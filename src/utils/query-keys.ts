@@ -5,17 +5,12 @@ export const QUERY_KEYS = {
     activeOrganization: ["auth", "activeOrganization"],
   },
   INTEGRATIONS: {
-    all: (organizationId: string) => ["integrations", organizationId],
-    detail: (integrationId: string) => ["integrations", integrationId],
-    repositories: (integrationId: string) => [
-      "integrations",
-      integrationId,
-      "repositories",
-    ],
-    availableRepos: (integrationId: string) => [
-      "integrations",
-      integrationId,
-      "available-repos",
-    ],
+    base: ["integrations"] as const,
+    all: (organizationId: string) => ["integrations", organizationId] as const,
+    detail: (integrationId: string) => ["integrations", integrationId] as const,
+    repositories: (integrationId: string) =>
+      ["integrations", integrationId, "repositories"] as const,
+    availableRepos: (integrationId: string) =>
+      ["integrations", integrationId, "available-repos"] as const,
   },
 } as const;

@@ -134,7 +134,7 @@ export async function createGitHubIntegration(
     {
       id: nanoid(),
       repositoryId: repository.id,
-      outputType: "tweet",
+      outputType: "twitter_post",
       enabled: false,
       config: null,
     },

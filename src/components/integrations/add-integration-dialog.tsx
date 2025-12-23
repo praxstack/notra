@@ -156,7 +156,6 @@ export function AddIntegrationDialog({
                     } else {
                       setRepoInfo(null);
                     }
-                    Promise.resolve();
                   },
                 }}
               >

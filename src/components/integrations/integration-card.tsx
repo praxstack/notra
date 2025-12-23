@@ -42,7 +42,7 @@ export function IntegrationCard({
     },
     onSuccess: (_, enabled) => {
       queryClient.invalidateQueries({
-        queryKey: ["integrations"],
+        queryKey: QUERY_KEYS.INTEGRATIONS.base,
       });
       toast.success(enabled ? "Integration enabled" : "Integration disabled");
       onUpdate?.();
@@ -66,7 +66,7 @@ export function IntegrationCard({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["integrations"],
+        queryKey: QUERY_KEYS.INTEGRATIONS.base,
       });
       toast.success("Integration deleted");
       onUpdate?.();

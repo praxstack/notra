@@ -5,6 +5,7 @@ import { AddIntegrationDialog } from "@/components/integrations/add-integration-
 import { IntegrationCard } from "@/components/integrations/integration-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { GitHubIntegration } from "@/types/integrations";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 type PageClientProps = {
   organizationId: string;
@@ -16,7 +17,7 @@ export default function PageClient({ organizationId }: PageClientProps) {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["integrations", organizationId],
+    queryKey: QUERY_KEYS.INTEGRATIONS.all(organizationId),
     queryFn: async () => {
       const response = await fetch(
         `/api/integrations?organizationId=${organizationId}`

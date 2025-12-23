@@ -22,6 +22,7 @@ import { Linear } from "@/components/ui/svgs/linear";
 import { Marble } from "@/components/ui/svgs/marble";
 import { Slack } from "@/components/ui/svgs/slack";
 import { Webflow } from "@/components/ui/svgs/webflow";
+import { QUERY_KEYS } from "@/utils/query-keys";
 
 const AddIntegrationDialog = dynamic(
   () =>
@@ -209,9 +210,10 @@ export default function PageClient({
 }: PageClientProps) {
   const { activeOrganization } = useOrganizationsContext();
   const organizationId = propOrganizationId ?? activeOrganization?.id;
+  const organizationSlug = activeOrganization?.slug;
 
   const { data: integrations, isLoading } = useQuery({
-    queryKey: ["integrations", organizationId],
+    queryKey: QUERY_KEYS.INTEGRATIONS.all(organizationId),
     queryFn: async () => {
       if (!organizationId) {
         throw new Error("Organization ID is required");
@@ -356,7 +358,7 @@ export default function PageClient({
                       </CardHeader>
                       <CardContent>
                         <Link
-                          href={`/${organizationId}/integrations/${integration.type}`}
+                          href={`/${organizationSlug}/integrations/${integration.type}`}
                         >
                           <Button size="sm" variant="ghost">
                             View Details

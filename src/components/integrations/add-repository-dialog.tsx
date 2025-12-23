@@ -31,6 +31,111 @@ import {
   addRepositoryFormSchema,
 } from "@/utils/schemas/integrations";
 
+function RepositorySelector({
+  field,
+  availableRepos,
+  mutation,
+}: {
+  field: {
+    state: { value: string; meta: { errors: unknown[] } };
+    handleBlur: () => void;
+    handleChange: (value: string) => void;
+  };
+  availableRepos: AvailableRepo[];
+  mutation: { isPending: boolean };
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const shouldVirtualize = availableRepos.length > 20;
+
+  const rowVirtualizer = useVirtualizer({
+    count: availableRepos.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 40,
+    overscan: 5,
+    enabled: shouldVirtualize,
+  });
+
+  if (shouldVirtualize) {
+    return (
+      <>
+        <div
+          className="w-full rounded-lg border border-border bg-background"
+          ref={parentRef}
+          style={{
+            height: "300px",
+            overflow: "auto",
+          }}
+        >
+          <div
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const repo = availableRepos[virtualRow.index];
+              return (
+                <button
+                  className={`w-full px-3 py-2 text-left hover:bg-accent ${
+                    field.state.value === repo.fullName ? "bg-accent" : ""
+                  }`}
+                  disabled={mutation.isPending}
+                  key={virtualRow.key}
+                  onClick={() => field.handleChange(repo.fullName)}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  type="button"
+                >
+                  {repo.fullName} {repo.private ? "(Private)" : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {field.state.meta.errors.length > 0 ? (
+          <p className="mt-1 text-destructive text-sm">
+            {typeof field.state.meta.errors[0] === "string"
+              ? field.state.meta.errors[0]
+              : String(field.state.meta.errors[0])}
+          </p>
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <select
+        className="w-full rounded-lg border border-border bg-background px-3 py-2"
+        disabled={mutation.isPending}
+        onBlur={field.handleBlur}
+        onChange={(e) => field.handleChange(e.target.value)}
+        value={field.state.value}
+      >
+        <option value="">Select a repository...</option>
+        {availableRepos.map((repo) => (
+          <option key={repo.fullName} value={repo.fullName}>
+            {repo.fullName} {repo.private ? "(Private)" : ""}
+          </option>
+        ))}
+      </select>
+      {field.state.meta.errors.length > 0 ? (
+        <p className="mt-1 text-destructive text-sm">
+          {typeof field.state.meta.errors[0] === "string"
+            ? field.state.meta.errors[0]
+            : String(field.state.meta.errors[0])}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function AddRepositoryDialog({
   integrationId,
   onSuccess,
@@ -75,7 +180,9 @@ export function AddRepositoryDialog({
             outputs: [
               { type: "changelog", enabled: true },
               { type: "blog_post", enabled: false },
-              { type: "tweet", enabled: false },
+              { type: "twitter_post", enabled: false },
+              { type: "linkedin_post", enabled: false },
+              { type: "investor_update", enabled: false },
             ],
           }),
         }
@@ -123,17 +230,6 @@ export function AddRepositoryDialog({
       <DialogTrigger render={trigger as React.ReactElement} />
     ) : null;
 
-  const parentRef = useRef<HTMLDivElement>(null);
-  const shouldVirtualize = availableRepos.length > 20;
-
-  const rowVirtualizer = useVirtualizer({
-    count: availableRepos.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 40,
-    overscan: 5,
-    enabled: shouldVirtualize,
-  });
-
   return (
     <>
       {triggerElement}
@@ -161,119 +257,53 @@ export function AddRepositoryDialog({
                   onChange: addRepositoryFormSchema.shape.repository,
                 }}
               >
-                {(field) => (
-                  <Field>
-                    <FieldLabel>Repository</FieldLabel>
-                    {loadingRepos ? (
-                      <Skeleton className="h-10 w-full" />
-                    ) : availableRepos.length > 0 ? (
-                      shouldVirtualize ? (
-                        <>
-                          <div
-                            className="w-full rounded-lg border border-border bg-background"
-                            ref={parentRef}
-                            style={{
-                              height: "300px",
-                              overflow: "auto",
-                            }}
-                          >
-                            <div
-                              style={{
-                                height: `${rowVirtualizer.getTotalSize()}px`,
-                                width: "100%",
-                                position: "relative",
-                              }}
-                            >
-                              {rowVirtualizer
-                                .getVirtualItems()
-                                .map((virtualRow) => {
-                                  const repo = availableRepos[virtualRow.index];
-                                  return (
-                                    <button
-                                      className={`w-full px-3 py-2 text-left hover:bg-accent ${
-                                        field.state.value === repo.fullName
-                                          ? "bg-accent"
-                                          : ""
-                                      }`}
-                                      disabled={mutation.isPending}
-                                      key={virtualRow.key}
-                                      onClick={() =>
-                                        field.handleChange(repo.fullName)
-                                      }
-                                      style={{
-                                        position: "absolute",
-                                        top: 0,
-                                        left: 0,
-                                        height: `${virtualRow.size}px`,
-                                        transform: `translateY(${virtualRow.start}px)`,
-                                      }}
-                                      type="button"
-                                    >
-                                      {repo.fullName}{" "}
-                                      {repo.private ? "(Private)" : ""}
-                                    </button>
-                                  );
-                                })}
-                            </div>
-                          </div>
-                          {field.state.meta.errors.length > 0 ? (
-                            <p className="mt-1 text-destructive text-sm">
-                              {typeof field.state.meta.errors[0] === "string"
-                                ? field.state.meta.errors[0]
-                                : String(field.state.meta.errors[0])}
-                            </p>
-                          ) : null}
-                        </>
-                      ) : (
-                        <>
-                          <select
-                            className="w-full rounded-lg border border-border bg-background px-3 py-2"
-                            disabled={mutation.isPending}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            value={field.state.value}
-                          >
-                            <option value="">Select a repository...</option>
-                            {availableRepos.map((repo) => (
-                              <option key={repo.fullName} value={repo.fullName}>
-                                {repo.fullName}{" "}
-                                {repo.private ? "(Private)" : ""}
-                              </option>
-                            ))}
-                          </select>
-                          {field.state.meta.errors.length > 0 ? (
-                            <p className="mt-1 text-destructive text-sm">
-                              {typeof field.state.meta.errors[0] === "string"
-                                ? field.state.meta.errors[0]
-                                : String(field.state.meta.errors[0])}
-                            </p>
-                          ) : null}
-                        </>
-                      )
-                    ) : (
-                      <>
-                        <Input
-                          disabled={mutation.isPending}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          placeholder="facebook/react or https://github.com/facebook/react"
-                          value={field.state.value}
+                {(field) => {
+                  if (loadingRepos) {
+                    return (
+                      <Field>
+                        <FieldLabel>Repository</FieldLabel>
+                        <Skeleton className="h-10 w-full" />
+                      </Field>
+                    );
+                  }
+
+                  if (availableRepos.length > 0) {
+                    return (
+                      <Field>
+                        <FieldLabel>Repository</FieldLabel>
+                        <RepositorySelector
+                          availableRepos={availableRepos}
+                          field={field}
+                          mutation={mutation}
                         />
-                        {field.state.meta.errors.length > 0 ? (
-                          <p className="mt-1 text-destructive text-sm">
-                            {typeof field.state.meta.errors[0] === "string"
-                              ? field.state.meta.errors[0]
-                              : String(field.state.meta.errors[0])}
-                          </p>
-                        ) : null}
-                        <p className="mt-1 text-muted-foreground text-xs">
-                          No access token available. Enter the repository as
-                          owner/repo or paste a GitHub URL.
+                      </Field>
+                    );
+                  }
+
+                  return (
+                    <Field>
+                      <FieldLabel>Repository</FieldLabel>
+                      <Input
+                        disabled={mutation.isPending}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="facebook/react or https://github.com/facebook/react"
+                        value={field.state.value}
+                      />
+                      {field.state.meta.errors.length > 0 ? (
+                        <p className="mt-1 text-destructive text-sm">
+                          {typeof field.state.meta.errors[0] === "string"
+                            ? field.state.meta.errors[0]
+                            : String(field.state.meta.errors[0])}
                         </p>
-                      </>
-                    )}
-                  </Field>
-                )}
+                      ) : null}
+                      <p className="mt-1 text-muted-foreground text-xs">
+                        No access token available. Enter the repository as
+                        owner/repo or paste a GitHub URL.
+                      </p>
+                    </Field>
+                  );
+                }}
               </form.Field>
             </div>
             <DialogFooter>

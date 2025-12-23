@@ -42,7 +42,7 @@ export const addGitHubIntegrationFormSchema = z.object({
       (value) => isValidGitHubUrl(value),
       "Invalid GitHub repository URL or format. Use: https://github.com/owner/repo, git@github.com:owner/repo, or owner/repo"
     ),
-  token: z.string().min(1, "Token is required"),
+  token: z.string().optional().nullable(),
 });
 export type AddGitHubIntegrationFormValues = z.infer<
   typeof addGitHubIntegrationFormSchema
