@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["ultracite/core", "ultracite/next"],
-  "files": {
-    "ignore": ["components/ui/**"]
+  "linter": {
+    "includes": ["**", "!components/ui/**"]
   }
 }
