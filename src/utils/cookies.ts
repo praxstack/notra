@@ -12,19 +12,17 @@ export const setLastVisitedOrganization = async (
       process.env.NODE_ENV === "production");
 
   if (typeof window !== "undefined" && "cookieStore" in window) {
-    try {
-      const cookieOptions: CookieInit = {
-        name: LAST_VISITED_ORGANIZATION_COOKIE,
-        value: organizationSlug,
-        expires: Date.now() + maxAge * 1000,
-        path: "/",
-        sameSite: "lax",
-      };
+    const cookieOptions: CookieInit = {
+      name: LAST_VISITED_ORGANIZATION_COOKIE,
+      value: organizationSlug,
+      expires: Date.now() + maxAge * 1000,
+      path: "/",
+      sameSite: "lax",
+    };
 
-      await cookieStore.set(cookieOptions);
-    } catch (error) {
+    await cookieStore.set(cookieOptions).catch(() => {
       // Failed to set cookie - silently continue
-    }
+    });
   } else if (typeof document !== "undefined") {
     const secureFlag = isSecure ? "; Secure" : "";
     // biome-ignore lint/suspicious/noDocumentCookie: Fallback for browsers without Cookie Store API support

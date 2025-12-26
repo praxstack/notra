@@ -12,7 +12,9 @@ import { cookies } from "next/headers";
 import { db } from "@/lib/db/drizzle";
 import { members, organizations } from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
+import { generateOrganizationAvatar } from "@/lib/utils";
 import { LAST_VISITED_ORGANIZATION_COOKIE } from "@/utils/constants";
+import { organizationSlugSchema } from "@/utils/schemas/organization";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
@@ -86,7 +88,24 @@ export const auth = betterAuth({
   experimental: {
     joins: true,
   },
-  plugins: [organization(), lastLoginMethod(), haveIBeenPwned(), nextCookies()], // nextCookies() must be last
+  plugins: [
+    organization({
+      schema: {
+        organization: {
+          additionalFields: {
+            website: {
+              type: "string",
+              required: false,
+              input: true,
+            },
+          },
+        },
+      },
+    }),
+    lastLoginMethod(),
+    haveIBeenPwned(),
+    nextCookies(),
+  ], // nextCookies() must be last
   secondaryStorage: {
     get: async (key) => await redis.get(key),
     set: async (key, value, ttl) => {
@@ -140,9 +159,34 @@ export const auth = betterAuth({
               name: "Personal",
               slug,
               userId: user.id,
-              logo: `https://api.dicebear.com/9.x/glass/svg?seed=${slug}&backgroundType=gradientLinear,solid&backgroundColor=8E51FF`,
+              logo: generateOrganizationAvatar(slug),
             },
           });
+        },
+      },
+    },
+    organization: {
+      create: {
+        before: (org: { slug?: unknown; [key: string]: unknown }) => {
+          if (!org.slug || typeof org.slug !== "string") {
+            throw new Error("Organization slug is required");
+          }
+
+          const slug = org.slug.trim();
+          const validation = organizationSlugSchema.safeParse(slug);
+
+          if (!validation.success) {
+            throw new Error(
+              validation.error.issues[0]?.message ?? "Invalid organization slug"
+            );
+          }
+
+          return {
+            data: {
+              ...org,
+              slug,
+            },
+          };
         },
       },
     },

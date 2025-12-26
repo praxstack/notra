@@ -82,6 +82,7 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Avoid spread syntax in accumulators within loops
 - Use top-level regex literals instead of creating them in loops
 - Prefer specific imports over namespace imports
+- When importing zod use this "import * as z from "zod";" and if needed add this lint rule above "-biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import"
 - Avoid barrel files (index files that re-export everything)
 - Use proper image components (e.g., Next.js `<Image>`) over `<img>` tags
 

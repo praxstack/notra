@@ -1,6 +1,10 @@
 "use client";
 
-import { ArrowDown01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowDown01Icon,
+  PlusSignIcon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -13,6 +17,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -30,6 +35,7 @@ import {
   type Organization,
   useOrganizationsContext,
 } from "../providers/organization-provider";
+import { CreateOrgModal } from "./create-org-modal";
 
 function OrgSelectorTrigger({
   isCollapsed,
@@ -101,6 +107,7 @@ export function OrgSelector() {
     useOrganizationsContext();
 
   const [isSwitching, setIsSwitching] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   async function switchOrganization(org: Organization) {
     if (org.slug === activeOrganization?.slug) {
@@ -188,8 +195,28 @@ export function OrgSelector() {
                 No organizations found
               </div>
             )}
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem>
+              <button
+                className="flex w-full cursor-pointer items-center gap-4"
+                onClick={() => setIsCreateModalOpen(true)}
+                type="button"
+              >
+                <div className="flex size-6 items-center justify-center rounded-[0.2rem] bg-muted">
+                  <HugeiconsIcon className="size-4" icon={PlusSignIcon} />
+                </div>
+                Create Organization
+              </button>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <CreateOrgModal
+          onOpenChange={setIsCreateModalOpen}
+          open={isCreateModalOpen}
+        />
       </SidebarMenuItem>
     </SidebarMenu>
   );
