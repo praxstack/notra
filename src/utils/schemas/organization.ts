@@ -19,10 +19,6 @@ export const organizationSlugSchema = z
     "Organization slug cannot contain consecutive hyphens"
   )
   .refine(
-    (value) => !value.includes(" "),
-    "Organization slug cannot contain spaces"
-  )
-  .refine(
     (value) =>
       !RESERVED_ORGANIZATION_SLUGS.includes(
         value as (typeof RESERVED_ORGANIZATION_SLUGS)[number]
