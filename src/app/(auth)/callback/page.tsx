@@ -14,5 +14,5 @@ export default async function AuthCallback() {
     redirect(`/${organization.slug}`);
   }
 
-  redirect("/login");
+  redirect("/onboarding");
 }
