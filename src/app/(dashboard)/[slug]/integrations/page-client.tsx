@@ -40,7 +40,7 @@ const AddIntegrationDialog = dynamic(
   { ssr: false }
 );
 
-type Integration = {
+interface Integration {
   id: string;
   displayName: string;
   type: string;
@@ -52,13 +52,13 @@ type Integration = {
     repo: string;
     enabled: boolean;
   }>;
-};
+}
 
-type PageClientProps = {
+interface PageClientProps {
   organizationId: string;
-};
+}
 
-type IntegrationConfig = {
+interface IntegrationConfig {
   id: string;
   name: string;
   description: string;
@@ -66,7 +66,7 @@ type IntegrationConfig = {
   href: string;
   available: boolean;
   category: "input" | "output";
-};
+}
 
 const INPUT_SOURCES: readonly IntegrationConfig[] = [
   {
@@ -318,13 +318,13 @@ export default function PageClient({
         </div>
 
         <Tabs
+          onValueChange={(value) => setActiveTab(value)}
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
         >
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="installed">
-              Installed {installedCount > 0 ? installedCount : ""}
+              Installed{installedCount > 0 ? ` (${installedCount})` : ""}
             </TabsTrigger>
           </TabsList>
 
@@ -333,7 +333,9 @@ export default function PageClient({
               {isLoading ? (
                 <>
                   <section>
-                    <h2 className="mb-4 font-semibold text-lg">Input Sources</h2>
+                    <h2 className="mb-4 font-semibold text-lg">
+                      Input Sources
+                    </h2>
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to pull data and updates from
                     </p>
@@ -358,7 +360,9 @@ export default function PageClient({
                   </section>
 
                   <section>
-                    <h2 className="mb-4 font-semibold text-lg">Output Sources</h2>
+                    <h2 className="mb-4 font-semibold text-lg">
+                      Output Sources
+                    </h2>
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to publish and sync content to
                     </p>
@@ -385,7 +389,9 @@ export default function PageClient({
               ) : (
                 <>
                   <section>
-                    <h2 className="mb-4 font-semibold text-lg">Input Sources</h2>
+                    <h2 className="mb-4 font-semibold text-lg">
+                      Input Sources
+                    </h2>
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to pull data and updates from
                     </p>
@@ -403,7 +409,9 @@ export default function PageClient({
                   </section>
 
                   <section>
-                    <h2 className="mb-4 font-semibold text-lg">Output Sources</h2>
+                    <h2 className="mb-4 font-semibold text-lg">
+                      Output Sources
+                    </h2>
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to publish and sync content to
                     </p>
