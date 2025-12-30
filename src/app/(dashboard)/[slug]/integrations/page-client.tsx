@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import type { IntegrationType } from "@/utils/schemas/integrations";
 
 const TAB_VALUES = ["all", "installed"] as const;
 
@@ -43,7 +44,7 @@ const AddIntegrationDialog = dynamic(
 interface Integration {
   id: string;
   displayName: string;
-  type: string;
+  type: IntegrationType;
   enabled: boolean;
   createdAt: string;
   repositories: Array<{
@@ -54,8 +55,13 @@ interface Integration {
   }>;
 }
 
+interface IntegrationsResponse {
+  integrations: Integration[];
+  count: number;
+}
+
 interface PageClientProps {
-  organizationId: string;
+  organizationSlug: string;
 }
 
 interface IntegrationConfig {
@@ -143,8 +149,7 @@ function IntegrationCard({
   const organizationSlug = activeOrganization?.slug;
   const isActive = activeCount > 0;
   const [dialogOpen, setDialogOpen] = useState(false);
-  const showManageButton = integration.available && isActive;
-  const showConnectButton = integration.available && !isActive;
+  const showConnectButton = integration.available;
   const showComingSoon = !integration.available;
   const showDialog = integration.available && integration.id === "github";
 
@@ -160,31 +165,26 @@ function IntegrationCard({
           : ""
       }
     >
-      <CardHeader>
-        <div className="flex items-start gap-4">
-          <div className="flex size-10 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-8">
+      <CardHeader className="gap-3">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <div className="flex size-9 shrink-0 items-center justify-center text-muted-foreground sm:size-10 [&_svg]:size-7 sm:[&_svg]:size-8">
             {integration.icon}
           </div>
-          <div className="flex-1 space-y-1">
-            <CardTitle className="text-base">{integration.name}</CardTitle>
-            <CardDescription className="text-sm">
+          <div className="min-w-0 flex-1 space-y-1">
+            <CardTitle className="text-sm sm:text-base">
+              {integration.name}
+            </CardTitle>
+            <CardDescription className="line-clamp-2 text-xs sm:text-sm">
               {integration.description}
             </CardDescription>
           </div>
         </div>
-        <CardAction>
-          <div className="flex items-center gap-2">
+        <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {isActive ? (
-              <Badge variant="default">{activeCount} active</Badge>
-            ) : null}
-            {showManageButton ? (
-              <Button
-                onClick={(e) => e.stopPropagation()}
-                size="sm"
-                variant="outline"
-              >
-                Manage
-              </Button>
+              <Badge className="text-xs" variant="default">
+                {activeCount}
+              </Badge>
             ) : null}
             {showConnectButton ? (
               <Button
@@ -212,7 +212,7 @@ function IntegrationCard({
                       size="sm"
                       variant="outline"
                     >
-                      Coming Soon
+                      Soon
                     </Button>
                   }
                 />
@@ -248,36 +248,45 @@ function IntegrationCard({
   );
 }
 
-export default function PageClient({
-  organizationId: propOrganizationId,
-}: PageClientProps) {
-  const { activeOrganization } = useOrganizationsContext();
-  const organizationId = propOrganizationId ?? activeOrganization?.id;
-  const organizationSlug = activeOrganization?.slug;
+export default function PageClient({ organizationSlug }: PageClientProps) {
+  const { getOrganization } = useOrganizationsContext();
+  const organization = getOrganization(organizationSlug);
+  const organizationId = organization?.id;
 
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
     parseAsStringLiteral(TAB_VALUES).withDefault("all")
   );
 
-  const { data: integrations, isLoading } = useQuery({
-    queryKey: QUERY_KEYS.INTEGRATIONS.all(organizationId),
+  const { data, isLoading } = useQuery({
+    queryKey: QUERY_KEYS.INTEGRATIONS.all(organizationId ?? ""),
     queryFn: async () => {
       if (!organizationId) {
         throw new Error("Organization ID is required");
       }
       const response = await fetch(
-        `/api/integrations?organizationId=${organizationId}`
+        `/api/organizations/${organizationId}/integrations`
       );
 
       if (!response.ok) {
         throw new Error("Failed to fetch integrations");
       }
 
-      return response.json() as Promise<Integration[]>;
+      const result = await response.json();
+      console.log("[Integrations API Response]", result);
+      return result as IntegrationsResponse;
     },
     enabled: !!organizationId,
   });
+
+  console.log("[Integrations Data]", {
+    data,
+    integrations: data?.integrations,
+    count: data?.count,
+  });
+
+  const integrations = data?.integrations;
+  const installedCount = data?.count ?? 0;
 
   if (!organizationId) {
     return (
@@ -304,8 +313,6 @@ export default function PageClient({
     },
     {} as Record<string, Integration[]>
   );
-
-  const installedCount = integrations?.length ?? 0;
 
   return (
     <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -336,19 +343,19 @@ export default function PageClient({
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to pull data and updates from
                     </p>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {[1, 2, 3].map((i) => (
                         <Card key={i}>
-                          <CardHeader>
-                            <div className="flex items-start gap-4">
-                              <Skeleton className="size-10 shrink-0 rounded-md" />
-                              <div className="flex-1 space-y-2">
-                                <Skeleton className="h-5 w-24" />
-                                <Skeleton className="h-4 w-full" />
+                          <CardHeader className="gap-3">
+                            <div className="flex items-start gap-3 sm:gap-4">
+                              <Skeleton className="size-9 shrink-0 rounded-md sm:size-10" />
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <Skeleton className="h-4 w-20 sm:h-5 sm:w-24" />
+                                <Skeleton className="h-3 w-full sm:h-4" />
                               </div>
                             </div>
-                            <CardAction>
-                              <Skeleton className="h-9 w-28 rounded-md" />
+                            <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
+                              <Skeleton className="h-8 w-20 rounded-md sm:h-9 sm:w-24" />
                             </CardAction>
                           </CardHeader>
                         </Card>
@@ -363,19 +370,19 @@ export default function PageClient({
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to publish and sync content to
                     </p>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {[1, 2, 3].map((i) => (
                         <Card key={i}>
-                          <CardHeader>
-                            <div className="flex items-start gap-4">
-                              <Skeleton className="size-10 shrink-0 rounded-md" />
-                              <div className="flex-1 space-y-2">
-                                <Skeleton className="h-5 w-24" />
-                                <Skeleton className="h-4 w-full" />
+                          <CardHeader className="gap-3">
+                            <div className="flex items-start gap-3 sm:gap-4">
+                              <Skeleton className="size-9 shrink-0 rounded-md sm:size-10" />
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <Skeleton className="h-4 w-20 sm:h-5 sm:w-24" />
+                                <Skeleton className="h-3 w-full sm:h-4" />
                               </div>
                             </div>
-                            <CardAction>
-                              <Skeleton className="h-9 w-28 rounded-md" />
+                            <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
+                              <Skeleton className="h-8 w-20 rounded-md sm:h-9 sm:w-24" />
                             </CardAction>
                           </CardHeader>
                         </Card>
@@ -392,7 +399,7 @@ export default function PageClient({
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to pull data and updates from
                     </p>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {INPUT_SOURCES.map((integration) => (
                         <IntegrationCard
                           activeCount={
@@ -412,7 +419,7 @@ export default function PageClient({
                     <p className="mb-4 text-muted-foreground text-sm">
                       Connect services to publish and sync content to
                     </p>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {OUTPUT_SOURCES.map((integration) => (
                         <IntegrationCard
                           activeCount={
@@ -432,19 +439,19 @@ export default function PageClient({
           <TabsContent value="installed">
             <div className="space-y-8 pt-4">
               {isLoading && (
-                <div className="grid gap-4">
+                <div className="grid gap-3 sm:gap-4">
                   {[1, 2, 3].map((i) => (
                     <Card key={i}>
-                      <CardHeader>
-                        <div className="flex items-start gap-4">
-                          <Skeleton className="size-10 shrink-0 rounded-md" />
-                          <div className="flex-1 space-y-2">
-                            <Skeleton className="h-5 w-24" />
-                            <Skeleton className="h-4 w-full" />
+                      <CardHeader className="gap-3">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <Skeleton className="size-9 shrink-0 rounded-md sm:size-10" />
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <Skeleton className="h-4 w-20 sm:h-5 sm:w-24" />
+                            <Skeleton className="h-3 w-full sm:h-4" />
                           </div>
                         </div>
-                        <CardAction>
-                          <Skeleton className="h-9 w-28 rounded-md" />
+                        <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
+                          <Skeleton className="h-6 w-16 rounded-full sm:w-20" />
                         </CardAction>
                       </CardHeader>
                     </Card>
@@ -453,7 +460,7 @@ export default function PageClient({
               )}
 
               {!isLoading && integrations && integrations.length > 0 && (
-                <div className="grid gap-4">
+                <div className="grid gap-3 sm:gap-4">
                   {integrations.map((integration) => {
                     const config = ALL_INTEGRATIONS.find(
                       (i) => i.id === integration.type
@@ -465,31 +472,32 @@ export default function PageClient({
                         key={integration.id}
                       >
                         <Card className="cursor-pointer transition-colors hover:bg-accent/50">
-                          <CardHeader>
-                            <div className="flex items-start gap-4">
-                              <div className="flex size-10 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-8">
+                          <CardHeader className="gap-3">
+                            <div className="flex items-start gap-3 sm:gap-4">
+                              <div className="flex size-9 shrink-0 items-center justify-center text-muted-foreground sm:size-10 [&_svg]:size-7 sm:[&_svg]:size-8">
                                 {config?.icon}
                               </div>
-                              <div className="flex-1 space-y-1">
-                                <CardTitle className="text-base">
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <CardTitle className="truncate text-sm sm:text-base">
                                   {integration.displayName}
                                 </CardTitle>
-                                <CardDescription className="text-sm">
+                                <CardDescription className="text-xs sm:text-sm">
                                   {config?.name} •{" "}
                                   {integration.repositories.length}{" "}
                                   {integration.repositories.length === 1
-                                    ? "repository"
-                                    : "repositories"}
+                                    ? "repo"
+                                    : "repos"}
                                 </CardDescription>
                               </div>
                             </div>
-                            <CardAction>
+                            <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
                               <Badge
+                                className="text-xs"
                                 variant={
                                   integration.enabled ? "default" : "secondary"
                                 }
                               >
-                                {integration.enabled ? "Enabled" : "Disabled"}
+                                {integration.enabled ? "On" : "Off"}
                               </Badge>
                             </CardAction>
                           </CardHeader>
