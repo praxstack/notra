@@ -52,11 +52,11 @@ export function ThemeToggle() {
     >
       <HugeiconsIcon
         className="size-4"
-        icon={isDark ? Moon02Icon : Sun03Icon}
+        icon={isDark ? Sun03Icon : Moon02Icon}
       />
       {!isCollapsed && (
         <span className="flex-1 text-left text-sm">
-          {isDark ? "Dark Mode" : "Light Mode"}
+          {isDark ? "Light Mode" : "Dark Mode"}
         </span>
       )}
     </button>
