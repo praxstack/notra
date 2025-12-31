@@ -46,7 +46,7 @@ export function ThemeToggle() {
       type="button"
       onClick={handleToggle}
       className={cn(
-        "flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        "flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-foreground/10",
         isCollapsed && "justify-center px-0"
       )}
     >
