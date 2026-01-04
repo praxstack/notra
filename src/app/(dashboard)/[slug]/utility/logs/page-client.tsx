@@ -1,8 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,10 +21,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   const organization = getOrganization(organizationSlug);
   const organizationId = organization?.id;
 
-  const [page, setPage] = useQueryState(
-    "page",
-    parseAsInteger.withDefault(1)
-  );
+  const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
   const { data, isLoading } = useQuery({
     queryKey: QUERY_KEYS.WEBHOOK_LOGS.list(organizationId ?? "", page),
@@ -72,7 +69,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         </div>
 
         <Alert>
-          <HugeiconsIcon icon={InformationCircleIcon} className="size-4" />
+          <HugeiconsIcon className="size-4" icon={InformationCircleIcon} />
           <AlertDescription>
             Log data is retained for 30 days. Older entries are automatically
             removed.
@@ -84,7 +81,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             <div className="overflow-hidden rounded-md border">
               <div className="p-4">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-center space-x-4 py-3">
+                  <div className="flex items-center space-x-4 py-3" key={i}>
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="h-4 w-20" />
                     <Skeleton className="h-5 w-20" />
@@ -101,9 +98,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           <DataTable
             columns={columns}
             data={data?.logs ?? []}
+            onPageChange={setPage}
             page={page}
             totalPages={data?.pagination.totalPages ?? 1}
-            onPageChange={setPage}
           />
         )}
       </div>

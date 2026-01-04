@@ -1,9 +1,9 @@
 "use client";
 
-import { HelpCircleIcon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import Link from "next/link";
 import type { ComponentPropsWithoutRef } from "react";
+import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -18,22 +18,17 @@ interface NavSecondaryItem {
   icon: IconSvgElement;
 }
 
-const items: readonly NavSecondaryItem[] = [
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings01Icon,
-  },
-  {
-    title: "Get Help",
-    url: "#",
-    icon: HelpCircleIcon,
-  },
-];
+const items: readonly NavSecondaryItem[] = [];
 
 export function NavSecondary({
   ...props
 }: ComponentPropsWithoutRef<typeof SidebarGroup>) {
+  const { activeOrganization } = useOrganizationsContext();
+
+  if (!activeOrganization?.slug) {
+    return null;
+  }
+
   return (
     <SidebarGroup {...props}>
       <SidebarGroupContent>

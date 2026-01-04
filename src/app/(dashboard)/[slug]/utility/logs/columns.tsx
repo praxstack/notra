@@ -1,6 +1,5 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowDown01Icon,
   ArrowUp01Icon,
@@ -10,9 +9,10 @@ import {
   Notification01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import type { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Log, IntegrationType, LogDirection } from "@/types/webhook-logs";
+import type { IntegrationType, Log, LogDirection } from "@/types/webhook-logs";
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -37,9 +37,19 @@ function StatusBadge({ status }: { status: Log["status"] }) {
   return <Badge variant={variants[status]}>{status}</Badge>;
 }
 
+function getSortIcon(isSorted: false | "asc" | "desc") {
+  if (isSorted === "asc") {
+    return ArrowUp01Icon;
+  }
+  if (isSorted === "desc") {
+    return ArrowDown01Icon;
+  }
+  return ArrowUpDownIcon;
+}
+
 function DirectionBadge({ direction }: { direction: LogDirection }) {
   return (
-    <Badge variant="outline" className="capitalize">
+    <Badge className="capitalize" variant="outline">
       {direction}
     </Badge>
   );
@@ -55,8 +65,8 @@ function IntegrationIcon({ type }: { type: IntegrationType }) {
 
   return (
     <HugeiconsIcon
-      icon={icons[type]}
       className="size-4 text-muted-foreground"
+      icon={icons[type]}
     />
   );
 }
@@ -85,9 +95,7 @@ export const columns: ColumnDef<Log>[] = [
   {
     accessorKey: "direction",
     header: "Direction",
-    cell: ({ row }) => (
-      <DirectionBadge direction={row.getValue("direction")} />
-    ),
+    cell: ({ row }) => <DirectionBadge direction={row.getValue("direction")} />,
   },
   {
     accessorKey: "status",
@@ -108,7 +116,7 @@ export const columns: ColumnDef<Log>[] = [
     cell: ({ row }) => {
       const refId = row.getValue("referenceId") as string | null;
       return (
-        <span className="text-muted-foreground font-mono text-sm">
+        <span className="font-mono text-muted-foreground text-sm">
           {refId ?? "-"}
         </span>
       );
@@ -120,21 +128,12 @@ export const columns: ColumnDef<Log>[] = [
       const isSorted = column.getIsSorted();
       return (
         <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="-ml-4"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          variant="ghost"
         >
           Created At
-          <HugeiconsIcon
-            icon={
-              isSorted === "asc"
-                ? ArrowUp01Icon
-                : isSorted === "desc"
-                  ? ArrowDown01Icon
-                  : ArrowUpDownIcon
-            }
-            className="ml-2 size-4"
-          />
+          <HugeiconsIcon className="ml-2 size-4" icon={getSortIcon(isSorted)} />
         </Button>
       );
     },

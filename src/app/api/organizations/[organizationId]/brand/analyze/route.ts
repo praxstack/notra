@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createGithubChangelogAgent } from "@/lib/ai/agents/changelog";
+import { start } from "workflow/api";
 import { withOrganizationAuth } from "@/lib/auth/organization";
-import { generateChangelogBodySchema } from "@/utils/schemas/workflows";
+import { analyzeBrand } from "@/lib/workflows/brand-analysis";
+import { analyzeBrandSchema } from "@/utils/schemas/brand";
 
 interface RouteContext {
   params: Promise<{ organizationId: string }>;
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     const body = await request.json();
-    const validationResult = generateChangelogBodySchema.safeParse(body);
+    const validationResult = analyzeBrandSchema.safeParse(body);
 
     if (!validationResult.success) {
       return NextResponse.json(
@@ -29,19 +30,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const { prompt } = validationResult.data;
+    const { url } = validationResult.data;
 
-    const agent = createGithubChangelogAgent(organizationId);
+    await start(analyzeBrand, [organizationId, url]);
 
-    const result = await agent.stream({
-      prompt,
+    return NextResponse.json({
+      success: true,
+      message: "Brand analysis started",
     });
-
-    return result.toUIMessageStreamResponse();
   } catch (error) {
-    console.error("Error generating changelog:", error);
+    console.error("Error starting brand analysis:", error);
     return NextResponse.json(
-      { error: "Failed to generate changelog" },
+      { error: "Failed to start brand analysis" },
       { status: 500 }
     );
   }

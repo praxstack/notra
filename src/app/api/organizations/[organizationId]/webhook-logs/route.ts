@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { withOrganizationAuth } from "@/lib/auth/organization";
 import type {
+  IntegrationType,
   Log,
   LogDirection,
-  IntegrationType,
-  WebhookLogStatus,
   LogsResponse,
+  WebhookLogStatus,
 } from "@/types/webhook-logs";
 
 interface RouteContext {
@@ -27,14 +27,19 @@ const EVENT_TITLES = [
   "Task completed",
 ] as const;
 
-const INTEGRATION_TYPES: IntegrationType[] = ["github", "linear", "slack", "webhook"];
+const INTEGRATION_TYPES: IntegrationType[] = [
+  "github",
+  "linear",
+  "slack",
+  "webhook",
+];
 
 const DIRECTIONS: LogDirection[] = ["incoming", "outgoing"];
 
 const STATUSES: WebhookLogStatus[] = ["success", "failed", "pending"];
 
 function generateReferenceId(integrationType: IntegrationType): string | null {
-  const random = Math.floor(Math.random() * 10000);
+  const random = Math.floor(Math.random() * 10_000);
   switch (integrationType) {
     case "github":
       return `PR-${random}`;
@@ -68,7 +73,8 @@ function generateExampleLogs(count: number): Log[] {
       integrationType,
       direction,
       status,
-      statusCode: status === "pending" ? null : status === "success" ? 200 : 500,
+      statusCode:
+        status === "pending" ? null : status === "success" ? 200 : 500,
       errorMessage:
         status === "failed"
           ? "Connection timeout: Failed to establish connection"
