@@ -205,7 +205,7 @@ export function OrgSelector() {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
-              className="flex items-center gap-4"
+              className="flex cursor-pointer items-center gap-4"
               onClick={() => setIsCreateModalOpen(true)}
             >
               <div className="flex size-6 items-center justify-center rounded-[0.2rem] bg-muted">
