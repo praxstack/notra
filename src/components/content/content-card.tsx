@@ -1,13 +1,6 @@
 import Link from "next/link";
+import { TitleCard } from "@/components/title-card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const CONTENT_TYPES = [
@@ -32,57 +25,37 @@ interface ContentCardProps {
   title: string;
   preview: string;
   contentType: ContentType;
-  date: Date;
   className?: string;
   href?: string;
-}
-
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(date);
 }
 
 function ContentCard({
   title,
   preview,
   contentType,
-  date,
   className,
   href,
 }: ContentCardProps) {
   const cardContent = (
-    <Card
+    <TitleCard
+      action={
+        <Badge variant="secondary">{CONTENT_TYPE_LABELS[contentType]}</Badge>
+      }
       className={cn(
-        "flex h-full flex-col transition-colors",
-        href && "cursor-pointer hover:bg-accent/50",
+        "h-full transition-colors",
+        href && "cursor-pointer hover:bg-muted/80",
         className
       )}
+      heading={title}
     >
-      <CardHeader>
-        <CardTitle className="line-clamp-2">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1">
-        <CardDescription className="line-clamp-3">{preview}</CardDescription>
-      </CardContent>
-      <CardFooter className="flex items-center justify-between gap-2">
-        <time
-          className="text-muted-foreground text-xs"
-          dateTime={date.toISOString()}
-        >
-          {formatDate(date)}
-        </time>
-        <Badge variant="secondary">{CONTENT_TYPE_LABELS[contentType]}</Badge>
-      </CardFooter>
-    </Card>
+      <p className="line-clamp-3 text-muted-foreground text-sm">{preview}</p>
+    </TitleCard>
   );
 
   if (href) {
     return (
       <Link
-        className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-[20px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         href={href}
       >
         {cardContent}
