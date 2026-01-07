@@ -10,7 +10,8 @@
       "**",
       "!src/components/ui/**",
       "!src/components/ai-elements/**",
-      "!migrations/**"
+      "!migrations/**",
+      "!src/components/PixelBlast.tsx"
     ]
   },
   "formatter": {
@@ -18,7 +19,8 @@
       "**",
       "!src/components/ui/**",
       "!src/components/ai-elements/**",
-      "!migrations/**"
+      "!migrations/**",
+      "!src/components/PixelBlast.tsx"
     ]
   }
 }
