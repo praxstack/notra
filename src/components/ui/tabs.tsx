@@ -2,7 +2,7 @@
 
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { cva, type VariantProps } from "class-variance-authority";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
