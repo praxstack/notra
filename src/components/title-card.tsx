@@ -40,7 +40,12 @@ function TitleCard({
           style={gradientStyle}
         />
       )}
-      <div className="flex items-start justify-between gap-4 px-2 py-1.5">
+      <div
+        className={cn(
+          "flex items-start justify-between gap-4 py-1.5 pr-2",
+          icon ? "pl-3" : "pl-2"
+        )}
+      >
         <div className="flex items-center gap-2">
           {icon && (
             <div className="flex size-8 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-5">

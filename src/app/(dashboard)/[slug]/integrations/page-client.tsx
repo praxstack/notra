@@ -336,7 +336,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                 <p className="mb-4 text-muted-foreground text-sm">
                   Connect services to pull data and updates from
                 </p>
-                <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                   {INPUT_SOURCES.map((integration) => (
                     <IntegrationCard
                       activeCount={
@@ -355,7 +355,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                 <p className="mb-4 text-muted-foreground text-sm">
                   Connect services to publish and sync content to
                 </p>
-                <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                   {OUTPUT_SOURCES.map((integration) => (
                     <IntegrationCard
                       activeCount={
@@ -417,7 +417,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                           <p className="mb-4 text-muted-foreground text-sm">
                             Connected services pulling data and updates
                           </p>
-                          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
                             {inputIntegrations.map((integration) => {
                               const config = ALL_INTEGRATIONS.find(
                                 (i) => i.id === integration.type
@@ -446,7 +446,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                           <p className="mb-4 text-muted-foreground text-sm">
                             Connected services publishing and syncing content
                           </p>
-                          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3">
                             {outputIntegrations.map((integration) => {
                               const config = ALL_INTEGRATIONS.find(
                                 (i) => i.id === integration.type
