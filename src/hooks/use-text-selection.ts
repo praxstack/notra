@@ -14,8 +14,19 @@ export function useTextSelection(
 
   const handleMouseUp = useCallback(
     (event: MouseEvent) => {
+      const container = containerRef.current;
+      if (!container) {
+        return;
+      }
+
       const target = event.target as HTMLElement;
 
+      // Check if click is within our container
+      if (!container.contains(target)) {
+        return;
+      }
+
+      // Handle textarea selection
       if (target instanceof HTMLTextAreaElement) {
         const start = target.selectionStart;
         const end = target.selectionEnd;
@@ -30,13 +41,9 @@ export function useTextSelection(
         return;
       }
 
+      // Handle regular text selection
       const activeSelection = window.getSelection();
       if (!activeSelection || activeSelection.isCollapsed) {
-        return;
-      }
-
-      const container = containerRef.current;
-      if (!container) {
         return;
       }
 
@@ -58,16 +65,12 @@ export function useTextSelection(
   );
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    container.addEventListener("mouseup", handleMouseUp);
+    // Listen on document to catch all mouseup events
+    document.addEventListener("mouseup", handleMouseUp);
     return () => {
-      container.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [containerRef, handleMouseUp]);
+  }, [handleMouseUp]);
 
   const clearSelection = useCallback(() => {
     setSelection(null);
