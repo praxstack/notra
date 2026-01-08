@@ -49,8 +49,10 @@ export function AiEditInput({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // Prevent clearing text selection when clicking on the chat input
-    if (selectedText && e.target !== textareaRef.current) {
+    if (selectedText) {
       e.preventDefault();
+      // Focus textarea manually so user can still type
+      textareaRef.current?.focus();
     }
   };
 
