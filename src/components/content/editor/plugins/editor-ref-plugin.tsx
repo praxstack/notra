@@ -11,11 +11,7 @@ import {
   $getSelection,
   $isRangeSelection,
 } from "lexical";
-import {
-  type MutableRefObject,
-  type RefObject,
-  useImperativeHandle,
-} from "react";
+import { type RefObject, useImperativeHandle } from "react";
 import { EDITOR_TRANSFORMERS } from "../markdown-transformers";
 
 export interface SelectionInfo {
@@ -35,7 +31,7 @@ export interface EditorRefHandle {
 
 interface EditorRefPluginProps {
   editorRef: RefObject<EditorRefHandle | null>;
-  isProgrammaticUpdateRef: MutableRefObject<boolean>;
+  isProgrammaticUpdateRef: RefObject<boolean>;
 }
 
 export function EditorRefPlugin({
