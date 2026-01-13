@@ -3,13 +3,13 @@
 import {
   Cancel01Icon,
   CheckmarkCircle02Icon,
-  Loading02Icon,
   ViewIcon,
   ViewOffSlashIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -205,11 +205,7 @@ function ProfileSection({ user }: ProfileSectionProps) {
                   />
                   <Button disabled={isUpdating} size="default" type="submit">
                     {isUpdating ? (
-                      <HugeiconsIcon
-                        className="animate-spin"
-                        icon={Loading02Icon}
-                        size={16}
-                      />
+                      <LoaderCircle className="size-4 animate-spin" />
                     ) : (
                       "Save"
                     )}
@@ -402,11 +398,7 @@ function LoginDetailsSection({
               >
                 {isChangingPassword ? (
                   <>
-                    <HugeiconsIcon
-                      className="animate-spin"
-                      icon={Loading02Icon}
-                      size={16}
-                    />
+                    <LoaderCircle className="size-4 animate-spin" />
                     Changing...
                   </>
                 ) : (
@@ -523,11 +515,7 @@ function ConnectedAccountsSection({
                 variant="outline"
               >
                 {loadingProvider === "google" ? (
-                  <HugeiconsIcon
-                    className="animate-spin"
-                    icon={Loading02Icon}
-                    size={16}
-                  />
+                  <LoaderCircle className="size-4 animate-spin" />
                 ) : (
                   <>
                     <HugeiconsIcon icon={Cancel01Icon} size={16} />
@@ -543,11 +531,7 @@ function ConnectedAccountsSection({
                 variant="outline"
               >
                 {loadingProvider === "google" ? (
-                  <HugeiconsIcon
-                    className="animate-spin"
-                    icon={Loading02Icon}
-                    size={16}
-                  />
+                  <LoaderCircle className="size-4 animate-spin" />
                 ) : (
                   "Connect"
                 )}
@@ -577,11 +561,7 @@ function ConnectedAccountsSection({
                 variant="outline"
               >
                 {loadingProvider === "github" ? (
-                  <HugeiconsIcon
-                    className="animate-spin"
-                    icon={Loading02Icon}
-                    size={16}
-                  />
+                  <LoaderCircle className="size-4 animate-spin" />
                 ) : (
                   <>
                     <HugeiconsIcon icon={Cancel01Icon} size={16} />
@@ -597,11 +577,7 @@ function ConnectedAccountsSection({
                 variant="outline"
               >
                 {loadingProvider === "github" ? (
-                  <HugeiconsIcon
-                    className="animate-spin"
-                    icon={Loading02Icon}
-                    size={16}
-                  />
+                  <LoaderCircle className="size-4 animate-spin" />
                 ) : (
                   "Connect"
                 )}
