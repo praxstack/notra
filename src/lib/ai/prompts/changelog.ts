@@ -10,8 +10,7 @@ export function getChangelogPrompt(params: ChangelogPromptParams) {
   const { repository, startDate, endDate, totalCount, pullRequestsData } =
     params;
 
-  return `
-  # ROLE AND IDENTITY
+  return `# ROLE AND IDENTITY
 
 You are the Founder and lead developer creating a detailed changelog from GitHub pull requests. Write in an engaging, developer-to-developer tone that highlights the most impactful changes.
 
@@ -116,7 +115,7 @@ Organize EVERY PR from the data into appropriate sections:
 # PR ENTRY FORMAT
 
 For each PR use this exact format:
-- **[Descriptive Title]** [#${"{"}number}](https://github.com/${repository}/pull/${"{"}number}) - Brief description of the change and its impact. (Author: @${"{"}author})
+- **[Descriptive Title]** [#\${number}](https://github.com/${repository}/pull/\${number}) - Brief description of the change and its impact. (Author: @\${author})
 
 # CATEGORIZATION GUIDELINES
 
@@ -150,6 +149,5 @@ Before providing your final response, verify:
 - Keep PR descriptions concise but informative
 - Only use tools when necessary to improve changelog quality
 
-Output ONLY the MDX content for the changelog.
-`;
+Output ONLY the MDX content for the changelog.`;
 }

@@ -1,3 +1,5 @@
+import dedent from "dedent";
+
 interface ContentEditorPromptParams {
   instruction: string;
   currentMarkdown: string;
@@ -13,58 +15,58 @@ export function getContentEditorPrompt(params: ContentEditorPromptParams) {
     .join("\n");
 
   const selectionContext = selectedText
-    ? `
-
-## Selected Text (User has highlighted this portion)
-Focus your changes ONLY on this specific section:
-\`\`\`
-${selectedText}
-\`\`\``
+    ? dedent`
+      ## Selected Text (User has highlighted this portion)
+      Focus your changes ONLY on this specific section:
+      \`\`\`
+      ${selectedText}
+      \`\`\`
+    `
     : "";
 
-  return `
-# ROLE AND IDENTITY
+  return dedent`
+    # ROLE AND IDENTITY
 
-You are a skilled content editor. Apply the user's requested changes using a minimal set of line operations.
+    You are a skilled content editor. Apply the user's requested changes using a minimal set of line operations.
 
-# TASK OBJECTIVE
+    # TASK OBJECTIVE
 
-Apply this instruction: "${instruction}"
-${selectionContext}
+    Apply this instruction: "${instruction}"
+    ${selectionContext}
 
-# CURRENT MARKDOWN (with line numbers)
+    # CURRENT MARKDOWN (with line numbers)
 
-${numberedContent}
+    ${numberedContent}
 
-# OUTPUT FORMAT
+    # OUTPUT FORMAT
 
-Return ONLY a JSON array of operations. Each operation must be one of:
+    Return ONLY a JSON array of operations. Each operation must be one of:
 
-1. Replace a single line:
-   {"op": "replace", "line": <number>, "content": "<new content>"}
+    1. Replace a single line:
+       {"op": "replace", "line": <number>, "content": "<new content>"}
 
-2. Replace a range of lines:
-   {"op": "replace", "startLine": <number>, "endLine": <number>, "content": "<new content with \\n for line breaks>"}
+    2. Replace a range of lines:
+       {"op": "replace", "startLine": <number>, "endLine": <number>, "content": "<new content with \\n for line breaks>"}
 
-3. Insert after a line:
-   {"op": "insert", "afterLine": <number>, "content": "<content to insert>"}
+    3. Insert after a line:
+       {"op": "insert", "afterLine": <number>, "content": "<content to insert>"}
 
-4. Delete a line:
-   {"op": "delete", "line": <number>}
+    4. Delete a line:
+       {"op": "delete", "line": <number>}
 
-5. Delete a range:
-   {"op": "delete", "startLine": <number>, "endLine": <number>}
+    5. Delete a range:
+       {"op": "delete", "startLine": <number>, "endLine": <number|}
 
-# CONSTRAINTS
+    # CONSTRAINTS
 
-- Return ONLY the JSON array, no explanations
-- Use the minimum number of operations needed
-- Line numbers are 1-indexed
-- For multi-line content in "content" field, use \\n
-- If the user selected text, ONLY modify lines containing that selection
+    - Return ONLY the JSON array, no explanations
+    - Use the minimum number of operations needed
+    - Line numbers are 1-indexed
+    - For multi-line content in "content" field, use \\n
+    - If the user selected text, ONLY modify lines containing that selection
 
-# EXAMPLE OUTPUT
+    # EXAMPLE OUTPUT
 
-[{"op": "replace", "line": 5, "content": "Updated heading text"}]
-`;
+    [{"op": "replace", "line": 5, "content": "Updated heading text"}]
+  `;
 }
