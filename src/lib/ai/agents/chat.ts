@@ -16,7 +16,7 @@ interface ChatAgentContext {
 
 export function createChatAgent(context: ChatAgentContext) {
   const modelWithMemory = withSupermemory(
-    openrouter("anthropic/claude-sonnet-4.5"),
+    openrouter("moonshotai/kimi-k2-0905"),
     context.organizationId
   );
 
