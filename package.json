@@ -16,6 +16,7 @@
     "db:seed": "tsx scripts/seed-posts.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.12",
     "@ai-sdk/react": "^2.0.119",
     "@base-ui/react": "^1.0.0",
     "@biomejs/cli-linux-x64": "^2.3.10",
@@ -51,7 +52,7 @@
     "@upstash/realtime": "^1.0.0",
     "@upstash/redis": "^1.35.8",
     "@xyflow/react": "^12.10.0",
-    "ai": "^6.0.6",
+    "ai": "^6.0.33",
     "better-auth": "^1.4.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
