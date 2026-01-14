@@ -4,7 +4,6 @@ import {
   createEditMarkdownTool,
   createGetMarkdownTool,
 } from "@/lib/ai/tools/edit-markdown";
-import { scrapeWebsiteTool } from "@/lib/ai/tools/scrape-website";
 import { openrouter } from "@/lib/openrouter";
 
 interface ChatAgentContext {
@@ -34,7 +33,6 @@ export function createChatAgent(context: ChatAgentContext) {
     tools: {
       getMarkdown: createGetMarkdownTool(editContext),
       editMarkdown: createEditMarkdownTool(editContext),
-      scrapeWebsite: scrapeWebsiteTool,
     },
     instructions: `You are a helpful content editor assistant with memory of past interactions. Your job is to help users edit and improve their markdown documents.
 
