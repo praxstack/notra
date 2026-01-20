@@ -4,6 +4,9 @@ import { withWorkflow } from "workflow/next";
 const nextConfig: NextConfig = {
   reactStrictMode: true, // enabled by default but I like to be explicit
   reactCompiler: true,
+  outputFileTracingIncludes: {
+    "/*": ["./src/lib/ai/skills/**/*"],
+  },
   experimental: {
     useCache: true,
     optimizePackageImports: ["@hugeicons/core-free-icons"],
