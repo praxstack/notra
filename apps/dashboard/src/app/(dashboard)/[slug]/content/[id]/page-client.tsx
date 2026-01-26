@@ -266,7 +266,7 @@ export default function PageClient({
       api: `/api/organizations/${organizationId}/content/${contentId}/chat`,
       body: () => ({
         currentMarkdown: currentMarkdownRef.current,
-        selectedText: selectionRef.current?.text ?? null,
+        selectedText: selectionRef.current?.text,
         context: contextRef.current,
       }),
     }),
