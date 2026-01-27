@@ -227,6 +227,9 @@ export const auth = betterAuth({
           const result = await autumn.customers.create({
             id: org.id,
             name: org.name,
+            metadata: {
+              orgId: org.id,
+            },
           });
 
           if (result.error) {
@@ -236,7 +239,7 @@ export const auth = betterAuth({
               error: result.error,
             });
             throw new Error(
-              `Failed to set up billing for organization: ${result.error.message || "Unknown error"}`
+              `Failed to set up billing for organization: ${result.error.message || "Unknown error"}`,
             );
           }
 
