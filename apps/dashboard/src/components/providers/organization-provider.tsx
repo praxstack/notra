@@ -6,9 +6,12 @@ import {
   type ReactNode,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
+import { useCustomer } from "autumn-js/react";
 import { authClient } from "@/lib/auth/client";
 import { QUERY_KEYS } from "@/utils/query-keys";
 
@@ -24,12 +27,16 @@ interface OrganizationsContextValue {
 }
 
 const OrganizationsContext = createContext<OrganizationsContextValue | null>(
-  null
+  null,
 );
 
 export function OrganizationsProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const { refetch: refetchCustomer } = useCustomer();
   const hasAutoSelectedRef = useRef(false);
+  const lastSyncedSlugRef = useRef<string | null>(null);
+  const syncInProgressRef = useRef(false);
   const [optimisticActiveOrg, setOptimisticActiveOrg] =
     useState<Organization | null>(null);
 
@@ -61,6 +68,16 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
 
   const organizations = organizationsData ?? [];
   const isLoading = isLoadingOrgs || isLoadingActive;
+  const slugFromPath = useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length === 0) {
+      return null;
+    }
+    if (segments[0] === "account") {
+      return null;
+    }
+    return segments[0] ?? null;
+  }, [pathname]);
 
   // Clear optimistic state when real data arrives
   useEffect(() => {
@@ -69,6 +86,65 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
     }
   }, [activeOrganization]);
 
+  useEffect(() => {
+    if (isLoadingOrgs || isLoadingActive) {
+      return;
+    }
+    if (!slugFromPath) {
+      lastSyncedSlugRef.current = null;
+      return;
+    }
+    if (activeOrganization?.slug === slugFromPath) {
+      lastSyncedSlugRef.current = slugFromPath;
+      return;
+    }
+    if (syncInProgressRef.current) {
+      return;
+    }
+
+    const organizationFromPath = organizations.find(
+      (org) => org.slug === slugFromPath,
+    );
+    if (!organizationFromPath) {
+      return;
+    }
+    if (lastSyncedSlugRef.current === slugFromPath) {
+      return;
+    }
+
+    lastSyncedSlugRef.current = slugFromPath;
+    syncInProgressRef.current = true;
+    setOptimisticActiveOrg(organizationFromPath);
+    authClient.organization
+      .setActive({ organizationId: organizationFromPath.id })
+      .then((result) => {
+        if (result.error) {
+          console.error("Failed to sync organization:", result.error);
+          setOptimisticActiveOrg(null);
+          lastSyncedSlugRef.current = null;
+        } else {
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.AUTH.activeOrganization,
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error syncing organization:", error);
+        setOptimisticActiveOrg(null);
+        lastSyncedSlugRef.current = null;
+      })
+      .finally(() => {
+        syncInProgressRef.current = false;
+      });
+  }, [
+    activeOrganization?.slug,
+    isLoadingActive,
+    isLoadingOrgs,
+    organizations,
+    queryClient,
+    slugFromPath,
+  ]);
+
   // Auto-select first organization if no active organization is set
   useEffect(() => {
     if (
@@ -76,6 +152,7 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
       organizationsData &&
       organizationsData.length > 0 &&
       !activeOrganization &&
+      !slugFromPath &&
       !hasAutoSelectedRef.current
     ) {
       const firstOrg = organizationsData[0];
@@ -88,7 +165,7 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
             if (result.error) {
               console.error(
                 "Failed to auto-set active organization:",
-                result.error
+                result.error,
               );
               setOptimisticActiveOrg(null);
               hasAutoSelectedRef.current = false;
@@ -114,6 +191,7 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
     organizationsData,
     activeOrganization,
     queryClient,
+    slugFromPath,
   ]);
 
   const getOrganization = (slug: string) => {
@@ -127,6 +205,14 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
     getOrganization,
   };
 
+  useEffect(() => {
+    if (!contextValue.activeOrganization?.id) {
+      return;
+    }
+
+    refetchCustomer();
+  }, [contextValue.activeOrganization?.id, refetchCustomer]);
+
   return (
     <OrganizationsContext.Provider value={contextValue}>
       {children}
@@ -138,7 +224,7 @@ export function useOrganizationsContext() {
   const context = useContext(OrganizationsContext);
   if (!context) {
     throw new Error(
-      "useOrganizationsContext must be used within OrganizationsProvider"
+      "useOrganizationsContext must be used within OrganizationsProvider",
     );
   }
   return context;
