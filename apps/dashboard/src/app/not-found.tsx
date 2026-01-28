@@ -14,12 +14,8 @@ export default function NotFound() {
           been moved or deleted.
         </p>
         <div className="mt-8 flex items-center justify-center gap-3">
-          <Button asChild>
-            <Link href="/">Go home</Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="javascript:history.back()">Go back</Link>
-          </Button>
+          <Button render={<Link href="/">Go home</Link>} />
+          <Button variant="outline" render={ <Link href="javascript:history.back()">Go back</Link>}/>
         </div>
       </div>
     </div>
