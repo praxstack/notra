@@ -2,6 +2,7 @@
 
 import {
   CreditCardIcon,
+  AnalyticsUpIcon,
   PaintBoardIcon,
   Settings01Icon,
   UserCircleIcon,
@@ -49,6 +50,11 @@ const organizationItems: NavSettingsItem[] = [
     url: "billing",
     icon: CreditCardIcon,
   },
+  {
+    name: "Usage",
+    url: "billing/usage",
+    icon: AnalyticsUpIcon,
+  },
 ];
 
 interface NavSettingsProps {
@@ -72,7 +78,7 @@ export function NavSettings({ slug }: NavSettingsProps) {
                 "border border-transparent transition-colors duration-200 hover:bg-sidebar-accent",
                 isActive(item.url)
                   ? "bg-sidebar-accent text-foreground"
-                  : "hover:text-accent-foreground"
+                  : "hover:text-accent-foreground",
               )}
               key={item.name}
               render={
@@ -96,7 +102,7 @@ export function NavSettings({ slug }: NavSettingsProps) {
                 "border border-transparent transition-colors duration-200 hover:bg-sidebar-accent",
                 isActive(item.url)
                   ? "bg-sidebar-accent text-foreground"
-                  : "hover:text-accent-foreground"
+                  : "hover:text-accent-foreground",
               )}
               key={item.name}
               render={
