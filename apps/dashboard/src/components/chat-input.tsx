@@ -103,7 +103,7 @@ const ChatInput = ({
   const checkResult = useMemo(() => {
     if (!customer) return null;
     return check({
-      featureId: FEATURES.CHAT_MESSAGES,
+      featureId: FEATURES.AI_CREDITS,
       requiredBalance: 1,
     }).data;
   }, [check, customer]);
@@ -199,7 +199,7 @@ const ChatInput = ({
     // Only check billing if customer data is available (Autumn is configured)
     if (customer) {
       const { data: checkResult } = check({
-        featureId: FEATURES.CHAT_MESSAGES,
+        featureId: FEATURES.AI_CREDITS,
         requiredBalance: 1,
       });
 

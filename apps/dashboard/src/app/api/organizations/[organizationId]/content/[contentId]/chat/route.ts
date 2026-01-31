@@ -33,12 +33,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       console.log("[Autumn] Checking feature access:", {
         requestId,
         customerId: organizationId,
-        featureId: FEATURES.CHAT_MESSAGES,
+        featureId: FEATURES.AI_CREDITS,
       });
 
       const { data: checkData, error: checkError } = await autumn.check({
         customer_id: organizationId,
-        feature_id: FEATURES.CHAT_MESSAGES,
+        feature_id: FEATURES.AI_CREDITS,
       });
 
       if (checkError) {
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (autumn) {
       const { error: trackError } = await autumn.track({
         customer_id: organizationId,
-        feature_id: FEATURES.CHAT_MESSAGES,
+        feature_id: FEATURES.AI_CREDITS,
         value: 1,
       });
 
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       if (tracked && autumn) {
         await autumn.track({
           customer_id: organizationId,
-          feature_id: FEATURES.CHAT_MESSAGES,
+          feature_id: FEATURES.AI_CREDITS,
           value: -1,
         });
         console.log("[Autumn] Usage compensated after orchestration failure:", { requestId });
