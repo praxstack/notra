@@ -13,7 +13,7 @@ import { openrouter } from "@/lib/openrouter";
 
 export function createGithubChangelogAgent(organizationId: string) {
   const modelWithMemory = withSupermemory(
-    openrouter("google/gemini-3-flash-preview"),
+    openrouter("moonshotai/kimi-k2.5"),
     organizationId
   );
 
