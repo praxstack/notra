@@ -31,8 +31,8 @@ import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCustomer } from "autumn-js/react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
@@ -126,6 +126,7 @@ function OrgSelectorSkeleton({ isCollapsed }: { isCollapsed: boolean }) {
 
 export function OrgSelector() {
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { isMobile, state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -133,8 +134,10 @@ export function OrgSelector() {
     useOrganizationsContext();
   const { customer } = useCustomer();
 
+  const [isPending, startTransition] = useTransition();
   const [isSwitching, setIsSwitching] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const isNavigating = isSwitching || isPending;
 
   const proProduct = customer?.products.find(
     (p) => (p.id === "pro" || p.id === "pro_yearly") && (p.status === "active" || p.status === "trialing")
@@ -146,6 +149,18 @@ export function OrgSelector() {
       return;
     }
 
+    const currentSlug = activeOrganization?.slug;
+    let targetPath = `/${org.slug}`;
+
+    if (currentSlug && pathname) {
+      const segments = pathname.split("/").filter(Boolean);
+      if (segments[0] === currentSlug && segments.length > 1) {
+        const subPath = "/" + segments.slice(1).join("/");
+        targetPath = `/${org.slug}${subPath}`;
+      }
+    }
+
+    router.prefetch(targetPath);
     setIsSwitching(true);
 
     try {
@@ -155,20 +170,22 @@ export function OrgSelector() {
 
       if (error) {
         toast.error(error.message || "Failed to switch organization");
+        setIsSwitching(false);
         return;
       }
 
       await setLastVisitedOrganization(org.slug);
-
       await queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.AUTH.activeOrganization,
       });
 
-      router.push(`/${org.slug}`);
+      setIsSwitching(false);
+      startTransition(() => {
+        router.replace(targetPath);
+      });
     } catch (error) {
       toast.error("Failed to switch organization");
       console.error(error);
-    } finally {
       setIsSwitching(false);
     }
   }
@@ -184,7 +201,7 @@ export function OrgSelector() {
             <OrgSelectorTrigger
               activeOrganization={activeOrganization}
               isCollapsed={isCollapsed}
-              isSwitching={isSwitching}
+              isSwitching={isNavigating}
               isPro={isPro}
             />
           ) : (
@@ -204,7 +221,7 @@ export function OrgSelector() {
                 {organizations.map((org) => (
                   <DropdownMenuItem
                     className="flex items-center gap-4"
-                    disabled={isSwitching}
+                    disabled={isNavigating}
                     key={org.id}
                     onClick={() => switchOrganization(org)}
                   >
