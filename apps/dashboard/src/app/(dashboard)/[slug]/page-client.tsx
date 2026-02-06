@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { ContentCard } from "@/components/content/content-card";
+import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { useTodayPosts } from "@/lib/hooks/use-posts";
@@ -78,9 +79,11 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 							))}
 						</div>
 					) : (
-						<div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-							No content created today.
-						</div>
+						<EmptyState
+							className="p-6"
+							description="Check back later or start a new post from the content page."
+							title="No content created today"
+						/>
 					)}
 				</section>
 			</div>

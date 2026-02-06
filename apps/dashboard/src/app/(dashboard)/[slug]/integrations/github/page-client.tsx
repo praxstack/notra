@@ -1,6 +1,8 @@
 "use client";
 
+import { Button } from "@notra/ui/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import { EmptyState } from "@/components/empty-state";
 import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
 import { IntegrationCard } from "@/components/integrations/integration-card";
 import { PageContainer } from "@/components/layout/container";
@@ -68,6 +70,11 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 						onSuccess={() => refetch()}
 						organizationId={organization?.id ?? ""}
 						organizationSlug={organizationSlug}
+						trigger={
+							<Button size="sm" variant="default">
+								Add Github Integration
+							</Button>
+						}
 					/>
 				</div>
 
@@ -75,12 +82,22 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 					{isPending ? <GitHubIntegrationsPageSkeleton /> : null}
 
 					{!isPending && (!integrations || integrations.length === 0) ? (
-						<div className="rounded-xl border border-dashed p-12 text-center">
-							<h3 className="font-medium text-lg">No integrations yet</h3>
-							<p className="text-muted-foreground text-sm">
-								Add your first GitHub integration to get started
-							</p>
-						</div>
+						<EmptyState
+							action={
+								<AddIntegrationDialog
+									onSuccess={() => refetch()}
+									organizationId={organization?.id ?? ""}
+									organizationSlug={organizationSlug}
+									trigger={
+										<Button size="sm" variant="outline">
+											Add Github Integration
+										</Button>
+									}
+								/>
+							}
+							description="Add your first GitHub integration to get started."
+							title="No integrations yet"
+						/>
 					) : null}
 
 					{!isPending && integrations && integrations.length > 0 ? (

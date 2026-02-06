@@ -46,6 +46,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2Icon, PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import type { Trigger, TriggerSourceType } from "@/types/triggers";
@@ -351,12 +352,8 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 				{isPending ? (
 					<SchedulePageSkeleton />
 				) : scheduleTriggers.length === 0 ? (
-					<div className="rounded-2xl border border-dashed p-12 text-center">
-						<h3 className="font-semibold text-lg">No schedules yet</h3>
-						<p className="mt-1 text-muted-foreground text-sm">
-							Create your first schedule to automate recurring content.
-						</p>
-						<div className="mt-4">
+					<EmptyState
+						action={
 							<AddTriggerDialog
 								allowedSourceTypes={CRON_SOURCE_TYPES}
 								apiPath={
@@ -376,12 +373,14 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 								trigger={
 									<Button size="sm" variant="outline">
 										<PlusIcon className="size-4" />
-										<span className="ml-1">Add schedule</span>
+										<span className="ml-1">New Schedule</span>
 									</Button>
 								}
 							/>
-						</div>
-					</div>
+						}
+						description="Create your first schedule to automate recurring content."
+						title="No schedules yet"
+					/>
 				) : (
 					<Tabs
 						defaultValue="active"
@@ -457,7 +456,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 						<AlertDialogDescription>
 							This will permanently delete this{" "}
 							{triggerToDelete
-								? formatFrequency(triggerToDelete.sourceConfig.cron).toLowerCase()
+								? formatFrequency(
+										triggerToDelete.sourceConfig.cron,
+									).toLowerCase()
 								: ""}{" "}
 							schedule. This action cannot be undone.
 						</AlertDialogDescription>
@@ -556,7 +557,8 @@ function ScheduleTable({
 				</TableHeader>
 				<TableBody>
 					{triggers.map((trigger) => {
-						const isThisUpdating = isUpdating && updatingTriggerId === trigger.id;
+						const isThisUpdating =
+							isUpdating && updatingTriggerId === trigger.id;
 						const isThisRunning = isRunning && runningTriggerId === trigger.id;
 
 						return (
@@ -611,7 +613,10 @@ function ScheduleTable({
 												disabled={isRunning || !trigger.enabled}
 												onClick={() => onRunNow(trigger.id)}
 											>
-												<HugeiconsIcon className="size-4" icon={PlayCircleIcon} />
+												<HugeiconsIcon
+													className="size-4"
+													icon={PlayCircleIcon}
+												/>
 												Run now
 											</DropdownMenuItem>
 											<DropdownMenuItem

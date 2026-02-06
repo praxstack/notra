@@ -3,6 +3,7 @@
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { useEffect, useMemo, useRef } from "react";
 import { ContentCard } from "@/components/content/content-card";
+import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import type { ContentType, Post } from "@/utils/schemas/content";
@@ -97,13 +98,10 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
 	const allPosts = useMemo(
 		() => data?.pages.flatMap((page) => page.posts) ?? [],
-		[data?.pages]
+		[data?.pages],
 	);
 
-	const groupedPosts = useMemo(
-		() => groupPostsByDate(allPosts),
-		[allPosts]
-	);
+	const groupedPosts = useMemo(() => groupPostsByDate(allPosts), [allPosts]);
 
 	// Cache preview results to avoid recomputing for each render
 	const previewsByPostId = useMemo(() => {
@@ -127,12 +125,11 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 				{isPending && <ContentPageSkeleton />}
 
 				{!isPending && allPosts.length === 0 && (
-					<div className="rounded-lg border border-dashed p-8 text-center">
-						<p className="text-muted-foreground">
-							No content yet. Generate your first piece of content to get
-							started.
-						</p>
-					</div>
+					<EmptyState
+						className="p-8"
+						description="Generate your first piece of content to get started."
+						title="No content yet"
+					/>
 				)}
 
 				{Array.from(groupedPosts.entries()).map(([dateKey, posts]) => (
