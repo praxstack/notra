@@ -61,7 +61,7 @@ export const InviteUserEmail = ({
             </Text>
 
             <Section className="my-8 text-center">
-              <EmailButton href={inviteLink}>Join organization</EmailButton>
+              <EmailButton href={inviteLink}>Join Organization</EmailButton>
             </Section>
 
             <Text className="text-[14px] text-black leading-[24px]">

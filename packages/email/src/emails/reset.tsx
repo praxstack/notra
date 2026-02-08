@@ -53,7 +53,7 @@ export const ResetPasswordEmail = ({
             </Text>
 
             <Section className="my-8 text-center">
-              <EmailButton href={resetLink}>Reset your password</EmailButton>
+              <EmailButton href={resetLink}>Reset Your Password</EmailButton>
             </Section>
 
             <Hr className="mx-0 mt-[26px] w-full border border-[#eaeaea] border-solid" />
