@@ -1,6 +1,5 @@
-import { generateText, Output } from "ai";
+import { gateway, generateText, Output } from "ai";
 import { ROUTING_PROMPT } from "@/lib/ai/prompts/router";
-import { openrouter } from "@/lib/openrouter";
 import { routingDecisionSchema } from "./schemas";
 import type { RoutingDecision, RoutingResult } from "./types";
 
@@ -18,7 +17,7 @@ export async function routeMessage(
     ? "\n\nNote: The user has added GitHub repository context, suggesting they may want to work with GitHub data."
     : "";
 
-  const routerModel = openrouter(MODELS.router);
+  const routerModel = gateway(MODELS.router);
 
   const { output } = await generateText({
     model: routerModel,

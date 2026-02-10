@@ -7,7 +7,6 @@ import { generateText, Output } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getFirecrawlClient } from "@/lib/firecrawl";
-import { openrouter } from "@/lib/openrouter";
 import { redis } from "@/lib/redis";
 import { getBaseUrl } from "@/lib/triggers/qstash";
 import { brandSettingsSchema } from "@/utils/schemas/brand";
@@ -189,7 +188,7 @@ export const { POST } = serve<BrandAnalysisPayload>(
       async () => {
         try {
           const { output } = await generateText({
-            model: openrouter("google/gemini-2.0-flash-001"),
+            model: "moonshotai/kimi-k2.5",
             output: Output.object({ schema: brandSettingsSchema }),
             prompt: `Analyze this website content and extract brand identity information.
 

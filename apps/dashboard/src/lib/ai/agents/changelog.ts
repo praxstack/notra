@@ -12,7 +12,6 @@ import {
   createGetReleaseByTagTool,
 } from "@/lib/ai/tools/github";
 import { getSkillByName, listAvailableSkills } from "@/lib/ai/tools/skills";
-import { openrouter } from "@/lib/openrouter";
 import { getValidToneProfile, type ToneProfile } from "@/utils/schemas/brand";
 
 export const changelogOutputSchema = z.object({
