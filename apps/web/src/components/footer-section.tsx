@@ -5,8 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { buttonVariants } from "@notra/ui/components/ui/button";
-import { NotraMark } from "./notra-mark";
-import { NotraWordmark } from "./notra-wordmark";
+import { NotraMark, NotraWordmark } from "./notra-mark";
 
 export default function FooterSection() {
   const year = new Date().getFullYear();
@@ -24,7 +23,7 @@ export default function FooterSection() {
             </div>
           </div>
           <div className="font-medium font-sans text-foreground/90 text-sm leading-[18px]">
-            Turn your daily work into publish-ready content
+            Turn your daily work into publish-ready content!
           </div>
           <div className="font-normal font-sans text-foreground/60 text-xs leading-5">
             {`© ${year} Notra. All rights reserved.`}

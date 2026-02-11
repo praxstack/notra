@@ -10,7 +10,7 @@ export default function CTASection() {
           <div className="relative h-full w-full">
             {Array.from({ length: 300 }).map((_, i) => (
               <div
-                className="absolute h-4 w-full origin-top-left rotate-[-45deg] outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                className="-rotate-45 absolute h-4 w-full origin-top-left outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
                 key={i}
                 style={{
                   top: `${i * 16 - 120}px`,
@@ -24,8 +24,9 @@ export default function CTASection() {
 
         <div className="relative z-20 flex w-full max-w-[586px] flex-col items-center justify-start gap-6 overflow-hidden rounded-lg px-6 py-5 md:py-8">
           <div className="flex flex-col items-start justify-start gap-3 self-stretch">
-            <div className="flex flex-col justify-center self-stretch text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[56px]">
+            <div className="self-stretch text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[56px]">
               Stop writing content from scratch
+              <span className="text-primary">!</span>
             </div>
             <div className="self-stretch text-center font-medium font-sans text-base text-muted-foreground leading-7">
               Let Notra turn your team's shipped work into changelogs,

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type React from "react";
 
 interface YourWorkInSyncProps {
@@ -288,14 +289,14 @@ const YourWorkInSync: React.FC<YourWorkInSyncProps> = ({
                 flexShrink: 0,
               }}
             >
-              <img
+              <Image
                 alt="Send"
+                height={20}
                 src={imgArrowUp || "/placeholder.svg"}
                 style={{
-                  width: "20px",
-                  height: "20px",
                   filter: "brightness(0) invert(1)",
                 }}
+                width={20}
               />
             </div>
           </div>

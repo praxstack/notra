@@ -29,8 +29,8 @@ export default function PricingSection() {
   return (
     <div className="flex w-full flex-col items-center justify-center gap-2">
       <div className="flex items-center justify-center gap-6 self-stretch border-primary/12 border-b px-6 py-12 md:px-24 md:py-16">
-        <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4 overflow-hidden rounded-lg px-6 py-5 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] shadow-none">
-          <div className="flex flex-col justify-center self-stretch text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[60px]">
+        <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4 overflow-hidden rounded-lg px-6 py-5 shadow-[0px_2px_4px_rgba(50,45,43,0.06)]">
+          <div className="self-stretch text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[60px]">
             Pick the plan that fits your team
             <span className="text-primary">.</span>
           </div>
@@ -104,7 +104,7 @@ export default function PricingSection() {
             <div className="absolute top-[-120px] left-[-58px] flex w-[162px] flex-col items-start justify-start">
               {Array.from({ length: 200 }).map((_, i) => (
                 <div
-                  className="h-4 origin-top-left rotate-[-45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
                   key={i}
                 />
               ))}
@@ -112,7 +112,7 @@ export default function PricingSection() {
           </div>
 
           <div className="flex flex-1 flex-col items-center justify-center gap-6 py-12 md:flex-row md:py-0">
-            <Card className="flex max-w-full flex-1 flex-col items-start justify-start gap-12 self-stretch overflow-hidden rounded-none border border-border border-primary/12 bg-[rgba(255,255,255,0)] px-6 py-5 ring-0 md:max-w-none">
+            <Card className="flex max-w-full flex-1 flex-col items-start justify-start gap-12 self-stretch overflow-hidden rounded-none border border-border bg-[rgba(255,255,255,0)] px-6 py-5 ring-0 md:max-w-none">
               <div className="flex flex-col items-center justify-start gap-9 self-stretch">
                 <div className="flex flex-col items-start justify-start gap-2 self-stretch">
                   <div className="font-medium font-sans text-lg text-primary/90 leading-7">
@@ -357,7 +357,7 @@ export default function PricingSection() {
             <div className="absolute top-[-120px] left-[-58px] flex w-[162px] flex-col items-start justify-start">
               {Array.from({ length: 200 }).map((_, i) => (
                 <div
-                  className="h-4 origin-top-left rotate-[-45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
                   key={i}
                 />
               ))}

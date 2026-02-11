@@ -80,7 +80,7 @@ export default function FAQSection() {
                   onOpenChange={() => toggleItem(index)}
                   open={isOpen}
                 >
-                  <CollapsibleTrigger className="flex w-full items-center justify-between gap-5 px-5 py-[18px] text-left transition-colors duration-200 hover:bg-foreground/[0.02]">
+                  <CollapsibleTrigger className="flex w-full items-center justify-between gap-5 px-5 py-[18px] text-left transition-colors duration-200 hover:bg-foreground/2">
                     <div className="flex-1 font-medium font-sans text-base text-foreground leading-6">
                       {item.question}
                     </div>
@@ -94,7 +94,7 @@ export default function FAQSection() {
                     </div>
                   </CollapsibleTrigger>
 
-                  <CollapsibleContent className="overflow-hidden transition-all duration-300 ease-in-out data-[ending-style]:max-h-0 data-[starting-style]:max-h-0 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 [[data-open]>&]:max-h-96 [[data-open]>&]:opacity-100">
+                  <CollapsibleContent className="overflow-hidden transition-all duration-300 ease-in-out data-ending-style:max-h-0 data-starting-style:max-h-0 data-ending-style:opacity-0 data-starting-style:opacity-0 [[data-open]>&]:max-h-96 [[data-open]>&]:opacity-100">
                     <div className="px-5 pb-[18px] font-normal font-sans text-muted-foreground text-sm leading-6">
                       {item.answer}
                     </div>

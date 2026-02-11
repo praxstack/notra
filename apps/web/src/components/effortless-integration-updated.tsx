@@ -14,7 +14,7 @@ interface EffortlessIntegrationProps {
   className?: string;
 }
 
-type IntegrationOrbit = {
+interface IntegrationOrbit {
   name: string;
   radius: number;
   angle: number;
@@ -23,7 +23,7 @@ type IntegrationOrbit = {
   background: string;
   iconClassName: string;
   Icon: (props: SVGProps<SVGSVGElement>) => React.JSX.Element;
-};
+}
 
 const centerX = 250;
 const centerY = 179;

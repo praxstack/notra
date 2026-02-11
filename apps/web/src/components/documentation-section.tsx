@@ -24,7 +24,7 @@ export default function DocumentationSection() {
   return (
     <div className="flex w-full flex-col items-center justify-center shadow-[inset_0_-1px_0_var(--border)]">
       <div className="flex items-center justify-center gap-6 self-stretch px-6 py-12 shadow-[inset_0_-1px_0_var(--border)] md:px-24 md:py-16">
-        <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4 overflow-hidden rounded-lg px-6 py-5 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] shadow-none">
+        <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4 overflow-hidden rounded-lg px-6 py-5 shadow-[0px_2px_4px_rgba(50,45,43,0.06)]">
           <div className="self-stretch text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[60px]">
             From shipped code to published content
             <Link href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
@@ -142,7 +142,7 @@ export default function DocumentationSection() {
             </button>
           </div>
 
-          <div className="order-1 flex w-full flex-col items-center justify-center gap-2 rounded-lg px-[00] md:order-2 md:w-auto md:px-0">
+          <div className="order-1 flex w-full flex-col items-center justify-center gap-2 rounded-lg px-0 md:order-2 md:w-auto md:px-0">
             <div className="flex h-[250px] w-full flex-col items-start justify-start overflow-hidden rounded-lg bg-card shadow-[0px_0px_0px_0.9056603908538818px_rgba(0,0,0,0.08)] md:h-[420px] md:w-[580px]">
               {activeCard === 0 ? (
                 <div className="relative h-full w-full bg-card">
@@ -205,14 +205,14 @@ export default function DocumentationSection() {
                       </p>
                     </article>
                   </div>
-                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-gradient-to-t from-background via-background/95 to-transparent" />
+                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-background via-background/95 to-transparent" />
                 </div>
               ) : (
                 <div
                   className={`h-full w-full transition-all duration-300 ${
                     activeCard === 1
-                      ? "bg-gradient-to-br from-purple-50 to-purple-100"
-                      : "bg-gradient-to-br from-green-50 to-green-100"
+                      ? "bg-linear-to-br from-purple-50 to-purple-100"
+                      : "bg-linear-to-br from-green-50 to-green-100"
                   }`}
                 />
               )}

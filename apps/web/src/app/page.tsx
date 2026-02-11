@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@notra/ui/components/ui/button";
 import Image from "next/image";
+import Link from "next/link";
 import { ActivityFeed } from "../components/activity-feed";
 import CTASection from "../components/cta-section";
 import DocumentationSection from "../components/documentation-section";
@@ -28,7 +28,10 @@ export default function LandingPage() {
             <div className="absolute top-0 left-0 z-20 flex h-12 w-full items-center justify-center px-6 sm:h-14 sm:px-8 md:h-16 md:px-12 lg:h-[84px] lg:px-0">
               <div className="relative z-30 flex h-10 w-full max-w-[calc(100%-32px)] items-center justify-between overflow-hidden rounded-lg bg-background px-3 py-1.5 pr-2 shadow-[0px_0px_0px_2px_white] backdrop-blur-sm sm:h-11 sm:max-w-[calc(100%-48px)] sm:px-4 sm:py-2 sm:pr-3 md:h-12 md:max-w-[calc(100%-64px)] md:px-4 lg:w-[960px] lg:max-w-[960px]">
                 <div className="flex items-center justify-center">
-                  <div className="flex items-center justify-start gap-2">
+                  <Link
+                    className="flex items-center justify-start gap-2"
+                    href="/"
+                  >
                     <div className="flex items-center justify-center text-[#8E51FF]">
                       <NotraMark
                         className="h-7 w-7 shrink-0"
@@ -38,34 +41,35 @@ export default function LandingPage() {
                     <div className="flex flex-col justify-center font-medium font-sans text-foreground text-sm leading-5 sm:text-base md:text-lg lg:text-xl">
                       Notra
                     </div>
-                  </div>
+                  </Link>
                   <div className="flex flex-row items-start justify-start gap-2 pl-3 sm:flex sm:gap-3 sm:pl-4 md:gap-4 md:pl-5 lg:gap-4 lg:pl-5">
-                    <div className="flex items-center justify-start">
-                      <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] md:text-[13px]">
-                        Products
+                    <Link
+                      className="flex items-center justify-start"
+                      href="#features"
+                    >
+                      <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] transition-colors hover:text-foreground md:text-[13px]">
+                        Features
                       </div>
-                    </div>
-                    <div className="flex items-center justify-start">
-                      <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] md:text-[13px]">
+                    </Link>
+                    <Link
+                      className="flex items-center justify-start"
+                      href="#pricing"
+                    >
+                      <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] transition-colors hover:text-foreground md:text-[13px]">
                         Pricing
                       </div>
-                    </div>
-                    <div className="flex items-center justify-start">
-                      <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] md:text-[13px]">
-                        Docs
-                      </div>
-                    </div>
+                    </Link>
                   </div>
                 </div>
                 <div className="flex h-6 items-start justify-start gap-2 sm:h-7 sm:gap-3 md:h-8">
-                  <Button
-                    className="overflow-hidden border-transparent bg-white px-2 py-1 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-muted sm:px-3 sm:py-[6px] md:px-[14px]"
-                    variant="ghost"
+                  <Link
+                    className="inline-flex items-center justify-center overflow-hidden border border-transparent bg-white px-2 py-1 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-muted sm:px-3 sm:py-[6px] md:px-[14px]"
+                    href="https://app.usenotra.com"
                   >
                     <span className="flex flex-col justify-center font-medium font-sans text-primary text-xs leading-5 md:text-[13px]">
                       Log in
                     </span>
-                  </Button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -78,7 +82,7 @@ export default function LandingPage() {
                     <br />
                     into publish-ready content
                   </div>
-                  <div className="flex w-full max-w-[506.08px] flex-col justify-center px-2 text-center font-medium font-sans text-foreground/80 text-sm leading-[1.4] sm:px-4 sm:text-lg sm:leading-[1.45] md:px-0 md:text-xl md:leading-[1.5] lg:w-[506.08px] lg:text-lg lg:leading-7">
+                  <div className="flex w-full max-w-[506.08px] flex-col justify-center px-2 text-center font-medium font-sans text-foreground/80 text-sm leading-[1.4] sm:px-4 sm:text-lg sm:leading-[1.45] md:px-0 md:text-xl md:leading-normal lg:w-[506.08px] lg:text-lg lg:leading-7">
                     Now in public beta. Notra connects to GitHub, Linear,
                     <br className="hidden sm:block" />
                     and Slack to turn shipped work into ready-to-publish
@@ -89,11 +93,14 @@ export default function LandingPage() {
 
               <div className="relative z-10 mt-6 flex w-full max-w-[497px] flex-col items-center justify-center gap-6 sm:mt-8 sm:gap-8 md:mt-10 md:gap-10 lg:mt-12 lg:w-[497px] lg:gap-12">
                 <div className="flex items-center justify-start gap-4 backdrop-blur-[8.25px]">
-                  <Button className="h-10 overflow-hidden border-transparent bg-primary px-6 py-2 shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] hover:bg-primary-hover sm:h-11 sm:px-8 sm:py-[6px] md:h-12 md:px-10 lg:px-12">
+                  <Link
+                    className="inline-flex h-10 items-center justify-center overflow-hidden border border-transparent bg-primary px-6 py-2 shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] hover:bg-primary-hover sm:h-11 sm:px-8 sm:py-[6px] md:h-12 md:px-10 lg:px-12"
+                    href="https://app.usenotra.com"
+                  >
                     <span className="flex flex-col justify-center font-medium font-sans text-primary-foreground text-sm leading-5 sm:text-base md:text-[15px]">
                       Start for free
                     </span>
-                  </Button>
+                  </Link>
                 </div>
               </div>
 
@@ -102,7 +109,7 @@ export default function LandingPage() {
                   <div className="absolute top-[-120px] left-[-40px] flex w-[120px] flex-col items-start justify-start sm:left-[-50px] sm:w-[140px] md:left-[-58px] md:w-[162px]">
                     {Array.from({ length: 50 }).map((_, i) => (
                       <div
-                        className="h-3 origin-top-right rotate-[45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                        className="h-3 origin-top-right rotate-45 self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
                         key={i}
                       />
                     ))}
@@ -126,7 +133,7 @@ export default function LandingPage() {
                   <div className="absolute top-[-120px] right-[-40px] flex w-[120px] flex-col items-start justify-start sm:right-[-50px] sm:w-[140px] md:right-[-58px] md:w-[162px]">
                     {Array.from({ length: 50 }).map((_, i) => (
                       <div
-                        className="h-3 origin-top-right rotate-[45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                        className="h-3 origin-top-right rotate-45 self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
                         key={i}
                       />
                     ))}
@@ -134,9 +141,12 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex w-full flex-col items-center justify-center border-border border-b">
+              <section
+                className="flex w-full flex-col items-center justify-center border-border border-b"
+                id="social-proof"
+              >
                 <div className="flex items-center justify-center gap-6 self-stretch border-border border-b px-4 py-8 sm:px-6 sm:py-12 md:px-24 md:py-16">
-                  <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-3 overflow-hidden rounded-lg px-4 py-4 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] shadow-none sm:gap-4 sm:px-6 sm:py-5">
+                  <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-3 overflow-hidden rounded-lg px-4 py-4 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] sm:gap-4 sm:px-6 sm:py-5">
                     <div className="w-full max-w-[472.55px] text-center font-sans font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-2xl md:text-3xl md:leading-[60px] lg:text-5xl">
                       Teams that ship faster, write less
                       <span className="text-primary">.</span>
@@ -154,7 +164,7 @@ export default function LandingPage() {
                     <div className="absolute top-[-120px] left-[-40px] flex w-[120px] flex-col items-start justify-start sm:left-[-50px] sm:w-[140px] md:left-[-58px] md:w-[162px]">
                       {Array.from({ length: 50 }).map((_, i) => (
                         <div
-                          className="h-3 origin-top-left rotate-[-45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                          className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
                           key={i}
                         />
                       ))}
@@ -207,18 +217,21 @@ export default function LandingPage() {
                     <div className="absolute top-[-120px] left-[-40px] flex w-[120px] flex-col items-start justify-start sm:left-[-50px] sm:w-[140px] md:left-[-58px] md:w-[162px]">
                       {Array.from({ length: 50 }).map((_, i) => (
                         <div
-                          className="h-3 origin-top-left rotate-[-45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                          className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
                           key={i}
                         />
                       ))}
                     </div>
                   </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="flex w-full flex-col items-center justify-center border-border border-b">
+              <section
+                className="flex w-full flex-col items-center justify-center border-border border-b"
+                id="features"
+              >
                 <div className="flex items-center justify-center gap-6 self-stretch border-border border-b px-4 py-8 sm:px-6 sm:py-12 md:px-8 md:py-16 lg:w-[1060px] lg:max-w-[1060px] lg:px-0">
-                  <div className="flex w-full max-w-[616px] flex-col items-center justify-start gap-3 overflow-hidden rounded-lg px-4 py-4 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] shadow-none sm:gap-4 sm:px-6 sm:py-5 lg:w-[616px]">
+                  <div className="flex w-full max-w-[616px] flex-col items-center justify-start gap-3 overflow-hidden rounded-lg px-4 py-4 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] sm:gap-4 sm:px-6 sm:py-5 lg:w-[616px]">
                     <div className="w-full max-w-[598.06px] text-center font-sans font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-2xl md:text-3xl md:leading-[60px] lg:w-[598.06px] lg:text-5xl">
                       Your team ships<span className="text-primary">.</span>{" "}
                       Notra writes it up
@@ -237,7 +250,7 @@ export default function LandingPage() {
                     <div className="absolute top-[-120px] left-[-40px] flex w-[120px] flex-col items-start justify-start sm:left-[-50px] sm:w-[140px] md:left-[-58px] md:w-[162px]">
                       {Array.from({ length: 200 }).map((_, i) => (
                         <div
-                          className="h-3 origin-top-left rotate-[-45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                          className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
                           key={i}
                         />
                       ))}
@@ -257,7 +270,7 @@ export default function LandingPage() {
                       </div>
                       <div className="relative flex w-full items-end justify-center overflow-hidden rounded-lg pt-4">
                         <ActivityFeed />
-                        <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-background to-transparent" />
+                        <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-linear-to-t from-background to-transparent" />
                       </div>
                     </div>
 
@@ -299,7 +312,7 @@ export default function LandingPage() {
                             width={400}
                           />
                         </div>
-                        <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-background to-transparent" />
+                        <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-linear-to-t from-background to-transparent" />
                       </div>
                     </div>
 
@@ -322,8 +335,8 @@ export default function LandingPage() {
                             width="100%"
                           />
                         </div>
-                        <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-t from-background to-transparent" />
-                        <div className="absolute inset-0 flex hidden items-center justify-center opacity-20">
+                        <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-linear-to-t from-background to-transparent" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-20">
                           <div className="flex flex-col items-center gap-2 p-4">
                             <div className="h-full w-3/4 rounded-full bg-green-500" />
                           </div>
@@ -339,26 +352,38 @@ export default function LandingPage() {
                     <div className="absolute top-[-120px] left-[-40px] flex w-[120px] flex-col items-start justify-start sm:left-[-50px] sm:w-[140px] md:left-[-58px] md:w-[162px]">
                       {Array.from({ length: 200 }).map((_, i) => (
                         <div
-                          className="h-3 origin-top-left rotate-[-45deg] self-stretch outline outline-[0.5px] outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                          className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
                           key={i}
                         />
                       ))}
                     </div>
                   </div>
                 </div>
-              </div>
+              </section>
 
-              <DocumentationSection />
+              <section className="w-full" id="documentation">
+                <DocumentationSection />
+              </section>
 
-              <TestimonialsSection />
+              <section className="w-full" id="testimonials">
+                <TestimonialsSection />
+              </section>
 
-              <PricingSection />
+              <section className="w-full" id="pricing">
+                <PricingSection />
+              </section>
 
-              <FAQSection />
+              <section className="w-full" id="faq">
+                <FAQSection />
+              </section>
 
-              <CTASection />
+              <section className="w-full" id="cta">
+                <CTASection />
+              </section>
 
-              <FooterSection />
+              <section className="w-full" id="footer">
+                <FooterSection />
+              </section>
             </div>
           </div>
         </div>
