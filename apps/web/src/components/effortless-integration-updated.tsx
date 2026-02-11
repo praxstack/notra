@@ -1,4 +1,12 @@
+import { Framer } from "@notra/ui/components/ui/svgs/framer";
+import { Github } from "@notra/ui/components/ui/svgs/github";
+import { Linear } from "@notra/ui/components/ui/svgs/linear";
+import { Marble } from "@notra/ui/components/ui/svgs/marble";
+import { Slack } from "@notra/ui/components/ui/svgs/slack";
+import { Webflow } from "@notra/ui/components/ui/svgs/webflow";
 import type React from "react";
+import type { SVGProps } from "react";
+import { NotraMark } from "./notra-mark";
 
 interface EffortlessIntegrationProps {
   width?: number | string;
@@ -6,24 +14,85 @@ interface EffortlessIntegrationProps {
   className?: string;
 }
 
+type IntegrationOrbit = {
+  name: string;
+  radius: number;
+  angle: number;
+  duration: number;
+  direction?: "normal" | "reverse";
+  background: string;
+  iconClassName: string;
+  Icon: (props: SVGProps<SVGSVGElement>) => React.JSX.Element;
+};
+
+const centerX = 250;
+const centerY = 179;
+
+const integrations: IntegrationOrbit[] = [
+  {
+    name: "GitHub",
+    radius: 80,
+    angle: Math.PI,
+    duration: 18,
+    background: "#ffffff",
+    iconClassName: "h-[18px] w-[18px]",
+    Icon: Github,
+  },
+  {
+    name: "Linear",
+    radius: 80,
+    angle: 0,
+    duration: 18,
+    background: "#ffffff",
+    iconClassName: "h-[18px] w-[18px]",
+    Icon: Linear,
+  },
+  {
+    name: "Slack",
+    radius: 120,
+    angle: -Math.PI / 4,
+    duration: 24,
+    direction: "reverse",
+    background: "#ffffff",
+    iconClassName: "h-[18px] w-[18px]",
+    Icon: Slack,
+  },
+  {
+    name: "Marble",
+    radius: 120,
+    angle: (3 * Math.PI) / 4,
+    duration: 24,
+    direction: "reverse",
+    background: "#ffffff",
+    iconClassName: "h-[16px] w-[16px] rounded-[4px]",
+    Icon: Marble,
+  },
+  {
+    name: "Webflow",
+    radius: 160,
+    angle: Math.PI,
+    duration: 30,
+    background: "#ffffff",
+    iconClassName: "h-[16px] w-[16px]",
+    Icon: Webflow,
+  },
+  {
+    name: "Framer",
+    radius: 160,
+    angle: 0,
+    duration: 30,
+    direction: "reverse",
+    background: "#ffffff",
+    iconClassName: "h-[16px] w-[16px]",
+    Icon: Framer,
+  },
+];
+
 const EffortlessIntegration: React.FC<EffortlessIntegrationProps> = ({
   width = 482,
   height = 300,
   className = "",
 }) => {
-  const centerX = 250;
-  const centerY = 179;
-  const rings = [
-    { radius: 80, logos: 2 },
-    { radius: 120, logos: 3 },
-    { radius: 160, logos: 2 },
-  ];
-
-  const getPositionOnRing = (ringRadius: number, angle: number) => ({
-    x: centerX + ringRadius * Math.cos(angle),
-    y: centerY + ringRadius * Math.sin(angle),
-  });
-
   return (
     <div
       className={className}
@@ -41,10 +110,7 @@ const EffortlessIntegration: React.FC<EffortlessIntegrationProps> = ({
       <div
         style={{
           position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          inset: 0,
           background:
             "linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, transparent 20%, transparent 80%, rgba(255,255,255,0.1) 100%)",
           pointerEvents: "none",
@@ -102,6 +168,77 @@ const EffortlessIntegration: React.FC<EffortlessIntegrationProps> = ({
           position: "absolute",
         }}
       >
+        {integrations.map((integration) => {
+          const baseAngle = (integration.angle * 180) / Math.PI;
+          const orbitDelay =
+            -((integration.angle + Math.PI) / (2 * Math.PI)) *
+            integration.duration;
+
+          return (
+            <div
+              key={integration.name}
+              style={{
+                position: "absolute",
+                left: `${centerX}px`,
+                top: `${centerY}px`,
+                width: `${integration.radius * 2}px`,
+                height: `${integration.radius * 2}px`,
+                transform: "translate(-50%, -50%)",
+                transformOrigin: "50% 50%",
+                animationName: "orbitSpin",
+                animationDuration: `${integration.duration}s`,
+                animationTimingFunction: "linear",
+                animationIterationCount: "infinite",
+                animationDirection: integration.direction ?? "normal",
+                animationDelay: `${orbitDelay}s`,
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  transform: `rotate(${baseAngle}deg)`,
+                }}
+              >
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    position: "absolute",
+                    right: "-16px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: integration.background,
+                    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      animationName: "iconSpin",
+                      animationDuration: `${integration.duration}s`,
+                      animationTimingFunction: "linear",
+                      animationIterationCount: "infinite",
+                      animationDirection:
+                        integration.direction === "reverse"
+                          ? "normal"
+                          : "reverse",
+                    }}
+                  >
+                    <integration.Icon className={integration.iconClassName} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
         <div
           style={{
             width: "72px",
@@ -115,284 +252,33 @@ const EffortlessIntegration: React.FC<EffortlessIntegrationProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: "'Inter', sans-serif",
-            fontWeight: 700,
-            fontSize: "32px",
-            color: "#ffffff",
+            color: "#8E51FF",
+            zIndex: 2,
           }}
         >
-          b
+          <NotraMark className="h-8 w-8 shrink-0" strokeWidth={42} />
         </div>
-
-        <div
-          style={{
-            width: "32px",
-            height: "32px",
-            left: `${getPositionOnRing(80, Math.PI).x - 16}px`,
-            top: `${getPositionOnRing(80, Math.PI).y - 16}px`,
-            position: "absolute",
-            background: "#000000",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            alt="GitHub"
-            src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/github.svg"
-            style={{
-              width: "18px",
-              height: "18px",
-              filter: "brightness(0) invert(1)",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            width: "32px",
-            height: "32px",
-            left: `${getPositionOnRing(80, 0).x - 16}px`,
-            top: `${getPositionOnRing(80, 0).y - 16}px`,
-            position: "absolute",
-            background: "#ffffff",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            alt="Slack"
-            src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/slack.svg"
-            style={{
-              width: "18px",
-              height: "18px",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            width: "32px",
-            height: "32px",
-            left: `${getPositionOnRing(120, -Math.PI / 4).x - 16}px`,
-            top: `${getPositionOnRing(120, -Math.PI / 4).y - 16}px`,
-            position: "absolute",
-            background: "#EEEFE8",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            alt="Figma"
-            src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/figma.svg"
-            style={{
-              width: "16px",
-              height: "16px",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            width: "32px",
-            height: "32px",
-            left: `${getPositionOnRing(120, (3 * Math.PI) / 4).x - 16}px`,
-            top: `${getPositionOnRing(120, (3 * Math.PI) / 4).y - 16}px`,
-            position: "absolute",
-            background: "#5865F2",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            alt="Discord"
-            src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/discord.svg"
-            style={{
-              width: "18px",
-              height: "18px",
-              filter: "brightness(0) invert(1)",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            width: "32px",
-            height: "32px",
-            left: `${getPositionOnRing(120, (5 * Math.PI) / 4).x - 16}px`,
-            top: `${getPositionOnRing(120, (5 * Math.PI) / 4).y - 16}px`,
-            position: "absolute",
-            background: "#ffffff",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            alt="Notion"
-            src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/notion.svg"
-            style={{
-              width: "18px",
-              height: "18px",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            width: "32px",
-            height: "32px",
-            left: `${getPositionOnRing(160, Math.PI).x - 16}px`,
-            top: `${getPositionOnRing(160, Math.PI).y - 16}px`,
-            position: "absolute",
-            background: "#635BFF",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            alt="Stripe"
-            src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/stripe.svg"
-            style={{
-              width: "18px",
-              height: "18px",
-              filter: "brightness(0) invert(1)",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            width: "32px",
-            height: "32px",
-            left: `${getPositionOnRing(160, 0).x - 16}px`,
-            top: `${getPositionOnRing(160, 0).y - 16}px`,
-            position: "absolute",
-            background: "#000000",
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <img
-            alt="Framer"
-            src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/framer.svg"
-            style={{
-              width: "16px",
-              height: "16px",
-              filter: "brightness(0) invert(1)",
-            }}
-          />
-        </div>
-
-        <svg
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            pointerEvents: "none",
-          }}
-        >
-          <defs>
-            <linearGradient
-              id="connectionGradient"
-              x1="0%"
-              x2="100%"
-              y1="0%"
-              y2="100%"
-            >
-              <stop offset="0%" stopColor="rgba(55, 50, 47, 0.1)" />
-              <stop offset="50%" stopColor="rgba(55, 50, 47, 0.05)" />
-              <stop offset="100%" stopColor="rgba(55, 50, 47, 0.1)" />
-            </linearGradient>
-          </defs>
-
-          <line
-            opacity="0.2"
-            stroke="url(#connectionGradient)"
-            strokeWidth="1"
-            x1={centerX}
-            x2={getPositionOnRing(80, 0).x}
-            y1={centerY}
-            y2={getPositionOnRing(80, 0).y}
-          />
-          <line
-            opacity="0.2"
-            stroke="url(#connectionGradient)"
-            strokeWidth="1"
-            x1={centerX}
-            x2={getPositionOnRing(80, Math.PI).x}
-            y1={centerY}
-            y2={getPositionOnRing(80, Math.PI).y}
-          />
-
-          <line
-            opacity="0.15"
-            stroke="url(#connectionGradient)"
-            strokeWidth="1"
-            x1={centerX}
-            x2={getPositionOnRing(120, -Math.PI / 4).x}
-            y1={centerY}
-            y2={getPositionOnRing(120, -Math.PI / 4).y}
-          />
-          <line
-            opacity="0.15"
-            stroke="url(#connectionGradient)"
-            strokeWidth="1"
-            x1={centerX}
-            x2={getPositionOnRing(120, (3 * Math.PI) / 4).x}
-            y1={centerY}
-            y2={getPositionOnRing(120, (3 * Math.PI) / 4).y}
-          />
-          <line
-            opacity="0.15"
-            stroke="url(#connectionGradient)"
-            strokeWidth="1"
-            x1={centerX}
-            x2={getPositionOnRing(120, (5 * Math.PI) / 4).x}
-            y1={centerY}
-            y2={getPositionOnRing(120, (5 * Math.PI) / 4).y}
-          />
-
-          <line
-            opacity="0.1"
-            stroke="url(#connectionGradient)"
-            strokeWidth="1"
-            x1={centerX}
-            x2={getPositionOnRing(160, 0).x}
-            y1={centerY}
-            y2={getPositionOnRing(160, 0).y}
-          />
-          <line
-            opacity="0.1"
-            stroke="url(#connectionGradient)"
-            strokeWidth="1"
-            x1={centerX}
-            x2={getPositionOnRing(160, Math.PI).x}
-            y1={centerY}
-            y2={getPositionOnRing(160, Math.PI).y}
-          />
-        </svg>
       </div>
+
+      <style jsx>{`
+        @keyframes orbitSpin {
+          from {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+          to {
+            transform: translate(-50%, -50%) rotate(360deg);
+          }
+        }
+
+        @keyframes iconSpin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 };

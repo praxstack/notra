@@ -1,6 +1,6 @@
 import type * as React from "react";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@notra/ui/lib/utils";
 
 interface TitleCardProps extends Omit<React.ComponentProps<"div">, "title"> {
   heading: React.ReactNode;
@@ -71,3 +71,4 @@ function TitleCard({
 }
 
 export { TitleCard };
+export type { TitleCardProps };

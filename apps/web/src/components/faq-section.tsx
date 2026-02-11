@@ -18,42 +18,40 @@ const faqData: FAQItem[] = [
   {
     question: "What is Notra and who is it for?",
     answer:
-      "Notra is a comprehensive billing automation platform designed for businesses that need custom contract management. It's perfect for SaaS companies, service providers, and enterprises looking to streamline their billing processes.",
+      "Notra is a content automation tool for product and engineering teams. It connects to GitHub, Linear, and Slack, tracks your team's daily work, and generates drafts for changelogs, blog posts, and social media updates.",
   },
   {
-    question: "How does the custom contract billing work?",
+    question: "What kind of content does Notra generate?",
     answer:
-      "Our platform automatically processes your custom contracts, calculates billing amounts based on your specific terms, and generates invoices. You can set up complex pricing structures, usage-based billing, and custom billing cycles.",
+      "Notra creates changelog entries from merged PRs, blog post drafts from shipped features, and social media updates from milestones and team activity. Every draft is written to match your brand voice.",
   },
   {
-    question: "Can I integrate Notra with my existing tools?",
+    question: "Which tools does Notra integrate with?",
     answer:
-      "Yes! Notra integrates seamlessly with popular CRM systems, accounting software, and payment processors. We support APIs and webhooks for custom integrations with your existing workflow.",
+      "Notra connects to GitHub, Linear, and Slack out of the box. We are adding more integrations regularly. You can also use our API and webhooks to connect custom sources.",
   },
   {
-    question: "What kind of support do you provide?",
+    question: "How does brand voice matching work?",
     answer:
-      "We offer 24/7 customer support, dedicated account managers for enterprise clients, comprehensive documentation, and onboarding assistance to help you get started quickly.",
+      "When you set up Notra, you provide examples of your existing content. Notra uses those samples to learn your tone, vocabulary, and style so that every draft reads like your team wrote it.",
   },
   {
     question: "Is my data secure with Notra?",
     answer:
-      "Absolutely. We use enterprise-grade security measures including end-to-end encryption, SOC 2 compliance, and regular security audits. Your data is stored in secure, redundant data centers.",
+      "Yes. We encrypt sensitive data, including integration tokens, at rest. Your source code is never stored, and Notra only reads the metadata needed to generate drafts, like PR titles, issue descriptions, and message summaries.",
   },
   {
-    question: "How do I get started with Notra?",
+    question: "How do I get started?",
     answer:
-      "Getting started is simple! Sign up for our free trial, connect your existing systems, and our onboarding team will help you set up your first custom billing workflow within 24 hours.",
+      "Sign up for free, connect one of your tools, and Notra will start generating content within minutes. No credit card required.",
   },
 ];
 
 export default function FAQSection() {
-  const [openItems, setOpenItems] = useState<number[]>([]);
+  const [openItem, setOpenItem] = useState<number | null>(null);
 
   const toggleItem = (index: number) => {
-    setOpenItems((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
+    setOpenItem((prev) => (prev === index ? null : index));
   };
 
   return (
@@ -64,16 +62,16 @@ export default function FAQSection() {
             Frequently Asked Questions
           </div>
           <div className="w-full font-normal font-sans text-base text-muted-foreground leading-7">
-            Explore your data, build your dashboard,
+            Common questions about how Notra
             <br className="hidden md:block" />
-            bring your team together.
+            turns your team's work into content.
           </div>
         </div>
 
         <div className="flex w-full flex-col items-center justify-center lg:flex-1">
           <div className="flex w-full flex-col">
             {faqData.map((item, index) => {
-              const isOpen = openItems.includes(index);
+              const isOpen = openItem === index;
 
               return (
                 <Collapsible

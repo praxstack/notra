@@ -4,50 +4,60 @@ import {
   NewTwitterIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@notra/ui/components/ui/button";
+import { buttonVariants } from "@notra/ui/components/ui/button";
+import { NotraMark } from "./notra-mark";
+import { NotraWordmark } from "./notra-wordmark";
 
 export default function FooterSection() {
+  const year = new Date().getFullYear();
+
   return (
     <div className="flex w-full flex-col items-start justify-start pt-10">
       <div className="flex h-auto flex-col items-stretch justify-between self-stretch pt-0 pr-0 pb-8 md:flex-row">
         <div className="flex h-auto flex-col items-start justify-start gap-8 p-4 md:p-8">
           <div className="flex items-center justify-start gap-3 self-stretch">
+            <div className="text-[#8E51FF]">
+              <NotraMark className="h-6 w-6 shrink-0" strokeWidth={40} />
+            </div>
             <div className="text-center font-sans font-semibold text-foreground text-xl leading-4">
               Notra
             </div>
           </div>
           <div className="font-medium font-sans text-foreground/90 text-sm leading-[18px]">
-            Coding made effortless
+            Turn your daily work into publish-ready content
+          </div>
+          <div className="font-normal font-sans text-foreground/60 text-xs leading-5">
+            {`© ${year} Notra. All rights reserved.`}
           </div>
 
           <div className="flex items-start justify-start gap-2 text-foreground">
-            <Button asChild size="icon" variant="ghost">
-              <a
-                href="https://x.com/usenotra"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <HugeiconsIcon className="size-5" icon={NewTwitterIcon} />
-              </a>
-            </Button>
-            <Button asChild size="icon" variant="ghost">
-              <a
-                href="https://www.linkedin.com/company/usenotra"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <HugeiconsIcon className="size-5" icon={Linkedin01Icon} />
-              </a>
-            </Button>
-            <Button asChild size="icon" variant="ghost">
-              <a
-                href="https://github.com/usenotra/notra"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                <HugeiconsIcon className="size-5" icon={Github01Icon} />
-              </a>
-            </Button>
+            <a
+              aria-label="Visit Notra on X"
+              className={buttonVariants({ size: "icon", variant: "ghost" })}
+              href="https://x.com/usenotra"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <HugeiconsIcon className="size-5" icon={NewTwitterIcon} />
+            </a>
+            <a
+              aria-label="Visit Notra on LinkedIn"
+              className={buttonVariants({ size: "icon", variant: "ghost" })}
+              href="https://www.linkedin.com/company/usenotra"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <HugeiconsIcon className="size-5" icon={Linkedin01Icon} />
+            </a>
+            <a
+              aria-label="Visit Notra on GitHub"
+              className={buttonVariants({ size: "icon", variant: "ghost" })}
+              href="https://github.com/usenotra/notra"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <HugeiconsIcon className="size-5" icon={Github01Icon} />
+            </a>
           </div>
         </div>
 
@@ -67,10 +77,10 @@ export default function FooterSection() {
                 Integrations
               </div>
               <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Real-time Previews
+                Changelog
               </div>
               <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Multi-Agent Coding
+                Blog Drafts
               </div>
             </div>
           </div>
@@ -123,7 +133,7 @@ export default function FooterSection() {
         </div>
       </div>
 
-      <div className="relative h-12 self-stretch overflow-hidden border-primary/12 border-t border-b">
+      <div className="relative h-12 self-stretch overflow-hidden border-border border-t">
         <div className="absolute inset-0 h-full w-full overflow-hidden">
           <div className="relative h-full w-full">
             {Array.from({ length: 400 }).map((_, i) => (
@@ -140,6 +150,10 @@ export default function FooterSection() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="w-full px-4 md:px-8">
+        <NotraWordmark className="-my-3 mx-auto max-w-[520px]" />
       </div>
     </div>
   );

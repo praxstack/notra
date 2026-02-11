@@ -19,12 +19,12 @@ import {
   TableRow,
 } from "@notra/ui/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@notra/ui/components/ui/tabs";
+import { TitleCard } from "@notra/ui/components/ui/title-card";
 import { cn } from "@notra/ui/lib/utils";
 import type { CheckoutResult, Product } from "autumn-js";
 import { useCustomer, usePricingTable } from "autumn-js/react";
 import { useId, useMemo, useState } from "react";
 import { PageContainer } from "@/components/layout/container";
-import { TitleCard } from "@/components/title-card";
 
 const SCENARIO_TEXT: Record<string, string> = {
   scheduled: "Plan Scheduled",

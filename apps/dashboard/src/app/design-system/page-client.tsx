@@ -208,6 +208,7 @@ import {
   TabsTrigger,
 } from "@notra/ui/components/ui/tabs";
 import { Textarea } from "@notra/ui/components/ui/textarea";
+import { TitleCard } from "@notra/ui/components/ui/title-card";
 import {
   Tooltip,
   TooltipContent,
@@ -218,7 +219,6 @@ import { toast } from "sonner";
 import ChatInput from "@/components/chat-input";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 import { IntegrationCard } from "@/components/integrations/integration-card";
-import { TitleCard } from "@/components/title-card";
 
 const colorGroups = [
   {
