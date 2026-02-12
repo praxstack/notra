@@ -28,7 +28,10 @@ export const WelcomeEmail = () => {
 
         <Text>
           Or schedule a talk with me at{" "}
-          <Link href="https://cal.com/dominikkoch">cal.com/dominikkoch</Link>!
+          <Link href="https://usenotra.com/founder-call">
+            usenotra.com/founder-call
+          </Link>
+          !
         </Text>
 
         <Text>

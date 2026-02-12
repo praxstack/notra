@@ -8,6 +8,13 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname, "../.."),
   },
   transpilePackages: ["@notra/ui"],
+  redirects: async () => [
+    {
+      source: "/founder-call",
+      destination: "https://cal.com/dominikkoch",
+      permanent: false,
+    },
+  ],
 };
 
 const withMDX = createMDX();
