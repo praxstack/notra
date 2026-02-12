@@ -1,8 +1,8 @@
+import { buttonVariants } from "@notra/ui/components/ui/button";
 import { Discord } from "@notra/ui/components/ui/svgs/discord";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
-import { buttonVariants } from "@notra/ui/components/ui/button";
 import Link from "next/link";
 import { SOCIAL_LINKS } from "../utils/constants";
 import { NotraMark, NotraWordmark } from "./notra-mark";

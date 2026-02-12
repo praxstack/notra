@@ -62,7 +62,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ scrollbarGutter: "stable" }}>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
