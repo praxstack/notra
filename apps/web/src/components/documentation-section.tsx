@@ -11,7 +11,7 @@ export default function DocumentationSection() {
     const interval = setInterval(() => {
       setActiveCard((prev) => (prev + 1) % 3);
       setAnimationKey((prev) => prev + 1);
-    }, 5000);
+    }, 7000);
 
     return () => clearInterval(interval);
   }, []);
@@ -53,7 +53,7 @@ export default function DocumentationSection() {
                 className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 0 ? "opacity-100" : "opacity-0"}`}
               >
                 <div
-                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
+                  className="h-0.5 animate-[progressBar_7s_linear_forwards] bg-primary will-change-transform"
                   key={
                     activeCard === 0
                       ? animationKey
@@ -84,7 +84,7 @@ export default function DocumentationSection() {
                 className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 1 ? "opacity-100" : "opacity-0"}`}
               >
                 <div
-                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
+                  className="h-0.5 animate-[progressBar_7s_linear_forwards] bg-primary will-change-transform"
                   key={
                     activeCard === 1
                       ? animationKey
@@ -115,7 +115,7 @@ export default function DocumentationSection() {
                 className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 2 ? "opacity-100" : "opacity-0"}`}
               >
                 <div
-                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
+                  className="h-0.5 animate-[progressBar_7s_linear_forwards] bg-primary will-change-transform"
                   key={
                     activeCard === 2
                       ? animationKey
