@@ -18,32 +18,32 @@ const faqData: FAQItem[] = [
   {
     question: "What is Notra and who is it for?",
     answer:
-      "Notra is a content automation tool for product and engineering teams. It connects to GitHub, Linear, and Slack, tracks your team's daily work, and generates drafts for changelogs, blog posts, and social media updates.",
+      "Notra is a content automation tool for product and engineering teams. Connect your GitHub repos and Notra picks up merged PRs and shipped features to draft changelogs, blog posts, and social updates.",
   },
   {
     question: "What kind of content does Notra generate?",
     answer:
-      "Notra creates changelog entries from merged PRs, blog post drafts from shipped features, and social media updates from milestones and team activity. Every draft is written to match your brand voice.",
+      "Changelog entries from merged PRs, blog post drafts when you ship features, and social updates when you hit milestones. Every draft matches your brand voice so it reads like your team wrote it.",
   },
   {
-    question: "Which tools does Notra integrate with?",
+    question: "Which integrations are available right now?",
     answer:
-      "Notra connects to GitHub, Linear, and Slack out of the box. We are adding more integrations regularly. You can also use our API and webhooks to connect custom sources.",
+      "The beta ships with GitHub. Connect your repos and Notra starts pulling in PRs, commits, and releases right away. Linear, Slack, and more are on the roadmap.",
   },
   {
     question: "How does brand voice matching work?",
     answer:
-      "When you set up Notra, you provide examples of your existing content. Notra uses those samples to learn your tone, vocabulary, and style so that every draft reads like your team wrote it.",
+      "During setup you provide a few examples of your existing content. Notra learns your tone, vocabulary, and style so every draft sounds like your team wrote it.",
   },
   {
     question: "Is my data secure with Notra?",
     answer:
-      "Yes. We encrypt sensitive data, including integration tokens, at rest. Your source code is never stored, and Notra only reads the metadata needed to generate drafts, like PR titles, issue descriptions, and message summaries.",
+      "Integration tokens are encrypted at rest. Your source code is never stored. Notra only reads the metadata it needs to write drafts — PR titles, descriptions, and commit messages.",
   },
   {
     question: "How do I get started?",
     answer:
-      "Sign up for free, connect one of your tools, and Notra will start generating content within minutes. No credit card required.",
+      "Sign up for free, connect your GitHub, and Notra starts generating content within minutes. No credit card required.",
   },
 ];
 
