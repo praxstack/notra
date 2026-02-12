@@ -1,11 +1,10 @@
-import {
-  Github01Icon,
-  Linkedin01Icon,
-  NewTwitterIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { Discord } from "@notra/ui/components/ui/svgs/discord";
+import { Github } from "@notra/ui/components/ui/svgs/github";
+import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
+import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
 import { buttonVariants } from "@notra/ui/components/ui/button";
 import Link from "next/link";
+import { SOCIAL_LINKS } from "../utils/constants";
 import { NotraMark, NotraWordmark } from "./notra-mark";
 
 export default function FooterSection() {
@@ -31,33 +30,38 @@ export default function FooterSection() {
           </div>
 
           <div className="flex items-start justify-start gap-2 text-foreground">
-            <a
+            <Link
               aria-label="Visit Notra on X"
               className={buttonVariants({ size: "icon", variant: "ghost" })}
-              href="https://x.com/usenotra"
-              rel="noopener noreferrer"
+              href={SOCIAL_LINKS.x}
               target="_blank"
             >
-              <HugeiconsIcon className="size-5" icon={NewTwitterIcon} />
-            </a>
-            <a
+              <XTwitter className="size-5" />
+            </Link>
+            <Link
               aria-label="Visit Notra on LinkedIn"
               className={buttonVariants({ size: "icon", variant: "ghost" })}
-              href="https://www.linkedin.com/company/usenotra"
-              rel="noopener noreferrer"
+              href={SOCIAL_LINKS.linkedin}
               target="_blank"
             >
-              <HugeiconsIcon className="size-5" icon={Linkedin01Icon} />
-            </a>
-            <a
+              <Linkedin className="size-5" />
+            </Link>
+            <Link
               aria-label="Visit Notra on GitHub"
               className={buttonVariants({ size: "icon", variant: "ghost" })}
-              href="https://github.com/usenotra/notra"
-              rel="noopener noreferrer"
+              href={SOCIAL_LINKS.github}
               target="_blank"
             >
-              <HugeiconsIcon className="size-5" icon={Github01Icon} />
-            </a>
+              <Github className="size-5" />
+            </Link>
+            <Link
+              aria-label="Visit Notra on Discord"
+              className={buttonVariants({ size: "icon", variant: "ghost" })}
+              href={SOCIAL_LINKS.discord}
+              target="_blank"
+            >
+              <Discord className="size-5" />
+            </Link>
           </div>
         </div>
 
