@@ -10,18 +10,52 @@ import { Webflow } from "@notra/ui/components/ui/svgs/webflow";
 import { NotraMark } from "./notra-mark";
 
 const items = [
-  <Github className="h-6 w-6" key="github" />,
-  <Linear className="h-6 w-6" key="linear" />,
-  <Slack className="h-6 w-6" key="slack" />,
-  <img
-    alt="DataBuddy"
-    className="h-6 w-6"
+  <div
+    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    key="github"
+  >
+    <Github className="h-6 w-6" />
+  </div>,
+  <div
+    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    key="linear"
+  >
+    <Linear className="h-6 w-6" />
+  </div>,
+  <div
+    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    key="slack"
+  >
+    <Slack className="h-6 w-6" />
+  </div>,
+  <div
+    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
     key="databuddy"
-    src="/logos/brands/databuddy.svg"
-  />,
-  <Framer className="h-6 w-6" key="framer" />,
-  <Marble className="h-6 w-6" key="marble" />,
-  <Webflow className="h-6 w-6" key="webflow" />,
+  >
+    <img
+      alt="DataBuddy"
+      className="h-6 w-6"
+      src="/logos/brands/databuddy.svg"
+    />
+  </div>,
+  <div
+    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    key="framer"
+  >
+    <Framer className="h-6 w-6" />
+  </div>,
+  <div
+    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    key="marble"
+  >
+    <Marble className="h-6 w-6" />
+  </div>,
+  <div
+    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    key="webflow"
+  >
+    <Webflow className="h-6 w-6" />
+  </div>,
 ];
 
 const centerLogo = (
@@ -46,13 +80,16 @@ export default function IntegrationOrbit({
           direction="normal"
           duration={25}
           fill
-          itemSize={36}
+          itemSize={52}
           items={items}
+          pathColor="rgba(0,0,0,0.06)"
+          pathWidth={1}
           paused={false}
           radius={150}
           responsive
           rotation={0}
           shape="circle"
+          showPath
         />
       </div>
     </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalContent from "../../../content/legal/legal.mdx";
 
 export const metadata: Metadata = {
-  title: "Legal Notice — Notra",
+  title: "Legal Notice",
   description:
     "Legal notice and imprint for Notra in accordance with German Telemedia Act (TMG).",
 };

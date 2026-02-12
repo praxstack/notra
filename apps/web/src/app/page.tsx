@@ -4,14 +4,13 @@ import { Button } from "@notra/ui/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { ActivityFeed } from "../components/activity-feed";
+import BrandVoicePreview from "../components/brand-voice-preview";
 import CTASection from "../components/cta-section";
 import DocumentationSection from "../components/documentation-section";
 import FAQSection from "../components/faq-section";
 import IntegrationOrbit from "../components/integration-orbit";
-import NumbersThatSpeak from "../components/numbers-that-speak";
 import PricingSection from "../components/pricing-section";
 import TestimonialsSection from "../components/testimonials-section";
-import YourWorkInSync from "../components/your-work-in-sync";
 import { SOCIAL_PROOF_LOGOS } from "../utils/constants";
 
 export default function LandingPage() {
@@ -26,7 +25,7 @@ export default function LandingPage() {
               into publish-ready content
             </div>
             <div className="flex w-full max-w-[31.63rem] flex-col justify-center px-2 text-center font-medium font-sans text-foreground/80 text-sm leading-[1.4] sm:px-4 sm:text-lg sm:leading-[1.45] md:px-0 md:text-xl md:leading-normal lg:text-lg lg:leading-7">
-              Now in public beta. Notra connects to GitHub, Linear,
+              Now in public beta. Notra connects to GitHub, Linear
               <br className="hidden sm:block" />
               and Slack to turn shipped work into ready-to-publish content.
             </div>
@@ -59,13 +58,12 @@ export default function LandingPage() {
 
           <div className="relative z-5 flex max-w-240 flex-1 flex-col">
             <div className="flex aspect-video w-full max-w-240 flex-col items-start justify-start overflow-hidden rounded-md bg-card shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)] sm:rounded-lg lg:rounded-[0.566rem]">
-              <iframe
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="h-full w-full"
-                referrerPolicy="strict-origin-when-cross-origin"
-                src="https://www.youtube.com/embed/vAPVCCayBIA?rel=0"
-                title="Notra product demo"
+              <Image
+                alt="Notra product demo"
+                className="h-full w-full object-cover"
+                height={1080}
+                src="/demo.webp"
+                width={1920}
               />
             </div>
           </div>
@@ -87,8 +85,8 @@ export default function LandingPage() {
           id="social-proof"
         >
           <div className="flex items-center justify-center gap-6 self-stretch border-border border-b px-4 py-8 sm:px-6 sm:py-12 md:px-24 md:py-16">
-            <div className="flex w-full max-w-146.5 flex-col items-center justify-start gap-3 overflow-hidden rounded-lg px-4 py-4 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] sm:gap-4 sm:px-6 sm:py-5">
-              <div className="w-full max-w-[29.53rem] text-center font-sans font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-2xl md:text-3xl md:leading-15 lg:text-5xl">
+            <div className="flex w-full max-w-146.5 flex-col items-center justify-start gap-3 sm:gap-4">
+              <div className="w-full max-w-[29.53rem] text-balance text-center font-sans font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-2xl md:text-3xl md:leading-15 lg:text-5xl">
                 Teams that ship faster, write less
                 <span className="text-primary">.</span>
               </div>
@@ -172,8 +170,8 @@ export default function LandingPage() {
           id="features"
         >
           <div className="flex items-center justify-center gap-6 self-stretch border-border border-b px-4 py-8 sm:px-6 sm:py-12 md:px-8 md:py-16">
-            <div className="flex w-full max-w-154 flex-col items-center justify-start gap-3 overflow-hidden rounded-lg px-4 py-4 shadow-[0px_2px_4px_rgba(50,45,43,0.06)] sm:gap-4 sm:px-6 sm:py-5">
-              <div className="w-full max-w-[37.38rem] text-center font-sans font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-2xl md:text-3xl md:leading-15 lg:text-5xl">
+            <div className="flex w-full max-w-154 flex-col items-center justify-start gap-3 sm:gap-4">
+              <div className="w-full max-w-[37.38rem] text-balance text-center font-sans font-semibold text-foreground text-xl leading-tight tracking-tight sm:text-2xl md:text-3xl md:leading-15 lg:text-5xl">
                 Your team ships<span className="text-primary">.</span> Notra
                 writes it up
                 <span className="text-primary">.</span>
@@ -225,13 +223,8 @@ export default function LandingPage() {
                     your team wrote it.
                   </p>
                 </div>
-                <div className="flex h-50 w-full items-center justify-center overflow-hidden rounded-lg text-right sm:h-62.5 md:h-75">
-                  <YourWorkInSync
-                    className="scale-60 sm:scale-75 md:scale-90"
-                    height="250"
-                    theme="light"
-                    width="400"
-                  />
+                <div className="w-full pt-2">
+                  <BrandVoicePreview />
                 </div>
               </div>
 
@@ -253,29 +246,17 @@ export default function LandingPage() {
               <div className="flex flex-col items-start justify-start gap-4 p-4 sm:gap-6 sm:p-6 md:p-8 lg:p-12">
                 <div className="flex flex-col gap-2">
                   <h3 className="font-sans font-semibold text-foreground text-lg leading-tight sm:text-xl">
-                    Content performance
+                    More to come
                   </h3>
                   <p className="font-normal font-sans text-muted-foreground text-sm leading-relaxed md:text-base">
-                    See which posts get traction and what your audience responds
-                    to across every channel.
+                    We're building new features every week. Stay tuned for
+                    what's next.
                   </p>
                 </div>
-                <div className="relative flex h-50 w-full items-center justify-center overflow-hidden rounded-lg sm:h-62.5 md:h-75">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <NumbersThatSpeak
-                      className="h-full w-full object-contain"
-                      height="100%"
-                      theme="light"
-                      width="100%"
-                    />
-                  </div>
-                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-linear-to-t from-background to-transparent" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                    <div className="flex flex-col items-center gap-2 p-4">
-                      <div className="h-full w-3/4 rounded-full bg-green-500" />
-                    </div>
-                    <div className="text-green-600 text-sm">Growth Rate</div>
-                  </div>
+                <div className="flex h-50 w-full items-center justify-center sm:h-62.5 md:h-75">
+                  <span className="font-sans text-muted-foreground/50 text-sm">
+                    Coming soon
+                  </span>
                 </div>
               </div>
             </div>

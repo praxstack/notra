@@ -1,31 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function DocumentationSection() {
   const [activeCard, setActiveCard] = useState(0);
-  const [animationKey, setAnimationKey] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveCard((prev) => (prev + 1) % 3);
-      setAnimationKey((prev) => prev + 1);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleCardClick = (index: number) => {
-    setActiveCard(index);
-    setAnimationKey((prev) => prev + 1);
-  };
 
   return (
     <div className="flex w-full flex-col items-center justify-center shadow-[inset_0_-1px_0_var(--border)]">
       <div className="flex items-center justify-center gap-6 self-stretch px-6 py-12 shadow-[inset_0_-1px_0_var(--border)] md:px-24 md:py-16">
-        <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4 overflow-hidden rounded-lg px-6 py-5 shadow-[0px_2px_4px_rgba(50,45,43,0.06)]">
-          <div className="self-stretch text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[60px]">
+        <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4">
+          <div className="self-stretch text-balance text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[60px]">
             From shipped code to published content
             <Link href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
               <span className="cursor-pointer text-primary">.</span>
@@ -48,21 +33,9 @@ export default function DocumentationSection() {
                   ? "border-border bg-card shadow-[0px_0px_0px_0.75px_var(--border)_inset]"
                   : ""
               }`}
-              onClick={() => handleCardClick(0)}
+              onClick={() => setActiveCard(0)}
               type="button"
             >
-              <div
-                className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 0 ? "opacity-100" : "opacity-0"}`}
-              >
-                <div
-                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
-                  key={
-                    activeCard === 0
-                      ? animationKey
-                      : `inactive-0-${animationKey}`
-                  }
-                />
-              </div>
               <div className="flex w-full flex-col gap-2 px-6 py-5">
                 <div className="flex flex-col justify-center self-stretch font-sans font-semibold text-foreground text-sm leading-6">
                   Auto-generate changelogs
@@ -81,21 +54,9 @@ export default function DocumentationSection() {
                   ? "border-border bg-card shadow-[0px_0px_0px_0.75px_var(--border)_inset]"
                   : ""
               }`}
-              onClick={() => handleCardClick(1)}
+              onClick={() => setActiveCard(1)}
               type="button"
             >
-              <div
-                className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 1 ? "opacity-100" : "opacity-0"}`}
-              >
-                <div
-                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
-                  key={
-                    activeCard === 1
-                      ? animationKey
-                      : `inactive-1-${animationKey}`
-                  }
-                />
-              </div>
               <div className="flex w-full flex-col gap-2 px-6 py-5">
                 <div className="flex flex-col justify-center self-stretch font-sans font-semibold text-foreground text-sm leading-6">
                   Draft blog posts from features
@@ -114,21 +75,9 @@ export default function DocumentationSection() {
                   ? "border-border bg-card shadow-[0px_0px_0px_0.75px_var(--border)_inset]"
                   : ""
               }`}
-              onClick={() => handleCardClick(2)}
+              onClick={() => setActiveCard(2)}
               type="button"
             >
-              <div
-                className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 2 ? "opacity-100" : "opacity-0"}`}
-              >
-                <div
-                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
-                  key={
-                    activeCard === 2
-                      ? animationKey
-                      : `inactive-2-${animationKey}`
-                  }
-                />
-              </div>
               <div className="flex w-full flex-col gap-2 px-6 py-5">
                 <div className="flex flex-col justify-center self-stretch font-sans font-semibold text-foreground text-sm leading-6">
                   Social updates from milestones
@@ -209,12 +158,16 @@ export default function DocumentationSection() {
                 </div>
               ) : (
                 <div
-                  className={`h-full w-full transition-all duration-300 ${
+                  className={`flex h-full w-full items-center justify-center transition-all duration-300 ${
                     activeCard === 1
                       ? "bg-linear-to-br from-purple-50 to-purple-100"
                       : "bg-linear-to-br from-green-50 to-green-100"
                   }`}
-                />
+                >
+                  <span className="font-sans text-muted-foreground/50 text-sm">
+                    Coming soon
+                  </span>
+                </div>
               )}
             </div>
           </div>

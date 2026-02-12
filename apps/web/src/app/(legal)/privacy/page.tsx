@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import PrivacyContent from "../../../content/legal/privacy.mdx";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Notra",
+  title: "Privacy Policy",
   description:
     "Learn how Notra collects, uses, and protects your personal information.",
 };
