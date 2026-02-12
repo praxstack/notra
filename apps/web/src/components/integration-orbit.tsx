@@ -7,6 +7,7 @@ import { Linear } from "@notra/ui/components/ui/svgs/linear";
 import { Marble } from "@notra/ui/components/ui/svgs/marble";
 import { Slack } from "@notra/ui/components/ui/svgs/slack";
 import { Webflow } from "@notra/ui/components/ui/svgs/webflow";
+import Image from "next/image";
 import { NotraMark } from "./notra-mark";
 
 const items = [
@@ -32,10 +33,12 @@ const items = [
     className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
     key="databuddy"
   >
-    <img
+    <Image
       alt="DataBuddy"
       className="h-6 w-6"
+      height={24}
       src="/logos/brands/databuddy.svg"
+      width={24}
     />
   </div>,
   <div

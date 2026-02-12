@@ -59,7 +59,7 @@ export default function BrandVoicePreview({
             </div>
             <div className="flex-1 rounded-[12px] border border-border/80 bg-background px-4 py-3">
               <div className="space-y-3">
-                <label className="flex cursor-pointer items-center gap-2">
+                <span className="flex cursor-pointer items-center gap-2">
                   <div className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
                     <svg
                       aria-hidden="true"
@@ -77,7 +77,7 @@ export default function BrandVoicePreview({
                     </svg>
                   </div>
                   <span className="text-sm">Tone Profile</span>
-                </label>
+                </span>
                 <Select
                   onValueChange={(value) => {
                     if (value) {
