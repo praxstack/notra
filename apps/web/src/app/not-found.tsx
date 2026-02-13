@@ -4,10 +4,10 @@ export default function NotFound() {
   return (
     <div className="flex min-h-[80svh] w-full flex-col items-center justify-center gap-8 px-6">
       <div className="flex flex-col items-center gap-2">
-        <span className="font-serif text-[8rem] text-foreground/10 leading-none tracking-tight sm:text-[12rem] md:text-[16rem]">
+        <span className="font-serif text-[8rem] text-foreground leading-none tracking-tight sm:text-[12rem] md:text-[16rem]">
           404
         </span>
-        <p className="font-serif text-foreground/60 text-xl sm:text-2xl">
+        <p className="font-serif text-foreground text-xl sm:text-2xl">
           This page doesn&apos;t exist yet.
         </p>
       </div>
