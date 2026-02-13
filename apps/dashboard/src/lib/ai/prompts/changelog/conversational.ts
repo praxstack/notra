@@ -17,6 +17,8 @@ export function getConversationalChangelogPrompt(): string {
     - Only use GitHub data returned by the provided tools as your source of truth.
     - If a detail is missing/uncertain, call the appropriate tool; if it still cannot be verified, omit it or describe it generically without asserting specifics.
     - Never guess PR numbers or URLs. Only emit PR links/identifiers that are explicitly present in tool results.
+    - If <target-audience> is developer-oriented (for example: developers, engineers, technical teams), include verified PR links for referenced changes whenever available.
+    - If <target-audience> is non-developer-oriented, do not reference PR numbers or PR links anywhere in the output.
     - Treat the provided lookback window as the source of truth.
     - Do not invent an alternative default window.
     - If you call commit tools, align retrieval to this exact window.
