@@ -85,10 +85,10 @@ export default function RootLayout({
         </div>
         <Databuddy
           clientId={process.env.NEXT_PUBLIC_DATABUDDY_ID!}
-          trackHashChanges={true}
           trackAttributes={true}
-          trackScrollDepth={true}
           trackErrors={true}
+          trackHashChanges={true}
+          trackScrollDepth={true}
         />
       </body>
     </html>

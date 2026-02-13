@@ -224,12 +224,6 @@ export const auth = betterAuth({
         },
       }
     : undefined,
-  advanced: {
-    crossSubDomainCookies: {
-      enabled: process.env.NODE_ENV === "production",
-      domain: ".usenotra.com",
-    },
-  },
   trustedOrigins: [
     "http://localhost:3000",
     "https://app.usenotra.com",
