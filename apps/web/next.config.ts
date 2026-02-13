@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
       permanent: false,
     },
   ],
+  images: {
+    unoptimized: true,
+  },
 };
 
 const withMDX = createMDX();

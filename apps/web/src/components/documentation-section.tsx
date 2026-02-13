@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import automationPreview from "../../public/automation.webp";
+import logsPreview from "../../public/logs.webp";
 
 export default function DocumentationSection() {
   const [activeCard, setActiveCard] = useState(0);
@@ -207,17 +210,18 @@ export default function DocumentationSection() {
                       </p>
                     </article>
                   </div>
-                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-background via-background/95 to-transparent" />
+                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-white via-white/95 to-transparent" />
                 </div>
               ) : (
-                <div
-                  className={`flex h-full w-full items-center justify-center transition-all duration-300 ${
-                    activeCard === 1
-                      ? "bg-linear-to-br from-purple-50 to-purple-100"
-                      : "bg-linear-to-br from-green-50 to-green-100"
-                  }`}
-                >
-                  <span className="font-sans text-muted-foreground/50 text-sm">
+                <div className="relative flex h-full w-full items-center justify-center">
+                  <Image
+                    alt=""
+                    className="object-cover object-top blur-[3px]"
+                    fill
+                    placeholder="blur"
+                    src={activeCard === 1 ? logsPreview : automationPreview}
+                  />
+                  <span className="relative z-10 font-medium font-sans text-muted-foreground text-sm">
                     Coming soon
                   </span>
                 </div>
