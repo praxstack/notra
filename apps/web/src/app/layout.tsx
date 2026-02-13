@@ -1,3 +1,4 @@
+import { Databuddy } from "@databuddy/sdk/react";
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Inter } from "next/font/google";
 import FooterSection from "../components/footer-section";
@@ -82,6 +83,13 @@ export default function RootLayout({
             </div>
           </div>
         </div>
+        <Databuddy
+          clientId={process.env.NEXT_PUBLIC_DATABUDDY_ID!}
+          trackHashChanges={true}
+          trackAttributes={true}
+          trackScrollDepth={true}
+          trackErrors={true}
+        />
       </body>
     </html>
   );
