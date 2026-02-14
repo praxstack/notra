@@ -12,7 +12,9 @@ export default function DocumentationSection() {
   const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
 
   const startInterval = useCallback(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
     intervalRef.current = setInterval(() => {
       setActiveCard((prev) => (prev + 1) % 3);
       setAnimationKey((prev) => prev + 1);
@@ -22,7 +24,9 @@ export default function DocumentationSection() {
   useEffect(() => {
     startInterval();
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
   }, [startInterval]);
 

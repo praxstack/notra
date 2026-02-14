@@ -63,7 +63,9 @@ export function Navbar() {
             <div className="flex min-w-0 items-center justify-center">
               <DropdownMenu
                 onOpenChange={(open) => {
-                  if (!open) setLogoMenuOpen(false);
+                  if (!open) {
+                    setLogoMenuOpen(false);
+                  }
                 }}
                 open={logoMenuOpen}
               >

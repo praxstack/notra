@@ -39,6 +39,46 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   const { data, isPending } = useTodayPosts(organizationId);
   const posts = data?.pages.flatMap((page) => page.posts) ?? [];
   const previewPosts = posts.slice(0, 3);
+  const todayContent = (() => {
+    if (isPending) {
+      return (
+        <div className="grid justify-items-center gap-3 sm:grid-cols-2 sm:justify-items-stretch lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              className="h-[170px] w-full max-w-[340px] rounded-[20px] border border-border/60 bg-muted/30 sm:h-[140px] sm:max-w-none"
+              key={`${skeletonId}-${index + 1}`}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    if (previewPosts.length > 0) {
+      return (
+        <div className="grid justify-items-center gap-3 sm:grid-cols-2 sm:justify-items-stretch lg:grid-cols-3">
+          {previewPosts.map((post) => (
+            <div className="w-full max-w-[340px] sm:max-w-none" key={post.id}>
+              <ContentCard
+                className="min-h-[170px] sm:min-h-[140px]"
+                contentType={post.contentType as ContentType}
+                href={`/${organizationSlug}/content/${post.id}`}
+                preview={getPreview(post.markdown)}
+                title={post.title}
+              />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <EmptyState
+        className="p-6"
+        description="Check back later or start a new post from the content page."
+        title="No content created today"
+      />
+    );
+  })();
 
   return (
     <PageContainer className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -57,34 +97,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             </div>
           </div>
 
-          {isPending ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, index) => (
-                <div
-                  className="h-[140px] rounded-[20px] border border-border/60 bg-muted/30"
-                  key={`${skeletonId}-${index + 1}`}
-                />
-              ))}
-            </div>
-          ) : previewPosts.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {previewPosts.map((post) => (
-                <ContentCard
-                  contentType={post.contentType as ContentType}
-                  href={`/${organizationSlug}/content/${post.id}`}
-                  key={post.id}
-                  preview={getPreview(post.markdown)}
-                  title={post.title}
-                />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              className="p-6"
-              description="Check back later or start a new post from the content page."
-              title="No content created today"
-            />
-          )}
+          {todayContent}
         </section>
       </div>
     </PageContainer>
