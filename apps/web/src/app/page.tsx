@@ -91,7 +91,7 @@ export default function LandingPage() {
                 <span className="text-primary">.</span>
               </div>
               <div className="self-stretch text-center font-normal font-sans text-muted-foreground text-sm leading-6 sm:text-base sm:leading-7">
-                People at these companies use Notra to keep their
+                People at these companies use Notra to keep their{" "}
                 <br className="hidden sm:block" />
                 audience in the loop without slowing down development.
               </div>
