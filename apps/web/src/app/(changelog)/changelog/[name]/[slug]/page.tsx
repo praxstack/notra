@@ -34,7 +34,7 @@ export async function generateMetadata({
     return {};
   }
 
-  const title = `${entry.title} | ${company.name} Changelog`;
+  const title = { absolute: entry.title };
   const url = `https://usenotra.com/changelog/${name}/${slug}`;
 
   return {
@@ -42,7 +42,7 @@ export async function generateMetadata({
     description: entry.description,
     alternates: { canonical: url },
     openGraph: {
-      title,
+      title: entry.title,
       description: entry.description,
       url,
       type: "article",
@@ -50,7 +50,7 @@ export async function generateMetadata({
       siteName: "Notra",
     },
     twitter: {
-      title,
+      title: entry.title,
       description: entry.description,
     },
   };

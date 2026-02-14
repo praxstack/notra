@@ -27,7 +27,8 @@ export async function generateMetadata({
     return {};
   }
 
-  const title = `${company.name} Changelog | Notra`;
+  const titleString = `${company.name} Changelog`;
+  const title = { absolute: titleString };
   const description = `${company.description} See AI-generated changelogs powered by Notra.`;
   const url = `https://usenotra.com/changelog/${name}`;
 
@@ -36,7 +37,7 @@ export async function generateMetadata({
     description,
     alternates: { canonical: url },
     openGraph: {
-      title,
+      title: titleString,
       description,
       url,
       type: "website",
@@ -44,7 +45,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: titleString,
       description,
     },
   };
