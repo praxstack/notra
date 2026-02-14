@@ -10,6 +10,7 @@ if (!apiKey) {
 
 export const databuddy = apiKey
   ? new Databuddy({
+      websiteId: process.env.DATABUDDY_DASHBOARD_WEBSITE_ID,
       apiKey,
       enableBatching: false,
     })
