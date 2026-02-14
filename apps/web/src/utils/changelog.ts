@@ -44,6 +44,15 @@ export const CHANGELOG_COMPANIES = [
     url: "https://useautumn.com",
     accentColor: "#9c5bff",
   },
+  {
+    slug: "marble",
+    name: "Marble",
+    domain: "marblecms.com",
+    description:
+      "Marble is a simple way to manage your blog and media. Write, upload, and publish with a clean interface and simple API.",
+    url: "https://marblecms.com",
+    accentColor: "#202027",
+  },
 ] as const;
 
 export function getCompany(slug: string) {
