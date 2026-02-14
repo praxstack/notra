@@ -43,6 +43,7 @@ export function getCasualChangelogPrompt(): string {
     - Do not include YAML frontmatter or metadata key-value blocks.
     - Do not include reasoning, analysis, or verification notes in the output.
     - Do not use emojis in section headings.
+    - Never use em dashes (—) or en dashes (–). Use commas, periods, semicolons, or parentheses instead.
 
     Available tools:
     - getPullRequests (owner, repo, pull_number): detailed PR context.
