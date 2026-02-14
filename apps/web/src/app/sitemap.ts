@@ -7,34 +7,34 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changelog
       .filter((entry) => entry.info.path.startsWith(`${company.slug}/`))
       .map((entry) => ({
-        url: `https://usenotra.com/changelog/${company.slug}/${getEntrySlug(entry.info.path)}`,
+        url: `https://www.usenotra.com/changelog/${company.slug}/${getEntrySlug(entry.info.path)}`,
         lastModified: new Date(entry.date),
       }))
   );
 
   return [
     {
-      url: "https://usenotra.com",
+      url: "https://www.usenotra.com",
       lastModified: new Date(),
     },
     {
-      url: "https://usenotra.com/privacy",
+      url: "https://www.usenotra.com/privacy",
       lastModified: new Date(),
     },
     {
-      url: "https://usenotra.com/terms",
+      url: "https://www.usenotra.com/terms",
       lastModified: new Date(),
     },
     {
-      url: "https://usenotra.com/legal",
+      url: "https://www.usenotra.com/legal",
       lastModified: new Date(),
     },
     {
-      url: "https://usenotra.com/changelog",
+      url: "https://www.usenotra.com/changelog",
       lastModified: new Date(),
     },
     ...CHANGELOG_COMPANIES.map((company) => ({
-      url: `https://usenotra.com/changelog/${company.slug}`,
+      url: `https://www.usenotra.com/changelog/${company.slug}`,
       lastModified: new Date(),
     })),
     ...changelogEntries,
