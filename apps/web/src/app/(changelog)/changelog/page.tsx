@@ -18,7 +18,7 @@ const COMPANY_ICONS: Record<string, ReactNode> = {
 
 const title = "Example Changelogs | Notra";
 const description =
-  "See what AI-generated changelogs look like for popular open source projects, powered by Notra.";
+  "See what Notra-generated changelogs look like for popular open source projects.";
 
 export const metadata: Metadata = {
   title,
