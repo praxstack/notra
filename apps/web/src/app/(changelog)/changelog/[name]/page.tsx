@@ -1,3 +1,5 @@
+import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -77,6 +79,14 @@ export default async function CompanyChangelogPage({ params }: PageProps) {
           <br className="hidden sm:block" />
           powered by Notra.
         </p>
+        <a
+          className="inline-flex items-center gap-1 font-sans text-muted-foreground/60 text-sm transition-colors hover:text-foreground"
+          href={`${company.url}?utm_source=usenotra.com`}
+          target="_blank"
+        >
+          {company.domain}
+          <HugeiconsIcon className="size-3.5" icon={ArrowUpRight01Icon} />
+        </a>
       </div>
 
       <div className="mt-14 flex w-full flex-col">
