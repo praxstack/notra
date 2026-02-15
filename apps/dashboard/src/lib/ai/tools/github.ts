@@ -338,11 +338,16 @@ Use this for activity summaries, changelog generation, or understanding recent c
         });
         const octokit = createOctokit(token);
         const since = getISODateFromDaysAgo(days);
+        // TODO: We need an actual todo date in the future to allow for more flexible timeframes
+        const until = new Date().toISOString();
         const response = await withGitHubRateLimitHandling(() =>
           octokit.request("GET /repos/{owner}/{repo}/commits", {
             owner,
             repo,
             since,
+            until,
+            //TODO: We need to paginate this in the future to get all commits
+            per_page: 100,
             headers: {
               "X-GitHub-Api-Version": "2022-11-28",
             },
