@@ -8,38 +8,42 @@ const nextConfig: NextConfig = {
     root: path.resolve(__dirname, "../.."),
   },
   transpilePackages: ["@notra/ui"],
-  rewrites: async () => [
-    {
-      source: "/changelog/:name",
-      destination: "/changelog/:name/markdown",
-      has: [
-        {
-          type: "header",
-          key: "accept",
-          value: ".*text/markdown.*",
-        },
-      ],
-    },
-    {
-      source: "/changelog/:name/:slug",
-      destination: "/changelog/:name/:slug/markdown",
-      has: [
-        {
-          type: "header",
-          key: "accept",
-          value: ".*text/markdown.*",
-        },
-      ],
-    },
-    {
-      source: "/changelog/:name.md",
-      destination: "/changelog/:name/markdown",
-    },
-    {
-      source: "/changelog/:name/:slug.md",
-      destination: "/changelog/:name/:slug/markdown",
-    },
-  ],
+  rewrites: async () => ({
+    beforeFiles: [
+      {
+        source: "/changelog/:name",
+        destination: "/changelog/:name/markdown",
+        has: [
+          {
+            type: "header",
+            key: "accept",
+            value: ".*text/markdown.*",
+          },
+        ],
+      },
+      {
+        source: "/changelog/:name/:slug",
+        destination: "/changelog/:name/:slug/markdown",
+        has: [
+          {
+            type: "header",
+            key: "accept",
+            value: ".*text/markdown.*",
+          },
+        ],
+      },
+      {
+        source: "/changelog/:name.md",
+        destination: "/changelog/:name/markdown",
+      },
+      {
+        source: "/changelog/:name/:slug.md",
+        destination: "/changelog/:name/:slug/markdown",
+      },
+    ],
+    afterFiles: [],
+    fallback: [],
+  }),
   redirects: async () => [
     {
       source: "/founder-call",

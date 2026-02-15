@@ -12,6 +12,7 @@ function markdownResponse(content: string, status = 200) {
     status,
     headers: {
       "content-type": "text/markdown; charset=utf-8",
+      vary: "accept",
     },
   });
 }
