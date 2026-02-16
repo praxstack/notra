@@ -9,6 +9,11 @@ import {
 } from "@notra/ui/components/ui/collapsible";
 import { Input } from "@notra/ui/components/ui/input";
 import { Github } from "@notra/ui/components/ui/svgs/github";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@notra/ui/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRightIcon,
@@ -333,15 +338,33 @@ export default function PageClient({ integrationId }: PageClientProps) {
     integration.repositories.length === 1 && primaryRepository
       ? `${primaryRepository.owner}/${primaryRepository.repo}`
       : null;
+  const createdLabel = integration.createdByUser
+    ? `Added by ${integration.createdByUser.name} on ${new Date(integration.createdAt).toLocaleDateString()}`
+    : `Created on ${new Date(integration.createdAt).toLocaleDateString()}`;
+  const statusLabel = integration.enabled ? "Enabled" : "Disabled";
 
   return (
     <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
       <div className="w-full space-y-6 px-4 lg:px-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="font-bold text-3xl tracking-tight">
-              {integration.displayName}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <h1 className="font-bold text-3xl tracking-tight">
+                      <span className="cursor-help underline decoration-dotted underline-offset-4">
+                        {integration.displayName}
+                      </span>
+                    </h1>
+                  }
+                />
+                <TooltipContent>{createdLabel}</TooltipContent>
+              </Tooltip>
+              <Badge variant={integration.enabled ? "default" : "secondary"}>
+                {statusLabel}
+              </Badge>
+            </div>
             {repositoryFullName ? (
               <p className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Github className="size-4 shrink-0" />
@@ -384,26 +407,13 @@ export default function PageClient({ integrationId }: PageClientProps) {
 
         <div className="space-y-6">
           <div className="rounded-lg border p-6">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start">
               <div className="space-y-1">
                 <h2 className="font-semibold text-lg">Integration Details</h2>
                 <p className="text-muted-foreground text-sm">
-                  {integration.createdByUser ? (
-                    <>
-                      Added by {integration.createdByUser.name} on{" "}
-                      {new Date(integration.createdAt).toLocaleDateString()}
-                    </>
-                  ) : (
-                    <>
-                      Created on{" "}
-                      {new Date(integration.createdAt).toLocaleDateString()}
-                    </>
-                  )}
+                  Metadata and configuration for this GitHub integration.
                 </p>
               </div>
-              <Badge variant={integration.enabled ? "default" : "secondary"}>
-                {integration.enabled ? "Enabled" : "Disabled"}
-              </Badge>
             </div>
           </div>
 
