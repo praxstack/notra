@@ -148,10 +148,8 @@ export function AddTriggerDialog({
       return {
         name: editTrigger.name ?? "Untitled Schedule",
         sourceType: editTrigger.sourceType,
-        eventType:
-          (editTrigger.sourceConfig.eventTypes?.[0] as WebhookEventType) ??
-          "release",
-        outputType: editTrigger.outputType as OutputContentType,
+        eventType: editTrigger.sourceConfig.eventTypes?.[0] ?? "release",
+        outputType: editTrigger.outputType,
         repositoryIds: editTrigger.targets.repositoryIds,
         schedule: editTrigger.sourceConfig.cron ?? {
           frequency: "daily",
@@ -179,7 +177,9 @@ export function AddTriggerDialog({
     },
   });
 
-  const { data: integrationsResponse, isLoading: isLoadingRepos } = useQuery({
+  const { data: integrationsResponse, isLoading: isLoadingRepos } = useQuery<{
+    integrations: Array<GitHubIntegration & { type: string }>;
+  }>({
     queryKey: QUERY_KEYS.INTEGRATIONS.all(organizationId),
     queryFn: async () => {
       const response = await fetch(
@@ -190,9 +190,7 @@ export function AddTriggerDialog({
         throw new Error("Failed to fetch integrations");
       }
 
-      return response.json() as Promise<{
-        integrations: Array<GitHubIntegration & { type: string }>;
-      }>;
+      return response.json();
     },
     enabled: !!organizationId,
   });
@@ -214,8 +212,8 @@ export function AddTriggerDialog({
     [repositories]
   );
 
-  const mutation = useMutation({
-    mutationFn: async (value: TriggerFormValues) => {
+  const mutation = useMutation<{ trigger: Trigger }, Error, TriggerFormValues>({
+    mutationFn: async (value) => {
       const basePath =
         apiPath ?? `/api/organizations/${organizationId}/triggers`;
       const targetPath = isEditMode
@@ -251,26 +249,35 @@ export function AddTriggerDialog({
               : "Trigger already exists"
           );
         }
-        throw new Error(
-          payload?.error ??
-            (isEditMode
-              ? "Failed to update schedule"
-              : isScheduleContext
-                ? "Failed to create schedule"
-                : "Failed to create trigger")
-        );
+        let errorMessage = payload?.error;
+
+        if (!errorMessage) {
+          if (isEditMode) {
+            errorMessage = "Failed to update schedule";
+          } else if (isScheduleContext) {
+            errorMessage = "Failed to create schedule";
+          } else {
+            errorMessage = "Failed to create trigger";
+          }
+        }
+
+        throw new Error(errorMessage);
       }
 
-      return payload as { trigger: Trigger };
+      return payload;
     },
     onSuccess: (data) => {
-      toast.success(
-        isEditMode
-          ? "Schedule updated"
-          : isScheduleContext
-            ? "Schedule added"
-            : "Trigger added"
-      );
+      let successMessage: string;
+
+      if (isEditMode) {
+        successMessage = "Schedule updated";
+      } else if (isScheduleContext) {
+        successMessage = "Schedule added";
+      } else {
+        successMessage = "Trigger added";
+      }
+
+      toast.success(successMessage);
       onSuccess?.(data.trigger);
       setOpen(false);
       form.reset();
@@ -306,18 +313,16 @@ export function AddTriggerDialog({
       <SheetContent className="gap-0 overflow-hidden sm:max-w-lg" side="right">
         <SheetHeader className="shrink-0 border-b">
           <SheetTitle className="text-2xl">
-            {isEditMode
-              ? "Edit Schedule"
-              : isScheduleContext
-                ? "Add Schedule"
-                : "Add Trigger"}
+            {isEditMode && "Edit Schedule"}
+            {!isEditMode &&
+              (isScheduleContext ? "Add Schedule" : "Add Trigger")}
           </SheetTitle>
           <SheetDescription>
-            {isEditMode
-              ? "Update the schedule configuration."
-              : isScheduleContext
+            {isEditMode && "Update the schedule configuration."}
+            {!isEditMode &&
+              (isScheduleContext
                 ? "Configure when and how to generate content automatically."
-                : "Choose a source, targets, and output to automate content."}
+                : "Choose a source, targets, and output to automate content.")}
           </SheetDescription>
         </SheetHeader>
 
@@ -349,11 +354,10 @@ export function AddTriggerDialog({
                       ) : (
                         <Select
                           onValueChange={(value) => {
-                            if (value) {
-                              field.handleChange(
-                                value as Trigger["sourceType"]
-                              );
+                            if (!value) {
+                              return;
                             }
+                            field.handleChange(value);
                           }}
                           value={field.state.value}
                         >
@@ -416,9 +420,10 @@ export function AddTriggerDialog({
                             <Label htmlFor={field.name}>Lookback window</Label>
                             <Select
                               onValueChange={(value) => {
-                                if (value) {
-                                  field.handleChange(value as LookbackWindow);
+                                if (!value) {
+                                  return;
                                 }
+                                field.handleChange(value);
                               }}
                               value={field.state.value}
                             >
@@ -456,9 +461,10 @@ export function AddTriggerDialog({
                           </Label>
                           <Select
                             onValueChange={(value) => {
-                              if (value) {
-                                field.handleChange(value as WebhookEventType);
+                              if (!value) {
+                                return;
                               }
+                              field.handleChange(value);
                             }}
                             value={field.state.value}
                           >
@@ -495,13 +501,13 @@ export function AddTriggerDialog({
                     <Label htmlFor={field.name}>
                       <RequiredLabel>Targets</RequiredLabel>
                     </Label>
-                    {isLoadingRepos ? (
-                      <Skeleton className="h-10 w-full" />
-                    ) : repositories.length === 0 ? (
+                    {isLoadingRepos && <Skeleton className="h-10 w-full" />}
+                    {!isLoadingRepos && repositories.length === 0 && (
                       <div className="rounded-md border border-dashed p-3 text-muted-foreground text-xs">
                         Add a GitHub repository first to select targets.
                       </div>
-                    ) : (
+                    )}
+                    {!isLoadingRepos && repositories.length > 0 && (
                       <div ref={comboboxAnchor}>
                         <Combobox
                           items={repositoryOptions.map((repo) => repo.value)}
@@ -562,9 +568,10 @@ export function AddTriggerDialog({
                     </Label>
                     <Select
                       onValueChange={(value) => {
-                        if (value) {
-                          field.handleChange(value as OutputContentType);
+                        if (!value) {
+                          return;
                         }
+                        field.handleChange(value);
                       }}
                       value={field.state.value}
                     >
@@ -615,15 +622,21 @@ export function AddTriggerDialog({
             >
               {({ canSubmit, isSubmitting }) => (
                 <Button disabled={isSubmitting || !canSubmit} type="submit">
-                  {isSubmitting
-                    ? isEditMode
-                      ? "Saving..."
-                      : "Adding..."
-                    : isEditMode
-                      ? "Save changes"
-                      : isScheduleContext
-                        ? "Add schedule"
-                        : "Add trigger"}
+                  {(() => {
+                    if (isSubmitting) {
+                      return isEditMode ? "Saving..." : "Adding...";
+                    }
+
+                    if (isEditMode) {
+                      return "Save changes";
+                    }
+
+                    if (isScheduleContext) {
+                      return "Add schedule";
+                    }
+
+                    return "Add trigger";
+                  })()}
                 </Button>
               )}
             </form.Subscribe>

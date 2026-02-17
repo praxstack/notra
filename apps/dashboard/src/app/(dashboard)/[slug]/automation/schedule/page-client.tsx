@@ -50,14 +50,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2Icon, PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { AddTriggerDialog } from "@/components/automation/triggers/trigger-sheet";
+import { TriggerStatusBadge } from "@/components/automation/triggers/trigger-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import type { Trigger, TriggerSourceType } from "@/types/lib/triggers/triggers";
 import { getOutputTypeLabel } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";
-import { AddTriggerDialog } from "../../triggers/trigger-dialog";
-import { TriggerStatusBadge } from "../_components/trigger-status-badge";
 import { SchedulePageSkeleton } from "./skeleton";
 
 const CRON_SOURCE_TYPES: TriggerSourceType[] = ["cron"];
@@ -388,9 +388,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           />
         </div>
 
-        {isPending ? (
-          <SchedulePageSkeleton />
-        ) : scheduleTriggers.length === 0 ? (
+        {isPending && <SchedulePageSkeleton />}
+
+        {!isPending && scheduleTriggers.length === 0 && (
           <EmptyState
             action={
               <AddTriggerDialog
@@ -425,7 +425,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             description="Create your first schedule to automate recurring content."
             title="No schedules yet"
           />
-        ) : (
+        )}
+
+        {!isPending && scheduleTriggers.length > 0 && (
           <Tabs
             defaultValue="active"
             onValueChange={(value) =>
