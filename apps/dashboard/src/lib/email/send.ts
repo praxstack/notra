@@ -2,11 +2,16 @@ import {
   EMAIL_CONFIG,
   InviteUserEmail,
   ResetPasswordEmail,
+  ScheduledContentCreatedEmail,
   VerifyUserEmail,
   WelcomeEmail,
 } from "@notra/email";
 import type { Resend } from "resend";
-import type { EmailResult, SendInviteEmailProps } from "@/types/lib/email/send";
+import type {
+  EmailResult,
+  SendInviteEmailProps,
+  SendScheduledContentCreatedEmailProps,
+} from "@/types/lib/email/send";
 
 // --- Retry & Idempotency ---
 
@@ -216,5 +221,36 @@ export async function sendWelcomeEmail(
       tags: [{ name: "category", value: "welcome" }],
     },
     `notra:welcome:${userEmail}`
+  );
+}
+
+export async function sendScheduledContentCreatedEmail(
+  resend: Resend,
+  {
+    recipientEmail,
+    organizationName,
+    scheduleName,
+    contentTitle,
+    contentType,
+    contentLink,
+  }: SendScheduledContentCreatedEmailProps
+) {
+  return sendWithRetry(
+    resend,
+    {
+      from: EMAIL_CONFIG.from,
+      replyTo: EMAIL_CONFIG.replyTo,
+      to: recipientEmail,
+      subject: `Your ${scheduleName} schedule created new content`,
+      react: ScheduledContentCreatedEmail({
+        organizationName,
+        scheduleName,
+        contentTitle,
+        contentType,
+        contentLink,
+      }),
+      tags: [{ name: "category", value: "schedule-content-created" }],
+    },
+    `notra:schedule-content-created:${recipientEmail}:${contentLink}`
   );
 }

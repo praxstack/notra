@@ -5,18 +5,23 @@ import {
   contentTriggerLookbackWindows,
   contentTriggers,
   githubIntegrations,
+  members,
+  organizations,
   posts,
 } from "@notra/db/schema";
+import { EMAIL_CONFIG } from "@notra/email";
 import type { WorkflowContext } from "@upstash/workflow";
 import { WorkflowAbort } from "@upstash/workflow";
 import { serve } from "@upstash/workflow/nextjs";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
+import { Resend } from "resend";
 import { z } from "zod";
 import { generateChangelog } from "@/lib/ai/agents/changelog";
 import { isGitHubRateLimitError } from "@/lib/ai/tools/github";
 import { autumn } from "@/lib/billing/autumn";
 import { trackScheduledContentCreated } from "@/lib/databuddy";
+import { sendScheduledContentCreatedEmail } from "@/lib/email/send";
 import { getBaseUrl, triggerScheduleNow } from "@/lib/triggers/qstash";
 import { getValidToneProfile } from "@/schemas/brand";
 import type { LookbackWindow } from "@/schemas/integrations";
@@ -32,6 +37,7 @@ type SchedulePayload = z.infer<typeof schedulePayloadSchema>;
 
 interface TriggerData {
   id: string;
+  name: string;
   organizationId: string;
   sourceType: string;
   sourceConfig: unknown;
@@ -68,6 +74,8 @@ type BrandSettingsData = {
 const DEFAULT_LOOKBACK_WINDOW: LookbackWindow = "last_7_days";
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const GITHUB_RATE_LIMIT_RETRY_DELAY = "30m" as const;
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 function resolveLookbackRange(window: LookbackWindow) {
   const now = new Date();
@@ -158,6 +166,7 @@ export const { POST } = serve<SchedulePayload>(
 
         return {
           id: result.id,
+          name: result.name,
           organizationId: result.organizationId,
           sourceType: result.sourceType,
           sourceConfig: result.sourceConfig,
@@ -449,6 +458,80 @@ export const { POST } = serve<SchedulePayload>(
             postId,
             error: trackingError,
           });
+        }
+      });
+
+      await context.run("send-content-created-email", async () => {
+        if (!resend) {
+          return;
+        }
+
+        const organization = await db.query.organizations.findFirst({
+          where: eq(organizations.id, trigger.organizationId),
+        });
+
+        if (!organization) {
+          console.warn("[Schedule] Organization not found for email", {
+            triggerId,
+            organizationId: trigger.organizationId,
+          });
+          return;
+        }
+
+        const ownerMemberships = await db.query.members.findMany({
+          where: and(
+            eq(members.organizationId, trigger.organizationId),
+            eq(members.role, "owner")
+          ),
+          with: {
+            users: true,
+          },
+        });
+
+        const recipientEmails = ownerMemberships
+          .map((membership) => membership.users.email)
+          .filter((email): email is string => Boolean(email));
+
+        if (recipientEmails.length === 0) {
+          return;
+        }
+
+        const contentLink = `${EMAIL_CONFIG.getAppUrl()}/${organization.slug}/content/${postId}`;
+
+        const results = await Promise.allSettled(
+          recipientEmails.map((recipientEmail) =>
+            sendScheduledContentCreatedEmail(resend, {
+              recipientEmail,
+              organizationName: organization.name,
+              scheduleName: trigger.name,
+              contentTitle: content.title,
+              contentType: trigger.outputType,
+              contentLink,
+            })
+          )
+        );
+
+        for (const [index, result] of results.entries()) {
+          const recipientEmail = recipientEmails[index];
+
+          if (result.status === "rejected") {
+            console.error("[Schedule] Failed to send content email", {
+              triggerId,
+              postId,
+              recipientEmail,
+              error: result.reason,
+            });
+            continue;
+          }
+
+          if (result.value.error) {
+            console.error("[Schedule] Resend rejected content email", {
+              triggerId,
+              postId,
+              recipientEmail,
+              error: result.value.error,
+            });
+          }
         }
       });
 
