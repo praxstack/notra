@@ -29,7 +29,7 @@ export async function GET() {
     "",
     "Turn your daily work into publish-ready content.",
     "",
-    "Now in public beta. Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish content.",
+    "Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish content.",
     "",
     "Primary CTA: [Start for free](https://app.usenotra.com)",
     "",
