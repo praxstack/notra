@@ -360,7 +360,10 @@ Use this for activity summaries, changelog generation, or understanding recent c
           .describe("The page number to retrieve (starts at 1)"),
         branch: z
           .string()
-          .describe("The branch to retrieve commits from. If not provided, the default branch will be used.").optional(),
+          .describe(
+            "The branch to retrieve commits from. If not provided, the default branch will be used."
+          )
+          .optional(),
         days: z
           .number()
           .default(7)
