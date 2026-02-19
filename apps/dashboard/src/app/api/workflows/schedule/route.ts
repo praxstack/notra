@@ -8,26 +8,26 @@ import {
   members,
   organizationNotificationSettings,
   organizations,
-  posts,
 } from "@notra/db/schema";
 import type { WorkflowContext } from "@upstash/workflow";
 import { WorkflowAbort } from "@upstash/workflow";
 import { serve } from "@upstash/workflow/nextjs";
 import { and, eq, inArray } from "drizzle-orm";
-import { customAlphabet } from "nanoid";
 import { Resend } from "resend";
 import { z } from "zod";
 import { generateChangelog } from "@/lib/ai/agents/changelog";
 import { isGitHubRateLimitError } from "@/lib/ai/tools/github";
 import { autumn } from "@/lib/billing/autumn";
 import { trackScheduledContentCreated } from "@/lib/databuddy";
-import { sendScheduledContentCreatedEmail } from "@/lib/email/send";
+import {
+  sendScheduledContentCreatedEmail,
+  sendScheduledContentFailedEmail,
+} from "@/lib/email/send";
 import { getBaseUrl, triggerScheduleNow } from "@/lib/triggers/qstash";
+import { appendWebhookLog } from "@/lib/webhooks/logging";
 import { getValidToneProfile } from "@/schemas/brand";
 import type { LookbackWindow } from "@/schemas/integrations";
 import { FEATURES } from "@/utils/constants";
-
-const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 16);
 
 const schedulePayloadSchema = z.object({
   triggerId: z.string().min(1),
@@ -55,14 +55,11 @@ interface RepositoryData {
   defaultBranch: string | null;
 }
 
-interface GeneratedContent {
-  title: string;
-  markdown: string;
-}
-
 type ContentGenerationResult =
-  | { status: "ok"; content: GeneratedContent }
-  | { status: "rate_limited"; retryAfterSeconds?: number };
+  | { status: "ok"; postId: string; title: string }
+  | { status: "rate_limited"; retryAfterSeconds?: number }
+  | { status: "unsupported_output_type"; outputType: string }
+  | { status: "generation_failed"; reason: string };
 
 type BrandSettingsData = {
   toneProfile: string | null;
@@ -308,8 +305,22 @@ export const { POST } = serve<SchedulePayload>(
               .map((r) => `integrationId: ${r.id}`)
               .join(", ");
 
+            const sourceMetadata: PostSourceMetadata = {
+              triggerId: trigger.id,
+              triggerSourceType: trigger.sourceType,
+              repositories: repositories.map((r) => ({
+                owner: r.owner,
+                repo: r.repo,
+              })),
+              lookbackWindow,
+              lookbackRange: {
+                start: lookbackRange.start.toISOString(),
+                end: lookbackRange.end.toISOString(),
+              },
+            };
+
             try {
-              const { output } = await generateChangelog({
+              const { postId, title } = await generateChangelog({
                 organizationId: trigger.organizationId,
                 repositories: repositories.map((repository) => ({
                   integrationId: repository.id,
@@ -329,14 +340,13 @@ export const { POST } = serve<SchedulePayload>(
                   audience: brand?.audience ?? undefined,
                   customInstructions: brand?.customInstructions ?? null,
                 },
+                sourceMetadata,
               });
 
               return {
                 status: "ok",
-                content: {
-                  title: output.title,
-                  markdown: output.markdown,
-                },
+                postId,
+                title,
               };
             } catch (error) {
               if (isGitHubRateLimitError(error)) {
@@ -346,21 +356,21 @@ export const { POST } = serve<SchedulePayload>(
                 };
               }
 
-              throw error;
+              return {
+                status: "generation_failed",
+                reason: error instanceof Error ? error.message : String(error),
+              };
             }
           }
 
-          // For other output types, log and return placeholder
+          // For other output types, return a distinct status so we do not
+          // enter rate-limit retry flow.
           console.log(
             `[Schedule] Output type ${trigger.outputType} not fully implemented yet`
           );
-
           return {
-            status: "ok",
-            content: {
-              title: `${trigger.outputType} - ${new Date().toLocaleDateString()}`,
-              markdown: `*Automated ${trigger.outputType} generation is coming soon.*\n\nRepositories: ${repositories.map((r) => `${r.owner}/${r.repo}`).join(", ")}`,
-            },
+            status: "unsupported_output_type",
+            outputType: trigger.outputType,
           };
         }
       );
@@ -407,38 +417,180 @@ export const { POST } = serve<SchedulePayload>(
         return;
       }
 
-      const content = contentResult.content;
+      if (contentResult.status === "unsupported_output_type") {
+        const autumnClient = autumn;
+        if (aiCreditReservation.reserved && autumnClient) {
+          await context.run(
+            "refund-ai-credit-after-unsupported-output-type",
+            async () => {
+              const { error } = await autumnClient.track({
+                customer_id: trigger.organizationId,
+                feature_id: FEATURES.AI_CREDITS,
+                value: 0,
+              });
 
-      const postId = await context.run<string>("save-post", async () => {
-        const id = nanoid();
-        const lookbackRange = resolveLookbackRange(lookbackWindow);
+              if (error) {
+                console.error(
+                  "[Schedule] Failed to refund AI credit after unsupported output type",
+                  {
+                    triggerId,
+                    organizationId: trigger.organizationId,
+                    outputType: contentResult.outputType,
+                    error,
+                  }
+                );
+              }
+            }
+          );
+        }
 
-        const sourceMetadata: PostSourceMetadata = {
-          triggerId: trigger.id,
-          triggerSourceType: trigger.sourceType,
-          repositories: repositories.map((r) => ({
-            owner: r.owner,
-            repo: r.repo,
-          })),
-          lookbackWindow,
-          lookbackRange: {
-            start: lookbackRange.start.toISOString(),
-            end: lookbackRange.end.toISOString(),
-          },
-        };
+        console.warn(
+          `[Schedule] Output type ${contentResult.outputType} is not implemented for trigger ${triggerId}. Canceling without retry.`
+        );
 
-        await db.insert(posts).values({
-          id,
-          organizationId: trigger.organizationId,
-          title: content.title,
-          content: content.markdown,
-          markdown: content.markdown,
-          contentType: trigger.outputType,
-          sourceMetadata,
+        await context.cancel();
+        return;
+      }
+
+      if (contentResult.status === "generation_failed") {
+        const autumnClient = autumn;
+        if (aiCreditReservation.reserved && autumnClient) {
+          await context.run(
+            "refund-ai-credit-after-generation-failure",
+            async () => {
+              const { error } = await autumnClient.track({
+                customer_id: trigger.organizationId,
+                feature_id: FEATURES.AI_CREDITS,
+                value: 0,
+              });
+
+              if (error) {
+                console.error(
+                  "[Schedule] Failed to refund AI credit after generation failure",
+                  {
+                    triggerId,
+                    organizationId: trigger.organizationId,
+                    reason: contentResult.reason,
+                    error,
+                  }
+                );
+              }
+            }
+          );
+        }
+
+        console.error(
+          `[Schedule] Content generation failed for trigger ${triggerId}: ${contentResult.reason}`
+        );
+
+        await context.run("log-generation-failure", async () => {
+          await appendWebhookLog({
+            organizationId: trigger.organizationId,
+            integrationId: triggerId,
+            integrationType: "schedule",
+            title: `Schedule "${trigger.name.trim() || trigger.outputType}" failed to generate content`,
+            status: "failed",
+            statusCode: null,
+            errorMessage: contentResult.reason,
+          });
         });
 
-        return id;
+        const failureNotificationData = await context.run<{
+          enabled: boolean;
+          ownerEmails: string[];
+          organizationName: string;
+          organizationSlug: string;
+        }>("fetch-failure-notification-data", async () => {
+          const notificationSettings =
+            await db.query.organizationNotificationSettings.findFirst({
+              where: eq(
+                organizationNotificationSettings.organizationId,
+                trigger.organizationId
+              ),
+            });
+
+          if (!notificationSettings?.scheduledContentFailed) {
+            return {
+              enabled: false,
+              ownerEmails: [],
+              organizationName: "",
+              organizationSlug: "",
+            };
+          }
+
+          const org = await db.query.organizations.findFirst({
+            where: eq(organizations.id, trigger.organizationId),
+            columns: { name: true, slug: true },
+          });
+
+          const ownerMemberships = await db.query.members.findMany({
+            where: and(
+              eq(members.organizationId, trigger.organizationId),
+              eq(members.role, "owner")
+            ),
+            with: { users: { columns: { email: true } } },
+          });
+
+          return {
+            enabled: true,
+            ownerEmails: ownerMemberships.map((m) => m.users.email),
+            organizationName: org?.name ?? "Your organization",
+            organizationSlug: org?.slug ?? "",
+          };
+        });
+
+        if (
+          failureNotificationData.enabled &&
+          failureNotificationData.ownerEmails.length > 0
+        ) {
+          await context.run("send-failure-notification-emails", async () => {
+            const resendApiKey = process.env.RESEND_API_KEY;
+            if (!resendApiKey) {
+              return;
+            }
+
+            const resend = new Resend(resendApiKey);
+            const scheduleName = trigger.name.trim() || trigger.outputType;
+
+            await Promise.allSettled(
+              failureNotificationData.ownerEmails.map((email) =>
+                sendScheduledContentFailedEmail(resend, {
+                  recipientEmail: email,
+                  organizationName: failureNotificationData.organizationName,
+                  organizationSlug: failureNotificationData.organizationSlug,
+                  scheduleName,
+                  reason: contentResult.reason,
+                }).then((result) => {
+                  if (result.error) {
+                    console.error(
+                      `[Schedule] Failed to send failure notification to ${email}:`,
+                      result.error
+                    );
+                  }
+                })
+              )
+            );
+          });
+        }
+
+        await context.cancel();
+        return;
+      }
+
+      const { postId, title: contentTitle } = contentResult;
+
+      await context.run("log-generation-success", async () => {
+        await appendWebhookLog({
+          organizationId: trigger.organizationId,
+          integrationId: triggerId,
+          integrationType: "schedule",
+          title: `Schedule "${trigger.name.trim() || trigger.outputType}" created "${contentTitle}"`,
+          status: "success",
+          statusCode: null,
+          referenceId: postId,
+        });
       });
+
       await context.run("track-content-created", async () => {
         try {
           await trackScheduledContentCreated({
@@ -528,7 +680,7 @@ export const { POST } = serve<SchedulePayload>(
                 recipientEmail: email,
                 organizationName: notificationData.organizationName,
                 scheduleName,
-                contentTitle: content.title,
+                contentTitle,
                 contentType: trigger.outputType,
                 contentLink,
                 organizationSlug: notificationData.organizationSlug,
