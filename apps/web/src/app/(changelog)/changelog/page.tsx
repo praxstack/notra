@@ -28,6 +28,15 @@ const COMPANY_ICONS: Record<string, ReactNode> = {
   ),
   marble: <Marble className="size-5 rounded" />,
   neon: <Neon className="size-5 rounded" />,
+  unkey: (
+    <Image
+      alt="Unkey"
+      className="h-5 w-auto rounded"
+      height="85"
+      src="/logos/brands/unkey.webp"
+      width="53"
+    />
+  ),
 };
 
 const title = "Example Changelogs | Notra";
