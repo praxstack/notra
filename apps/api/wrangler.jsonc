@@ -3,7 +3,8 @@
   "name": "my-app",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-20",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "keep_vars": true
   // "vars": {
   //   "MY_VAR": "my-variable"
   // },
