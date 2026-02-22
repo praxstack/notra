@@ -9,10 +9,6 @@
     {
       "url": "https://api.usenotra.com",
       "description": "Production"
-    },
-    {
-      "url": "http://localhost:8787",
-      "description": "Current environment"
     }
   ],
   "security": [

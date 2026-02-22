@@ -43,7 +43,7 @@ app.openAPIRegistry.registerComponent("securitySchemes", "BearerAuth", {
     "Send your API key in the Authorization header as Bearer API_KEY.",
 });
 
-app.doc31("/openapi.json", (c) => ({
+app.doc31("/openapi.json", (_c) => ({
   openapi: "3.1.1",
   info: {
     title: "Notra API",
