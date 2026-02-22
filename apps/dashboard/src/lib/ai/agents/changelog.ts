@@ -75,7 +75,7 @@ export async function generateChangelog(
     model,
     providerOptions: {
       anthropic: {
-        thinking: { type: "enabled", budgetTokens: 5000 },
+        thinking: { type: "enabled", budgetTokens: 2500 },
       },
     },
     tools: {
