@@ -1,52 +1,141 @@
+import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { and, count, eq, inArray } from "@notra/db/operators";
 import { posts } from "@notra/db/schema";
-import { Hono } from "hono";
 import {
+  errorResponseSchema,
   getPostParamsSchema,
   getPostQuerySchema,
+  getPostResponseSchema,
+  getPostsOpenApiQuerySchema,
   getPostsParamsSchema,
-  getPostsQuerySchema,
+  getPostsResponseSchema,
 } from "../schemas/post";
 
-export const contentRoutes = new Hono();
+export const contentRoutes = new OpenAPIHono();
 
-contentRoutes.get("/:organizationId/posts", async (c) => {
-  const paramsValidation = getPostsParamsSchema.safeParse(c.req.param());
-  if (!paramsValidation.success) {
-    return c.json(
-      {
-        error:
-          paramsValidation.error.issues[0]?.message ?? "Invalid path params",
+const getPostsRoute = createRoute({
+  method: "get",
+  path: "/{organizationId}/posts",
+  tags: ["Content"],
+  operationId: "listPosts",
+  summary: "List posts",
+  request: {
+    params: getPostsParamsSchema,
+    query: getPostsOpenApiQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Posts fetched successfully",
+      content: {
+        "application/json": {
+          schema: getPostsResponseSchema,
+        },
       },
-      400
-    );
-  }
+    },
+    400: {
+      description: "Invalid path params or query",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Authentication service unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
 
-  const queryValidation = getPostsQuerySchema.safeParse({
-    ...c.req.query(),
-    status: new URL(c.req.url).searchParams.getAll("status"),
-  });
-  if (!queryValidation.success) {
-    return c.json(
-      { error: queryValidation.error.issues[0]?.message ?? "Invalid query" },
-      400
-    );
-  }
+const getPostRoute = createRoute({
+  method: "get",
+  path: "/{organizationId}/posts/{postId}",
+  tags: ["Content"],
+  operationId: "getPost",
+  summary: "Get a single post",
+  request: {
+    params: getPostParamsSchema,
+    query: getPostQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Post fetched successfully",
+      content: {
+        "application/json": {
+          schema: getPostResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Invalid path params or query",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Authentication service unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+contentRoutes.openapi(getPostsRoute, async (c) => {
+  const params = c.req.valid("param");
+  const query = c.req.valid("query");
 
   const auth = c.get("auth");
   const keyOrganizationId = auth.identity?.externalId;
-  if (
-    !keyOrganizationId ||
-    keyOrganizationId !== paramsValidation.data.organizationId
-  ) {
+  if (!keyOrganizationId || keyOrganizationId !== params.organizationId) {
     return c.json({ error: "Forbidden: organization access denied" }, 403);
   }
 
   const db = c.get("db");
-  const { limit, page, sort, status } = queryValidation.data;
+  const { limit, page, sort, status } = query;
   const offset = (page - 1) * limit;
   const whereClause = and(
-    eq(posts.organizationId, paramsValidation.data.organizationId),
+    eq(posts.organizationId, params.organizationId),
     status.length === 2 ? undefined : inArray(posts.status, status)
   );
 
@@ -79,56 +168,41 @@ contentRoutes.get("/:organizationId/posts", async (c) => {
     },
   });
 
-  return c.json({
-    posts: results,
-    pagination: {
-      limit,
-      currentPage: page,
-      nextPage: page < totalPages ? page + 1 : null,
-      previousPage: page > 1 ? page - 1 : null,
-      totalPages,
-      totalItems,
+  return c.json(
+    {
+      posts: results,
+      pagination: {
+        limit,
+        currentPage: page,
+        nextPage: page < totalPages ? page + 1 : null,
+        previousPage: page > 1 ? page - 1 : null,
+        totalPages,
+        totalItems,
+      },
+      metadata: {
+        status,
+      },
     },
-  });
+    200
+  );
 });
 
-contentRoutes.get("/:organizationId/posts/:postId", async (c) => {
-  const paramsValidation = getPostParamsSchema.safeParse(c.req.param());
-  if (!paramsValidation.success) {
-    return c.json(
-      {
-        error:
-          paramsValidation.error.issues[0]?.message ?? "Invalid path params",
-      },
-      400
-    );
-  }
+contentRoutes.openapi(getPostRoute, async (c) => {
+  const params = c.req.valid("param");
+  const query = c.req.valid("query");
 
   const auth = c.get("auth");
   const keyOrganizationId = auth.identity?.externalId;
-  if (
-    !keyOrganizationId ||
-    keyOrganizationId !== paramsValidation.data.organizationId
-  ) {
+  if (!keyOrganizationId || keyOrganizationId !== params.organizationId) {
     return c.json({ error: "Forbidden: organization access denied" }, 403);
   }
 
-  const queryValidation = getPostQuerySchema.safeParse({
-    status: new URL(c.req.url).searchParams.getAll("status"),
-  });
-  if (!queryValidation.success) {
-    return c.json(
-      { error: queryValidation.error.issues[0]?.message ?? "Invalid query" },
-      400
-    );
-  }
-
   const db = c.get("db");
-  const { status } = queryValidation.data;
+  const { status } = query;
   const post = await db.query.posts.findFirst({
     where: and(
-      eq(posts.id, paramsValidation.data.postId),
-      eq(posts.organizationId, paramsValidation.data.organizationId),
+      eq(posts.id, params.postId),
+      eq(posts.organizationId, params.organizationId),
       status.length === 2 ? undefined : inArray(posts.status, status)
     ),
     columns: {
@@ -144,7 +218,13 @@ contentRoutes.get("/:organizationId/posts/:postId", async (c) => {
     },
   });
 
-  return c.json({
-    post,
-  });
+  return c.json(
+    {
+      post: post ?? null,
+      metadata: {
+        status,
+      },
+    },
+    200
+  );
 });

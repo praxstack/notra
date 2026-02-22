@@ -1,8 +1,17 @@
-// biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
-import * as z from "zod";
+import { z } from "@hono/zod-openapi";
 
 export const getPostsParamsSchema = z.object({
-  organizationId: z.string().trim().min(1, "organizationId is required"),
+  organizationId: z
+    .string()
+    .trim()
+    .min(1, "organizationId is required")
+    .openapi({
+      param: {
+        in: "path",
+        name: "organizationId",
+      },
+      example: "org_123",
+    }),
 });
 
 const postStatusSchema = z.enum(["draft", "published"]);
@@ -12,7 +21,7 @@ const statusFilterSchema = z
   .array(postStatusSchema)
   .max(2)
   .optional()
-  .transform((statuses): PostStatus[] =>
+  .transform((statuses: PostStatus[] | undefined): PostStatus[] =>
     statuses && statuses.length > 0
       ? Array.from(new Set(statuses))
       : ["published"]
@@ -25,14 +34,75 @@ export const getPostsQuerySchema = z.object({
   status: statusFilterSchema,
 });
 
+const openApiStatusFilterSchema = z
+  .union([postStatusSchema, z.array(postStatusSchema).max(2)])
+  .optional()
+  .transform(
+    (statuses: PostStatus | PostStatus[] | undefined): PostStatus[] => {
+      if (!statuses) {
+        return ["published"];
+      }
+
+      const normalized = Array.isArray(statuses) ? statuses : [statuses];
+      return Array.from(new Set(normalized));
+    }
+  )
+  .openapi({
+    description:
+      "Filter by status. Repeat the query param to pass multiple values.",
+    example: ["published"],
+  });
+
+export const getPostsOpenApiQuerySchema = z.object({
+  sort: z.enum(["asc", "desc"]).default("desc").openapi({
+    description: "Sort by creation date",
+    example: "desc",
+  }),
+  limit: z.coerce.number().int().min(1).max(100).default(10).openapi({
+    description: "Items per page",
+    example: 10,
+  }),
+  page: z.coerce.number().int().min(1).default(1).openapi({
+    description: "Page number",
+    example: 1,
+  }),
+  status: openApiStatusFilterSchema,
+});
+
 export const getPostParamsSchema = z.object({
-  organizationId: z.string().trim().min(1, "organizationId is required"),
-  postId: z.string().trim().min(1, "postId is required"),
+  organizationId: z
+    .string()
+    .trim()
+    .min(1, "organizationId is required")
+    .openapi({
+      param: {
+        in: "path",
+        name: "organizationId",
+      },
+      example: "org_123",
+    }),
+  postId: z
+    .string()
+    .trim()
+    .min(1, "postId is required")
+    .openapi({
+      param: {
+        in: "path",
+        name: "postId",
+      },
+      example: "post_123",
+    }),
 });
 
 export const getPostQuerySchema = z.object({
-  status: statusFilterSchema,
+  status: openApiStatusFilterSchema,
 });
+
+export const errorResponseSchema = z
+  .object({
+    error: z.string(),
+  })
+  .openapi("ErrorResponse");
 
 export const postResponseSchema = z.object({
   id: z.string(),
@@ -42,8 +112,8 @@ export const postResponseSchema = z.object({
   contentType: z.string(),
   sourceMetadata: z.unknown().nullable(),
   status: postStatusSchema,
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 export const postsResponseMetadataSchema = z.object({

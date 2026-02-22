@@ -1,5 +1,5 @@
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { createDb } from "@notra/db/drizzle-http";
-import { Hono } from "hono";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import { authMiddleware } from "./middleware/auth";
 import { contentRoutes } from "./routes/content";
@@ -16,7 +16,7 @@ interface AppEnv {
   };
 }
 
-const app = new Hono<AppEnv>({ strict: true });
+const app = new OpenAPIHono<AppEnv>({ strict: true });
 
 app.use(trimTrailingSlash({ alwaysRedirect: true }));
 
@@ -34,5 +34,35 @@ app.get("/", (c) => {
 });
 
 app.route("/v1", contentRoutes);
+
+app.openAPIRegistry.registerComponent("securitySchemes", "BearerAuth", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "API Key",
+  description:
+    "Send your API key in the Authorization header as Bearer API_KEY.",
+});
+
+app.doc31("/openapi.json", (c) => ({
+  openapi: "3.1.1",
+  info: {
+    title: "Notra API",
+    version: "1.0.0",
+    description: "OpenAPI schema for authenticated content endpoints.",
+  },
+  servers: [
+    {
+      url: "https://api.usenotra.com",
+      description: "Production",
+    }
+  ],
+  security: [{ BearerAuth: [] }],
+  tags: [
+    {
+      name: "Content",
+      description: "Read content for the authenticated organization",
+    },
+  ],
+}));
 
 export default app;
