@@ -171,7 +171,7 @@ function SchedulesSection({
     .join("&");
   const hasRepositories = normalizedRepositoryIds.length > 0;
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError } = useQuery<{ triggers: Trigger[] }>({
     queryKey: [
       ...QUERY_KEYS.AUTOMATION.schedules(organizationId),
       "repositoryIds",
@@ -186,7 +186,7 @@ function SchedulesSection({
       if (!response.ok) {
         throw new Error("Failed to fetch schedules");
       }
-      return response.json() as Promise<{ triggers: Trigger[] }>;
+      return response.json();
     },
     enabled: !!organizationId && hasRepositories,
   });
@@ -238,8 +238,8 @@ function SchedulesSection({
               key={schedule.id}
             >
               <div className="flex min-w-0 items-center gap-3">
-                <span className="truncate font-medium text-sm capitalize">
-                  {getOutputTypeLabel(schedule.outputType)}
+                <span className="truncate font-medium text-sm">
+                  {schedule.name}
                 </span>
                 <span className="shrink-0 text-muted-foreground text-xs">
                   {formatFrequency(schedule.sourceConfig.cron)}
@@ -272,42 +272,44 @@ export default function PageClient({ integrationId }: PageClientProps) {
   const { activeOrganization } = useOrganizationsContext();
   const organizationId = activeOrganization?.id;
 
-  const { data: integration, isLoading: isLoadingIntegration } = useQuery({
-    queryKey: QUERY_KEYS.INTEGRATIONS.detail(
-      organizationId ?? "",
-      integrationId
-    ),
-    queryFn: async () => {
-      if (!organizationId) {
-        throw new Error("Organization ID is required");
-      }
-      const response = await fetch(
-        `/api/organizations/${organizationId}/integrations/${integrationId}`
-      );
+  const { data: integration, isLoading: isLoadingIntegration } =
+    useQuery<GitHubIntegration>({
+      queryKey: QUERY_KEYS.INTEGRATIONS.detail(
+        organizationId ?? "",
+        integrationId
+      ),
+      queryFn: async () => {
+        if (!organizationId) {
+          throw new Error("Organization ID is required");
+        }
+        const response = await fetch(
+          `/api/organizations/${organizationId}/integrations/${integrationId}`
+        );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch integration");
-      }
+        if (!response.ok) {
+          throw new Error("Failed to fetch integration");
+        }
 
-      return response.json() as Promise<GitHubIntegration>;
-    },
-    enabled: !!organizationId,
-    staleTime: 1000 * 60 * 5,
-    gcTime: 1000 * 60 * 10,
-    initialData: () => {
-      if (!organizationId) {
-        return undefined;
-      }
+        return response.json();
+      },
+      enabled: !!organizationId,
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
+      initialData: () => {
+        if (!organizationId) {
+          return undefined;
+        }
 
-      const cachedIntegrations = queryClient.getQueryData<IntegrationsResponse>(
-        QUERY_KEYS.INTEGRATIONS.all(organizationId)
-      );
+        const cachedIntegrations =
+          queryClient.getQueryData<IntegrationsResponse>(
+            QUERY_KEYS.INTEGRATIONS.all(organizationId)
+          );
 
-      return cachedIntegrations?.integrations.find(
-        (cachedIntegration) => cachedIntegration.id === integrationId
-      );
-    },
-  });
+        return cachedIntegrations?.integrations.find(
+          (cachedIntegration) => cachedIntegration.id === integrationId
+        );
+      },
+    });
 
   if (!organizationId) {
     return null;
