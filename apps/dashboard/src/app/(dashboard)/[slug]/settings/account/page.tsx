@@ -3,6 +3,7 @@
 import {
   Cancel01Icon,
   CheckmarkCircle02Icon,
+  Upload01Icon,
   ViewIcon,
   ViewOffSlashIcon,
 } from "@hugeicons/core-free-icons";
@@ -225,12 +226,14 @@ function ProfileSection({ user, onSessionRefetch }: ProfileSectionProps) {
           />
           <button
             aria-label="Upload profile picture"
-            className="group relative cursor-pointer disabled:cursor-not-allowed"
+            className="group group/avatar relative cursor-pointer disabled:cursor-not-allowed"
             disabled={isUploadingAvatar}
             onClick={() => fileInputRef.current?.click()}
+            onMouseEnter={(e) => e.stopPropagation()}
+            onMouseLeave={(e) => e.stopPropagation()}
             type="button"
           >
-            <Avatar className="size-16 rounded-lg ring-2 ring-transparent transition-shadow after:rounded-lg group-hover:ring-muted-foreground/20 group-focus-visible:ring-ring">
+            <Avatar className="size-16 rounded-lg ring-2 ring-transparent transition-shadow after:rounded-lg group-hover/avatar:ring-muted-foreground/20 group-focus-visible:ring-ring">
               <AvatarImage
                 alt={user.name}
                 className="rounded-lg"
@@ -244,6 +247,9 @@ function ProfileSection({ user, onSessionRefetch }: ProfileSectionProps) {
                   <Loader2Icon className="size-6 animate-spin" />
                 </span>
               )}
+              <span className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/80 opacity-0 transition-opacity group-hover/avatar:opacity-100">
+                <HugeiconsIcon icon={Upload01Icon} className="size-6" />
+              </span>
             </Avatar>
           </button>
           <div className="space-y-1">
