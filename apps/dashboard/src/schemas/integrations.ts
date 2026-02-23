@@ -1,6 +1,6 @@
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
-import { GITHUB_URL_PATTERNS } from "@/utils/constants";
+import { GITHUB_URL_PATTERNS } from "@/constants/github";
 
 export const INTEGRATION_CATEGORIES = ["input", "output"] as const;
 export type IntegrationCategory = (typeof INTEGRATION_CATEGORIES)[number];
@@ -214,7 +214,10 @@ export const configureTriggerBodySchema = z.object({
 });
 export type ConfigureTriggerBody = z.infer<typeof configureTriggerBodySchema>;
 
-export const SUPPORTED_SCHEDULE_OUTPUT_TYPES = ["changelog"] as const;
+export const SUPPORTED_SCHEDULE_OUTPUT_TYPES = [
+  "changelog",
+  "linkedin_post",
+] as const;
 export type ScheduleOutputType =
   (typeof SUPPORTED_SCHEDULE_OUTPUT_TYPES)[number];
 

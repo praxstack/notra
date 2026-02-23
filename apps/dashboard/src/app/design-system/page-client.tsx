@@ -218,7 +218,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import ChatInput from "@/components/chat-input";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
+
 import { IntegrationCard } from "@/components/integrations/integration-card";
+import { LinkedInPost } from "@/components/linkedin-post";
 
 const colorGroups = [
   {
@@ -372,17 +374,17 @@ export default function DesignSystemClientPage() {
   return (
     <main className="container mx-auto flex flex-col gap-12 py-10">
       <header className="space-y-3">
-        <h1 className="font-semibold text-3xl tracking-tight">
-          Notra UI Preview
-        </h1>
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="font-semibold text-3xl tracking-tight">
+            Notra UI Preview
+          </h1>
+          <SidebarProvider className="!min-h-0 w-auto" defaultOpen={false}>
+            <ThemeToggle />
+          </SidebarProvider>
+        </div>
         <p className="max-w-2xl text-muted-foreground text-sm">
           Component and token showcase for the dashboard UI kit.
         </p>
-        <SidebarProvider defaultOpen={false}>
-          <div className="w-fit">
-            <ThemeToggle />
-          </div>
-        </SidebarProvider>
       </header>
 
       <section className="space-y-6">
@@ -1422,6 +1424,48 @@ export default function DesignSystemClientPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      </section>
+
+      <Separator />
+
+      <section className="space-y-6">
+        <SectionHeader
+          description="LinkedIn post preview cards for content planning."
+          title="Social Media Previews"
+        />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <LinkedInPost
+            author={{
+              name: "Avery Lane",
+              avatar: "https://i.pravatar.cc/80?img=32",
+              headline: "77,350 followers",
+            }}
+            comments={42}
+            content={
+              "We just shipped our biggest update yet — and it changes everything about how teams run automations.\n\nAfter months of working closely with power users, we rebuilt the scheduling engine from the ground up. The result? 3x faster execution, smarter retry logic, and a brand-new visual timeline.\n\nHere's what's new:\n• Enum-based lookback windows for precise control\n• Real-time status indicators across all workflows\n• One-click duplication for complex automations\n\nThis is just the beginning. We're building the future of workflow automation, and your feedback is what drives us forward."
+            }
+            defaultExpanded={false}
+            reactions={{ count: 128, types: ["like", "love", "celebrate"] }}
+            reposts={12}
+            timestamp="2d"
+            truncate
+          />
+          <LinkedInPost
+            author={{
+              name: "Jordan Kim",
+              fallback: "JK",
+              headline: "Product Designer at Notra",
+            }}
+            comments={8}
+            content={
+              "Excited to share our new dashboard design system — built for consistency, speed, and dark mode from day one.\n\nWe focused on three core principles:\n• Accessibility first — every component tested with screen readers\n• Performance obsessed — zero layout shift, minimal JS\n• Developer experience — copy-paste ready with full TypeScript support\n\nCheck it out and let me know what you think!"
+            }
+            reactions={{ count: 56, types: ["like", "celebrate"] }}
+            reposts={3}
+            timestamp="5h"
+            truncate
+          />
         </div>
       </section>
 
