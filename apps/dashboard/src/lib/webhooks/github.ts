@@ -1,7 +1,11 @@
 import crypto from "node:crypto";
+import { db } from "@notra/db/drizzle";
+import { contentTriggers } from "@notra/db/schema";
+import { and, eq, sql } from "drizzle-orm";
 import { checkLogRetention } from "@/lib/billing/check-log-retention";
 import { redis } from "@/lib/redis";
 import { getWebhookSecretByRepositoryId } from "@/lib/services/github-integration";
+import { triggerEventNow } from "@/lib/triggers/qstash";
 import { appendWebhookLog } from "@/lib/webhooks/logging";
 import {
   type GitHubEventType,
@@ -18,6 +22,7 @@ import type {
 } from "@/types/lib/webhooks/webhooks";
 
 const DELIVERY_TTL_SECONDS = 60 * 60 * 24;
+const SHOULD_DEDUPE_DELIVERIES = process.env.NODE_ENV !== "development";
 
 async function isDeliveryProcessed(deliveryId: string) {
   if (!(redis && deliveryId)) {
@@ -34,15 +39,6 @@ async function markDeliveryProcessed(deliveryId: string) {
   }
   const key = `webhook:delivery:${deliveryId}`;
   await redis.set(key, "1", { ex: DELIVERY_TTL_SECONDS });
-}
-
-const STAR_MILESTONES = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10_000];
-
-function isStarMilestone(stars?: number) {
-  if (!stars) {
-    return false;
-  }
-  return STAR_MILESTONES.includes(stars);
 }
 
 function getRepositoryName(payload: GitHubWebhookPayload) {
@@ -117,7 +113,7 @@ function processReleaseEvent(
   action: string,
   payload: GitHubWebhookPayload
 ): GithubProcessedEvent | null {
-  const validActions = ["published", "created", "edited", "prereleased"];
+  const validActions = ["published", "prereleased"];
   if (!validActions.includes(action)) {
     return null;
   }
@@ -188,28 +184,6 @@ function processPushEvent(
   };
 }
 
-function processStarEvent(
-  action: string,
-  payload: GitHubWebhookPayload
-): GithubProcessedEvent | null {
-  if (action !== "created") {
-    return null;
-  }
-
-  const stargazersCount =
-    payload.repository?.stargazers_count ?? payload.star_count;
-
-  return {
-    type: "star",
-    action: "created",
-    data: {
-      starredAt: payload.starred_at,
-      user: payload.sender?.login,
-      stargazersCount,
-    },
-  };
-}
-
 export async function handleGitHubWebhook(
   context: WebhookContext
 ): Promise<WebhookResult> {
@@ -240,7 +214,11 @@ export async function handleGitHubWebhook(
 
   const event: GitHubEventType = eventHeader;
 
-  if (delivery && (await isDeliveryProcessed(delivery))) {
+  if (
+    SHOULD_DEDUPE_DELIVERIES &&
+    delivery &&
+    (await isDeliveryProcessed(delivery))
+  ) {
     return {
       success: true,
       message: "Webhook already processed (duplicate delivery)",
@@ -379,9 +357,6 @@ export async function handleGitHubWebhook(
     case "push":
       processedEvent = processPushEvent(payload);
       break;
-    case "star":
-      processedEvent = processStarEvent(action, payload);
-      break;
     default:
       await appendWebhookLog({
         organizationId,
@@ -423,13 +398,8 @@ export async function handleGitHubWebhook(
   }
 
   const repositoryName = getRepositoryName(payload);
-  const stargazersCount = processedEvent.data.stargazersCount;
-
   const shouldPersistMemory =
-    processedEvent.type === "release" ||
-    processedEvent.type === "push" ||
-    (processedEvent.type === "star" &&
-      isStarMilestone(stargazersCount as number | undefined));
+    processedEvent.type === "release" || processedEvent.type === "push";
 
   if (shouldPersistMemory) {
     const customId = `github:${repositoryId}:${delivery ?? crypto.randomUUID()}`;
@@ -459,7 +429,46 @@ export async function handleGitHubWebhook(
     retentionDays: logRetentionDays,
   });
 
-  if (delivery) {
+  // Find and trigger matching event triggers
+  const matchingTriggers = await db
+    .select({
+      id: contentTriggers.id,
+      sourceConfig: contentTriggers.sourceConfig,
+    })
+    .from(contentTriggers)
+    .where(
+      and(
+        eq(contentTriggers.organizationId, organizationId),
+        eq(contentTriggers.sourceType, "github_webhook"),
+        eq(contentTriggers.enabled, true),
+        sql`(${contentTriggers.targets}->'repositoryIds') @> ${JSON.stringify([repositoryId])}::jsonb`
+      )
+    );
+
+  for (const trigger of matchingTriggers) {
+    const config = trigger.sourceConfig as { eventTypes?: string[] };
+    const eventTypes = config.eventTypes ?? [];
+
+    if (eventTypes.length === 0 || eventTypes.includes(processedEvent.type)) {
+      try {
+        await triggerEventNow({
+          triggerId: trigger.id,
+          eventType: processedEvent.type,
+          eventAction: processedEvent.action,
+          eventData: processedEvent.data as Record<string, unknown>,
+          repositoryId,
+          deliveryId: delivery ?? undefined,
+        });
+      } catch (error) {
+        console.error(
+          `Failed to trigger event workflow for trigger ${trigger.id}:`,
+          error
+        );
+      }
+    }
+  }
+
+  if (SHOULD_DEDUPE_DELIVERIES && delivery) {
     await markDeliveryProcessed(delivery);
   }
 

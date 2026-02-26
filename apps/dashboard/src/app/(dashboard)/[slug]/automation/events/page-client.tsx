@@ -1,12 +1,7 @@
 "use client";
 
 import { Button } from "@notra/ui/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@notra/ui/components/ui/card";
+
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import {
   Table,
@@ -30,13 +25,12 @@ import { EventsPageSkeleton } from "@/components/automation/events-skeleton";
 import { TriggerRowActions } from "@/components/automation/triggers/trigger-row-actions";
 import { AddTriggerDialog } from "@/components/automation/triggers/trigger-sheet";
 import { TriggerStatusBadge } from "@/components/automation/triggers/trigger-status-badge";
+import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import type { Trigger, TriggerSourceType } from "@/types/lib/triggers/triggers";
 import { getOutputTypeLabel } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";
-
-const COMING_SOON = true;
 
 const EVENT_SOURCE_TYPES: TriggerSourceType[] = ["github_webhook"];
 
@@ -184,47 +178,6 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
     [deleteMutation]
   );
 
-  if (COMING_SOON) {
-    return (
-      <PageContainer
-        className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"
-        variant="compact"
-      >
-        <div className="w-full px-4 lg:px-6">
-          <div className="relative min-h-125">
-            <div className="pointer-events-none blur-sm">
-              <div className="mb-6 space-y-1">
-                <h1 className="font-bold text-3xl tracking-tight">
-                  Automation Events
-                </h1>
-                <p className="text-muted-foreground">
-                  React to GitHub activity and trigger content generation
-                  automatically.
-                </p>
-              </div>
-              <div className="space-y-8">
-                <div className="h-12 w-64 rounded-lg border bg-muted/20" />
-                <div className="h-64 w-full rounded-lg border bg-muted/20" />
-              </div>
-            </div>
-
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Card className="w-full max-w-md border-border/50 shadow-xs">
-                <CardHeader className="text-center">
-                  <CardTitle>Coming Soon</CardTitle>
-                  <CardDescription>
-                    Event-based automation triggers are currently in
-                    development. Stay tuned!
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </PageContainer>
-    );
-  }
-
   return (
     <PageContainer className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
       <div className="w-full space-y-6 px-4 lg:px-6">
@@ -264,12 +217,8 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         {isPending && <EventsPageSkeleton />}
 
         {!isPending && eventTriggers.length === 0 && (
-          <div className="rounded-2xl border border-dashed p-12 text-center">
-            <h3 className="font-semibold text-lg">No event triggers yet</h3>
-            <p className="mt-1 text-muted-foreground text-sm">
-              Create your first event trigger to react to GitHub activity.
-            </p>
-            <div className="mt-4">
+          <EmptyState
+            action={
               <AddTriggerDialog
                 allowedSourceTypes={EVENT_SOURCE_TYPES}
                 apiPath={
@@ -289,12 +238,14 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                 trigger={
                   <Button size="sm" variant="outline">
                     <PlusIcon className="size-4" />
-                    <span className="ml-1">Add event trigger</span>
+                    <span className="ml-1">New Event Trigger</span>
                   </Button>
                 }
               />
-            </div>
-          </div>
+            }
+            description="Create your first event trigger to react to GitHub activity."
+            title="No event triggers yet"
+          />
         )}
 
         {!isPending && eventTriggers.length > 0 && (
