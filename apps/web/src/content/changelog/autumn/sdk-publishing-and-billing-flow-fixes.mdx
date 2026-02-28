@@ -1,0 +1,59 @@
+---
+title: "Autumn Changelog - February 14-21, 2026"
+date: "2026-02-21"
+description: "OIDC trusted npm SDK publishing, pricing table currency and invoice-mode checkout fixes, corrected ledger balance calculations, and feature-router architecture for backend RPC actions."
+---
+
+This week focused on SDK publishing infrastructure, critical bug fixes in billing and payment flows, and backend reorganization to support more flexible feature routing. Several pricing and invoice handling issues were resolved, along with improved attachment parameter configuration.
+
+## Highlights
+
+### SDK publish workflow stabilized
+
+Implemented secure OIDC trusted publishing with NPM version validation, ensuring reliable automated SDK releases to npm with proper dependency verification.
+
+### Pricing table currency regression fixed
+
+Corrected display and calculation of currency values in pricing tables, restoring correct local currency formatting across checkout flows.
+
+### Invoice mode parameter handling improved
+
+Updated attach checkpoint to properly handle invoice mode parameters, fixing edge cases where payment method requirements weren't correctly evaluated.
+
+### Balance subrow calculation corrected
+
+Fixed balance row calculation issues in ledger displays, ensuring accurate financial data presentation in customer account statements.
+
+### RPC feature router architecture introduced
+
+Refactored backend action handlers into a feature router pattern, aligning RPC handlers with product actions for more maintainable feature development.
+
+## More Updates
+
+### Bug Fixes
+
+- **Fixed balance subrow display issue** - Corrected calculation and rendering of balance subrows in account ledgers. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Fixed pricing table currency display** - Resolved regression where currency values weren't rendering correctly in pricing tables. (Author: [@SirTenzin](https://github.com/SirTenzin/))
+- **Fixed Vercel deployment status check** - Corrected status readiness detection in Vercel integration. (Author: [@SirTenzin](https://github.com/SirTenzin/))
+- **Fixed invoice mode without payment method** - Updated invoice checkout to handle cases where payment method is not required. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+
+### Features & Enhancements
+
+- **Finalized attach v2 checkout parameters** - Completed parameter validation and routing for attach v2 endpoints. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Added discounts to legacy attach upgrade flow** - Extended discount support to legacy attachment upgrade scenarios. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Improved billing error handling** - Enhanced error messages and status handling in billing operations. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Added mobile support to date/time inputs** - Extended date and time input components with mobile-friendly interactions. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+
+### Internal Changes
+
+- **Refactored product actions to internal structure** - Reorganized product action handlers under internal/product/actions for clearer code organization. (Author: [@SirTenzin](https://github.com/SirTenzin/))
+- **Aligned plan RPC handlers with actions paths** - Standardized RPC handler paths to match product actions structure. (Author: [@SirTenzin](https://github.com/SirTenzin/))
+- **Updated drizzle-orm tsconfig path** - Explicitly configured drizzle-orm resolution in server TypeScript configuration. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Fixed imports for SDK compatibility** - Corrected import paths for proper SDK module resolution. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+
+### Infrastructure & Testing
+
+- **Implemented OIDC trusted publishing** - Configured NPM package publishing with OpenID Connect for secure CI/CD token handling. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Ensured NPM minimum version requirement** - Added version constraint (npm >= 11.5.1) for trusted publishing support. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Added SQS client restart capability** - Improved queue client resilience with restart logic for connection failures. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Lowered SQS client restart threshold** - Tuned restart conditions for more responsive queue client recovery. (Author: [@johnyeocx](https://github.com/johnyeocx/))

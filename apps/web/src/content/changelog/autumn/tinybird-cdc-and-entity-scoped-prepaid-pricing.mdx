@@ -1,0 +1,65 @@
+---
+title: "Autumn Changelog - February 21-28, 2026"
+date: "2026-02-28"
+description: "Entity-scoped prepaid tiered pricing, Tinybird CDC pipeline for real-time analytics, multi-worktree local development improvements, and atomic Redis cache updates for better consistency."
+---
+
+This week brought significant improvements to billing infrastructure, data pipelines, and operational reliability. Prepaid tiered pricing now works entity-scoped with proper Stripe integration, while a new Tinybird CDC pipeline enables real-time analytics across 17 Postgres tables. Developer experience improved with multi-worktree support, and infrastructure got cleaner with the removal of ClickHouse in favor of Tinybird. Concurrency and cache consistency saw major upgrades through atomic Redis updates and lazy entitlement resets, while memory diagnostics moved to Axiom for better observability.
+
+## Highlights
+
+### Entity-scoped prepaid tiered pricing with inline Stripe prices
+
+Prepaid tiers now support per-entity pricing calculations using inline Stripe price\_data, letting each entity have independent tier math while preserving metadata across subscriptions and schedules. Checkout and scheduled switches handle quantities correctly for entity items.
+
+### Complete Tinybird CDC for real-time analytics
+
+A new real-time Change Data Capture pipeline syncs 17 Postgres tables to Tinybird with Elixir transformations, ReplacingMergeTree deduplication, and comprehensive backfill tooling. Includes an interactive CLI, idempotent chunked backfills, and specialized scripts for tables without standard timestamp fields.
+
+### Multi-worktree local development
+
+Developers can now run multiple instances side-by-side with the new `bun dx` command, which auto-assigns port offsets and skips workers for non-primary instances. CORS validation in dev allows any localhost:port for flexibility while prod stays allowlisted.
+
+### Lazy customer entitlement resets on read
+
+Entitlement resets now happen automatically when fetching a customer or reading cache, using an atomic Postgres function and Redis Lua script to prevent double-resets. Eliminates manual reset workflows and keeps cache in sync with database state.
+
+### Atomic cache updates replacing cache invalidation
+
+New Redis Lua scripts update customer data and entity records in-place instead of deleting and regenerating cache. Reduces cache misses, improves concurrency for concurrent operations like track-after-clear, and keeps FullCustomer cache consistent across regions.
+
+## More Updates
+
+### Features & Enhancements
+
+- **Filter API responses to hide internal fields** [#836](https://github.com/useautumn/autumn/pull/836) - Added middleware that strips internal billing fields from preview responses; dashboard requests bypass the filter. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Stripe discounts in attach dropdown** [#819](https://github.com/useautumn/autumn/pull/819) - Expanded the attach UI to include Stripe discount objects. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Link line items to Stripe products via metadata** - Stripe subscriptions and schedules now track product references through item metadata and price fields. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+
+### Bug Fixes
+
+- **Fixed empty events table rendering** [#824](https://github.com/useautumn/autumn/pull/824) - Charts no longer break when the events table is empty. (Author: [@SirTenzin](https://github.com/SirTenzin/))
+- **Fixed customer balance UI display** [#816](https://github.com/useautumn/autumn/pull/816) - Balance information now renders correctly in the customer detail view. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Fixed balance sub-row display for granted amounts** [#780](https://github.com/useautumn/autumn/pull/780) - Sub-rows now consistently show /granted values. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Fixed impersonation flow** [#793](https://github.com/useautumn/autumn/pull/793) - User impersonation no longer leaves stale state. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+
+### Infrastructure
+
+- **Removed ClickHouse, gated analytics on Tinybird** [#836](https://github.com/useautumn/autumn/pull/836) - Deleted ClickHouse infrastructure (2,500+ lines) and migrated error codes to Tinybird equivalents. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Memory diagnostics via Axiom logger** [#798](https://github.com/useautumn/autumn/pull/798) - Server and worker processes now periodically log memory metrics (RSS, heap, external) to Axiom with `type: "memory_log"` for easy filtering and alerting. (Author: [@joejohnson123[bot]](https://github.com/joejohnson123%5Bbot%5D/))
+- **SIGUSR2 heap snapshot handler** [#798](https://github.com/useautumn/autumn/pull/798) - Sending SIGUSR2 to a process now triggers a heap snapshot that gets sent to Discord for on-demand diagnostics. (Author: [@atmn](https://github.com/atmn/))
+
+### Testing
+
+- **Added frontend unit tests** [#820](https://github.com/useautumn/autumn/pull/820) - Vite unit test GitHub Action now runs on each commit for frontend reliability. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Added server unit tests in CI** [#801](https://github.com/useautumn/autumn/pull/801) - Server unit tests now run in GitHub Actions. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Added tests for setup payment endpoint** - Comprehensive tests validate setup payment v2 flow including attach parameters. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+- **Added tests for CORS origin validation** [#842](https://github.com/useautumn/autumn/pull/842) - Unit tests ensure localhost origin handling works correctly in dev and prod. (Author: [@charlietlamb](https://github.com/charlietlamb/))
+
+### Internal Changes
+
+- **Removed unused legacy pipe** [#825](https://github.com/useautumn/autumn/pull/825) - Cleaned up old list transformation code. (Author: [@SirTenzin](https://github.com/SirTenzin/))
+- **CusService now requires context parameter** [#802](https://github.com/useautumn/autumn/pull/802) - getFull and getByVercelId now take ctx for consistent transaction handling across all call sites. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Refactored test structure** [#812](https://github.com/useautumn/autumn/pull/812) - Reorganized tests into integration/ subdirectories and consolidated overlapping test cases. (Author: [@johnyeocx](https://github.com/johnyeocx/))
+- **Moved Sequin code to others/ folder** [#841](https://github.com/useautumn/autumn/pull/841) - Refactored monorepo structure to keep CDC transformation code separate. (Author: [@SirTenzin](https://github.com/SirTenzin/))
+- **Dependency updates** - Hono bumped from 4.11.7 to 4.11.10. (Author: [@dependabot[bot]](https://github.com/dependabot%5Bbot%5D/))
