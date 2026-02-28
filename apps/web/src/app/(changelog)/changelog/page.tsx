@@ -28,6 +28,15 @@ const COMPANY_ICONS: Record<string, ReactNode> = {
   ),
   marble: <Marble className="size-5 rounded" />,
   neon: <Neon className="size-5 rounded" />,
+  openclaw: (
+    <Image
+      alt="OpenClaw"
+      className="h-5 w-auto rounded"
+      height="85"
+      src="/logos/brands/openclaw.webp"
+      width="53"
+    />
+  ),
   unkey: (
     <Image
       alt="Unkey"
@@ -61,6 +70,26 @@ export const metadata: Metadata = {
 };
 
 export default function ChangelogOverviewPage() {
+  const postCounts = new Map(
+    CHANGELOG_COMPANIES.map((company) => [
+      company.slug,
+      changelog.filter((entry) =>
+        entry.info.path.startsWith(`${company.slug}/`)
+      ).length,
+    ])
+  );
+
+  const companies = [...CHANGELOG_COMPANIES].sort((a, b) => {
+    const countDiff =
+      (postCounts.get(b.slug) ?? 0) - (postCounts.get(a.slug) ?? 0);
+
+    if (countDiff !== 0) {
+      return countDiff;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <>
       <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4 self-center">
@@ -75,10 +104,8 @@ export default function ChangelogOverviewPage() {
       </div>
 
       <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {CHANGELOG_COMPANIES.map((company) => {
-          const entryCount = changelog.filter((e) =>
-            e.info.path.startsWith(`${company.slug}/`)
-          ).length;
+        {companies.map((company) => {
+          const entryCount = postCounts.get(company.slug) ?? 0;
 
           return (
             <Link

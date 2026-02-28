@@ -63,6 +63,15 @@ export const CHANGELOG_COMPANIES = [
     accentColor: "#37C38F",
   },
   {
+    slug: "openclaw",
+    name: "OpenClaw",
+    domain: "openclaw.ai",
+    description:
+      "Clears your inbox, sends emails, manages your calendar, checks you in for flights. All from WhatsApp, Telegram, or any chat app you already use.",
+    url: "https://openclaw.ai/",
+    accentColor: "#F70715",
+  },
+  {
     slug: "unkey",
     name: "Unkey",
     domain: "unkey.com",
