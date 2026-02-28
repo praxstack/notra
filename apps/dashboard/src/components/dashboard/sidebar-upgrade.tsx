@@ -32,7 +32,11 @@ export function SidebarUpgrade() {
     ? "Loading..."
     : (hasFreeTrial && "Start 3 day free trial") || "Upgrade to Pro";
 
-  if (!isOnboardingDone || isPro) {
+  if (
+    process.env.NEXT_PUBLIC_SHOW_UPGRADE_BUTTON !== "true" ||
+    !isOnboardingDone ||
+    isPro
+  ) {
     return null;
   }
 

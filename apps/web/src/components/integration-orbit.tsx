@@ -12,25 +12,25 @@ import { NotraMark } from "./notra-mark";
 
 const items = [
   <div
-    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-sm"
     key="github"
   >
     <Github className="h-6 w-6" />
   </div>,
   <div
-    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-sm"
     key="linear"
   >
     <Linear className="h-6 w-6" />
   </div>,
   <div
-    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-sm"
     key="slack"
   >
     <Slack className="h-6 w-6" />
   </div>,
   <div
-    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-sm"
     key="databuddy"
   >
     <Image
@@ -42,19 +42,19 @@ const items = [
     />
   </div>,
   <div
-    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-sm"
     key="framer"
   >
     <Framer className="h-6 w-6" />
   </div>,
   <div
-    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-sm"
     key="marble"
   >
     <Marble className="h-6 w-6" />
   </div>,
   <div
-    className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm"
+    className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card shadow-sm"
     key="webflow"
   >
     <Webflow className="h-6 w-6" />
@@ -85,7 +85,7 @@ export default function IntegrationOrbit({
           fill
           itemSize={52}
           items={items}
-          pathColor="rgba(0,0,0,0.06)"
+          pathColor="color-mix(in srgb, var(--border) 60%, transparent)"
           pathWidth={1}
           paused={false}
           radius={150}

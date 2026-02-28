@@ -126,7 +126,7 @@ export default function PricingSection() {
             <button
               className={`relative z-10 cursor-pointer rounded-[99px] px-4 py-1 transition-all duration-300 ${
                 billingPeriod === "monthly"
-                  ? "bg-white shadow-[0px_2px_4px_rgba(0,0,0,0.08)]"
+                  ? "bg-card shadow-[0px_2px_4px_rgba(0,0,0,0.08)]"
                   : "bg-transparent"
               }`}
               onClick={() => setBillingPeriod("monthly")}
@@ -146,7 +146,7 @@ export default function PricingSection() {
             <button
               className={`relative z-10 cursor-pointer rounded-[99px] px-4 py-1 transition-all duration-300 ${
                 billingPeriod === "annually"
-                  ? "bg-white shadow-[0px_2px_4px_rgba(0,0,0,0.08)]"
+                  ? "bg-card shadow-[0px_2px_4px_rgba(0,0,0,0.08)]"
                   : "bg-transparent"
               }`}
               onClick={() => setBillingPeriod("annually")}
@@ -177,7 +177,7 @@ export default function PricingSection() {
             <div className="absolute top-[-120px] left-[-58px] flex w-[162px] flex-col items-start justify-start">
               {Array.from({ length: 200 }).map((_, i) => (
                 <div
-                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                   key={i}
                 />
               ))}
@@ -206,7 +206,7 @@ export default function PricingSection() {
               <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
                 {Array.from({ length: 200 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                     key={i}
                   />
                 ))}
@@ -238,7 +238,7 @@ export default function PricingSection() {
               <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
                 {Array.from({ length: 200 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                     key={i}
                   />
                 ))}
@@ -267,7 +267,7 @@ export default function PricingSection() {
             <div className="absolute top-[-120px] left-[-58px] flex w-[162px] flex-col items-start justify-start">
               {Array.from({ length: 200 }).map((_, i) => (
                 <div
-                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                   key={i}
                 />
               ))}

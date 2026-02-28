@@ -4,6 +4,7 @@ import { Instrument_Serif, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import FooterSection from "../components/footer-section";
 import { Navbar } from "../components/navbar";
+import { ThemeProvider } from "../components/theme-provider";
 
 import "@/styles/globals.css";
 
@@ -23,7 +24,10 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#8b5cf6",
+  themeColor: [
+    { color: "#f7f5f3", media: "(prefers-color-scheme: light)" },
+    { color: "#1f1a17", media: "(prefers-color-scheme: dark)" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -64,34 +68,45 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" style={{ scrollbarGutter: "stable" }}>
+    <html
+      lang="en"
+      style={{ scrollbarGutter: "stable" }}
+      suppressHydrationWarning
+    >
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
-        <div className="relative flex min-h-screen w-full flex-col items-center justify-start bg-background">
-          <div className="relative flex w-full flex-col items-center justify-start">
-            <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-265 lg:max-w-265 lg:px-0">
-              <div className="absolute top-0 left-4 z-0 h-full w-px bg-border shadow-[1px_0px_0px_white] sm:left-6 md:left-8 lg:left-0" />
-              <div className="absolute top-0 right-4 z-0 h-full w-px bg-border shadow-[1px_0px_0px_white] sm:right-6 md:right-8 lg:right-0" />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          disableTransitionOnChange
+          enableSystem
+        >
+          <div className="relative flex min-h-screen w-full flex-col items-center justify-start bg-background">
+            <div className="relative flex w-full flex-col items-center justify-start">
+              <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-265 lg:max-w-265 lg:px-0">
+                <div className="absolute top-0 left-4 z-0 h-full w-px bg-border/60 sm:left-6 md:left-8 lg:left-0" />
+                <div className="absolute top-0 right-4 z-0 h-full w-px bg-border/60 sm:right-6 md:right-8 lg:right-0" />
 
-              <div className="relative z-10 flex flex-col items-center self-stretch pt-2.25 pb-8 md:pb-12">
-                <Navbar />
-                {children}
-                <div className="w-full">
-                  <FooterSection />
+                <div className="relative z-10 flex flex-col items-center self-stretch pt-2.25 pb-8 md:pb-12">
+                  <Navbar />
+                  {children}
+                  <div className="w-full">
+                    <FooterSection />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <Toaster position="bottom-right" />
-        <Databuddy
-          clientId={process.env.NEXT_PUBLIC_DATABUDDY_ID!}
-          trackAttributes={true}
-          trackErrors={true}
-          trackHashChanges={true}
-          trackScrollDepth={true}
-        />
+          <Toaster position="bottom-right" />
+          <Databuddy
+            clientId={process.env.NEXT_PUBLIC_DATABUDDY_ID!}
+            trackAttributes={true}
+            trackErrors={true}
+            trackHashChanges={true}
+            trackScrollDepth={true}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );

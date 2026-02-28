@@ -78,7 +78,7 @@ export default function FAQSection() {
 
               return (
                 <Collapsible
-                  className="w-full overflow-hidden border-foreground/16 border-b"
+                  className="w-full overflow-hidden border-border/60 border-b"
                   key={item.question}
                   onOpenChange={() => toggleItem(item.question)}
                   open={isOpen}

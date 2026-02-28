@@ -1,10 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import automationPreview from "../../public/automation.webp";
-import logsPreview from "../../public/logs.webp";
 
 export default function DocumentationSection() {
   const [activeCard, setActiveCard] = useState(0);
@@ -56,8 +53,8 @@ export default function DocumentationSection() {
         <div className="flex flex-1 flex-col items-center justify-start gap-6 py-8 md:flex-row md:gap-12 md:py-11">
           <div className="order-2 flex w-full flex-col items-center justify-between gap-4 md:order-1 md:w-auto md:max-w-[400px] md:self-stretch">
             <button
-              className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-[rgba(2,6,23,0.08)] transition-all duration-300 ${
-                activeCard === 0 ? "border-border bg-white" : ""
+              className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-border/70 transition-all duration-300 ${
+                activeCard === 0 ? "border-border bg-background" : ""
               }`}
               onClick={() => handleCardClick(0)}
               type="button"
@@ -87,8 +84,8 @@ export default function DocumentationSection() {
             </button>
 
             <button
-              className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-[rgba(2,6,23,0.08)] transition-all duration-300 ${
-                activeCard === 1 ? "border-border bg-white" : ""
+              className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-border/70 transition-all duration-300 ${
+                activeCard === 1 ? "border-border bg-background" : ""
               }`}
               onClick={() => handleCardClick(1)}
               type="button"
@@ -118,8 +115,8 @@ export default function DocumentationSection() {
             </button>
 
             <button
-              className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-[rgba(2,6,23,0.08)] transition-all duration-300 ${
-                activeCard === 2 ? "border-border bg-white" : ""
+              className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-border/70 transition-all duration-300 ${
+                activeCard === 2 ? "border-border bg-background" : ""
               }`}
               onClick={() => handleCardClick(2)}
               type="button"
@@ -150,9 +147,9 @@ export default function DocumentationSection() {
           </div>
 
           <div className="order-1 flex w-full flex-col items-center justify-center gap-2 px-0 md:order-2 md:w-auto md:px-0">
-            <div className="flex h-[250px] w-full flex-col items-start justify-start overflow-hidden border border-border bg-card md:h-[420px] md:w-[580px]">
+            <div className="flex h-[250px] w-full flex-col items-start justify-start overflow-hidden border border-border bg-background md:h-[420px] md:w-[580px]">
               {activeCard === 0 ? (
-                <div className="relative h-full w-full bg-card">
+                <div className="relative h-full w-full bg-background">
                   <div className="h-full overflow-hidden">
                     <article className="prose prose-stone prose-sm dark:prose-invert h-full max-w-none overflow-hidden px-5 py-4 md:px-6 md:py-5">
                       <p>
@@ -212,17 +209,27 @@ export default function DocumentationSection() {
                       </p>
                     </article>
                   </div>
-                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-white via-white/95 to-transparent" />
+                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-background via-background/95 to-transparent" />
                 </div>
               ) : (
                 <div className="relative flex h-full w-full items-center justify-center">
                   <Image
                     alt=""
-                    className="object-cover object-top blur-[3px]"
+                    className="object-cover object-top blur-[3px] dark:hidden"
                     fill
-                    placeholder="blur"
                     sizes="(max-width: 768px) 100vw, 580px"
-                    src={activeCard === 1 ? logsPreview : automationPreview}
+                    src={activeCard === 1 ? "/logs.webp" : "/automation.webp"}
+                  />
+                  <Image
+                    alt=""
+                    className="hidden object-cover object-top blur-[3px] dark:block"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 580px"
+                    src={
+                      activeCard === 1
+                        ? "/logs-dark.webp"
+                        : "/automation-dark.webp"
+                    }
                   />
                   <span className="relative z-10 font-medium font-sans text-muted-foreground text-sm">
                     Coming soon

@@ -11,7 +11,7 @@ export default function CTASection() {
           <div className="relative h-full w-full">
             {Array.from({ length: 300 }).map((_, i) => (
               <div
-                className="-rotate-45 absolute h-4 w-full origin-top-left outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                className="-rotate-45 absolute h-4 w-full origin-top-left outline outline-border/60 outline-offset-[-0.25px]"
                 key={i}
                 style={{
                   top: `${i * 16 - 120}px`,

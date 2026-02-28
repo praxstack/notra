@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { NotraMark, notraMarkSvgString } from "./notra-mark";
+import { ThemeToggle } from "./theme-toggle";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -47,7 +48,7 @@ export function Navbar() {
             <div className="-top-24 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
               {Array.from({ length: 36 }).map((_, i) => (
                 <div
-                  className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                  className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
                   key={`left-rail-${i}`}
                 />
               ))}
@@ -73,7 +74,9 @@ export function Navbar() {
                   }}
                   render={<Link href="/" />}
                 >
-                  <NotraMark className="h-7 w-7 shrink-0" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-transparent p-1 dark:bg-[#f3eeea]">
+                    <NotraMark className="h-7 w-7 shrink-0" />
+                  </div>
                   <div className="flex flex-col justify-center font-medium font-sans text-foreground text-sm leading-5 sm:text-base md:text-lg lg:text-xl">
                     Notra
                   </div>
@@ -118,9 +121,10 @@ export function Navbar() {
               </div>
             </div>
             <div className="hidden h-6 items-start justify-start gap-2 sm:flex sm:h-7 sm:gap-3 md:h-8">
+              <ThemeToggle />
               <Link href="https://app.usenotra.com/login">
                 <Button
-                  className="overflow-hidden rounded-lg border-transparent bg-white px-2 py-1 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-muted sm:px-3 sm:py-[6px] md:px-[14px]"
+                  className="overflow-hidden rounded-lg border-transparent bg-card px-2 py-1 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-muted sm:px-3 sm:py-[6px] md:px-[14px]"
                   variant="ghost"
                 >
                   <span className="flex flex-col justify-center font-medium font-sans text-primary text-xs leading-5 md:text-[13px]">
@@ -154,7 +158,7 @@ export function Navbar() {
             <div className="-left-10 -top-24 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
               {Array.from({ length: 36 }).map((_, i) => (
                 <div
-                  className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                  className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
                   key={`right-rail-${i}`}
                 />
               ))}
@@ -189,6 +193,7 @@ export function Navbar() {
             </Link>
           </nav>
           <div className="flex flex-col items-center gap-3">
+            <ThemeToggle />
             <Link href="https://app.usenotra.com/signup">
               <Button className="h-11 overflow-hidden rounded-lg border-transparent bg-primary px-8 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-primary-hover">
                 <span className="font-medium font-sans text-base text-primary-foreground">
@@ -198,7 +203,7 @@ export function Navbar() {
             </Link>
             <Link href="https://app.usenotra.com/login">
               <Button
-                className="h-11 overflow-hidden rounded-lg border-transparent bg-white px-8 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-muted"
+                className="h-11 overflow-hidden rounded-lg border-transparent bg-card px-8 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-muted"
                 variant="ghost"
               >
                 <span className="font-medium font-sans text-base text-primary">

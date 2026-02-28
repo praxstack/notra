@@ -15,7 +15,9 @@ export default function FooterSection() {
       <div className="flex h-auto flex-col items-stretch justify-between self-stretch pt-0 pr-0 pb-8 md:flex-row">
         <div className="flex h-auto flex-col items-start justify-start gap-8 p-4 md:p-8">
           <div className="flex items-center justify-start gap-3 self-stretch">
-            <NotraMark className="h-6 w-6 shrink-0" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-transparent p-1 dark:bg-[#f3eeea]">
+              <NotraMark className="h-6 w-6 shrink-0" />
+            </div>
             <div className="text-center font-sans font-semibold text-foreground text-xl leading-4">
               Notra
             </div>

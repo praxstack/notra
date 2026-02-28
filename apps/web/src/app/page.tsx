@@ -51,7 +51,7 @@ export default function LandingPage() {
             <div className="-top-30 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
               {Array.from({ length: 50 }).map((_, i) => (
                 <div
-                  className="h-3 origin-top-right rotate-45 self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                  className="h-3 origin-top-right rotate-45 self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
                   key={i}
                 />
               ))}
@@ -62,9 +62,16 @@ export default function LandingPage() {
             <div className="flex aspect-video w-full max-w-240 flex-col items-start justify-start overflow-hidden rounded-md bg-card shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)] sm:rounded-lg lg:rounded-[0.566rem]">
               <Image
                 alt="Notra product demo"
-                className="h-full w-full object-cover"
+                className="h-full w-full object-cover dark:hidden"
                 height={1080}
                 src="/demo.webp"
+                width={1920}
+              />
+              <Image
+                alt="Notra product demo"
+                className="hidden h-full w-full object-cover dark:block"
+                height={1080}
+                src="/demo-dark.webp"
                 width={1920}
               />
             </div>
@@ -74,7 +81,7 @@ export default function LandingPage() {
             <div className="-right-10 sm:-right-12.5 -top-30 md:-right-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
               {Array.from({ length: 50 }).map((_, i) => (
                 <div
-                  className="h-3 origin-top-right rotate-45 self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                  className="h-3 origin-top-right rotate-45 self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
                   key={i}
                 />
               ))}
@@ -105,7 +112,7 @@ export default function LandingPage() {
               <div className="-top-30 -left-10 absolute flex w-30 flex-col items-start justify-start">
                 {Array.from({ length: 50 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                     key={i}
                   />
                 ))}
@@ -155,7 +162,7 @@ export default function LandingPage() {
               <div className="-left-10 -top-30 absolute flex w-30 flex-col items-start justify-start">
                 {Array.from({ length: 50 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                     key={i}
                   />
                 ))}
@@ -168,7 +175,7 @@ export default function LandingPage() {
               <div className="-top-30 -left-12.5 md:-left-14.5 absolute flex w-35 flex-col items-start justify-start md:w-40.5">
                 {Array.from({ length: 50 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                     key={i}
                   />
                 ))}
@@ -221,7 +228,7 @@ export default function LandingPage() {
               <div className="-left-12.5 -top-30 md:-left-14.5 absolute flex w-35 flex-col items-start justify-start md:w-40.5">
                 {Array.from({ length: 50 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
                     key={i}
                   />
                 ))}
@@ -253,7 +260,7 @@ export default function LandingPage() {
               <div className="-top-30 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
                 {Array.from({ length: 200 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
                     key={i}
                   />
                 ))}
@@ -329,7 +336,7 @@ export default function LandingPage() {
               <div className="-top-30 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
                 {Array.from({ length: 200 }).map((_, i) => (
                   <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px] sm:h-4"
+                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
                     key={i}
                   />
                 ))}
