@@ -28,6 +28,9 @@ export function SidebarUpgrade() {
 
   const proProduct = products?.find((p) => p.id === "pro");
   const hasFreeTrial = proProduct?.free_trial?.trial_available;
+  const buttonLabel = loading
+    ? "Loading..."
+    : (hasFreeTrial && "Start 3 day free trial") || "Upgrade to Pro";
 
   if (!isOnboardingDone || isPro) {
     return null;
@@ -60,23 +63,24 @@ export function SidebarUpgrade() {
 
   return (
     <SidebarGroup className="px-3 pb-2 group-data-[collapsible=icon]:hidden">
-      <div className="rounded-lg border bg-sidebar p-4">
-        <p className="font-semibold text-sm">Upgrade to Pro</p>
-        <p className="mt-1 text-muted-foreground text-xs">
-          Get more team seats, unlimited integrations, and higher usage limits.
-        </p>
-        <Button
-          className="mt-3 w-full"
-          disabled={loading}
-          onClick={handleUpgrade}
-          size="sm"
-        >
-          {loading
-            ? "Loading..."
-            : hasFreeTrial
-              ? "Start 3 day free trial"
-              : "Upgrade to Pro"}
-        </Button>
+      <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+        <div className="border-b bg-muted/50 px-3 py-3">
+          <p className="font-semibold text-sm">Upgrade to Pro</p>
+        </div>
+        <div className="space-y-3 p-3">
+          <p className="text-muted-foreground text-xs">
+            Get more team seats, unlimited integrations, and higher usage
+            limits.
+          </p>
+          <Button
+            className="w-full"
+            disabled={loading}
+            onClick={handleUpgrade}
+            size="sm"
+          >
+            {buttonLabel}
+          </Button>
+        </div>
       </div>
     </SidebarGroup>
   );
