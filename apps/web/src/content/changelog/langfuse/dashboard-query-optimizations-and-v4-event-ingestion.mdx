@@ -1,7 +1,7 @@
 ---
 title: "Langfuse Changelog - February 14-21, 2026"
 date: "2026-02-21"
-description: "Langfuse improved dashboard performance with v2 query optimizations, added bloom filter indexes for faster user and session lookups, enabled header-based direct writes to v4 event tables, and expanded event table filtering and batch tooling."
+description: "Dashboard v2 query optimizations, bloom filter indexes for faster user and session lookups, header-based direct writes to v4 event tables, and expanded event table filtering and batch tooling."
 ---
 
 This week brings significant performance improvements to dashboard queries, expanded event table capabilities, and developer-focused enhancements. Major work completed includes optimizing v2 metrics queries with uniq(trace\_id) aggregation for blazing-fast dashboard tiles, implementing bloom filter indexes on user\_id and session\_id columns for faster row lookups, and adding head-based opt-in support for direct writes into v4 event tables. Dashboard widgets can now switch query paths based on feature flags, observation table filtering now supports level-based selection, and prompt management gains folder deletion functionality. These improvements directly improve query speed, reduce dashboard load times, and provide operators with better control over their event ingestion paths.

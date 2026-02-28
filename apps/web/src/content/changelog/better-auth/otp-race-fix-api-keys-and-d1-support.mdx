@@ -1,7 +1,7 @@
 ---
 title: "Better Auth Changelog - February 21-28, 2026"
 date: "2026-02-28"
-description: "Better Auth fixed a critical OTP race condition, added organization-scoped API keys with multi-configuration support, introduced Cloudflare D1 compatibility, and improved session and OAuth token reliability."
+description: "Critical OTP race condition fix, organization-scoped API keys with multi-configuration support, Cloudflare D1 compatibility, and improved session and OAuth token reliability."
 ---
 
 Over the past week, the team shipped a critical OTP race condition fix that prevented reuse attacks across concurrent requests. Major feature work includes organization-scoped API keys with multi-configuration support (plugin now at `@better-auth/api-key`), user enumeration protection during signup, and a new /update-session endpoint for custom session fields. Infrastructure improvements address the Drizzle adapter's date handling, add Cloudflare D1 Workers support, and migrate to Prisma v7. The updates also include ID token persistence fixes for OAuth token refresh, improved session broadcasting across browser tabs, and stricter auth\_time claim stability per OpenID Connect specs. Bug fixes cover cookie handling, SIWE validation, and better error codes. Extensive work on CI reliability, test timeouts, and documentation including a new landing page.

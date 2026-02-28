@@ -1,7 +1,7 @@
 ---
 title: "Langfuse Changelog - February 21-28, 2026"
 date: "2026-02-28"
-description: "Langfuse patched a prototype-chain RBAC bypass, fixed self-hosted signup role assignment, added dashboard query scheduling to control backend load, and introduced stronger typing for Observations V2 API responses."
+description: "Prototype-chain RBAC bypass patch, self-hosted signup role assignment fix, dashboard query scheduling for backend load control, and stronger typing for Observations V2 API responses."
 ---
 
 This week brought four critical improvements across security, authentication, and dashboard performance. The most significant change fixes a privilege escalation vulnerability in RBAC logic, while a separate authentication fix ensures newly created users retain proper project access on self-hosted instances. Dashboard query scheduling is now active to prevent backend concurrency issues, and developers using the Observations V2 API will get proper type hints in their IDEs instead of loose `Record<string, unknown>` types.
