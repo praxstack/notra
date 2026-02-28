@@ -1,0 +1,99 @@
+---
+title: "Better Auth Changelog - February 14-21, 2026"
+date: "2026-02-21"
+description: "Better Auth shipped a framework-agnostic MCP client, launched the auth CLI, expanded OAuth compatibility for legacy clients, and strengthened account security with email OTP user-enumeration protection."
+---
+
+Over the past week, Better Auth shipped tooling improvements, security hardening, and expanded OAuth support. The team released an auth CLI, added legacy OAuth client support, and merged several stability fixes for session handling, rate limiting, and email verification flows. Two beta releases went out (v1.5.0-beta.14 and beta.15).
+
+## Highlights
+
+### Framework-agnostic MCP auth client
+
+New `@better-auth/mcp` package lets you run auth workflows in any environment that supports Model Context Protocol, not just Node/Deno runtimes.
+
+### Auth command-line interface
+
+The `auth init` CLI walks you through configuration without manual file edits, making first-run setup faster for new projects. (Author: [@jslno](https://github.com/jslno/))
+
+### Legacy OAuth support for clients without PKCE
+
+Servers can now accept older OAuth clients that don't implement PKCE. This matters for integrations with enterprise systems built before PKCE became standard. (Author: [@OscarCornish](https://github.com/OscarCornish/))
+
+### Email OTP user enumeration fix
+
+Sign-up flows with email OTP now avoid revealing whether an email is registered, preventing attackers from harvesting valid accounts. (Author: [@jslno](https://github.com/jslno/))
+
+### Dynamic auth baseURL with allowedHosts
+
+Configure the auth endpoint as a function instead of a string, letting middleware rewrite URLs based on the incoming request. Pairs with `allowedHosts` to validate origins. (Author: [@Paola3stefania](https://github.com/Paola3stefania/))
+
+## More Updates
+
+### Features & Enhancements
+
+- **Added Railway OAuth provider** [#7730](https://github.com/better-auth/better-auth/pull/7730) - Simplifies authentication for Railway-hosted apps. (Author: [@kadumedim](https://github.com/kadumedim/))
+- **Shared redirectURI option for OIDC** [#7818](https://github.com/better-auth/better-auth/pull/7818) - OIDC providers can now use a single redirect URL instead of configuring per-provider. (Author: [@Paola3stefania](https://github.com/Paola3stefania/))
+- **Allow manual token exchange in Electron** [#7976](https://github.com/better-auth/better-auth/pull/7976) - Desktop apps can now complete OAuth without relying on built-in browser handling. (Author: [@jslno](https://github.com/jslno/))
+- **Support callback for trusted providers** [#7904](https://github.com/better-auth/better-auth/pull/7904) - Trusted provider lists can now be computed dynamically rather than hardcoded. (Author: [@Siumauricio](https://github.com/Siumauricio/))
+- **Stripe schedule-at-period-end for plan changes** [#8064](https://github.com/better-auth/better-auth/pull/8064) - Defer subscription changes until billing cycle ends instead of applying immediately. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Stripe subscription schedule tracking** [#8070](https://github.com/better-auth/better-auth/pull/8070) - Store pending schedule IDs so you can query subscription change status. (Author: [@bytaesu](https://github.com/bytaesu/))
+
+### Bug Fixes
+
+- **Phone number callback on password reset** [#8046](https://github.com/better-auth/better-auth/pull/8046) - Password resets now trigger SMS verification callbacks. (Author: [@jslno](https://github.com/jslno/))
+- **Merge trusted origins from plugin init** [#8056](https://github.com/better-auth/better-auth/pull/8056) - Plugins can now extend the trusted origin list without overwriting existing entries. (Author: [@jslno](https://github.com/jslno/))
+- **Rate limit hardening for phone-number** [#8006](https://github.com/better-auth/better-auth/pull/8006) - Tightened default rate limits and fixed phone-number window configuration. (Author: [@Paola3stefania](https://github.com/Paola3stefania/))
+- **Delete-user verification email encoding** [#8007](https://github.com/better-auth/better-auth/pull/8007) - Callback URLs in delete-user emails now encode properly. (Author: [@Paola3stefania](https://github.com/Paola3stefania/))
+- **Cookie retrieval relaxation for getSessionCookie** [#8008](https://github.com/better-auth/better-auth/pull/8008) - Session retrieval is more lenient with cookie variants. (Author: [@jslno](https://github.com/jslno/))
+- **Supabase search\_path escaping** [#8051](https://github.com/better-auth/better-auth/pull/8051) - Fixed schema path handling when `$user` variables are present. (Author: [@Bekacru](https://github.com/Bekacru/))
+- **OAuth provider response field naming** [#7811](https://github.com/better-auth/better-auth/pull/7811) - OAuth consent and continue endpoints now return `url` instead of `uri`. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **OAuth provider consent scope narrowing** [#7873](https://github.com/better-auth/better-auth/pull/7873) - Users can now reduce requested scopes at consent time. (Author: [@gustavovalverde](https://github.com/gustavovalverde/))
+- **Wildcard trusted origins in Expo deep links** [#8013](https://github.com/better-auth/better-auth/pull/8013) - Expo deep link cookie injection now supports wildcard patterns. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **OAuth client missing timestamps** [#7851](https://github.com/better-auth/better-auth/pull/7851) - OAuth client creation/update dates now populate correctly. (Author: [@dvanmali](https://github.com/dvanmali/))
+- **Line item price on Stripe upgrade** [#8066](https://github.com/better-auth/better-auth/pull/8066) - Plan upgrades properly replace old line items instead of duplicating. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Stripe metadata on schedule update** [#8069](https://github.com/better-auth/better-auth/pull/8069) - Metadata injects on schedule updates, not creation. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Stripe subscription cancel callback** [#8032](https://github.com/better-auth/better-auth/pull/8032) - Cancellation callbacks now use the correct customer ID. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Stripe API fallback for customer search** [#7965](https://github.com/better-auth/better-auth/pull/7965) - Uses `customers.list` when the newer `customers.search` API is unavailable. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **OAuth provider invalid\_client on secret mismatch** [#8030](https://github.com/better-auth/better-auth/pull/8030) - Returns standard `invalid_client` error when encrypted secret verification fails. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Apple and Google ID token error handling** [#8011](https://github.com/better-auth/better-auth/pull/8011) - Explicit error handling for ID token verification failures. (Author: [@Paola3stefania](https://github.com/Paola3stefania/))
+- **Captcha error codes in middleware** [#7991](https://github.com/better-auth/better-auth/pull/7991) - Middleware responses now include error codes for captcha failures. (Author: [@himself65](https://github.com/himself65/))
+- **Organization member refetch on role change** [#7989](https://github.com/better-auth/better-auth/pull/7989) - Active member and role data refresh when switching organizations. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Tsconfig exclusion in package builds** [#7967](https://github.com/better-auth/better-auth/pull/7967) - Published packages no longer include tsconfig.json. (Author: [@GautamBytes](https://github.com/GautamBytes/))
+- **Client type inference for response fields** [#7986](https://github.com/better-auth/better-auth/pull/7986) - Top-level user and session responses now infer additional custom fields correctly. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Optional chaining in admin hooks** [#8026](https://github.com/better-auth/better-auth/pull/8026) - Admin hooks safely handle missing user context. (Author: [@jslno](https://github.com/jslno/))
+- **Mongo adapter ObjectID handling** [#7977](https://github.com/better-auth/better-auth/pull/7977) - Foreign key updates now store as ObjectID in MongoDB. (Author: [@ping-maxwell](https://github.com/ping-maxwell/))
+- **SSO CJS import fix** [#8041](https://github.com/better-auth/better-auth/pull/8041) - SSO plugin now imports CommonJS dependencies correctly. (Author: [@himself65](https://github.com/himself65/))
+- **Database required attribute inference** [#7996](https://github.com/better-auth/better-auth/pull/7996) - The `required` flag infers properly from default values. (Author: [@jslno](https://github.com/jslno/))
+- **Electron secure image fetch** [#7844](https://github.com/better-auth/better-auth/pull/7844) - Electron retrieves user images securely regardless of CSP. (Author: [@jslno](https://github.com/jslno/))
+
+### Performance Improvements
+
+- **Playwright optimization in E2E tests** [#8073](https://github.com/better-auth/better-auth/pull/8073) - E2E CI now caches Playwright browsers for faster runs.
+- **Docker Compose healthchecks** [#8010](https://github.com/better-auth/better-auth/pull/8010) - CI services start faster with explicit health checks.
+
+### Documentation
+
+- **Added test-utils plugin to navigation** [#7958](https://github.com/better-auth/better-auth/pull/7958) - Test utilities docs are now discoverable in the sidebar. (Author: [@janhesters](https://github.com/janhesters/))
+- **Admin plugin getUser endpoint docs** [#8072](https://github.com/better-auth/better-auth/pull/8072) - Documented the `getUser` method in the admin plugin. (Author: [@kebench](https://github.com/kebench/))
+- **Admin Roles plugin wording clarification** [#7522](https://github.com/better-auth/better-auth/pull/7522) - Improved clarity in role setup instructions. (Author: [@Anjellyrika](https://github.com/Anjellyrika/))
+- **Account linking example fix** [#8035](https://github.com/better-auth/better-auth/pull/8035) - Corrected the account linking code snippet. (Author: [@rosano](https://github.com/rosano/))
+- **Safari ITP third-party cookie docs** [#7980](https://github.com/better-auth/better-auth/pull/7980) - Documented ITP behavior and workarounds. (Author: [@ping-maxwell](https://github.com/ping-maxwell/))
+- **Fumadocs search engine upgrade** [#7984](https://github.com/better-auth/better-auth/pull/7984) - Docs now use Fumadocs' built-in Orama search. (Author: [@bytaesu](https://github.com/bytaesu/))
+
+### Infrastructure
+
+- **Release workflow GitHub dispatch** [#8004](https://github.com/better-auth/better-auth/pull/8004) - Release automation now dispatches from GitHub instead of external service. (Author: [@Bekacru](https://github.com/Bekacru/))
+- **Package version bumps** [#8037](https://github.com/better-auth/better-auth/pull/8037) - All packages bumped to v1.5.0-beta.16. (Author: [@Bekacru](https://github.com/Bekacru/))
+- **CLI beta URL configuration** [#7997](https://github.com/better-auth/better-auth/pull/7997) - CLI uses beta URLs for pre-release builds and resolves import paths. (Author: [@Bekacru](https://github.com/Bekacru/))
+
+### Testing
+
+- **OAuth consent response assertion updates** [#8029](https://github.com/better-auth/better-auth/pull/8029) - Test assertions updated to check `url` instead of `uri`. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Client output snapshot validation** [#7979](https://github.com/better-auth/better-auth/pull/7979) - Added checks for client output integrity. (Author: [@himself65](https://github.com/himself65/))
+
+### Dependency Updates
+
+- **Hono 4.11.7 to 4.11.10** [#8074](https://github.com/better-auth/better-auth/pull/8074)
+- **SvelteKit 2.50.1 to 2.52.2** [#8075](https://github.com/better-auth/better-auth/pull/8075)
+- **fast-xml-parser 5.3.3 to 5.3.6** [#8034](https://github.com/better-auth/better-auth/pull/8034)

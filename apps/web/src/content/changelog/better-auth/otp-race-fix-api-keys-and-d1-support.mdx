@@ -1,0 +1,82 @@
+---
+title: "Better Auth Changelog - February 21-28, 2026"
+date: "2026-02-28"
+description: "Better Auth fixed a critical OTP race condition, added organization-scoped API keys with multi-configuration support, introduced Cloudflare D1 compatibility, and improved session and OAuth token reliability."
+---
+
+Over the past week, the team shipped a critical OTP race condition fix that prevented reuse attacks across concurrent requests. Major feature work includes organization-scoped API keys with multi-configuration support (plugin now at `@better-auth/api-key`), user enumeration protection during signup, and a new /update-session endpoint for custom session fields. Infrastructure improvements address the Drizzle adapter's date handling, add Cloudflare D1 Workers support, and migrate to Prisma v7. The updates also include ID token persistence fixes for OAuth token refresh, improved session broadcasting across browser tabs, and stricter auth\_time claim stability per OpenID Connect specs. Bug fixes cover cookie handling, SIWE validation, and better error codes. Extensive work on CI reliability, test timeouts, and documentation including a new landing page.
+
+## Highlights
+
+### Critical: OTP race condition allows reuse across concurrent requests
+
+Concurrent POST requests could verify the same OTP multiple times before deletion, bypassing single-use constraints and enabling account takeover. Fixed using atomic delete-before-verify across all OTP endpoints (email-otp, sign-in, password reset). [#8067](https://github.com/better-auth/better-auth/pull/8067) (Author: [@Oluwatobi-Mustapha](https://github.com/Oluwatobi-Mustapha/))
+
+### API Keys now scoped to organizations with multi-config support
+
+The api-key plugin now lives at `@better-auth/api-key` and supports multiple configurations per instance. Keys can be owned by organizations instead of just users. Schema changes: `userId` becomes `referenceId`, plus new `configId` and `references` fields. [#4210](https://github.com/better-auth/better-auth/pull/4210) (Author: [@ping-maxwell](https://github.com/ping-maxwell/))
+
+### User enumeration prevention during signup
+
+When email verification or manual signup is enabled, duplicate email attempts now return success without creating a session. Eliminates timing attacks that leak registered accounts. Optional `onExistingUserSignUp` callback for notifying account owners. [#8091](https://github.com/better-auth/better-auth/pull/8091) (Author: [@bytaesu](https://github.com/bytaesu/))
+
+### ID token persistence in getAccessToken auto-refresh
+
+`getAccessToken` was returning a new `idToken` from token refresh but not persisting it, leaving identity claims stale in storage. Now saved alongside access and refresh tokens. [#8211](https://github.com/better-auth/better-auth/pull/8211) (Author: [@GautamBytes](https://github.com/GautamBytes/))
+
+### Built-in Cloudflare D1 database support
+
+Added Kysely dialect for Cloudflare D1. BetterAuth now runs natively on Workers without custom adapters. Auto-detection via batch/exec/prepare method checks. [#7519](https://github.com/better-auth/better-auth/pull/7519) (Author: [@bytaesu](https://github.com/bytaesu/))
+
+## More Updates
+
+### Security
+
+- **Keep auth\_time stable across ID token refresh** [#8134](https://github.com/better-auth/better-auth/pull/8134) - Per OpenID Connect Core 1.0, auth\_time must not change when tokens refresh. Captures original login time and carries it through token rotation. Requires migration: add nullable authTime column to oauthRefreshToken. (Author: [@grant0417](https://github.com/grant0417/))
+
+### Features & Enhancements
+
+- **POST /update-session endpoint** [#8084](https://github.com/better-auth/better-auth/pull/8084) - Update custom session fields and refresh the session cookie. (Author: [@himself65](https://github.com/himself65/))
+- **CLI upgrade command** [#8204](https://github.com/better-auth/better-auth/pull/8204) - `npx auth upgrade` scans package.json for better-auth deps, fetches latest versions, shows a table, and installs pinned versions. (Author: [@himself65](https://github.com/himself65/))
+
+### Bug Fixes
+
+- **Session changes broadcast to other tabs** [#8177](https://github.com/better-auth/better-auth/pull/8177) - Sign-out and user updates now post to other open tabs so useSession stays in sync. Fixes dead-code broadcast function. (Author: [@Abhinav-kodes](https://github.com/Abhinav-kodes/))
+- **Drizzle adapter date handling crash** [#8105](https://github.com/better-auth/better-auth/pull/8105) - Removed input transformation that stringified dates before insert. Dates now convert only on read. (Author: [@ping-maxwell](https://github.com/ping-maxwell/))
+- **Drizzle camelCase key mapping** [#8176](https://github.com/better-auth/better-auth/pull/8176) - Schema introspection now handles camelCase column names on PostgreSQL. (Author: [@jonathan-teamstatus](https://github.com/jonathan-teamstatus/))
+- **Prevent unnecessary cookie leak in Next.js** [#8193](https://github.com/better-auth/better-auth/pull/8193) - Remove spurious cookie from response headers. (Author: [@ping-maxwell](https://github.com/ping-maxwell/))
+- **Multi-session setActive validation** [#8121](https://github.com/better-auth/better-auth/pull/8121) - setActive now requires multi-session cookies enabled. (Author: [@Oluwatobi-Mustapha](https://github.com/Oluwatobi-Mustapha/))
+- **Delete expired Expo cookies** [#8090](https://github.com/better-auth/better-auth/pull/8090) - Properly remove expired cookies instead of storing empty values. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Fix bearer token cookie merging** [#8089](https://github.com/better-auth/better-auth/pull/8089) - Use semicolon to merge multiple Set-Cookie headers. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Handle undefined two-factor options** [#8162](https://github.com/better-auth/better-auth/pull/8162) - verifyTwoFactor no longer crashes when options are missing. (Author: [@okisdev](https://github.com/okisdev/))
+- **Remove chainId validation limit** [#8123](https://github.com/better-auth/better-auth/pull/8123) - SIWE no longer rejects newer networks with high chain IDs. (Author: [@orshih6](https://github.com/orshih6/))
+- **Use invalid\_grant for refresh token errors** [#8103](https://github.com/better-auth/better-auth/pull/8103) - Return correct OAuth error code. (Author: [@luchersou](https://github.com/luchersou/))
+- **Respect freshAge in deleteUser** [#8174](https://github.com/better-auth/better-auth/pull/8174) - User deletion now checks freshAge requirement. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Export getAccountCookie** [#8181](https://github.com/better-auth/better-auth/pull/8181) - Cookie helper available from better-auth/cookies for stateless flows. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Fix Next.js module resolution** [#8178](https://github.com/better-auth/better-auth/pull/8178) - Use explicit .js extension in next/headers imports. (Author: [@Jordanburch101](https://github.com/Jordanburch101/))
+- **Fix Stripe success URL** [#8095](https://github.com/better-auth/better-auth/pull/8095) - Use checkout session ID for redirect. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Dynamic baseUrl context properties** [#8170](https://github.com/better-auth/better-auth/pull/8170) - All auth context properties now available when baseUrl is dynamic. (Author: [@Engerim](https://github.com/Engerim/))
+
+### Infrastructure
+
+- **Prisma v7 migration** [#8166](https://github.com/better-auth/better-auth/pull/8166) - Updated prisma-adapter and CLI. Changed: datasourceUrl now passed to PrismaClient constructor; call `prisma generate` explicitly after db push. (Author: [@himself65](https://github.com/himself65/))
+- **Expo SDK 55 compatibility** [#8213](https://github.com/better-auth/better-auth/pull/8213) - Updated expo-constants, expo-linking, expo-network, expo-web-browser to SDK 55; widened expo-network peerDependency. (Author: [@himself65](https://github.com/himself65/))
+- **Per-job CI concurrency groups** [#8215](https://github.com/better-auth/better-auth/pull/8215) - Test matrix jobs can now run in parallel. (Author: [@himself65](https://github.com/himself65/))
+- **CI timeout and test splitting** [#8210](https://github.com/better-auth/better-auth/pull/8210), [#8209](https://github.com/better-auth/better-auth/pull/8209), [#8208](https://github.com/better-auth/better-auth/pull/8208) - Reduced flakiness in SSO, API key, OAuth provider, and Stripe tests.
+- **Dependency upgrades** [#8183](https://github.com/better-auth/better-auth/pull/8183) - fast-xml-parser and other packages. (Author: [@himself65](https://github.com/himself65/))
+- **Package.json alignment** [#8131](https://github.com/better-auth/better-auth/pull/8131) - Added missing READMEs and aligned package fields across monorepo. (Author: [@himself65](https://github.com/himself65/))
+- **Node 24 as default** [#8129](https://github.com/better-auth/better-auth/pull/8129) - Bumped minimum Node version. (Author: [@himself65](https://github.com/himself65/))
+- **Bump pnpm** [#8130](https://github.com/better-auth/better-auth/pull/8130) - Updated package manager. (Author: [@himself65](https://github.com/himself65/))
+
+### Documentation
+
+- **New documentation and landing page** [#8195](https://github.com/better-auth/better-auth/pull/8195) - Moved landing site into main repository. (Author: [@ping-maxwell](https://github.com/ping-maxwell/))
+- **Legacy /docs/errors redirect** [#8160](https://github.com/better-auth/better-auth/pull/8160) - Old error documentation links point to new structure. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Convex schema generation** [#8141](https://github.com/better-auth/better-auth/pull/8141) - Clarified confusing setup steps.
+- **Homepage SVG paths** [#8200](https://github.com/better-auth/better-auth/pull/8200) - Fixed broken image references.
+- **Community plugins** [#8138](https://github.com/better-auth/better-auth/pull/8138), [#8182](https://github.com/better-auth/better-auth/pull/8182) - Added better-auth-razorpay, better-auth-payu, and better-auth-audit-logs.
+- **Admin plugin Electron docs** [#8171](https://github.com/better-auth/better-auth/pull/8171) - Added image proxy callout.
+- **Captcha ERROR\_CODES export** [#8136](https://github.com/better-auth/better-auth/pull/8136) - Error codes now importable. (Author: [@marcellosso](https://github.com/marcellosso/))
+- **Description and code alignment** [#8132](https://github.com/better-auth/better-auth/pull/8132) - Fixed documentation inconsistencies. (Author: [@bytaesu](https://github.com/bytaesu/))
+- **Electron build config** [#8126](https://github.com/better-auth/better-auth/pull/8126) - Improved tooling. (Author: [@jslno](https://github.com/jslno/))
+- **Electron OAuth redirect** [#8143](https://github.com/better-auth/better-auth/pull/8143) - Fixed OAuth flow for Electron apps. (Author: [@jslno](https://github.com/jslno/))
