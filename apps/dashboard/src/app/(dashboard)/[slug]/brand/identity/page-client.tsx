@@ -517,15 +517,7 @@ function BrandForm({
                                 </svg>
                               )}
                             </div>
-                            <span
-                              className={
-                                useCustomToneField.state.value
-                                  ? "text-sm"
-                                  : "text-muted-foreground text-sm"
-                              }
-                            >
-                              Custom Tone
-                            </span>
+                            <span className="text-sm">Custom Tone</span>
                           </label>
                           <Input
                             autoComplete="off"
