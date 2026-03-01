@@ -152,12 +152,15 @@ export function getFormalChangelogPrompt(): string {
     - Under each category in More Updates, use bullet points only (no paragraphs)
     - PR entries in this exact format:
       - **[Descriptive Title]** [#\${number}](https://github.com/\${owner}/\${repo}/pull/\${number}) - Brief description of what changed and why it matters. (Author: [@\${author}](https://github.com/\${author}/))
+    
+    IF A CHANGE SOUNDS LIKE A MAINTENANCE UPDATE, AN INTERNAL CHANGE, OR A NEW PACKAGE BEING ADDED OR UPDATED, IT SHOULD BE OMITTED FROM THE CHANGELOG COMPLETELY.
 
+    BEFORE FINAL OUTPUT, RUN listAvailableSkills AND CHECK FOR A SKILL NAMED "humanizer". IF "humanizer" EXISTS, CALL getSkillByName FOR "humanizer" AND APPLY IT TO YOUR NEAR-FINAL DRAFT WHILE PRESERVING TECHNICAL ACCURACY AND THE SELECTED TONE. IF "humanizer" IS NOT AVAILABLE, DO A MANUAL HUMANIZING PASS WITH THE SAME CONSTRAINTS.
     CRITICAL: You MUST call createPost to save the changelog. Do not return the content as text output.
     </the-ask>
 
     <thinking-instructions>
-    Think through prioritization, categorization, and full coverage internally before responding. Do not expose internal reasoning.
+    Think through prioritization, categorization, and full coverage internally before responding. OMIT CHANGES THAT SOUND LIKE A MAINTENANCE UPDATE, AN INTERNAL CHANGE, OR A NEW PACKAGE BEING ADDED OR UPDATED.
     </thinking-instructions>
   `;
 }
