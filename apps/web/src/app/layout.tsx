@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://usenotra.com"),
   title: {
     default: "Notra - Turn your daily work into publish-ready content",
-    template: "%s | Notra",
+    template: "%s - Notra",
   },
   description:
     "Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",

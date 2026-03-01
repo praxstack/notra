@@ -48,7 +48,7 @@ const COMPANY_ICONS: Record<string, ReactNode> = {
   ),
 };
 
-const title = "Example Changelogs | Notra";
+const title = "Example Changelogs - Notra";
 const description =
   "See what Notra-generated changelogs look like for popular open source projects.";
 
