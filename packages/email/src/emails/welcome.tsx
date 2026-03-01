@@ -27,11 +27,12 @@ export const WelcomeEmail = () => {
         </Text>
 
         <Text>
-          Or schedule a talk with us at{" "}
+          You can also schedule a talk with us at{" "}
           <Link href="https://usenotra.com/founder-call">
             usenotra.com/founder-call
-          </Link>
-          !
+          </Link>{" "}
+          or join our{" "}
+          <Link href="https://usenotra.com/discord">Discord Community</Link>!
         </Text>
 
         <Text>

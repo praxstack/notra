@@ -65,6 +65,26 @@ const nextConfig: NextConfig = {
       destination: "https://cal.com/dominikkoch",
       permanent: false,
     },
+    {
+      source: "/discord",
+      destination: "https://discord.gg/2qzGZDsnwB",
+      permanent: false,
+    },
+    {
+      source: "/x",
+      destination: "https://x.com/usenotra",
+      permanent: false,
+    },
+    {
+      source: "/linkedin",
+      destination: "https://www.linkedin.com/company/usenotra",
+      permanent: false,
+    },
+    {
+      source: "/github",
+      destination: "https://github.com/usenotra/notra",
+      permanent: false,
+    },
   ],
   headers: async () => [
     {

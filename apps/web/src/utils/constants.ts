@@ -1,8 +1,8 @@
 export const SOCIAL_LINKS = {
-  x: "https://x.com/usenotra",
-  linkedin: "https://www.linkedin.com/company/usenotra",
-  github: "https://github.com/usenotra/notra",
-  discord: "https://discord.gg/2qzGZDsnwB",
+  x: "/x",
+  linkedin: "/linkedin",
+  github: "/github",
+  discord: "/discord",
 } as const;
 
 export const PRICING_PLANS = {
