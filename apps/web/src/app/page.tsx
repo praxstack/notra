@@ -8,7 +8,7 @@ import CTASection from "../components/cta-section";
 import DocumentationSection from "../components/documentation-section";
 import FAQSection from "../components/faq-section";
 import IntegrationOrbit from "../components/integration-orbit";
-import PricingSection from "../components/pricing-section";
+import { PricingCards } from "../components/pricing-section";
 import TestimonialsSection from "../components/testimonials-section";
 import { SOCIAL_PROOF_LOGOS } from "../utils/constants";
 
@@ -24,9 +24,9 @@ export default function LandingPage() {
       <main className="flex w-full flex-col items-center justify-start pt-28 sm:pt-20 md:pt-24 lg:pt-54">
         <div className="flex w-full max-w-234.25 flex-col items-center justify-center gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           <div className="flex flex-col items-center justify-center gap-4 self-stretch rounded-[3px] sm:gap-5 md:gap-6 lg:gap-8">
-            <div className="flex w-full max-w-[46.8rem] flex-col justify-center text-pretty px-2 text-center font-normal font-serif text-[2rem] text-foreground leading-[1.1] sm:px-4 sm:text-[2.625rem] sm:leading-[1.15] md:px-0 md:text-[3.25rem] md:leading-[1.2] lg:text-[5rem] lg:leading-24">
+            <h1 className="flex w-full max-w-[46.8rem] flex-col justify-center text-pretty px-2 text-center font-normal font-serif text-[2rem] text-foreground leading-[1.1] sm:px-4 sm:text-[2.625rem] sm:leading-[1.15] md:px-0 md:text-[3.25rem] md:leading-[1.2] lg:text-[5rem] lg:leading-24">
               Turn your daily work into publish-ready content
-            </div>
+            </h1>
             <div className="flex w-full max-w-[31.63rem] flex-col justify-center text-pretty px-2 text-center font-medium font-sans text-foreground/80 text-sm leading-[1.4] sm:px-4 sm:text-lg sm:leading-[1.45] md:px-0 md:text-xl md:leading-normal lg:text-lg lg:leading-7">
               Notra connects to GitHub, Linear and Slack to turn shipped work
               into ready-to-publish content.
@@ -354,7 +354,24 @@ export default function LandingPage() {
         </section>
 
         <section className="w-full" id="pricing">
-          <PricingSection />
+          <div className="flex w-full flex-col items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-6 self-stretch px-6 py-12 md:px-24 md:py-16">
+              <div className="flex w-full max-w-[586px] flex-col items-center justify-start gap-4">
+                <h2 className="self-stretch text-balance text-center font-sans font-semibold text-3xl text-foreground leading-tight tracking-tight md:text-5xl md:leading-[60px]">
+                  Pick the plan that fits{" "}
+                  <span className="text-primary">your team</span>
+                </h2>
+
+                <div className="self-stretch text-center font-normal font-sans text-base text-muted-foreground leading-7">
+                  Start generating content for free. Upgrade when you
+                  <br />
+                  need more integrations, posts, or team seats.
+                </div>
+              </div>
+            </div>
+
+            <PricingCards />
+          </div>
         </section>
 
         <section className="w-full" id="faq">
