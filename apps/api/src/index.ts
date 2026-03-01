@@ -33,6 +33,10 @@ app.get("/", (c) => {
   return c.text("ok");
 });
 
+app.get("/ping", (c) => {
+  return c.text("pong");
+});
+
 app.route("/v1", contentRoutes);
 
 app.openAPIRegistry.registerComponent("securitySchemes", "BearerAuth", {
