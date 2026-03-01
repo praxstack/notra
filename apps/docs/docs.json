@@ -21,6 +21,16 @@
     }
   },
   "favicon": "/favicon.svg",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/overview"
+    },
+    {
+      "source": "/api",
+      "destination": "/api/getting-started"
+    }
+  ],
   "contextual": {
     "options": [
       "copy",
@@ -44,38 +54,61 @@
     ]
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Getting started",
-        "icon": "play",
-        "pages": ["api/getting-started", "api/introduction"]
+        "tab": "Documentation",
+        "pages": [
+          {
+            "group": "Getting Started",
+            "pages": ["overview"]
+          },
+          {
+            "group": "Integrations",
+            "pages": ["integrations/github", "integrations/featul"]
+          }
+        ],
+        "root": "overview"
       },
       {
-        "group": "API",
-        "icon": "book-open",
-        "openapi": {
-          "source": "openapi.json",
-          "directory": "api-reference"
-        },
+        "tab": "API",
         "pages": [
-          "GET /v1/{organizationId}/posts",
-          "GET /v1/{organizationId}/posts/{postId}",
+          "api/getting-started",
           "api/authentication",
           "api/pagination",
-          "api/types"
-        ]
+          "api/types",
+          {
+            "group": "Routes",
+            "expanded": true,
+            "openapi": {
+              "source": "openapi.json",
+              "directory": "api-reference"
+            },
+            "pages": [
+              "GET /v1/{organizationId}/posts",
+              "GET /v1/{organizationId}/posts/{postId}"
+            ]
+          }
+        ],
+        "root": "api/getting-started"
       },
       {
-        "group": "SDK",
-        "icon": "code",
-        "openapi": {
-          "source": "https://spec.speakeasy.com/notra/notra/notra-api-with-code-samples",
-          "directory": "sdk-reference"
-        },
+        "tab": "SDK",
         "pages": [
-          "GET /v1/{organizationId}/posts",
-          "GET /v1/{organizationId}/posts/{postId}"
-        ]
+          "sdk/getting-started",
+          {
+            "group": "Methods",
+            "expanded": true,
+            "openapi": {
+              "source": "https://spec.speakeasy.com/notra/notra/notra-api-with-code-samples",
+              "directory": "sdk-reference"
+            },
+            "pages": [
+              "GET /v1/{organizationId}/posts",
+              "GET /v1/{organizationId}/posts/{postId}"
+            ]
+          }
+        ],
+        "root": "sdk/getting-started"
       }
     ],
     "global": {

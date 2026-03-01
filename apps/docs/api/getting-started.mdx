@@ -5,6 +5,15 @@ description: "Get started with the Notra API."
 
 ## Quick Start
 
+Base URL:
+```bash
+https://api.usenotra.com/v1/:organizationId/:resource
+```
+
+Where `:organizationId` is your organization ID and `:resource` is the specific
+resource you want to interact with (e.g., `posts`, `categories`, `tags`,
+`authors`).
+
 Run your first authenticated API request:
 
 ```bash
@@ -39,12 +48,14 @@ Create and manage API keys in [Authentication](/api/authentication).
 
 ## Next Steps
 
-<CardGroup>
-<Card title="Pagination" icon="book-open" href="/api/pagination">
-  Learn how to paginate through large result sets.
-</Card>
-
-<Card title="TypeScript Types" icon="code" href="/api/types">
-  Use our TypeScript definitions for type-safe development.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Pagination" icon="book-open" href="/api/pagination">
+    Learn how to paginate through large result sets.
+  </Card>
+  <Card title="TypeScript Types" icon="code" href="/api/types">
+    Use our TypeScript definitions for type-safe development.
+  </Card>
+  <Card title="SDK" icon="code" href="/sdk/getting-started">
+    Use the official TypeScript SDK for a smoother integration.
+  </Card>
 </CardGroup>
