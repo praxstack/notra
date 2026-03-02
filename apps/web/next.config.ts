@@ -61,9 +61,14 @@ const nextConfig: NextConfig = {
   }),
   redirects: async () => [
     {
-      source: "/founder-call",
+      source: "/founder-chat",
       destination: "https://cal.com/dominikkoch",
       permanent: false,
+    },
+    {
+      source: "/founder-call",
+      destination: "https://www.usenotra.com/founder-chat",
+      permanent: true,
     },
     {
       source: "/discord",
