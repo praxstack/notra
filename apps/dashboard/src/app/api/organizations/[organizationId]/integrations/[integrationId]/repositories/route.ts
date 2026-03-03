@@ -62,9 +62,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   } catch (error) {
     console.error("Error listing repositories:", error);
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Internal server error",
-      },
+      { error: "Failed to list repositories" },
       { status: 500 }
     );
   }
@@ -140,20 +138,24 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       error instanceof Error &&
       error.message === "Repository already connected"
     ) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+      return NextResponse.json(
+        { error: "Repository already connected" },
+        { status: 409 }
+      );
     }
 
     if (
       error instanceof Error &&
       error.message.includes("exactly one repository")
     ) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: "Please select exactly one repository" },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Internal server error",
-      },
+      { error: "Failed to connect repository" },
       { status: 500 }
     );
   }
