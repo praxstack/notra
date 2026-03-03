@@ -38,6 +38,7 @@ const nextConfig: NextConfig = {
       [
         "img-src 'self' data: blob:",
         "api.dicebear.com",
+        "icons.duckduckgo.com",
         process.env.CLOUDFLARE_PUBLIC_URL
           ? new URL(process.env.CLOUDFLARE_PUBLIC_URL).hostname
           : "",
@@ -91,16 +92,22 @@ const nextConfig: NextConfig = {
   },
   images: {
     unoptimized: true,
-    remotePatterns: process.env.CLOUDFLARE_PUBLIC_URL
-      ? [
-          {
-            protocol: new URL(
-              process.env.CLOUDFLARE_PUBLIC_URL
-            ).protocol.replace(":", "") as "https" | "http",
-            hostname: new URL(process.env.CLOUDFLARE_PUBLIC_URL).hostname,
-          },
-        ]
-      : [],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "icons.duckduckgo.com",
+      },
+      ...(process.env.CLOUDFLARE_PUBLIC_URL
+        ? [
+            {
+              protocol: new URL(
+                process.env.CLOUDFLARE_PUBLIC_URL
+              ).protocol.replace(":", "") as "https" | "http",
+              hostname: new URL(process.env.CLOUDFLARE_PUBLIC_URL).hostname,
+            },
+          ]
+        : []),
+    ],
   },
 };
 
