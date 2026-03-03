@@ -536,11 +536,11 @@ function BrandForm({
       const websiteUrl =
         trimmedUrl && !trimmedUrl.startsWith("https://")
           ? `https://${trimmedUrl}`
-          : trimmedUrl || null;
+          : trimmedUrl || undefined;
       await updateMutation.mutateAsync({
         ...valuesToSave,
         id: voiceId,
-        websiteUrl,
+        ...(websiteUrl !== undefined && { websiteUrl }),
       });
       lastSavedData.current = JSON.stringify(values);
       toast.success("Changes saved");

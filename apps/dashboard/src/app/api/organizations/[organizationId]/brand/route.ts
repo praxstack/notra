@@ -91,9 +91,17 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
           .set({ ...data, updatedAt: new Date() })
           .where(eq(brandSettings.id, existing.id));
       } else {
+        if (!data.websiteUrl) {
+          return NextResponse.json(
+            { error: "Website URL is required to create default voice" },
+            { status: 400 }
+          );
+        }
+
         await db.insert(brandSettings).values({
           id: crypto.randomUUID(),
           organizationId,
+          websiteUrl: data.websiteUrl,
           ...data,
         });
       }
