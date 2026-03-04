@@ -3,6 +3,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@notra/ui/components/ui/avatar";
+import Link from "next/link";
 
 export default function TestimonialsSection() {
   return (
@@ -20,9 +21,14 @@ export default function TestimonialsSection() {
             <AvatarFallback>WD</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="font-medium font-sans text-base text-foreground">
+            <Link
+              className="font-medium font-sans text-base text-foreground"
+              href="https://x.com/willde_ath"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
               Will De Ath
-            </span>
+            </Link>
             <span className="font-normal font-sans text-muted-foreground text-sm">
               Head of Growth, Consent
             </span>
