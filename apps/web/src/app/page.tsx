@@ -132,28 +132,9 @@ export default function LandingPage() {
                   rel="noopener noreferrer"
                   target="_blank"
                 >
-                  {logo.type === "wordmark" ? (
-                    <Image
-                      alt={logo.name}
-                      className={`w-auto opacity-80 ${logo.name === "Consent" ? "h-6" : "h-8"}`}
-                      height={40}
-                      src={logo.src}
-                      width={180}
-                    />
-                  ) : (
-                    <>
-                      <Image
-                        alt={logo.name}
-                        className="h-8 w-8"
-                        height={32}
-                        src={logo.src}
-                        width={32}
-                      />
-                      <span className="font-medium font-sans text-foreground text-lg leading-tight">
-                        {logo.name}
-                      </span>
-                    </>
-                  )}
+                  <logo.Component
+                    className={`w-auto ${logo.className ?? "h-8"}`}
+                  />
                 </a>
               ))}
             </div>
@@ -198,28 +179,7 @@ export default function LandingPage() {
                   }}
                   target="_blank"
                 >
-                  {logo.type === "wordmark" ? (
-                    <Image
-                      alt={logo.name}
-                      className="h-6 w-auto opacity-80 md:h-7"
-                      height={28}
-                      src={logo.src}
-                      width={120}
-                    />
-                  ) : (
-                    <>
-                      <Image
-                        alt={logo.name}
-                        className="h-6 w-6"
-                        height={24}
-                        src={logo.src}
-                        width={24}
-                      />
-                      <span className="font-medium font-sans text-base text-foreground leading-tight md:text-lg">
-                        {logo.name}
-                      </span>
-                    </>
-                  )}
+                  <logo.Component className="h-6 w-auto md:h-7" />
                 </a>
               ))}
             </div>

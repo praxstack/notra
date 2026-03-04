@@ -1,3 +1,9 @@
+import { Consent } from "@notra/ui/components/ui/svgs/consent";
+import { StackAuth } from "@notra/ui/components/ui/svgs/stack-auth";
+import { Stagewise } from "@notra/ui/components/ui/svgs/stagewise";
+import { Upstash } from "@notra/ui/components/ui/svgs/upstash";
+import type { ComponentType, SVGProps } from "react";
+
 export const SOCIAL_LINKS = {
   x: "/x",
   linkedin: "/linkedin",
@@ -21,71 +27,94 @@ export const PRICING_PLANS = {
   },
   pro: {
     name: "Pro",
-    description: "More power for growing teams.",
-    pricing: { monthly: 50, annually: 500 },
-    cta: { label: "Get started", href: "https://app.usenotra.com/signup" },
+    description: "For growing teams that need more power.",
+    pricing: { monthly: 29, annually: 24 },
+    cta: {
+      label: "Start 7-day trial",
+      href: "https://app.usenotra.com/signup",
+    },
     features: [
-      "5 team members",
-      "Unlimited workflows",
-      "Unlimited integrations",
+      "10 team members",
+      "500 AI Credits per month",
+      "10 workflows",
+      "5 integrations",
       "30 Days Log Retention",
-      "200 AI Credits (then $0.01/credit)",
+      "Analytics",
     ],
   },
   enterprise: {
     name: "Enterprise",
-    description: "Full control for large teams with custom workflows.",
-    cta: { label: "Contact us", href: "mailto:dominik@usenotra.com" },
+    description: "For large teams with custom needs.",
+    pricing: { monthly: null, annually: null },
+    cta: { label: "Contact us", href: "mailto:hello@usenotra.com" },
     features: [
-      "Everything in Pro",
       "Unlimited team members",
+      "Unlimited AI Credits",
+      "Unlimited workflows",
       "Custom integrations",
-      "Unlimited log retention",
-      "Dedicated support",
-      "Custom AI Credit limits",
+      "Unlimited Log Retention",
+      "Advanced Analytics",
+      "Dedicated Support",
     ],
   },
 } as const;
 
-export const COMPARISON_FEATURES = [
+export const FEATURES_TABLE = [
   {
-    category: "Usage",
-    features: [
+    category: "Workflows",
+    items: [
+      { name: "Workflows", free: "3", pro: "10", enterprise: "Unlimited" },
+      {
+        name: "AI Credits",
+        free: "15 / month",
+        pro: "500 / month",
+        enterprise: "Unlimited",
+      },
+    ],
+  },
+  {
+    category: "Team",
+    items: [
       {
         name: "Team members",
         free: "2",
-        pro: "5",
-        enterprise: "Unlimited",
-      },
-      {
-        name: "Workflows",
-        free: "3",
-        pro: "Unlimited",
+        pro: "10",
         enterprise: "Unlimited",
       },
       {
         name: "Integrations",
         free: "2",
-        pro: "Unlimited",
+        pro: "5",
         enterprise: "Custom",
       },
-      {
-        name: "AI Credits per month",
-        free: "15",
-        pro: "200 (then $0.01/credit)",
-        enterprise: "Custom limits",
-      },
+    ],
+  },
+  {
+    category: "Data",
+    items: [
       {
         name: "Log retention",
-        free: "7 days",
-        pro: "30 days",
+        free: "7 Days",
+        pro: "30 Days",
         enterprise: "Unlimited",
+      },
+      {
+        name: "Analytics",
+        free: false,
+        pro: true,
+        enterprise: true,
+      },
+      {
+        name: "Advanced analytics",
+        free: false,
+        pro: false,
+        enterprise: true,
       },
     ],
   },
   {
     category: "Support",
-    features: [
+    items: [
       {
         name: "Community support",
         free: true,
@@ -93,7 +122,7 @@ export const COMPARISON_FEATURES = [
         enterprise: true,
       },
       {
-        name: "Priority support",
+        name: "Email support",
         free: false,
         pro: true,
         enterprise: true,
@@ -108,29 +137,34 @@ export const COMPARISON_FEATURES = [
   },
 ] as const;
 
-export const SOCIAL_PROOF_LOGOS = [
+export const SOCIAL_PROOF_LOGOS: {
+  name: string;
+  Component: ComponentType<SVGProps<SVGSVGElement>>;
+  href: string;
+  className?: string;
+}[] = [
   {
     name: "Consent",
-    type: "wordmark" as const,
-    src: "/logos/brands/consent.svg",
+    Component: Consent,
     href: "https://consent.io?utm_source=notra",
+    className: "h-6",
   },
   {
     name: "Upstash",
-    type: "wordmark" as const,
-    src: "/logos/brands/upstash.svg",
+    Component: Upstash,
     href: "https://upstash.com?utm_source=notra",
+    className: "h-8",
   },
   {
-    name: "DataBuddy",
-    type: "icon" as const,
-    src: "/logos/brands/databuddy.svg",
-    href: "https://databuddy.cc?utm_source=notra",
+    name: "stagewise",
+    Component: Stagewise,
+    href: "https://stagewise.io?utm_source=notra",
+    className: "h-8",
   },
   {
     name: "Stack Auth",
-    type: "wordmark" as const,
-    src: "/logos/brands/stack-auth.svg",
+    Component: StackAuth,
     href: "https://stack-auth.com?utm_source=notra",
+    className: "h-8",
   },
 ];
