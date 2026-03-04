@@ -137,6 +137,13 @@ export const FEATURES_TABLE = [
   },
 ] as const;
 
+export const COMPARISON_FEATURES = FEATURES_TABLE.map(
+  ({ category, items }) => ({
+    category,
+    features: items,
+  })
+);
+
 export const SOCIAL_PROOF_LOGOS: {
   name: string;
   Component: ComponentType<SVGProps<SVGSVGElement>>;
