@@ -348,6 +348,8 @@ export interface PostSourceMetadata {
   lookbackRange?: { start: string; end: string };
   eventType?: string;
   eventAction?: string;
+  brandVoiceName?: string;
+  brandVoiceId?: string;
 }
 
 export const usersRelations = relations(users, ({ many }) => ({

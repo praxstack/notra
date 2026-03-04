@@ -53,11 +53,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2Icon, PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BrandVoiceCell } from "@/components/automation/brand-voice-cell";
 import { AddTriggerDialog } from "@/components/automation/triggers/trigger-sheet";
 import { TriggerStatusBadge } from "@/components/automation/triggers/trigger-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import type { Trigger, TriggerSourceType } from "@/types/triggers/triggers";
 import { getOutputTypeLabel } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";
@@ -127,6 +129,32 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   });
 
   const repositoryMap = data?.repositoryMap ?? {};
+
+  const { data: brandResponse } = useQuery<{ voices: BrandSettings[] }>({
+    queryKey: QUERY_KEYS.BRAND.settings(organizationId ?? ""),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/organizations/${organizationId}/brand`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch brand voices");
+      }
+      return response.json();
+    },
+    enabled: !!organizationId,
+  });
+
+  const { brandVoiceMap, defaultBrandVoice } = useMemo(() => {
+    const map: Record<string, BrandSettings> = {};
+    let defaultVoice: BrandSettings | undefined;
+    for (const voice of brandResponse?.voices ?? []) {
+      map[voice.id] = voice;
+      if (voice.isDefault) {
+        defaultVoice = voice;
+      }
+    }
+    return { brandVoiceMap: map, defaultBrandVoice: defaultVoice };
+  }, [brandResponse]);
 
   const updateMutation = useMutation({
     mutationFn: async (trigger: Trigger) => {
@@ -426,7 +454,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
             <TabsContent className="mt-4" value="active">
               <ScheduleTable
+                brandVoiceMap={brandVoiceMap}
                 createdSortOrder={createdSortOrder}
+                defaultBrandVoice={defaultBrandVoice}
                 isDeleting={deleteMutation.isPending}
                 isRunning={runNowMutation.isPending}
                 isUpdating={updateMutation.isPending}
@@ -452,7 +482,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
             <TabsContent className="mt-4" value="paused">
               <ScheduleTable
+                brandVoiceMap={brandVoiceMap}
                 createdSortOrder={createdSortOrder}
+                defaultBrandVoice={defaultBrandVoice}
                 isDeleting={deleteMutation.isPending}
                 isRunning={runNowMutation.isPending}
                 isUpdating={updateMutation.isPending}
@@ -568,7 +600,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 function ScheduleTable({
   triggers,
   repositoryMap,
+  brandVoiceMap,
   createdSortOrder,
+  defaultBrandVoice,
   onSortCreatedChange,
   onToggle,
   onDelete,
@@ -582,7 +616,9 @@ function ScheduleTable({
 }: {
   triggers: Trigger[];
   repositoryMap: Record<string, string>;
+  brandVoiceMap: Record<string, BrandSettings>;
   createdSortOrder: false | "asc" | "desc";
+  defaultBrandVoice?: BrandSettings;
   onSortCreatedChange: (next: false | "asc" | "desc") => void;
   onToggle: (trigger: Trigger) => void;
   onDelete: (triggerId: string) => void;
@@ -634,6 +670,7 @@ function ScheduleTable({
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Schedule</TableHead>
+            <TableHead>Brand</TableHead>
             <TableHead>Output</TableHead>
             <TableHead>Targets</TableHead>
             <TableHead>Status</TableHead>
@@ -660,6 +697,11 @@ function ScheduleTable({
               isUpdating && updatingTriggerId === trigger.id;
             const isThisRunning = isRunning && runningTriggerId === trigger.id;
 
+            const hasExplicitVoice = !!trigger.outputConfig?.brandVoiceId;
+            const brandVoice = hasExplicitVoice
+              ? brandVoiceMap[trigger.outputConfig!.brandVoiceId!]
+              : defaultBrandVoice;
+
             return (
               <TableRow key={trigger.id}>
                 <TableCell>
@@ -671,6 +713,12 @@ function ScheduleTable({
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatFrequency(trigger.sourceConfig.cron)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  <BrandVoiceCell
+                    isDefault={!hasExplicitVoice}
+                    voice={brandVoice}
+                  />
                 </TableCell>
                 <TableCell className="text-muted-foreground capitalize">
                   {getOutputTypeLabel(trigger.outputType)}

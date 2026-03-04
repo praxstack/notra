@@ -17,6 +17,8 @@ export interface WorkflowRepositoryData {
 }
 
 export interface WorkflowBrandSettings {
+  id: string;
+  name: string;
   toneProfile: string | null;
   companyName: string | null;
   companyDescription: string | null;

@@ -26,6 +26,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BrandVoiceCell } from "@/components/automation/brand-voice-cell";
 import { EventsPageSkeleton } from "@/components/automation/events-skeleton";
 import { TriggerRowActions } from "@/components/automation/triggers/trigger-row-actions";
 import { AddTriggerDialog } from "@/components/automation/triggers/trigger-sheet";
@@ -33,6 +34,7 @@ import { TriggerStatusBadge } from "@/components/automation/triggers/trigger-sta
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import type { Trigger, TriggerSourceType } from "@/types/triggers/triggers";
 import { getOutputTypeLabel } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";
@@ -86,6 +88,32 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
     },
     enabled: !!organizationId,
   });
+
+  const { data: brandResponse } = useQuery<{ voices: BrandSettings[] }>({
+    queryKey: QUERY_KEYS.BRAND.settings(organizationId ?? ""),
+    queryFn: async () => {
+      const response = await fetch(
+        `/api/organizations/${organizationId}/brand`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch brand voices");
+      }
+      return response.json();
+    },
+    enabled: !!organizationId,
+  });
+
+  const { brandVoiceMap, defaultBrandVoice } = useMemo(() => {
+    const map: Record<string, BrandSettings> = {};
+    let defaultVoice: BrandSettings | undefined;
+    for (const voice of brandResponse?.voices ?? []) {
+      map[voice.id] = voice;
+      if (voice.isDefault) {
+        defaultVoice = voice;
+      }
+    }
+    return { brandVoiceMap: map, defaultBrandVoice: defaultVoice };
+  }, [brandResponse]);
 
   const updateMutation = useMutation({
     mutationFn: async (trigger: Trigger) => {
@@ -272,7 +300,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
             <TabsContent className="mt-4" value="active">
               <EventTable
+                brandVoiceMap={brandVoiceMap}
                 createdSortOrder={createdSortOrder}
+                defaultBrandVoice={defaultBrandVoice}
                 onDelete={handleDelete}
                 onSortCreatedChange={setCreatedSortOrder}
                 onToggle={handleToggle}
@@ -282,7 +312,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
             <TabsContent className="mt-4" value="paused">
               <EventTable
+                brandVoiceMap={brandVoiceMap}
                 createdSortOrder={createdSortOrder}
+                defaultBrandVoice={defaultBrandVoice}
                 onDelete={handleDelete}
                 onSortCreatedChange={setCreatedSortOrder}
                 onToggle={handleToggle}
@@ -298,13 +330,17 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
 function EventTable({
   triggers,
+  brandVoiceMap,
   createdSortOrder,
+  defaultBrandVoice,
   onSortCreatedChange,
   onToggle,
   onDelete,
 }: {
   triggers: Trigger[];
+  brandVoiceMap: Record<string, BrandSettings>;
   createdSortOrder: false | "asc" | "desc";
+  defaultBrandVoice?: BrandSettings;
   onSortCreatedChange: (next: false | "asc" | "desc") => void;
   onToggle: (trigger: Trigger) => void;
   onDelete: (triggerId: string) => void;
@@ -348,6 +384,7 @@ function EventTable({
           <TableRow>
             <TableHead>Type</TableHead>
             <TableHead>Events</TableHead>
+            <TableHead>Brand</TableHead>
             <TableHead>Output</TableHead>
             <TableHead>Targets</TableHead>
             <TableHead>Status</TableHead>
@@ -369,40 +406,53 @@ function EventTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedTriggers.map((trigger) => (
-            <TableRow key={trigger.id}>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <span className="flex size-8 items-center justify-center rounded-lg border bg-muted/50">
-                    <Github className="size-4" />
-                  </span>
-                  <span className="text-sm">GitHub webhook</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {formatEventList(trigger.sourceConfig.eventTypes)}
-              </TableCell>
-              <TableCell className="text-muted-foreground capitalize">
-                {getOutputTypeLabel(trigger.outputType)}
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {trigger.targets.repositoryIds.length} repositories
-              </TableCell>
-              <TableCell>
-                <TriggerStatusBadge enabled={trigger.enabled} />
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {formatDate(trigger.createdAt)}
-              </TableCell>
-              <TableCell>
-                <TriggerRowActions
-                  onDelete={onDelete}
-                  onToggle={onToggle}
-                  trigger={trigger}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
+          {sortedTriggers.map((trigger) => {
+            const hasExplicitVoice = !!trigger.outputConfig?.brandVoiceId;
+            const brandVoice = hasExplicitVoice
+              ? brandVoiceMap[trigger.outputConfig!.brandVoiceId!]
+              : defaultBrandVoice;
+
+            return (
+              <TableRow key={trigger.id}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-8 items-center justify-center rounded-lg border bg-muted/50">
+                      <Github className="size-4" />
+                    </span>
+                    <span className="text-sm">GitHub webhook</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatEventList(trigger.sourceConfig.eventTypes)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  <BrandVoiceCell
+                    isDefault={!hasExplicitVoice}
+                    voice={brandVoice}
+                  />
+                </TableCell>
+                <TableCell className="text-muted-foreground capitalize">
+                  {getOutputTypeLabel(trigger.outputType)}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {trigger.targets.repositoryIds.length} repositories
+                </TableCell>
+                <TableCell>
+                  <TriggerStatusBadge enabled={trigger.enabled} />
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatDate(trigger.createdAt)}
+                </TableCell>
+                <TableCell>
+                  <TriggerRowActions
+                    onDelete={onDelete}
+                    onToggle={onToggle}
+                    trigger={trigger}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
