@@ -50,6 +50,7 @@ import type { ToneProfile } from "@/schemas/brand";
 import { useUpdateBrandSettings } from "../../../../../../lib/hooks/use-brand-analysis";
 import {
   AUTO_SAVE_DELAY,
+  getLanguageFlag,
   LANGUAGE_OPTIONS,
   TONE_OPTIONS,
 } from "../constants/brand-identity";
@@ -167,12 +168,15 @@ export function BrandForm({
             {(field) => (
               <div className="space-y-2">
                 <Label htmlFor={field.name}>Website</Label>
-                <div className="flex w-full flex-row items-center overflow-hidden rounded-lg border border-input bg-background transition-all focus-within:ring-2 focus-within:ring-ring/20">
-                  <span className="flex h-10 items-center border-input border-r bg-muted/50 px-3 text-muted-foreground text-sm">
+                <div className="flex w-full flex-row items-center rounded-md border border-border transition-colors focus-within:border-ring focus-within:ring-ring/50">
+                  <label
+                    className="border-border border-r px-2.5 py-1.5 text-muted-foreground text-sm transition-colors"
+                    htmlFor={field.name}
+                  >
                     https://
-                  </span>
+                  </label>
                   <input
-                    className="h-10 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+                    className="flex-1 bg-transparent px-2.5 py-1.5 text-sm outline-none"
                     id={field.name}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -498,27 +502,44 @@ export function BrandForm({
             {(field) => (
               <div className="space-y-2">
                 <Label>Language</Label>
-                <Combobox
-                  items={LANGUAGE_OPTIONS}
-                  onValueChange={(value) => {
-                    if (value) {
-                      field.handleChange(value);
-                    }
-                  }}
-                  value={field.state.value}
-                >
-                  <ComboboxInput placeholder="Select language..." />
-                  <ComboboxContent>
-                    <ComboboxEmpty>No language found</ComboboxEmpty>
-                    <ComboboxList>
-                      {(lang) => (
-                        <ComboboxItem key={lang} value={lang}>
-                          {lang}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxList>
-                  </ComboboxContent>
-                </Combobox>
+                <div className="relative">
+                  <span
+                    aria-hidden="true"
+                    className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 z-10 text-base leading-none"
+                  >
+                    {getLanguageFlag(field.state.value)}
+                  </span>
+                  <Combobox
+                    items={LANGUAGE_OPTIONS}
+                    onValueChange={(value) => {
+                      if (value) {
+                        field.handleChange(value);
+                      }
+                    }}
+                    value={field.state.value}
+                  >
+                    <ComboboxInput
+                      className="[&_[data-slot=input-group-control]]:pl-9"
+                      placeholder="Select language..."
+                    />
+                    <ComboboxContent>
+                      <ComboboxEmpty>No language found</ComboboxEmpty>
+                      <ComboboxList>
+                        {(lang) => (
+                          <ComboboxItem key={lang} value={lang}>
+                            <span
+                              aria-hidden="true"
+                              className="text-base leading-none"
+                            >
+                              {getLanguageFlag(lang)}
+                            </span>
+                            <span>{lang}</span>
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                </div>
               </div>
             )}
           </form.Field>

@@ -47,7 +47,7 @@ export function VoiceSelector({
               <span className="block truncate font-medium text-sm leading-tight">
                 {truncateText(voice.name, IDENTITY_NAME_MAX_LENGTH)}
               </span>
-              {(voice.toneProfile || voice.isDefault) && (
+              {(voice.toneProfile || voice.language || voice.isDefault) && (
                 <Tooltip>
                   <TooltipTrigger
                     render={
@@ -63,6 +63,7 @@ export function VoiceSelector({
                     {voice.toneProfile && (
                       <p>Tone Profile: {voice.toneProfile}</p>
                     )}
+                    {voice.language && <p>Language: {voice.language}</p>}
                     {voice.isDefault && (
                       <p>
                         Default brand identity used when no specific identity is

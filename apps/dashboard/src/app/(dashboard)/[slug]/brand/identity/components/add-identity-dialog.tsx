@@ -122,12 +122,15 @@ export function AddIdentityDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="voice-url">Website</Label>
-            <div className="flex w-full flex-row items-center overflow-hidden rounded-lg border border-input bg-background transition-all focus-within:ring-2 focus-within:ring-ring/20">
-              <span className="flex h-10 items-center border-input border-r bg-muted/50 px-3 text-muted-foreground text-sm">
+            <div className="flex w-full flex-row items-center rounded-md border border-border transition-colors focus-within:border-ring focus-within:ring-ring/50">
+              <label
+                className="border-border border-r px-2.5 py-1.5 text-muted-foreground text-sm transition-colors"
+                htmlFor="voice-url"
+              >
                 https://
-              </span>
+              </label>
               <input
-                className="h-10 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent px-2.5 py-1.5 text-sm outline-none"
                 id="voice-url"
                 onChange={(e) => setUrl(sanitizeBrandUrlInput(e.target.value))}
                 placeholder="example.com"
