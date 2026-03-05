@@ -1,7 +1,7 @@
 import {
   Blockchain04Icon,
-  BlogPostIcon,
   ChartHistogramIcon,
+  News01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
@@ -35,7 +35,7 @@ export function OutputTypeIcon({
     case "changelog":
       return <HugeiconsIcon className={className} icon={Blockchain04Icon} />;
     case "blog_post":
-      return <HugeiconsIcon className={className} icon={BlogPostIcon} />;
+      return <HugeiconsIcon className={className} icon={News01Icon} />;
     case "investor_update":
       return <HugeiconsIcon className={className} icon={ChartHistogramIcon} />;
     default:
