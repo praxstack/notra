@@ -146,7 +146,7 @@ export function VoiceSelector({
                   {isActive && (
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        className="ml-auto flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 data-[state=open]:opacity-100"
+                        className="ml-auto flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md hover:bg-accent"
                         disabled={
                           isDeleting || isSettingDefault || isReanalyzing
                         }
