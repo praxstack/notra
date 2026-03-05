@@ -1,22 +1,4 @@
 import {
-  Delete02Icon,
-  Edit02Icon,
-  MoreVerticalIcon,
-  Refresh01Icon,
-  StarIcon,
-} from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  ResponsiveDialog,
-  ResponsiveDialogClose,
-  ResponsiveDialogContent,
-  ResponsiveDialogDescription,
-  ResponsiveDialogFooter,
-  ResponsiveDialogHeader,
-  ResponsiveDialogTitle,
-} from "@notra/ui/components/shared/responsive-dialog";
-import { Button } from "@notra/ui/components/ui/button";
-import {
   Combobox,
   ComboboxContent,
   ComboboxEmpty,
@@ -24,13 +6,6 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@notra/ui/components/ui/combobox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@notra/ui/components/ui/dropdown-menu";
 import { Input } from "@notra/ui/components/ui/input";
 import { Label } from "@notra/ui/components/ui/label";
 import {
@@ -44,7 +19,7 @@ import { Textarea } from "@notra/ui/components/ui/textarea";
 import { TitleCard } from "@notra/ui/components/ui/title-card";
 import { useForm } from "@tanstack/react-form";
 import { useAsyncDebouncedCallback } from "@tanstack/react-pacer";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { toast } from "sonner";
 import type { ToneProfile } from "@/schemas/brand";
 import { useUpdateBrandSettings } from "../../../../../../lib/hooks/use-brand-analysis";
@@ -60,19 +35,9 @@ export function BrandForm({
   organizationId,
   voiceId,
   initialData,
-  isDefault,
-  onReanalyze,
-  isReanalyzing,
-  onDelete,
-  isDeleting,
-  onSetDefault,
-  isSettingDefault,
 }: BrandFormProps) {
   const updateMutation = useUpdateBrandSettings(organizationId);
   const lastSavedData = useRef<string>(JSON.stringify(initialData));
-  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [isEditIdentityDialogOpen, setEditIdentityDialogOpen] = useState(false);
-  const [identityName, setIdentityName] = useState(initialData.name);
 
   const debouncedSave = useAsyncDebouncedCallback(
     async (values: typeof initialData) => {
@@ -117,33 +82,6 @@ export function BrandForm({
       },
     },
   });
-
-  const handleIdentityRename = async () => {
-    const trimmedName = identityName.trim();
-
-    if (!trimmedName) {
-      toast.error("Please enter an identity name");
-      return;
-    }
-
-    try {
-      await updateMutation.mutateAsync({
-        id: voiceId,
-        name: trimmedName,
-      });
-      lastSavedData.current = JSON.stringify({
-        ...form.state.values,
-        name: trimmedName,
-      });
-      form.setFieldValue("name", trimmedName);
-      toast.success("Identity name updated");
-      setEditIdentityDialogOpen(false);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to update identity"
-      );
-    }
-  };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -207,161 +145,7 @@ export function BrandForm({
         </div>
       </TitleCard>
 
-      <TitleCard
-        action={
-          <div className="flex items-center gap-2">
-            <form.Subscribe selector={(s) => s.values.websiteUrl}>
-              {(websiteUrl) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    className="flex size-8 cursor-pointer items-center justify-center rounded-md border border-input hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={isDeleting || isSettingDefault || isReanalyzing}
-                  >
-                    <HugeiconsIcon
-                      className="size-4 text-muted-foreground"
-                      icon={MoreVerticalIcon}
-                    />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    <DropdownMenuItem
-                      onClick={() => setEditIdentityDialogOpen(true)}
-                    >
-                      <HugeiconsIcon className="size-4" icon={Edit02Icon} />
-                      Edit identity name
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={!websiteUrl.trim() || isReanalyzing}
-                      onClick={() => onReanalyze(websiteUrl)}
-                    >
-                      <HugeiconsIcon className="size-4" icon={Refresh01Icon} />
-                      Re-analyze
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      disabled={isDefault}
-                      onClick={onSetDefault}
-                    >
-                      <HugeiconsIcon className="size-4" icon={StarIcon} />
-                      {isDefault
-                        ? "Already default identity"
-                        : "Set as default identity"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      disabled={isDefault}
-                      onClick={() => setDeleteDialogOpen(true)}
-                      variant="destructive"
-                    >
-                      <HugeiconsIcon className="size-4" icon={Delete02Icon} />
-                      Delete identity
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </form.Subscribe>
-            <ResponsiveDialog
-              onOpenChange={(open) => {
-                setEditIdentityDialogOpen(open);
-                if (!open) {
-                  setIdentityName(form.state.values.name);
-                }
-              }}
-              open={isEditIdentityDialogOpen}
-            >
-              <ResponsiveDialogContent className="sm:max-w-md">
-                <ResponsiveDialogHeader>
-                  <ResponsiveDialogTitle>
-                    Edit identity name
-                  </ResponsiveDialogTitle>
-                  <ResponsiveDialogDescription>
-                    Update the name used to identify this brand profile.
-                  </ResponsiveDialogDescription>
-                </ResponsiveDialogHeader>
-                <form
-                  className="space-y-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    handleIdentityRename();
-                  }}
-                >
-                  <div className="space-y-2">
-                    <Label htmlFor="identity-name">Identity name</Label>
-                    <Input
-                      autoFocus
-                      id="identity-name"
-                      onChange={(event) => setIdentityName(event.target.value)}
-                      placeholder="e.g. Default, Marketing, Technical"
-                      value={identityName}
-                    />
-                  </div>
-                  <ResponsiveDialogFooter>
-                    <ResponsiveDialogClose
-                      disabled={updateMutation.isPending}
-                      render={
-                        <Button
-                          className="w-full justify-center sm:w-auto"
-                          variant="outline"
-                        />
-                      }
-                    >
-                      Cancel
-                    </ResponsiveDialogClose>
-                    <Button
-                      className="w-full justify-center sm:w-auto"
-                      disabled={
-                        !identityName.trim() || updateMutation.isPending
-                      }
-                      type="submit"
-                    >
-                      {updateMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                  </ResponsiveDialogFooter>
-                </form>
-              </ResponsiveDialogContent>
-            </ResponsiveDialog>
-            <ResponsiveDialog
-              onOpenChange={setDeleteDialogOpen}
-              open={isDeleteDialogOpen}
-            >
-              <ResponsiveDialogContent className="sm:max-w-md">
-                <ResponsiveDialogHeader>
-                  <ResponsiveDialogTitle>
-                    Delete identity?
-                  </ResponsiveDialogTitle>
-                  <ResponsiveDialogDescription>
-                    This removes this brand identity and its saved profile
-                    settings. This action cannot be undone.
-                  </ResponsiveDialogDescription>
-                </ResponsiveDialogHeader>
-                <ResponsiveDialogFooter>
-                  <ResponsiveDialogClose
-                    disabled={isDeleting}
-                    render={
-                      <Button
-                        className="w-full justify-center sm:w-auto"
-                        variant="outline"
-                      />
-                    }
-                  >
-                    Cancel
-                  </ResponsiveDialogClose>
-                  <Button
-                    className="w-full justify-center sm:w-auto"
-                    disabled={isDeleting}
-                    onClick={() => {
-                      onDelete();
-                      setDeleteDialogOpen(false);
-                    }}
-                    variant="destructive"
-                  >
-                    {isDeleting ? "Deleting..." : "Delete identity"}
-                  </Button>
-                </ResponsiveDialogFooter>
-              </ResponsiveDialogContent>
-            </ResponsiveDialog>
-          </div>
-        }
-        heading="Tone & Language"
-      >
+      <TitleCard heading="Tone & Language">
         <form.Field name="useCustomTone">
           {(useCustomToneField) => (
             <fieldset className="space-y-4">

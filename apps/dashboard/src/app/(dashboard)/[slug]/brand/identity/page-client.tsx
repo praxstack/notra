@@ -275,7 +275,15 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
         <VoiceSelector
           activeVoiceId={selectedVoice.id}
+          isDefault={selectedVoice.isDefault}
+          isDeleting={deleteVoiceMutation.isPending}
+          isReanalyzing={analyzeMutation.isPending}
+          isSettingDefault={setDefaultMutation.isPending}
+          onDelete={handleDeleteVoice}
+          onReanalyze={handleReanalyze}
           onSelect={setActiveVoiceId}
+          onSetDefault={handleSetDefault}
+          organizationId={organizationId}
           voices={voices}
         />
 
@@ -289,14 +297,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
         <BrandForm
           initialData={initialData}
-          isDefault={selectedVoice.isDefault}
-          isDeleting={deleteVoiceMutation.isPending}
-          isReanalyzing={analyzeMutation.isPending}
-          isSettingDefault={setDefaultMutation.isPending}
           key={selectedVoice.id}
-          onDelete={handleDeleteVoice}
-          onReanalyze={handleReanalyze}
-          onSetDefault={handleSetDefault}
           organizationId={organizationId}
           voiceId={selectedVoice.id}
         />

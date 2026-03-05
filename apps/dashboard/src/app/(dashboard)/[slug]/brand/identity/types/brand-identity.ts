@@ -21,6 +21,14 @@ export interface VoiceSelectorProps {
   voices: BrandSettings[];
   activeVoiceId: string;
   onSelect: (id: string) => void;
+  organizationId: string;
+  isDefault: boolean;
+  onReanalyze: (url: string) => void;
+  isReanalyzing: boolean;
+  onDelete: () => void;
+  isDeleting: boolean;
+  onSetDefault: () => void;
+  isSettingDefault: boolean;
 }
 
 export interface AddIdentityDialogProps {
@@ -48,13 +56,6 @@ export interface BrandFormProps {
   organizationId: string;
   voiceId: string;
   initialData: BrandFormInitialData;
-  isDefault: boolean;
-  onReanalyze: (url: string) => void;
-  isReanalyzing: boolean;
-  onDelete: () => void;
-  isDeleting: boolean;
-  onSetDefault: () => void;
-  isSettingDefault: boolean;
 }
 
 export type StepIconState = "pending" | "active" | "completed";
