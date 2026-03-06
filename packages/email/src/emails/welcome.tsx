@@ -27,11 +27,9 @@ export const WelcomeEmail = () => {
         </Text>
 
         <Text>
-          You can also schedule a chat with us at{" "}
-          <Link href="https://usenotra.com/founder-chat">
-            usenotra.com/founder-chat
-          </Link>{" "}
-          or join our{" "}
+          You can also{" "}
+          <Link href="https://usenotra.com/founder-chat">schedule a chat</Link>{" "}
+          with us or join our{" "}
           <Link href="https://usenotra.com/discord">Discord Community</Link>!
         </Text>
 
