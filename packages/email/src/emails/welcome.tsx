@@ -34,10 +34,6 @@ export const WelcomeEmail = () => {
         </Text>
 
         <Text>
-          You can get started at <Link href={appUrl}>app.usenotra.com</Link>
-        </Text>
-
-        <Text>
           Cheers,
           <br />
           Dominik & The Notra Team
