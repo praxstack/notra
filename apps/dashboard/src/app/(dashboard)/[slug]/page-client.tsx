@@ -1,5 +1,6 @@
 "use client";
 
+import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { useId } from "react";
 import { ContentCard } from "@/components/content/content-card";
 import { ContentSkeletonCard } from "@/components/content/content-skeleton-card";
@@ -70,8 +71,8 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
       return (
         <div className="grid auto-rows-[1fr] justify-items-center gap-3 sm:grid-cols-2 sm:justify-items-stretch lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              className="h-[170px] w-full max-w-[340px] rounded-lg border border-border/60 bg-muted/30 sm:h-[140px] sm:max-w-none"
+            <Skeleton
+              className="h-[10.625rem] w-full max-w-[21.25rem] rounded-lg sm:h-[8.75rem] sm:max-w-none"
               key={`${skeletonId}-${index + 1}`}
             />
           ))}

@@ -53,9 +53,7 @@ export const ContentActivityCard = () => {
   });
 
   if (isPending) {
-    return (
-      <Skeleton className="rounded-lg" style={{ width: 848, height: 160 }} />
-    );
+    return <Skeleton className="h-40 w-full max-w-[53rem] rounded-lg" />;
   }
 
   return (
