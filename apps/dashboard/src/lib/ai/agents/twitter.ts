@@ -6,6 +6,7 @@ import { getConversationalTwitterPrompt } from "@/lib/ai/prompts/twitter/convers
 import { getFormalTwitterPrompt } from "@/lib/ai/prompts/twitter/formal";
 import { getProfessionalTwitterPrompt } from "@/lib/ai/prompts/twitter/professional";
 import { getTwitterUserPrompt } from "@/lib/ai/prompts/twitter/user";
+import { createGetBrandReferencesTool } from "@/lib/ai/tools/brand-references";
 import {
   createGetCommitsByTimeframeTool,
   createGetPullRequestsTool,
@@ -36,6 +37,7 @@ export async function generateTwitterPost(
 ): Promise<TwitterAgentResult> {
   const {
     organizationId,
+    voiceId,
     repositories,
     tone = "Conversational",
     promptInput,
@@ -79,6 +81,11 @@ export async function generateTwitterPost(
       },
     },
     tools: {
+      getBrandReferences: createGetBrandReferencesTool({
+        organizationId,
+        voiceId,
+        agentType: "twitter",
+      }),
       getPullRequests: createGetPullRequestsTool({
         organizationId,
         allowedIntegrationIds,

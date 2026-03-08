@@ -14,6 +14,7 @@ export interface ChangelogAgentResult {
 
 export interface ChangelogAgentOptions {
   organizationId: string;
+  voiceId?: string;
   repositories: Array<{
     integrationId: string;
     owner: string;
@@ -32,6 +33,7 @@ export interface LinkedInAgentResult {
 
 export interface LinkedInAgentOptions {
   organizationId: string;
+  voiceId?: string;
   repositories: Array<{
     integrationId: string;
     owner: string;
@@ -50,6 +52,7 @@ export interface TwitterAgentResult {
 
 export interface TwitterAgentOptions {
   organizationId: string;
+  voiceId?: string;
   repositories: Array<{
     integrationId: string;
     owner: string;
