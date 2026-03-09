@@ -15,7 +15,6 @@ import {
   createFailTool,
   createUpdatePostTool,
   createViewPostTool,
-  type PostToolsResult,
 } from "@/lib/ai/tools/post";
 import { getSkillByName, listAvailableSkills } from "@/lib/ai/tools/skills";
 import { getValidToneProfile, type ToneProfile } from "@/schemas/brand";
@@ -23,6 +22,7 @@ import type {
   BlogPostAgentOptions,
   BlogPostAgentResult,
 } from "@/types/ai/agents";
+import type { PostToolsResult } from "@/types/ai/post-tools";
 
 const blogPostPromptByTone: Record<ToneProfile, () => string> = {
   Conversational: getConversationalBlogPostPrompt,
@@ -91,7 +91,7 @@ export async function generateBlogPost(
       listAvailableSkills: listAvailableSkills(),
       getSkillByName: getSkillByName(),
       createPost: createCreatePostTool(postToolsConfig, postToolsResult),
-      updatePost: createUpdatePostTool(postToolsConfig),
+      updatePost: createUpdatePostTool(postToolsConfig, postToolsResult),
       viewPost: createViewPostTool(postToolsConfig),
       fail: createFailTool(postToolsResult),
     },
@@ -105,14 +105,21 @@ export async function generateBlogPost(
     throw new Error(postToolsResult.failReason);
   }
 
-  if (!postToolsResult.postId) {
+  if (!postToolsResult.posts?.length) {
     throw new Error(
       "Blog post agent completed without creating a post. No createPost tool call was made."
     );
   }
 
+  const primaryPost = postToolsResult.posts[0];
+
+  if (!primaryPost) {
+    throw new Error("Blog post agent did not return a primary post.");
+  }
+
   return {
-    postId: postToolsResult.postId,
-    title: postToolsResult.title ?? "",
+    postId: primaryPost.postId,
+    title: primaryPost.title,
+    posts: postToolsResult.posts,
   };
 }

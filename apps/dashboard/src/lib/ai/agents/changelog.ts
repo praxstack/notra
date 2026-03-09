@@ -16,7 +16,6 @@ import {
   createFailTool,
   createUpdatePostTool,
   createViewPostTool,
-  type PostToolsResult,
 } from "@/lib/ai/tools/post";
 import { getSkillByName, listAvailableSkills } from "@/lib/ai/tools/skills";
 import { getValidToneProfile, type ToneProfile } from "@/schemas/brand";
@@ -24,6 +23,7 @@ import type {
   ChangelogAgentOptions,
   ChangelogAgentResult,
 } from "@/types/ai/agents";
+import type { PostToolsResult } from "@/types/ai/post-tools";
 
 const changelogPromptByTone: Record<ToneProfile, () => string> = {
   Conversational: getConversationalChangelogPrompt,
@@ -98,7 +98,7 @@ export async function generateChangelog(
       listAvailableSkills: listAvailableSkills(),
       getSkillByName: getSkillByName(),
       createPost: createCreatePostTool(postToolsConfig, postToolsResult),
-      updatePost: createUpdatePostTool(postToolsConfig),
+      updatePost: createUpdatePostTool(postToolsConfig, postToolsResult),
       viewPost: createViewPostTool(postToolsConfig),
       fail: createFailTool(postToolsResult),
     },
@@ -112,14 +112,21 @@ export async function generateChangelog(
     throw new Error(postToolsResult.failReason);
   }
 
-  if (!postToolsResult.postId) {
+  if (!postToolsResult.posts?.length) {
     throw new Error(
       "Changelog agent completed without creating a post. No createPost tool call was made."
     );
   }
 
+  const primaryPost = postToolsResult.posts[0];
+
+  if (!primaryPost) {
+    throw new Error("Changelog agent did not return a primary post.");
+  }
+
   return {
-    postId: postToolsResult.postId,
-    title: postToolsResult.title ?? "",
+    postId: primaryPost.postId,
+    title: primaryPost.title,
+    posts: postToolsResult.posts,
   };
 }

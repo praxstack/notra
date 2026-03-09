@@ -16,6 +16,7 @@ import { serve } from "@upstash/workflow/nextjs";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { FEATURES } from "@/constants/features";
+import { GITHUB_RATE_LIMIT_RETRY_DELAY } from "@/constants/workflows";
 import { autumn } from "@/lib/billing/autumn";
 import {
   trackScheduledContentCreated,
@@ -34,6 +35,15 @@ import { getBaseUrl, triggerScheduleNow } from "@/lib/triggers/qstash";
 import { appendWebhookLog } from "@/lib/webhooks/logging";
 import { generateScheduledContent } from "@/lib/workflows/schedule/handlers";
 import type { ContentGenerationResult } from "@/lib/workflows/schedule/types";
+import {
+  formatUtcTodayContext,
+  resolveLookbackRange,
+} from "@/lib/workflows/shared/lookback";
+import {
+  parseLookbackWindow,
+  parseTriggerOutputConfig,
+  parseTriggerTargets,
+} from "@/lib/workflows/shared/parsing";
 import { getValidToneProfile } from "@/schemas/brand";
 import type { LookbackWindow } from "@/schemas/integrations";
 
@@ -72,74 +82,6 @@ type BrandSettingsData = {
   language: string | null;
 } | null;
 
-const DEFAULT_LOOKBACK_WINDOW: LookbackWindow = "last_7_days";
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
-const GITHUB_RATE_LIMIT_RETRY_DELAY = "30m" as const;
-function resolveLookbackRange(window: LookbackWindow) {
-  const now = new Date();
-
-  if (window === "current_day") {
-    const start = new Date(now);
-    start.setUTCHours(0, 0, 0, 0);
-
-    return {
-      start,
-      end: now,
-      label: "current UTC day",
-    };
-  }
-
-  if (window === "yesterday") {
-    const end = new Date(now);
-    end.setUTCHours(0, 0, 0, 0);
-    const start = new Date(end.getTime() - DAY_IN_MS);
-
-    return {
-      start,
-      end,
-      label: "previous UTC day",
-    };
-  }
-
-  if (window === "last_14_days") {
-    return {
-      start: new Date(now.getTime() - 14 * DAY_IN_MS),
-      end: now,
-      label: "last 14 days (rolling)",
-    };
-  }
-
-  if (window === "last_30_days") {
-    return {
-      start: new Date(now.getTime() - 30 * DAY_IN_MS),
-      end: now,
-      label: "last 30 days (rolling)",
-    };
-  }
-
-  return {
-    start: new Date(now.getTime() - 7 * DAY_IN_MS),
-    end: now,
-    label: "last 7 days (rolling)",
-  };
-}
-
-function formatUtcTodayContext(now: Date) {
-  const weekdays = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ] as const;
-  const weekday = weekdays[now.getUTCDay()];
-  const date = now.toISOString().slice(0, 10);
-
-  return `${weekday}, ${date} (UTC)`;
-}
-
 export const { POST } = serve<ScheduleWorkflowPayload>(
   async (context: WorkflowContext<ScheduleWorkflowPayload>) => {
     const parseResult = scheduleWorkflowPayloadSchema.safeParse(
@@ -164,13 +106,18 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           return null;
         }
 
+        const parsedTargets = parseTriggerTargets(result.targets);
+        if (!parsedTargets) {
+          return null;
+        }
+
         return {
           id: result.id,
           name: result.name,
           organizationId: result.organizationId,
           sourceType: result.sourceType,
           sourceConfig: result.sourceConfig,
-          targets: result.targets as { repositoryIds: string[] },
+          targets: parsedTargets,
           outputType: result.outputType,
           outputConfig: result.outputConfig,
           enabled: result.enabled,
@@ -186,10 +133,7 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
             where: eq(contentTriggerLookbackWindows.triggerId, triggerId),
           });
 
-        return (
-          (lookbackResult?.window as LookbackWindow | undefined) ??
-          DEFAULT_LOOKBACK_WINDOW
-        );
+        return parseLookbackWindow(lookbackResult?.window);
       }
     );
 
@@ -243,9 +187,7 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
     const brand = await context.run<BrandSettingsData>(
       "fetch-brand-settings",
       async () => {
-        const outputConfig = trigger.outputConfig as {
-          brandVoiceId?: string;
-        } | null;
+        const outputConfig = parseTriggerOutputConfig(trigger.outputConfig);
         const voiceId = outputConfig?.brandVoiceId;
 
         let result = voiceId
@@ -657,7 +599,33 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
         return;
       }
 
-      const { postId, title: contentTitle } = contentResult;
+      const createdPosts = contentResult.posts;
+
+      if (createdPosts.length === 0) {
+        console.error("[Schedule] Content generation returned no posts", {
+          triggerId,
+          organizationId: trigger.organizationId,
+        });
+        await context.cancel();
+        return;
+      }
+
+      const [primaryPost] = createdPosts;
+
+      if (!primaryPost) {
+        console.error("[Schedule] Missing primary post after generation", {
+          triggerId,
+          organizationId: trigger.organizationId,
+        });
+        await context.cancel();
+        return;
+      }
+
+      const postId = primaryPost.postId;
+      const contentTitle =
+        createdPosts.length === 1
+          ? primaryPost.title
+          : `${createdPosts.length} ${trigger.outputType.replaceAll("_", " ")} drafts`;
 
       await context.run("track-generation-end-success", async () => {
         await completeActiveGeneration(trigger.organizationId, {
@@ -676,7 +644,10 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           organizationId: trigger.organizationId,
           integrationId: triggerId,
           integrationType: manual ? "manual" : "schedule",
-          title: `Schedule "${trigger.name.trim() || trigger.outputType}" created "${contentTitle}"`,
+          title:
+            createdPosts.length === 1
+              ? `Schedule "${trigger.name.trim() || trigger.outputType}" created "${contentTitle}"`
+              : `Schedule "${trigger.name.trim() || trigger.outputType}" created ${createdPosts.length} drafts`,
           status: "success",
           statusCode: null,
           referenceId: postId,
@@ -684,22 +655,36 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       });
 
       await context.run("track-content-created", async () => {
-        try {
-          await trackScheduledContentCreated({
-            triggerId: trigger.id,
-            organizationId: trigger.organizationId,
-            postId,
-            outputType: trigger.outputType,
-            lookbackWindow,
-            repositoryCount: repositories.length,
-            source: "schedule",
-          });
-        } catch (trackingError) {
-          console.error("[Schedule] Failed to track content creation", {
+        const trackingResults = await Promise.allSettled(
+          createdPosts.map((createdPost) =>
+            trackScheduledContentCreated({
+              triggerId: trigger.id,
+              organizationId: trigger.organizationId,
+              postId: createdPost.postId,
+              outputType: trigger.outputType,
+              lookbackWindow,
+              repositoryCount: repositories.length,
+              source: "schedule",
+            })
+          )
+        );
+
+        const failedTracking = trackingResults.flatMap((result, index) =>
+          result.status === "rejected"
+            ? [
+                {
+                  postId: createdPosts[index]?.postId ?? "unknown",
+                  error: result.reason,
+                },
+              ]
+            : []
+        );
+
+        if (failedTracking.length > 0) {
+          console.error("[Schedule] Failed to track some created posts", {
             triggerId,
             organizationId: trigger.organizationId,
-            postId,
-            error: trackingError,
+            failures: failedTracking,
           });
         }
       });
@@ -759,7 +744,11 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           }
           const baseUrl =
             process.env.BETTER_AUTH_URL ?? "https://app.usenotra.com";
-          const contentLink = `${baseUrl}/${notificationData.organizationSlug}/content/${postId}`;
+          const contentOverviewLink = `${baseUrl}/${notificationData.organizationSlug}/content`;
+          const createdContent = createdPosts.map((createdPost) => ({
+            title: createdPost.title,
+            contentLink: `${contentOverviewLink}/${createdPost.postId}`,
+          }));
           const scheduleName = trigger.name.trim() || trigger.outputType;
           const subject = manual
             ? `New content created from ${scheduleName}`
@@ -771,9 +760,9 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
                 recipientEmail: email,
                 organizationName: notificationData.organizationName,
                 scheduleName,
-                contentTitle,
+                createdContent,
                 contentType: trigger.outputType,
-                contentLink,
+                contentOverviewLink,
                 organizationSlug: notificationData.organizationSlug,
                 subject,
               }).then((result) => {
@@ -791,7 +780,9 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
 
       if (process.env.NODE_ENV === "development") {
         console.log(
-          `[Schedule] Created post ${postId} for trigger ${triggerId}`
+          `[Schedule] Created ${createdPosts.length} post(s) for trigger ${triggerId}: ${createdPosts
+            .map((createdPost) => createdPost.postId)
+            .join(", ")}`
         );
       }
 

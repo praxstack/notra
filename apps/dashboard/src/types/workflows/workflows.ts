@@ -1,5 +1,6 @@
 import type { PostSourceMetadata } from "@notra/db/schema";
 import type { ToneProfile } from "@/schemas/brand";
+import type { PostSummary } from "@/types/posts";
 
 export interface WorkflowTriggerData {
   id: string;
@@ -50,7 +51,12 @@ export interface EventGenerationContext {
 }
 
 export type EventGenerationResult =
-  | { status: "ok"; postId: string; title: string }
+  | {
+      status: "ok";
+      postId: string;
+      title: string;
+      posts: PostSummary[];
+    }
   | { status: "generation_failed"; reason: string }
   | { status: "unsupported_output_type"; outputType: string };
 

@@ -1,5 +1,4 @@
 import { db } from "@notra/db/drizzle";
-import type { PostSourceMetadata } from "@notra/db/schema";
 import { posts } from "@notra/db/schema";
 import { type Tool, tool } from "ai";
 import { and, eq } from "drizzle-orm";
@@ -8,22 +7,11 @@ import { customAlphabet } from "nanoid";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 import { sanitizeMarkdownHtml } from "@/lib/sanitize";
-import { type ContentType, contentTypeSchema } from "@/schemas/content";
+import { contentTypeSchema } from "@/schemas/content";
+import type { PostToolsConfig, PostToolsResult } from "@/types/ai/post-tools";
 import { toolDescription } from "@/utils/ai/description";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 16);
-
-export interface PostToolsConfig {
-  organizationId: string;
-  contentType: ContentType;
-  sourceMetadata?: PostSourceMetadata;
-}
-
-export interface PostToolsResult {
-  postId?: string;
-  title?: string;
-  failReason?: string;
-}
 
 export function createCreatePostTool(
   config: PostToolsConfig,
@@ -37,9 +25,9 @@ export function createCreatePostTool(
       intro:
         "Creates a new post in the database with the generated content. The post type and source repositories are set automatically.",
       whenToUse:
-        "After you have finished writing the changelog content and are ready to save it.",
+        "After you have finished writing a post and are ready to save it.",
       usageNotes:
-        "Requires a title (plain text, max 120 chars) and markdown content body. Call this exactly once when the content is finalized.",
+        "Requires a title (plain text, max 120 chars) and markdown content body. You may call this multiple times only when there are multiple meaningfully distinct posts to save.",
     }),
     inputSchema: z.object({
       title: z
@@ -53,13 +41,6 @@ export function createCreatePostTool(
         ),
     }),
     execute: async ({ title, markdown }) => {
-      if (result.postId) {
-        return {
-          postId: result.postId,
-          status: "already_created",
-          message: "Post already created. Use updatePost to modify it.",
-        };
-      }
       const id = nanoid();
       const content = sanitizeMarkdownHtml(await marked.parse(markdown));
       await db.insert(posts).values({
@@ -71,14 +52,23 @@ export function createCreatePostTool(
         contentType,
         sourceMetadata: config.sourceMetadata ?? null,
       });
-      result.postId = id;
-      result.title = title;
-      return { postId: id, status: "created" };
+      result.posts ??= [];
+      result.posts.push({ postId: id, title });
+      result.postId ??= id;
+      result.title ??= title;
+      return {
+        postId: id,
+        status: "created",
+        totalCreated: result.posts.length,
+      };
     },
   });
 }
 
-export function createUpdatePostTool(config: PostToolsConfig): Tool {
+export function createUpdatePostTool(
+  config: PostToolsConfig,
+  result: PostToolsResult
+): Tool {
   return tool({
     description: toolDescription({
       toolName: "update_post",
@@ -127,6 +117,19 @@ export function createUpdatePostTool(config: PostToolsConfig): Tool {
 
       if (rows.length === 0) {
         return { postId, status: "not_found" };
+      }
+
+      if (title !== undefined) {
+        const existingPost = result.posts?.find(
+          (entry) => entry.postId === postId
+        );
+        if (existingPost) {
+          existingPost.title = title;
+        }
+
+        if (result.postId === postId) {
+          result.title = title;
+        }
       }
 
       return { postId, status: "updated" };
