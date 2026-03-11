@@ -36,7 +36,7 @@ export const PRICING_PLANS = {
     },
     features: [
       "10 team members",
-      "500 AI Credits per month",
+      "150 AI Credits per month",
       "10 workflows",
       "5 integrations",
       "100 references",

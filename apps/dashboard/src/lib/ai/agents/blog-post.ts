@@ -5,11 +5,7 @@ import { getConversationalBlogPostPrompt } from "@/lib/ai/prompts/blog_post/conv
 import { getFormalBlogPostPrompt } from "@/lib/ai/prompts/blog_post/formal";
 import { getProfessionalBlogPostPrompt } from "@/lib/ai/prompts/blog_post/professional";
 import { getBlogPostUserPrompt } from "@/lib/ai/prompts/blog_post/user";
-import {
-  createGetCommitsByTimeframeTool,
-  createGetPullRequestsTool,
-  createGetReleaseByTagTool,
-} from "@/lib/ai/tools/github";
+import { buildGitHubDataTools } from "@/lib/ai/tools/github";
 import {
   createCreatePostTool,
   createFailTool,
@@ -40,6 +36,9 @@ export async function generateBlogPost(
     tone = "Conversational",
     promptInput,
     sourceMetadata,
+    dataPointSettings,
+    selectionFilters,
+    commitWindow,
   } = options;
 
   if (!repositories || repositories.length === 0) {
@@ -76,17 +75,12 @@ export async function generateBlogPost(
       },
     },
     tools: {
-      getPullRequests: createGetPullRequestsTool({
+      ...buildGitHubDataTools({
         organizationId,
         allowedIntegrationIds,
-      }),
-      getReleaseByTag: createGetReleaseByTagTool({
-        organizationId,
-        allowedIntegrationIds,
-      }),
-      getCommitsByTimeframe: createGetCommitsByTimeframeTool({
-        organizationId,
-        allowedIntegrationIds,
+        dataPointSettings,
+        selectionFilters,
+        commitWindow,
       }),
       listAvailableSkills: listAvailableSkills(),
       getSkillByName: getSkillByName(),
