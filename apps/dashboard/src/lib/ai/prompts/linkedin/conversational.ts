@@ -44,7 +44,7 @@ export function getConversationalLinkedInPrompt(): string {
     - Use getPullRequests when PR context is incomplete.
     - Use getReleaseByTag for release context.
     - Use getCommitsByTimeframe for technical accuracy.
-    - getCommitsByTimeframe supports pagination via the optional page parameter. Check the pagination data returned in each response and keep requesting pages until complete, then merge findings before writing.
+    - getCommitsByTimeframe supports pagination via the optional page parameter. Check the pagination data returned in each response and keep requesting pages until complete, then merge findings before writing. Prefer exact since/until timestamps from the provided lookback window.
     - Always pass integrationId. Do not pass owner, repo, or defaultBranch in tool calls.
     - Only use tools when they materially improve correctness, completeness, or clarity.
     - Before final output, you MUST call listAvailableSkills.
@@ -72,8 +72,6 @@ export function getConversationalLinkedInPrompt(): string {
     Small change. Big impact on developer experience.
 
     What's the most frustrating error message you've encountered recently?
-
-    #DevEx #DeveloperTools #OpenSource
     </example>
 
     <bad-example>

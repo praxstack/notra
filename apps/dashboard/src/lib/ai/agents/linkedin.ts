@@ -6,11 +6,7 @@ import { getFormalLinkedInPrompt } from "@/lib/ai/prompts/linkedin/formal";
 import { getProfessionalLinkedInPrompt } from "@/lib/ai/prompts/linkedin/professional";
 import { getLinkedInUserPrompt } from "@/lib/ai/prompts/linkedin/user";
 import { createGetBrandReferencesTool } from "@/lib/ai/tools/brand-references";
-import {
-  createGetCommitsByTimeframeTool,
-  createGetPullRequestsTool,
-  createGetReleaseByTagTool,
-} from "@/lib/ai/tools/github";
+import { buildGitHubDataTools } from "@/lib/ai/tools/github";
 import {
   createCreatePostTool,
   createFailTool,
@@ -42,6 +38,9 @@ export async function generateLinkedInPost(
     tone = "Conversational",
     promptInput,
     sourceMetadata,
+    dataPointSettings,
+    selectionFilters,
+    commitWindow,
   } = options;
 
   if (!repositories || repositories.length === 0) {
@@ -83,17 +82,12 @@ export async function generateLinkedInPost(
         voiceId,
         agentType: "linkedin",
       }),
-      getPullRequests: createGetPullRequestsTool({
+      ...buildGitHubDataTools({
         organizationId,
         allowedIntegrationIds,
-      }),
-      getReleaseByTag: createGetReleaseByTagTool({
-        organizationId,
-        allowedIntegrationIds,
-      }),
-      getCommitsByTimeframe: createGetCommitsByTimeframeTool({
-        organizationId,
-        allowedIntegrationIds,
+        dataPointSettings,
+        selectionFilters,
+        commitWindow,
       }),
       listAvailableSkills: listAvailableSkills(),
       getSkillByName: getSkillByName(),
