@@ -62,7 +62,7 @@ export const PRICING_PLANS = {
   },
 } as const;
 
-export const FEATURES_TABLE = [
+const FEATURES_TABLE = [
   {
     category: "Workflows",
     items: [
@@ -70,7 +70,7 @@ export const FEATURES_TABLE = [
       {
         name: "AI Credits",
         free: "15 / month",
-        pro: "500 / month",
+        pro: "150 / month",
         enterprise: "Unlimited",
       },
     ],
