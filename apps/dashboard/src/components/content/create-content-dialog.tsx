@@ -10,6 +10,11 @@ import {
 } from "@notra/ui/components/shared/responsive-dialog";
 import { Button } from "@notra/ui/components/ui/button";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@notra/ui/components/ui/collapsible";
+import {
   Combobox,
   ComboboxChip,
   ComboboxChips,
@@ -30,7 +35,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@notra/ui/components/ui/pagination";
-import { ScrollArea } from "@notra/ui/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -44,7 +48,17 @@ import { cn } from "@notra/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-store";
-import { Check, Loader2, Plus, RotateCw } from "lucide-react";
+import { Badge } from "@notra/ui/components/ui/badge";
+import {
+  Check,
+  ChevronDown,
+  GitCommitHorizontal,
+  GitPullRequest,
+  Loader2,
+  Plus,
+  Rocket,
+  RotateCw,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -97,6 +111,7 @@ export function CreateContentDialog({
 }: CreateContentDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("configure");
+  const [dataSourcesOpen, setDataSourcesOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCommitKeys, setSelectedCommitKeys] = useState<Set<string>>(
     new Set()
@@ -615,7 +630,7 @@ export function CreateContentDialog({
         >
           {/* ── Step 1: Configure ── */}
           {step === "configure" && (
-            <ScrollArea className="min-h-0 flex-1">
+            <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="space-y-4 p-4">
                 <form.Field name="contentType">
                   {(field) => (
@@ -752,44 +767,49 @@ export function CreateContentDialog({
                   )}
                 </form.Field>
 
-                <div className="space-y-3">
-                  <Label>Data Sources</Label>
-                  <form.Field name="dataPoints.includePullRequests">
-                    {(field) => (
-                      <DataPointToggle
-                        checked={field.state.value}
-                        description="Include PR metadata and summaries."
-                        disabled={mutation.isPending}
-                        label="Pull Requests"
-                        onCheckedChange={field.handleChange}
-                      />
-                    )}
-                  </form.Field>
-                  <form.Field name="dataPoints.includeCommits">
-                    {(field) => (
-                      <DataPointToggle
-                        checked={field.state.value}
-                        description="Include commit-level change data."
-                        disabled={mutation.isPending}
-                        label="Commits"
-                        onCheckedChange={field.handleChange}
-                      />
-                    )}
-                  </form.Field>
-                  <form.Field name="dataPoints.includeReleases">
-                    {(field) => (
-                      <DataPointToggle
-                        checked={field.state.value}
-                        description="Include GitHub releases and changelogs."
-                        disabled={mutation.isPending}
-                        label="Releases"
-                        onCheckedChange={field.handleChange}
-                      />
-                    )}
-                  </form.Field>
-                </div>
+                <Collapsible defaultOpen={false} onOpenChange={setDataSourcesOpen} open={dataSourcesOpen}>
+                  <CollapsibleTrigger className="flex w-full items-center gap-2 font-medium text-sm">
+                    <ChevronDown className={`size-4 transition-transform ${dataSourcesOpen ? "" : "-rotate-90"}`} />
+                    Data Sources
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3 space-y-3">
+                    <form.Field name="dataPoints.includePullRequests">
+                      {(field) => (
+                        <DataPointToggle
+                          checked={field.state.value}
+                          description="Include PR metadata and summaries."
+                          disabled={mutation.isPending}
+                          label="Pull Requests"
+                          onCheckedChange={field.handleChange}
+                        />
+                      )}
+                    </form.Field>
+                    <form.Field name="dataPoints.includeCommits">
+                      {(field) => (
+                        <DataPointToggle
+                          checked={field.state.value}
+                          description="Include commit-level change data."
+                          disabled={mutation.isPending}
+                          label="Commits"
+                          onCheckedChange={field.handleChange}
+                        />
+                      )}
+                    </form.Field>
+                    <form.Field name="dataPoints.includeReleases">
+                      {(field) => (
+                        <DataPointToggle
+                          checked={field.state.value}
+                          description="Include GitHub releases and changelogs."
+                          disabled={mutation.isPending}
+                          label="Releases"
+                          onCheckedChange={field.handleChange}
+                        />
+                      )}
+                    </form.Field>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
-            </ScrollArea>
+            </div>
           )}
 
           {/* ── Step 2: Review Events ── */}
@@ -1191,14 +1211,12 @@ function EventRow({
         <p className="truncate text-sm">{label}</p>
         <p className="truncate text-muted-foreground text-xs">{meta}</p>
       </div>
-      <span
-        className={cn(
-          "shrink-0 rounded-full px-2 py-0.5 text-xs",
-          EVENT_BADGE[type]
-        )}
-      >
+      <Badge className={cn("shrink-0", EVENT_BADGE[type])}>
+        {type === "PR" && <GitPullRequest className="size-3!" />}
+        {type === "Commit" && <GitCommitHorizontal className="size-3!" />}
+        {type === "Release" && <Rocket className="size-3!" />}
         {type}
-      </span>
+      </Badge>
     </button>
   );
 }
