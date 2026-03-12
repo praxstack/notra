@@ -5,6 +5,7 @@ import { getConversationalBlogPostPrompt } from "@/lib/ai/prompts/blog_post/conv
 import { getFormalBlogPostPrompt } from "@/lib/ai/prompts/blog_post/formal";
 import { getProfessionalBlogPostPrompt } from "@/lib/ai/prompts/blog_post/professional";
 import { getBlogPostUserPrompt } from "@/lib/ai/prompts/blog_post/user";
+import { getAISDKTelemetry } from "@/lib/ai/telemetry";
 import { buildGitHubDataTools } from "@/lib/ai/tools/github";
 import {
   createCreatePostTool,
@@ -69,6 +70,10 @@ export async function generateBlogPost(
 
   const agent = new ToolLoopAgent({
     model,
+    experimental_telemetry: getAISDKTelemetry("generateBlogPost", {
+      agent: "blog_post",
+      contentType: "blog_post",
+    }),
     providerOptions: {
       anthropic: {
         thinking: { type: "enabled", budgetTokens: 2500 },

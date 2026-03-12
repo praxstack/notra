@@ -5,6 +5,7 @@ import { getConversationalChangelogPrompt } from "@/lib/ai/prompts/changelog/con
 import { getFormalChangelogPrompt } from "@/lib/ai/prompts/changelog/formal";
 import { getProfessionalChangelogPrompt } from "@/lib/ai/prompts/changelog/professional";
 import { getChangelogUserPrompt } from "@/lib/ai/prompts/changelog/user";
+import { getAISDKTelemetry } from "@/lib/ai/telemetry";
 import { createGetBrandReferencesTool } from "@/lib/ai/tools/brand-references";
 import { buildGitHubDataTools } from "@/lib/ai/tools/github";
 import {
@@ -71,6 +72,10 @@ export async function generateChangelog(
 
   const agent = new ToolLoopAgent({
     model,
+    experimental_telemetry: getAISDKTelemetry("generateChangelog", {
+      agent: "changelog",
+      contentType: "changelog",
+    }),
     providerOptions: {
       anthropic: {
         thinking: { type: "enabled", budgetTokens: 2500 },
