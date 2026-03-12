@@ -5,6 +5,7 @@ import { getConversationalTwitterPrompt } from "@/lib/ai/prompts/twitter/convers
 import { getFormalTwitterPrompt } from "@/lib/ai/prompts/twitter/formal";
 import { getProfessionalTwitterPrompt } from "@/lib/ai/prompts/twitter/professional";
 import { getTwitterUserPrompt } from "@/lib/ai/prompts/twitter/user";
+import { getAISDKTelemetry } from "@/lib/ai/telemetry";
 import { createGetBrandReferencesTool } from "@/lib/ai/tools/brand-references";
 import { buildGitHubDataTools } from "@/lib/ai/tools/github";
 import {
@@ -71,6 +72,10 @@ export async function generateTwitterPost(
 
   const agent = new ToolLoopAgent({
     model,
+    experimental_telemetry: getAISDKTelemetry("generateTwitterPost", {
+      agent: "twitter",
+      contentType: "twitter_post",
+    }),
     providerOptions: {
       anthropic: {
         thinking: { type: "enabled", budgetTokens: 2500 },

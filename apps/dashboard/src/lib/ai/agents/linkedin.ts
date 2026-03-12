@@ -5,6 +5,7 @@ import { getConversationalLinkedInPrompt } from "@/lib/ai/prompts/linkedin/conve
 import { getFormalLinkedInPrompt } from "@/lib/ai/prompts/linkedin/formal";
 import { getProfessionalLinkedInPrompt } from "@/lib/ai/prompts/linkedin/professional";
 import { getLinkedInUserPrompt } from "@/lib/ai/prompts/linkedin/user";
+import { getAISDKTelemetry } from "@/lib/ai/telemetry";
 import { createGetBrandReferencesTool } from "@/lib/ai/tools/brand-references";
 import { buildGitHubDataTools } from "@/lib/ai/tools/github";
 import {
@@ -71,6 +72,10 @@ export async function generateLinkedInPost(
 
   const agent = new ToolLoopAgent({
     model,
+    experimental_telemetry: getAISDKTelemetry("generateLinkedInPost", {
+      agent: "linkedin",
+      contentType: "linkedin_post",
+    }),
     providerOptions: {
       anthropic: {
         thinking: { type: "enabled", budgetTokens: 2500 },
