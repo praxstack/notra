@@ -39,8 +39,8 @@ export const PRICING_PLANS = {
       "Unlimited workflows",
       "Unlimited integrations",
       "30 Days Log Retention",
-      "100 references",
-      "100 AI Credits",
+      { label: "100 references", subtitle: "then $0.05 per reference / mo" },
+      { label: "100 AI Credits", subtitle: "then $0.01 per credit / mo" },
     ],
   },
   enterprise: {
