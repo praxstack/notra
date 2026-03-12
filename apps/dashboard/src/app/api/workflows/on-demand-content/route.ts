@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 
 import { completeActiveGeneration } from "@/lib/generations/tracking";
 import { getBaseUrl } from "@/lib/triggers/qstash";
+import { appendWebhookLog } from "@/lib/webhooks/logging";
 import {
   buildDataPointRestrictionInstructions,
   buildSelectedItemsInstructions,
@@ -279,6 +280,18 @@ export const { POST } = serve<OnDemandContentWorkflowPayload>(
           });
         });
 
+        await context.run("log-generation-failure", async () => {
+          await appendWebhookLog({
+            organizationId,
+            integrationId: "manual_on_demand",
+            integrationType: "manual",
+            title: `On-demand generation failed for ${contentType.replaceAll("_", " ")}`,
+            status: "failed",
+            statusCode: null,
+            errorMessage: reason,
+          });
+        });
+
         await context.run("refund-failed", async () => {
           await refundReservedAiCredit(organizationId, aiCreditReserved);
         });
@@ -306,6 +319,18 @@ export const { POST } = serve<OnDemandContentWorkflowPayload>(
           });
         });
 
+        await context.run("log-no-posts", async () => {
+          await appendWebhookLog({
+            organizationId,
+            integrationId: "manual_on_demand",
+            integrationType: "manual",
+            title: `On-demand generation for ${contentType.replaceAll("_", " ")} produced no content`,
+            status: "failed",
+            statusCode: null,
+            errorMessage: "No content was generated",
+          });
+        });
+
         await context.run("refund-no-posts", async () => {
           await refundReservedAiCredit(organizationId, aiCreditReserved);
         });
@@ -328,6 +353,21 @@ export const { POST } = serve<OnDemandContentWorkflowPayload>(
           status: "success",
           title: contentTitle,
           completedAt: new Date().toISOString(),
+        });
+      });
+
+      await context.run("log-generation-success", async () => {
+        await appendWebhookLog({
+          organizationId,
+          integrationId: "manual_on_demand",
+          integrationType: "manual",
+          title:
+            createdPosts.length === 1
+              ? `On-demand generation created "${contentTitle}"`
+              : `On-demand generation created ${createdPosts.length} drafts`,
+          status: "success",
+          statusCode: null,
+          referenceId: createdPosts[0]?.postId ?? null,
         });
       });
 
