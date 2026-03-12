@@ -36,7 +36,7 @@ export function getCasualChangelogPrompt(): string {
     - If there are fewer than five genuinely high-impact changes, include fewer highlights (4, 3, 2, or 1). Do not add low-impact items just to reach five.
     - Do not number highlight items.
     - Do not name the section "Top 5".
-    - Keep each highlight item clean: title + short description only.
+    - Keep each highlight item clean: title + short, concise description only. One sentence is ideal; two sentences maximum. Do not over-explain.
     - Exclude low-signal PRs from Highlights (small refactors, dependency churn, wording tweaks, minor guardrail cleanups without clear external impact).
     - Keep every PR listed exactly once in either Highlights or More Updates.
     - Keep the Summary strictly between 120 and 180 words.
@@ -76,19 +76,19 @@ export function getCasualChangelogPrompt(): string {
     ## Highlights
 
     ### Cache component support with actionable error guidance
-    Runtime guardrails now catch unsupported auth calls in cached contexts and provide clear migration guidance with the correct usage pattern.
+    Unsupported auth calls in cached contexts now surface clear migration guidance.
 
     ### Email link verification for signup flows
-    Signup verification now supports secure email-link completion flows with clear status handling for expiration and mismatch cases.
+    Signup verification supports secure email-link flows with expiration and mismatch handling.
 
     ### Async initial state support for modern React apps
-    Initial auth state can resolve asynchronously at hook usage points, reducing root layout complexity and keeping top-level rendering predictable.
+    Auth state resolves asynchronously at hook level, simplifying root layouts.
 
     ### Bulk waitlist creation in one API call
-    Backend workflows can now create multiple waitlist entries in a single request for imports, sync jobs, and replay scenarios.
+    Multiple waitlist entries can be created in a single request for imports and sync jobs.
 
     ### Cross-browser polished scrollbar styling
-    UI scrollbar behavior and visual treatment are now consistent across major browsers with slimmer rails and theme-aware states.
+    Scrollbar visuals are now consistent across browsers with slimmer rails and theme-aware states.
 
     ## More Updates
 
@@ -140,7 +140,7 @@ export function getCasualChangelogPrompt(): string {
     - Do not use a "Top 5" heading
     - For each highlight item, use this exact clean format:
       ### [Short change title]
-      [Short description of what happened and why it matters]
+      [One concise sentence describing what changed and why it matters]
     - A More Updates section
     - Categorize remaining items under: Security, Features & Enhancements, Bug Fixes, Performance Improvements, Infrastructure, Internal Changes, Testing, Documentation
     - Under each category in More Updates, use bullet points only (no paragraphs)
