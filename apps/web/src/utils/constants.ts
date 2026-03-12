@@ -35,12 +35,12 @@ export const PRICING_PLANS = {
       href: "https://app.usenotra.com/signup",
     },
     features: [
-      "10 team members",
-      "150 AI Credits per month",
-      "10 workflows",
-      "5 integrations",
-      "100 references",
+      "5 team members",
+      "Unlimited workflows",
+      "Unlimited integrations",
       "30 Days Log Retention",
+      "100 references",
+      "150 AI Credits",
     ],
   },
   enterprise: {
@@ -64,7 +64,12 @@ const FEATURES_TABLE = [
   {
     category: "Workflows",
     items: [
-      { name: "Workflows", free: "3", pro: "10", enterprise: "Unlimited" },
+      {
+        name: "Workflows",
+        free: "3",
+        pro: "Unlimited",
+        enterprise: "Unlimited",
+      },
       {
         name: "AI Credits",
         free: "15 / month",
@@ -79,13 +84,13 @@ const FEATURES_TABLE = [
       {
         name: "Team members",
         free: "2",
-        pro: "10",
+        pro: "5",
         enterprise: "Unlimited",
       },
       {
         name: "Integrations",
         free: "2",
-        pro: "5",
+        pro: "Unlimited",
         enterprise: "Custom",
       },
       {
