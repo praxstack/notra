@@ -14,6 +14,7 @@ export function register() {
         process.env.NODE_ENV === "development" ? "notra-dev" : "notra",
       traceExporter: new RespanExporter({
         apiKey,
+        debug: true,
       }),
     });
   }
