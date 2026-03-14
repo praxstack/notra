@@ -41,4 +41,94 @@ export const SHOWCASE_COMPANY_ICONS: Record<string, ReactNode> = {
       width={53}
     />
   ),
+  pangolin: (
+    <Image
+      alt="Pangolin"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/pangolin.webp"
+      width={85}
+    />
+  ),
+  onyx: (
+    <Image
+      alt="Onyx"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/onyx.webp"
+      width={85}
+    />
+  ),
+  "nao-labs": (
+    <Image
+      alt="nao Labs"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/nao-labs.webp"
+      width={85}
+    />
+  ),
+  superagent: (
+    <Image
+      alt="Superagent"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/superagent.webp"
+      width={85}
+    />
+  ),
+  emdash: (
+    <Image
+      alt="Emdash"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/emdash.webp"
+      width={85}
+    />
+  ),
+  "unsloth-ai": (
+    <Image
+      alt="Unsloth AI"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/unsloth-ai.webp"
+      width={85}
+    />
+  ),
+  corsair: (
+    <Image
+      alt="Corsair"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/corsair.webp"
+      width={85}
+    />
+  ),
+  "confident-ai": (
+    <Image
+      alt="Confident AI"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/confident-ai.webp"
+      width={85}
+    />
+  ),
+  char: (
+    <Image
+      alt="Char"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/char.webp"
+      width={85}
+    />
+  ),
+  airweave: (
+    <Image
+      alt="Airweave"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/airweave.webp"
+      width={85}
+    />
+  ),
 };

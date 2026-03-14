@@ -82,6 +82,95 @@ export const SHOWCASE_COMPANIES = [
     url: "https://unkey.com",
     accentColor: "#000000",
   },
+  {
+    slug: "pangolin",
+    name: "Pangolin",
+    domain: "pangolin.net",
+    description:
+      "Zero trust access to all your infrastructure, self-hosted applications, and SaaS tools. Easy to deploy and scale.",
+    url: "https://pangolin.net",
+    accentColor: "#4A90D9",
+  },
+  {
+    slug: "onyx",
+    name: "Onyx",
+    domain: "onyx.app",
+    description:
+      "The open-source AI enterprise search platform that helps teams find information across all company data.",
+    url: "https://onyx.app",
+    accentColor: "#1A1A2E",
+  },
+  {
+    slug: "nao-labs",
+    name: "nao Labs",
+    domain: "getnao.io",
+    description:
+      "The analytics agent builder for context engineering. Build, evaluate, and deploy reliable analytics agents with your own data stack.",
+    url: "https://getnao.io",
+    accentColor: "#00C9A7",
+  },
+  {
+    slug: "superagent",
+    name: "Superagent",
+    domain: "superagent.sh",
+    description:
+      "We attack your production system to surface data leaks, harmful outputs, and unwanted actions. Fix them before your users encounter them.",
+    url: "https://www.superagent.sh",
+    accentColor: "#FF6B6B",
+  },
+  {
+    slug: "emdash",
+    name: "Emdash",
+    domain: "emdash.sh",
+    description: "Open-source Agentic Development Environment.",
+    url: "https://www.emdash.sh",
+    accentColor: "#7C3AED",
+  },
+  {
+    slug: "unsloth-ai",
+    name: "Unsloth AI",
+    domain: "unsloth.ai",
+    description:
+      "Open source fine-tuning and reinforcement learning for LLMs. Beginner friendly.",
+    url: "https://unsloth.ai",
+    accentColor: "#F59E0B",
+  },
+  {
+    slug: "corsair",
+    name: "Corsair",
+    domain: "corsair.dev",
+    description:
+      "Corsair enforces a configurable permission layer on every action, so you can delegate work without losing control.",
+    url: "https://corsair.dev",
+    accentColor: "#E11D48",
+  },
+  {
+    slug: "confident-ai",
+    name: "Confident AI",
+    domain: "confident-ai.com",
+    description:
+      "The AI quality layer for engineers, QA teams, and product leaders to build reliable AI.",
+    url: "https://www.confident-ai.com",
+    accentColor: "#3B82F6",
+  },
+  {
+    slug: "char",
+    name: "Char",
+    domain: "char.com",
+    description:
+      "Private, on-device AI notepad that enhances your own notes without bots, cloud recording, or meeting intrusion.",
+    url: "https://char.com",
+    accentColor: "#10B981",
+  },
+  {
+    slug: "airweave",
+    name: "Airweave",
+    domain: "airweave.ai",
+    description:
+      "The open-source data integration platform that connects any data source to any vector database or retrieval system.",
+    url: "https://airweave.ai",
+    accentColor: "#6366F1",
+  },
 ] as const satisfies readonly ShowcaseCompany[];
 
 const MDX_EXTENSION_REGEX = /\.mdx$/;

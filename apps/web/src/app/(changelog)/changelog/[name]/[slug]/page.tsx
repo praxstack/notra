@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { changelog } from "@/../.source/server";
+import { getMDXComponents } from "@/../mdx-components";
 import { NotraMark } from "@/components/notra-mark";
 import { TableOfContents } from "@/components/table-of-contents";
 import { formatChangelogDate } from "@/utils/changelog";
@@ -100,7 +101,7 @@ export default async function ShowcaseEntryPage({
 
       <article className="prose prose-neutral dark:prose-invert mt-8 max-w-none prose-headings:font-sans prose-headings:font-semibold prose-p:font-sans prose-a:text-primary prose-li:text-foreground/80 prose-p:text-foreground/80 prose-strong:text-foreground prose-p:leading-7 prose-headings:tracking-tight prose-a:no-underline hover:prose-a:underline">
         <TableOfContents toc={entry.toc} />
-        <MDX />
+        <MDX components={getMDXComponents()} />
       </article>
 
       <div className="mt-12 flex items-center gap-2">
