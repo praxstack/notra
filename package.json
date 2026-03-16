@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "build": "dotenv -- turbo run build",
-    "dev": "dotenv -- turbo run dev",
+    "dev": "dotenv -- openlogs turbo run dev",
     "check-types": "dotenv -- turbo run check-types",
     "db:generate": "dotenv -- bunx drizzle-kit generate --config packages/db/drizzle.config.ts",
     "db:migrate": "dotenv -- bunx drizzle-kit migrate --config packages/db/drizzle.config.ts",
@@ -24,7 +24,8 @@
     "@biomejs/biome": "2.3.2",
     "dotenv-cli": "^10.0.0",
     "turbo": "^2.8.16",
-    "ultracite": "7.1.4"
+    "ultracite": "7.1.4",
+    "openlogs": "^0.0.1"
   },
   "engines": {
     "node": "24.11.1"
