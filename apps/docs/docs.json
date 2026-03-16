@@ -90,7 +90,11 @@
               "source": "openapi.json",
               "directory": "api-reference"
             },
-            "pages": ["GET /v1/posts", "GET /v1/posts/{postId}"]
+            "pages": [
+              "GET /v1/posts",
+              "GET /v1/posts/{postId}",
+              "DELETE /v1/posts/{postId}"
+            ]
           }
         ],
         "root": "api/getting-started"
