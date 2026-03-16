@@ -49,3 +49,6 @@ logs/
 apps/dashboard
 apps/web
 apps/docs
+
+# Openlogs
+.openlogs/
