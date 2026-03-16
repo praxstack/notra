@@ -6,9 +6,16 @@
     "description": "OpenAPI schema for authenticated content endpoints."
   },
   "servers": [
-    { "url": "https://api.usenotra.com", "description": "Production" }
+    {
+      "url": "https://api.usenotra.com",
+      "description": "Production"
+    }
   ],
-  "security": [{ "BearerAuth": [] }],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
   "tags": [
     {
       "name": "Content",
@@ -27,7 +34,11 @@
     "schemas": {
       "ErrorResponse": {
         "type": "object",
-        "properties": { "error": { "type": "string" } },
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
         "required": ["error"]
       }
     },
@@ -83,10 +94,16 @@
           {
             "schema": {
               "anyOf": [
-                { "type": "string", "enum": ["draft", "published"] },
+                {
+                  "type": "string",
+                  "enum": ["draft", "published"]
+                },
                 {
                   "type": "array",
-                  "items": { "type": "string", "enum": ["draft", "published"] },
+                  "items": {
+                    "type": "string",
+                    "enum": ["draft", "published"]
+                  },
                   "maxItems": 2
                 }
               ],
@@ -144,19 +161,35 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "id": { "type": "string" },
-                          "title": { "type": "string" },
-                          "content": { "type": "string" },
-                          "markdown": { "type": "string" },
-                          "recommendations": { "type": ["string", "null"] },
-                          "contentType": { "type": "string" },
+                          "id": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "content": {
+                            "type": "string"
+                          },
+                          "markdown": {
+                            "type": "string"
+                          },
+                          "recommendations": {
+                            "type": ["string", "null"]
+                          },
+                          "contentType": {
+                            "type": "string"
+                          },
                           "sourceMetadata": {},
                           "status": {
                             "type": "string",
                             "enum": ["draft", "published"]
                           },
-                          "createdAt": { "type": "string" },
-                          "updatedAt": { "type": "string" }
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          }
                         },
                         "required": [
                           "id",
@@ -174,8 +207,14 @@
                     "pagination": {
                       "type": "object",
                       "properties": {
-                        "limit": { "type": "integer", "minimum": 1 },
-                        "currentPage": { "type": "integer", "minimum": 1 },
+                        "limit": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "currentPage": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
                         "nextPage": {
                           "type": ["integer", "null"],
                           "minimum": 1
@@ -184,8 +223,14 @@
                           "type": ["integer", "null"],
                           "minimum": 1
                         },
-                        "totalPages": { "type": "integer", "minimum": 1 },
-                        "totalItems": { "type": "integer", "minimum": 0 }
+                        "totalPages": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "totalItems": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
                       },
                       "required": [
                         "limit",
@@ -206,7 +251,9 @@
             "description": "Invalid path params or query",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -214,7 +261,9 @@
             "description": "Missing or invalid API key",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -222,7 +271,9 @@
             "description": "Forbidden",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -230,7 +281,9 @@
             "description": "Authentication service unavailable",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -252,56 +305,6 @@
             "required": true,
             "in": "path",
             "name": "postId"
-          },
-          {
-            "schema": {
-              "anyOf": [
-                { "type": "string", "enum": ["draft", "published"] },
-                {
-                  "type": "array",
-                  "items": { "type": "string", "enum": ["draft", "published"] },
-                  "maxItems": 2
-                }
-              ],
-              "description": "Filter by status. Repeat the query param to pass multiple values."
-            },
-            "required": false,
-            "description": "Filter by status. Repeat the query param to pass multiple values.",
-            "name": "status",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "changelog",
-                    "linkedin_post",
-                    "twitter_post",
-                    "blog_post"
-                  ]
-                },
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "changelog",
-                      "linkedin_post",
-                      "twitter_post",
-                      "blog_post"
-                    ]
-                  },
-                  "maxItems": 4
-                }
-              ],
-              "description": "Filter by content type. Repeat the query param to pass multiple values."
-            },
-            "required": false,
-            "description": "Filter by content type. Repeat the query param to pass multiple values.",
-            "name": "contentType",
-            "in": "query"
           }
         ],
         "responses": {
@@ -315,19 +318,35 @@
                     "post": {
                       "type": ["object", "null"],
                       "properties": {
-                        "id": { "type": "string" },
-                        "title": { "type": "string" },
-                        "content": { "type": "string" },
-                        "markdown": { "type": "string" },
-                        "recommendations": { "type": ["string", "null"] },
-                        "contentType": { "type": "string" },
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "content": {
+                          "type": "string"
+                        },
+                        "markdown": {
+                          "type": "string"
+                        },
+                        "recommendations": {
+                          "type": ["string", "null"]
+                        },
+                        "contentType": {
+                          "type": "string"
+                        },
                         "sourceMetadata": {},
                         "status": {
                           "type": "string",
                           "enum": ["draft", "published"]
                         },
-                        "createdAt": { "type": "string" },
-                        "updatedAt": { "type": "string" }
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        }
                       },
                       "required": [
                         "id",
@@ -348,10 +367,12 @@
             }
           },
           "400": {
-            "description": "Invalid path params or query",
+            "description": "Invalid path params",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -359,7 +380,9 @@
             "description": "Missing or invalid API key",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -367,7 +390,9 @@
             "description": "Forbidden",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -375,7 +400,94 @@
             "description": "Authentication service unavailable",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Content"],
+        "operationId": "deletePost",
+        "summary": "Delete a single post",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "post_123"
+            },
+            "required": true,
+            "in": "path",
+            "name": "postId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Post deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid path params",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Authentication service unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
