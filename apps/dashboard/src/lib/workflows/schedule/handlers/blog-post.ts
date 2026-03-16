@@ -1,5 +1,5 @@
-import { generateBlogPost } from "@/lib/ai/agents/blog-post";
-import { isGitHubRateLimitError } from "@/lib/ai/tools/github";
+import { generateBlogPost } from "@notra/ai/agents/blog-post";
+import { isGitHubRateLimitError } from "@notra/ai/tools/github";
 import type {
   ContentGenerationContext,
   ContentGenerationResult,
@@ -19,6 +19,7 @@ export async function handleBlogPost(
       selectionFilters: ctx.selectionFilters,
       commitWindow: ctx.commitWindow,
       autoPublish: ctx.autoPublish,
+      resolveContext: ctx.resolveContext,
     });
 
     return { status: "ok", postId, title, posts };

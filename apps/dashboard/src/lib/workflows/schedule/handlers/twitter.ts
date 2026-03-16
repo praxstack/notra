@@ -1,5 +1,5 @@
-import { generateTwitterPost } from "@/lib/ai/agents/twitter";
-import { isGitHubRateLimitError } from "@/lib/ai/tools/github";
+import { generateTwitterPost } from "@notra/ai/agents/twitter";
+import { isGitHubRateLimitError } from "@notra/ai/tools/github";
 import type {
   ContentGenerationContext,
   ContentGenerationResult,
@@ -20,6 +20,7 @@ export async function handleTwitter(
       selectionFilters: ctx.selectionFilters,
       commitWindow: ctx.commitWindow,
       autoPublish: ctx.autoPublish,
+      resolveContext: ctx.resolveContext,
     });
 
     return { status: "ok", postId, title, posts };

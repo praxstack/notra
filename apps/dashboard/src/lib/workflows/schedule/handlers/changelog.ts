@@ -1,5 +1,5 @@
-import { generateChangelog } from "@/lib/ai/agents/changelog";
-import { isGitHubRateLimitError } from "@/lib/ai/tools/github";
+import { generateChangelog } from "@notra/ai/agents/changelog";
+import { isGitHubRateLimitError } from "@notra/ai/tools/github";
 import type {
   ContentGenerationContext,
   ContentGenerationResult,
@@ -20,6 +20,7 @@ export async function handleChangelog(
       selectionFilters: ctx.selectionFilters,
       commitWindow: ctx.commitWindow,
       autoPublish: ctx.autoPublish,
+      resolveContext: ctx.resolveContext,
     });
 
     return { status: "ok", postId, title, posts };

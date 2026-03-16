@@ -1,3 +1,4 @@
+import { getValidToneProfile } from "@notra/ai/schemas/brand";
 import { db } from "@notra/db/drizzle";
 import type { PostSourceMetadata } from "@notra/db/schema";
 import {
@@ -14,7 +15,6 @@ import type { WorkflowContext } from "@upstash/workflow";
 import { WorkflowAbort } from "@upstash/workflow";
 import { serve } from "@upstash/workflow/nextjs";
 import { and, eq, inArray } from "drizzle-orm";
-
 import { FEATURES } from "@/constants/features";
 import { GITHUB_RATE_LIMIT_RETRY_DELAY } from "@/constants/workflows";
 import { autumn } from "@/lib/billing/autumn";
@@ -31,6 +31,7 @@ import {
   completeActiveGeneration,
   generateRunId,
 } from "@/lib/generations/tracking";
+import { getGitHubToolRepositoryContextByIntegrationId } from "@/lib/services/github-integration";
 import { getBaseUrl, triggerScheduleNow } from "@/lib/triggers/qstash";
 import { appendWebhookLog } from "@/lib/webhooks/logging";
 import { generateScheduledContent } from "@/lib/workflows/schedule/handlers";
@@ -44,7 +45,6 @@ import {
   parseTriggerOutputConfig,
   parseTriggerTargets,
 } from "@/lib/workflows/shared/parsing";
-import { getValidToneProfile } from "@/schemas/brand";
 import type { LookbackWindow } from "@/schemas/integrations";
 import {
   type ScheduleWorkflowPayload,
@@ -341,6 +341,7 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
             },
             voiceId: brand?.id,
             autoPublish: trigger.autoPublish,
+            resolveContext: getGitHubToolRepositoryContextByIntegrationId,
           });
         }
       );
