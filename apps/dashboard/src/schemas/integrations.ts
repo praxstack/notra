@@ -62,7 +62,14 @@ export const addGitHubIntegrationFormSchema = z.object({
       "Invalid GitHub repository URL or format. Use: https://github.com/owner/repo, git@github.com:owner/repo, or owner/repo"
     ),
   branch: z.string().optional().nullable(),
-  token: githubPersonalAccessTokenSchema.optional().nullable(),
+  token: z.preprocess((value) => {
+    if (typeof value !== "string") {
+      return value;
+    }
+
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }, githubPersonalAccessTokenSchema.optional().nullable()),
 });
 export type AddGitHubIntegrationFormValues = z.infer<
   typeof addGitHubIntegrationFormSchema
