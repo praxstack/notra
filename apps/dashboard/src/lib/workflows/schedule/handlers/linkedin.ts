@@ -1,5 +1,5 @@
-import { generateLinkedInPost } from "@/lib/ai/agents/linkedin";
-import { isGitHubRateLimitError } from "@/lib/ai/tools/github";
+import { generateLinkedInPost } from "@notra/ai/agents/linkedin";
+import { isGitHubRateLimitError } from "@notra/ai/tools/github";
 import type {
   ContentGenerationContext,
   ContentGenerationResult,
@@ -20,6 +20,7 @@ export async function handleLinkedIn(
       selectionFilters: ctx.selectionFilters,
       commitWindow: ctx.commitWindow,
       autoPublish: ctx.autoPublish,
+      resolveContext: ctx.resolveContext,
     });
 
     return { status: "ok", postId, title, posts };

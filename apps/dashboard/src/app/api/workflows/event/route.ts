@@ -1,3 +1,4 @@
+import { getValidToneProfile } from "@notra/ai/schemas/brand";
 import { db } from "@notra/db/drizzle";
 import type { PostSourceMetadata } from "@notra/db/schema";
 import {
@@ -27,6 +28,7 @@ import {
   completeActiveGeneration,
   generateRunId,
 } from "@/lib/generations/tracking";
+import { getGitHubToolRepositoryContextByIntegrationId } from "@/lib/services/github-integration";
 import { getBaseUrl } from "@/lib/triggers/qstash";
 import { appendWebhookLog } from "@/lib/webhooks/logging";
 import { generateEventBasedContent } from "@/lib/workflows/event/handlers";
@@ -34,7 +36,6 @@ import {
   parseLookbackWindow,
   parseTriggerOutputConfig,
 } from "@/lib/workflows/shared/parsing";
-import { getValidToneProfile } from "@/schemas/brand";
 import type { LookbackWindow } from "@/schemas/integrations";
 import {
   type EventWorkflowPayload,
@@ -274,6 +275,7 @@ export const { POST } = serve<EventWorkflowPayload>(
             },
             sourceMetadata,
             autoPublish: trigger.autoPublish,
+            resolveContext: getGitHubToolRepositoryContextByIntegrationId,
           });
         }
       );
