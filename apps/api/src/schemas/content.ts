@@ -162,6 +162,32 @@ export const getPostResponseSchema = z.object({
   post: postResponseSchema.nullable(),
 });
 
+export const patchPostRequestSchema = z
+  .object({
+    title: z.string().trim().min(1).max(120).optional().openapi({
+      example: "Ship notes for week 11",
+    }),
+    markdown: z.string().min(1).optional().openapi({
+      example: "# Ship notes\n\nWe shipped a faster editor.",
+    }),
+    status: postStatusSchema.optional().openapi({
+      example: "published",
+    }),
+  })
+  .refine(
+    (data) =>
+      data.title !== undefined ||
+      data.markdown !== undefined ||
+      data.status !== undefined,
+    {
+      message: "At least one field must be provided",
+    }
+  );
+
+export const patchPostResponseSchema = z.object({
+  post: postResponseSchema,
+});
+
 export const deletePostResponseSchema = z.object({
   id: z.string(),
 });
@@ -172,4 +198,6 @@ export type GetPostParams = z.infer<typeof getPostParamsSchema>;
 export type PostResponse = z.infer<typeof postResponseSchema>;
 export type GetPostsResponse = z.infer<typeof getPostsResponseSchema>;
 export type GetPostResponse = z.infer<typeof getPostResponseSchema>;
+export type PatchPostRequest = z.infer<typeof patchPostRequestSchema>;
+export type PatchPostResponse = z.infer<typeof patchPostResponseSchema>;
 export type DeletePostResponse = z.infer<typeof deletePostResponseSchema>;

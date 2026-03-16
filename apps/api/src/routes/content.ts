@@ -11,8 +11,14 @@ import {
   getPostsOpenApiQuerySchema,
   getPostsParamsSchema,
   getPostsResponseSchema,
+  patchPostRequestSchema,
+  patchPostResponseSchema,
 } from "../schemas/content";
 import { getOrganizationId } from "../utils/auth";
+import {
+  extractTitleFromMarkdown,
+  renderMarkdownToHtml,
+} from "../utils/markdown";
 import {
   ORGANIZATION_POST_PATH_REGEX,
   ORGANIZATION_POSTS_PATH_REGEX,
@@ -50,6 +56,29 @@ contentRoutes.get("/:organizationId/posts", async (c) => {
 });
 
 contentRoutes.get("/:organizationId/posts/:postId", async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const pathOrg = c.req.param("organizationId");
+  const postId = c.req.param("postId");
+  if (orgId !== pathOrg) {
+    return c.json({ error: "Forbidden: organization access denied" }, 403);
+  }
+
+  const url = new URL(c.req.url);
+  const canonicalPath = url.pathname.replace(
+    ORGANIZATION_POST_PATH_REGEX,
+    `/posts/${postId}`
+  );
+  return c.redirect(`${canonicalPath}${url.search}`, 308);
+});
+
+contentRoutes.patch("/:organizationId/posts/:postId", async (c) => {
   const orgId = getOrganizationId(c);
   if (!orgId) {
     return c.json(
@@ -240,6 +269,75 @@ const deletePostRoute = createRoute({
   },
 });
 
+const patchPostRoute = createRoute({
+  method: "patch",
+  path: "/posts/{postId}",
+  tags: ["Content"],
+  operationId: "updatePost",
+  summary: "Update a single post",
+  request: {
+    params: getPostParamsSchema,
+    body: {
+      content: {
+        "application/json": {
+          schema: patchPostRequestSchema,
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: "Post updated successfully",
+      content: {
+        "application/json": {
+          schema: patchPostResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Invalid path params or request body",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "Post not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Authentication service unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
 contentRoutes.openapi(getPostsRoute, async (c) => {
   const orgId = getOrganizationId(c);
   if (!orgId) {
@@ -365,4 +463,83 @@ contentRoutes.openapi(deletePostRoute, async (c) => {
   }
 
   return c.json({ id: deletedPost.id }, 200);
+});
+
+contentRoutes.openapi(patchPostRoute, async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const { postId } = c.req.valid("param");
+  const body = c.req.valid("json");
+  const db = c.get("db");
+
+  const existingPost = await db.query.posts.findFirst({
+    where: and(eq(posts.id, postId), eq(posts.organizationId, orgId)),
+    columns: {
+      id: true,
+      title: true,
+    },
+  });
+
+  if (!existingPost) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  const updateData: Partial<typeof posts.$inferInsert> = {
+    updatedAt: new Date(),
+  };
+
+  if (body.title !== undefined) {
+    updateData.title = body.title;
+  }
+
+  if (body.markdown !== undefined) {
+    let renderedContent: string;
+
+    try {
+      renderedContent = await renderMarkdownToHtml(body.markdown);
+    } catch {
+      return c.json({ error: "Invalid markdown content" }, 400);
+    }
+
+    updateData.markdown = body.markdown;
+    updateData.content = renderedContent;
+
+    if (body.title === undefined) {
+      updateData.title =
+        extractTitleFromMarkdown(body.markdown) ?? existingPost.title;
+    }
+  }
+
+  if (body.status !== undefined) {
+    updateData.status = body.status;
+  }
+
+  const [updatedPost] = await db
+    .update(posts)
+    .set(updateData)
+    .where(and(eq(posts.id, postId), eq(posts.organizationId, orgId)))
+    .returning({
+      id: posts.id,
+      title: posts.title,
+      content: posts.content,
+      markdown: posts.markdown,
+      recommendations: posts.recommendations,
+      contentType: posts.contentType,
+      sourceMetadata: posts.sourceMetadata,
+      status: posts.status,
+      createdAt: posts.createdAt,
+      updatedAt: posts.updatedAt,
+    });
+
+  if (!updatedPost) {
+    return c.json({ error: "Post not found" }, 404);
+  }
+
+  return c.json({ post: updatedPost }, 200);
 });

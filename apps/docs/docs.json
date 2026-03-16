@@ -93,6 +93,7 @@
             "pages": [
               "GET /v1/posts",
               "GET /v1/posts/{postId}",
+              "PATCH /v1/posts/{postId}",
               "DELETE /v1/posts/{postId}"
             ]
           }
