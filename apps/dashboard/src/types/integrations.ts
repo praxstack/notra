@@ -101,6 +101,14 @@ export interface AddRepositoryDialogProps {
   trigger?: React.ReactNode;
 }
 
+export interface EditTokenDialogProps {
+  integration: GitHubIntegration;
+  organizationId: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
+}
+
 export interface IntegrationCardProps {
   integration: GitHubIntegration;
   organizationId: string;

@@ -35,6 +35,24 @@ function isValidGitHubUrl(url: string): boolean {
   return GITHUB_URL_PATTERNS.some((pattern) => pattern.test(trimmed));
 }
 
+const GITHUB_PAT_PREFIXES = [
+  "ghp_",
+  "github_pat_",
+  "gho_",
+  "ghu_",
+  "ghs_",
+  "ghr_",
+] as const;
+
+export const githubPersonalAccessTokenSchema = z
+  .string()
+  .trim()
+  .min(1, "Personal access token is required")
+  .refine(
+    (value) => GITHUB_PAT_PREFIXES.some((prefix) => value.startsWith(prefix)),
+    "Enter a valid GitHub personal access token"
+  );
+
 export const addGitHubIntegrationFormSchema = z.object({
   repoUrl: z
     .string()
@@ -44,7 +62,7 @@ export const addGitHubIntegrationFormSchema = z.object({
       "Invalid GitHub repository URL or format. Use: https://github.com/owner/repo, git@github.com:owner/repo, or owner/repo"
     ),
   branch: z.string().optional().nullable(),
-  token: z.string().optional().nullable(),
+  token: githubPersonalAccessTokenSchema.optional().nullable(),
 });
 export type AddGitHubIntegrationFormValues = z.infer<
   typeof addGitHubIntegrationFormSchema
@@ -55,7 +73,7 @@ export const createGitHubIntegrationRequestSchema = z.object({
   owner: z.string().min(1, "Repository owner is required"),
   repo: z.string().min(1, "Repository name is required"),
   branch: z.string().optional().nullable(),
-  token: z.string().optional().nullable(),
+  token: githubPersonalAccessTokenSchema.optional().nullable(),
 });
 export type CreateGitHubIntegrationRequest = z.infer<
   typeof createGitHubIntegrationRequestSchema
@@ -116,11 +134,23 @@ export const outputIdParamSchema = z.object({
 });
 export type OutputIdParam = z.infer<typeof outputIdParamSchema>;
 
-export const updateIntegrationBodySchema = z.object({
-  enabled: z.boolean(),
-  displayName: z.string().trim().min(1).optional(),
-  branch: z.string().trim().min(1).nullable().optional(),
-});
+export const updateIntegrationBodySchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    displayName: z.string().trim().min(1).optional(),
+    branch: z.string().trim().min(1).nullable().optional(),
+    token: githubPersonalAccessTokenSchema.optional(),
+  })
+  .refine(
+    (value) =>
+      value.enabled !== undefined ||
+      value.displayName !== undefined ||
+      value.branch !== undefined ||
+      value.token !== undefined,
+    {
+      message: "At least one field must be provided",
+    }
+  );
 export type UpdateIntegrationBody = z.infer<typeof updateIntegrationBodySchema>;
 
 export const editGitHubIntegrationFormSchema = z.object({
@@ -130,6 +160,13 @@ export const editGitHubIntegrationFormSchema = z.object({
 });
 export type EditGitHubIntegrationFormValues = z.infer<
   typeof editGitHubIntegrationFormSchema
+>;
+
+export const editGitHubTokenFormSchema = z.object({
+  token: githubPersonalAccessTokenSchema,
+});
+export type EditGitHubTokenFormValues = z.infer<
+  typeof editGitHubTokenFormSchema
 >;
 
 export const updateRepositoryBodySchema = z

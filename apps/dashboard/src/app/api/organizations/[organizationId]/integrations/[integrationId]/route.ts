@@ -8,6 +8,7 @@ import {
   GitHubBranchNotFoundError,
   getGitHubIntegrationById,
   updateGitHubIntegration,
+  updateGitHubIntegrationToken,
   updateRepository,
   validateRepositoryBranchExists,
 } from "@/lib/services/github-integration";
@@ -152,8 +153,20 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const { enabled, displayName, branch } = bodyValidation.data;
+    const { enabled, displayName, branch, token } = bodyValidation.data;
     const normalizedBranch = branch !== undefined ? branch || null : undefined;
+
+    if (token !== undefined) {
+      try {
+        await updateGitHubIntegrationToken(integrationId, token);
+      } catch (error) {
+        if (error instanceof Error) {
+          return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        throw error;
+      }
+    }
 
     if (normalizedBranch !== undefined) {
       if (integration.repositories.length !== 1) {
@@ -181,6 +194,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
             owner: repository.owner,
             repo: repository.repo,
             branch: normalizedBranch,
+            token,
             encryptedToken: integration.encryptedToken,
           });
         } catch (error) {
@@ -197,10 +211,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       });
     }
 
-    await updateGitHubIntegration(integrationId, {
-      enabled,
-      displayName,
-    });
+    if (enabled !== undefined || displayName !== undefined) {
+      await updateGitHubIntegration(integrationId, {
+        enabled,
+        displayName,
+      });
+    }
 
     const updated = await getGitHubIntegrationById(integrationId);
 

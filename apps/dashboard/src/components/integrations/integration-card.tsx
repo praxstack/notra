@@ -22,6 +22,7 @@ import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DeleteIntegrationDialog } from "@/components/delete-integration-dialog";
+import { EditTokenDialog } from "@/components/integrations/edit-token-dialog";
 import type {
   AffectedTriggersData,
   DeleteResourceResponse,
@@ -38,6 +39,7 @@ export function IntegrationCard({
   const queryClient = useQueryClient();
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditTokenDialogOpen, setIsEditTokenDialogOpen] = useState(false);
 
   const { data: affectedSchedulesData, isLoading: isLoadingSchedules } =
     useQuery<AffectedTriggersData>({
@@ -218,6 +220,15 @@ export function IntegrationCard({
                     className="cursor-pointer"
                     onClick={(event) => {
                       event.stopPropagation();
+                      setIsEditTokenDialogOpen(true);
+                    }}
+                  >
+                    Edit Personal Access Token
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={(event) => {
+                      event.stopPropagation();
                       handleToggle();
                     }}
                   >
@@ -259,6 +270,12 @@ export function IntegrationCard({
         onConfirm={handleDelete}
         onOpenChange={setIsDeleteDialogOpen}
         open={isDeleteDialogOpen}
+      />
+      <EditTokenDialog
+        integration={integration}
+        onOpenChange={setIsEditTokenDialogOpen}
+        open={isEditTokenDialogOpen}
+        organizationId={organizationId}
       />
     </>
   );
