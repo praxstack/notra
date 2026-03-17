@@ -131,6 +131,13 @@ export const errorResponseSchema = z
   })
   .openapi("ErrorResponse");
 
+export const organizationResponseSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  logo: z.string().nullable(),
+});
+
 export const postResponseSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -154,11 +161,13 @@ export const postsPaginationSchema = z.object({
 });
 
 export const getPostsResponseSchema = z.object({
+  organization: organizationResponseSchema,
   posts: z.array(postResponseSchema),
   pagination: postsPaginationSchema,
 });
 
 export const getPostResponseSchema = z.object({
+  organization: organizationResponseSchema,
   post: postResponseSchema.nullable(),
 });
 
@@ -185,11 +194,13 @@ export const patchPostRequestSchema = z
   );
 
 export const patchPostResponseSchema = z.object({
+  organization: organizationResponseSchema,
   post: postResponseSchema,
 });
 
 export const deletePostResponseSchema = z.object({
   id: z.string(),
+  organization: organizationResponseSchema,
 });
 
 export type GetPostsParams = z.infer<typeof getPostsParamsSchema>;
