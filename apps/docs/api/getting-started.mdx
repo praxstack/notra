@@ -107,10 +107,16 @@ const post = await notra.content.getPost({
 
 <CardGroup cols={2}>
   <Card title="Posts" icon="file-text" href="/api-reference/content/list-posts">
-    Retrieve paginated posts with `sort`, `limit`, `page`, and `status`.
+    Browse the post listing, single-post, update, and delete routes.
   </Card>
-  <Card title="Single Post" icon="file" href="/api-reference/content/get-a-single-post">
-    Get a specific post by ID.
+  <Card title="Generation" icon="sparkles" href="/api-reference/content/queue-async-post-generation">
+    Queue generation jobs and poll their status updates.
+  </Card>
+  <Card title="Brand Identities" icon="palette" href="/api-reference/content/list-available-brand-identities">
+    Browse the brand identity list and single-identity routes.
+  </Card>
+  <Card title="Integrations" icon="plug" href="/api-reference/content/list-available-integrations">
+    Discover available integrations to use in generation requests.
   </Card>
 </CardGroup>
 

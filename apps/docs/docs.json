@@ -91,10 +91,37 @@
               "directory": "api-reference"
             },
             "pages": [
-              "GET /v1/posts",
-              "GET /v1/posts/{postId}",
-              "PATCH /v1/posts/{postId}",
-              "DELETE /v1/posts/{postId}"
+              {
+                "group": "Posts",
+                "expanded": true,
+                "pages": [
+                  "GET /v1/posts",
+                  "GET /v1/posts/{postId}",
+                  "PATCH /v1/posts/{postId}",
+                  "DELETE /v1/posts/{postId}"
+                ]
+              },
+              {
+                "group": "Generation",
+                "expanded": true,
+                "pages": [
+                  "POST /v1/posts/generate",
+                  "GET /v1/posts/generate/{jobId}"
+                ]
+              },
+              {
+                "group": "Brand Identities",
+                "expanded": true,
+                "pages": [
+                  "GET /v1/brand-identities",
+                  "GET /v1/brand-identities/{brandIdentityId}"
+                ]
+              },
+              {
+                "group": "Integrations",
+                "expanded": true,
+                "pages": ["GET /v1/integrations"]
+              }
             ]
           }
         ],
