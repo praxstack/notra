@@ -44,6 +44,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
 import type {
   LookbackWindow,
   OutputContentType,
@@ -56,7 +57,6 @@ import {
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import type { GitHubIntegration } from "@/types/integrations";
 import type { Trigger } from "@/types/triggers/triggers";
-import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
 import { formatSnakeCaseLabel } from "@/utils/format";
 import { OutputTypeIcon } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";

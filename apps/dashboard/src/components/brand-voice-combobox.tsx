@@ -8,8 +8,8 @@ import {
   ComboboxList,
 } from "@notra/ui/components/ui/combobox";
 import { Label } from "@notra/ui/components/ui/label";
-import type { BrandVoiceComboboxProps } from "@/types/components/brand-voice";
 import { useCallback, useMemo, useState } from "react";
+import type { BrandVoiceComboboxProps } from "@/types/components/brand-voice";
 
 const DEFAULT_SENTINEL = "__default__";
 
@@ -23,7 +23,7 @@ export function BrandVoiceCombobox({
 
   const defaultVoiceName = useMemo(
     () => voices.find((v) => v.isDefault)?.name,
-    [voices],
+    [voices]
   );
 
   const defaultLabel = defaultVoiceName
@@ -48,7 +48,7 @@ export function BrandVoiceCombobox({
 
   const labelMap = useMemo(
     () => Object.fromEntries(options.map((o) => [o.id, o.label])),
-    [options],
+    [options]
   );
 
   const comboboxValue = value || DEFAULT_SENTINEL;
@@ -59,7 +59,7 @@ export function BrandVoiceCombobox({
         next && next !== DEFAULT_SENTINEL ? (next as string) : "";
       onChange(resolved);
     },
-    [onChange],
+    [onChange]
   );
 
   const handleInputValueChange = useCallback(
@@ -67,11 +67,11 @@ export function BrandVoiceCombobox({
       // When the user selects an item, input is set to the label — don't
       // treat that as a filter query.
       const isLabelMatch = Object.values(labelMap).some(
-        (label) => label === nextInput,
+        (label) => label === nextInput
       );
       setInputValue(isLabelMatch ? "" : nextInput);
     },
-    [labelMap],
+    [labelMap]
   );
 
   return (

@@ -54,7 +54,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@notra/ui/components/ui/select";
-import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { Switch } from "@notra/ui/components/ui/switch";
 import { cn } from "@notra/ui/lib/utils";
@@ -63,6 +62,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
 import {
   DEFAULT_CONTENT_TYPE,
   DEFAULT_DATA_POINTS,
