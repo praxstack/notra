@@ -12,11 +12,11 @@ import { toast } from "sonner";
 
 export default function BillingSuccessPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { openBillingPortal } = useCustomer();
+  const { openCustomerPortal } = useCustomer();
 
   async function handleManageBilling() {
     try {
-      await openBillingPortal({
+      await openCustomerPortal({
         returnUrl: `${window.location.origin}/${slug}/billing`,
       });
     } catch (err) {
