@@ -51,7 +51,9 @@ function isLogRetentionFeature(feature: FeatureData) {
 
 export function UsageSection() {
   const [range, setRange] = useState<RangeOption>("30d");
-  const { customer, isLoading: customerLoading } = useCustomer();
+  const { data: customer, isLoading: customerLoading } = useCustomer({
+    expand: ["balances.feature"],
+  });
 
   const { total } = useAggregateEvents({
     featureId: FEATURES.AI_CREDITS,
@@ -65,26 +67,24 @@ export function UsageSection() {
       : 0;
 
   const features = useMemo<FeatureData[]>(() => {
-    if (!customer?.features) {
+    if (!customer?.balances) {
       return [];
     }
-    return Object.entries(customer.features).map(([id, feature]) => {
+    return Object.entries(customer.balances).map(([id, feature]) => {
       const balance =
-        typeof feature?.balance === "number" ? feature.balance : null;
+        typeof feature?.remaining === "number" ? feature.remaining : null;
       const included =
-        typeof feature?.included_usage === "number"
-          ? feature.included_usage
-          : null;
+        typeof feature?.granted === "number" ? feature.granted : null;
 
       return {
         id,
-        name: formatFeatureName(id),
+        name: feature?.feature?.name ?? formatFeatureName(id),
         balance,
         included,
         unlimited: feature?.unlimited === true,
       };
     });
-  }, [customer?.features]);
+  }, [customer?.balances]);
 
   const limitedFeatures = features.filter(
     (feature) =>

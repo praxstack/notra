@@ -57,7 +57,7 @@ import {
 type Step = "source" | "tweet-url" | "import-x" | "custom";
 
 function useReferenceBalance() {
-  const { check, customer } = useCustomer();
+  const { check, data: customer } = useCustomer();
   return useMemo(() => {
     if (!customer) {
       return {
@@ -68,7 +68,7 @@ function useReferenceBalance() {
         unlimited: false,
       };
     }
-    const data = check({ featureId: FEATURES.REFERENCES }).data;
+    const data = check({ featureId: FEATURES.REFERENCES });
     if (!data) {
       return {
         remaining: null,
@@ -78,7 +78,7 @@ function useReferenceBalance() {
         unlimited: false,
       };
     }
-    if (data.unlimited) {
+    if (data.balance?.unlimited) {
       return {
         remaining: null,
         usage: null,
@@ -87,16 +87,20 @@ function useReferenceBalance() {
         unlimited: true,
       };
     }
-    const usage = typeof data.usage === "number" ? data.usage : 0;
+    const usage =
+      typeof data.balance?.usage === "number" ? data.balance.usage : 0;
     const included =
-      typeof data.included_usage === "number" ? data.included_usage : 0;
+      typeof data.balance?.granted === "number" ? data.balance.granted : 0;
     const overages = Math.max(0, usage - included);
     return {
-      remaining: typeof data.balance === "number" ? data.balance : null,
+      remaining:
+        typeof data.balance?.remaining === "number"
+          ? data.balance.remaining
+          : null,
       usage,
       included,
       overages,
-      overageAllowed: data.overage_allowed === true,
+      overageAllowed: data.balance?.overageAllowed === true,
       unlimited: false,
     };
   }, [check, customer]);

@@ -23,12 +23,12 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   const { getOrganization } = useOrganizationsContext();
   const organization = getOrganization(organizationSlug);
   const organizationId = organization?.id;
-  const { check, customer } = useCustomer();
+  const { check, data: customer } = useCustomer();
 
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
   const has30DayRetention = customer
-    ? check({ featureId: FEATURES.LOG_RETENTION_30_DAYS }).data?.allowed
+    ? check({ featureId: FEATURES.LOG_RETENTION_30_DAYS }).allowed
     : false;
   const logRetentionDays = has30DayRetention ? 30 : 7;
 

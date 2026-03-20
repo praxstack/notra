@@ -101,7 +101,7 @@ const ChatInput = ({
   const [internalValue, setInternalValue] = useState("");
   const [internalError, setInternalError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const { check, customer } = useCustomer();
+  const { check, data: customer } = useCustomer();
 
   const checkResult = useMemo(() => {
     if (!customer) {
@@ -110,10 +110,12 @@ const ChatInput = ({
     return check({
       featureId: FEATURES.AI_CREDITS,
       requiredBalance: 1,
-    }).data;
+    });
   }, [check, customer]);
   const remainingChatCredits =
-    typeof checkResult?.balance === "number" ? checkResult.balance : null;
+    typeof checkResult?.balance?.remaining === "number"
+      ? checkResult.balance.remaining
+      : null;
   const shouldShowLowCredits =
     remainingChatCredits !== null &&
     remainingChatCredits > 0 &&
@@ -207,7 +209,7 @@ const ChatInput = ({
 
     // Only check billing if customer data is available (Autumn is configured)
     if (customer) {
-      const { data: checkResult } = check({
+      const checkResult = check({
         featureId: FEATURES.AI_CREDITS,
         requiredBalance: 1,
       });
