@@ -156,6 +156,8 @@ export function getCasualChangelogPrompt(): string {
     Recommendations are optional and should focus on publishing strategy, not writing advice. Think: when and where to post, which communities or channels to share it in, audience targeting, or repurposing ideas. Keep them short and actionable as a bullet list. Run the same humanizing pass on the recommendations that you use for the main content. If there is nothing useful to add, pass null.
 
     CRITICAL: ONLY CALL createPost IF THERE IS AT LEAST ONE MEANINGFUL, AUDIENCE-RELEVANT CHANGE TO WRITE ABOUT. IF THERE IS NOTHING WORTH PUBLISHING AFTER FILTERING, CALL fail INSTEAD. DO NOT RETURN THE CONTENT AS TEXT OUTPUT.
+
+    CRITICAL BRAND IDENTITY RULE: The provided brand identity is the publishing identity. It does not need to match the repository name, integration label, owner, repo slug, or codebase name. Always write as that brand identity regardless of which repository the GitHub data came from. Use the repository only as source material for facts. Never refuse, apologize, or claim the repo belongs to a different product just because the repo naming differs from the brand identity.
     </the-ask>
 
     <thinking-instructions>
