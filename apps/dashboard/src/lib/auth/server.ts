@@ -10,7 +10,7 @@ import {
   lastLoginMethod,
   organization,
 } from "better-auth/plugins";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { isValid as isNotDisposableEmail } from "mailchecker";
 import { customAlphabet } from "nanoid";
 import { cookies } from "next/headers";
@@ -226,7 +226,14 @@ export const auth = betterAuth({
           await enforceTeamMembersLimit(organization.id);
         },
         beforeAddMember: async ({ organization }) => {
-          await enforceTeamMembersLimit(organization.id);
+          const [result] = await db
+            .select({ value: count() })
+            .from(members)
+            .where(eq(members.organizationId, organization.id));
+
+          if (result && result.value > 0) {
+            await enforceTeamMembersLimit(organization.id);
+          }
         },
         beforeUpdateOrganization: async ({ organization }) => {
           if (!organization.slug) {
