@@ -1,5 +1,6 @@
 import { db } from "@notra/db/drizzle";
 import { brandReferences, brandSettings } from "@notra/db/schema";
+import { deleteBrandReferenceMemory } from "@notra/db/utils/supermemory";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { FEATURES } from "@/constants/features";
@@ -7,10 +8,21 @@ import { withOrganizationAuth } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
 import { createReferenceSchema, updateReferenceSchema } from "@/schemas/brand";
 import type { ApplicablePlatform } from "@/types/hooks/brand-references";
+import {
+  type ReferenceMemoryRecord,
+  removeBrandReferenceMemory,
+  syncBrandReferenceMemory,
+} from "@/utils/brand-reference-memory";
 
 interface RouteContext {
   params: Promise<{ organizationId: string; voiceId: string }>;
 }
+
+const typeDefaults: Record<string, ApplicablePlatform[]> = {
+  twitter_post: ["twitter"],
+  linkedin_post: ["linkedin"],
+  blog_post: ["blog"],
+};
 
 async function verifyVoiceOwnership(organizationId: string, voiceId: string) {
   return db.query.brandSettings.findFirst({
@@ -20,6 +32,27 @@ async function verifyVoiceOwnership(organizationId: string, voiceId: string) {
     ),
     columns: { id: true },
   });
+}
+
+async function getReferenceById(referenceId: string, voiceId: string) {
+  return db.query.brandReferences.findFirst({
+    where: and(
+      eq(brandReferences.id, referenceId),
+      eq(brandReferences.brandSettingsId, voiceId)
+    ),
+  });
+}
+
+function isMemorySyncFieldUpdate(data: {
+  content?: string;
+  note?: string | null;
+  applicableTo?: string[];
+}) {
+  return (
+    Object.hasOwn(data, "content") ||
+    Object.hasOwn(data, "note") ||
+    Object.hasOwn(data, "applicableTo")
+  );
 }
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
@@ -98,17 +131,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       }
     }
 
-    const typeDefaults: Record<string, ApplicablePlatform[]> = {
-      twitter_post: ["twitter"],
-      linkedin_post: ["linkedin"],
-      blog_post: ["blog"],
-    };
-
     const applicableTo: ApplicablePlatform[] = result.data.applicableTo ??
       typeDefaults[result.data.type] ?? ["all"];
 
     if (autumn) {
-      let data;
+      let data: { allowed?: boolean } | null = null;
       try {
         data = await autumn.check({
           customerId: organizationId,
@@ -119,6 +146,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       } catch {
         data = null;
       }
+
       if (!data?.allowed) {
         return NextResponse.json(
           { error: "Reference limit reached. Upgrade your plan to add more." },
@@ -127,7 +155,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       }
     }
 
-    const reference = await db
+    const inserted = await db
       .insert(brandReferences)
       .values({
         id: crypto.randomUUID(),
@@ -140,7 +168,64 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       })
       .returning();
 
-    return NextResponse.json({ reference: reference[0] }, { status: 201 });
+    const reference = inserted[0];
+
+    if (!reference) {
+      throw new Error("Reference was not created");
+    }
+
+    let createdDocumentId: string | null = null;
+
+    try {
+      const link = await syncBrandReferenceMemory({
+        organizationId,
+        voiceId,
+        reference: reference as ReferenceMemoryRecord,
+      });
+      createdDocumentId = link.documentId;
+
+      const synced = await db
+        .update(brandReferences)
+        .set({
+          supermemoryDocumentId: link.documentId,
+          supermemoryMemoryId: link.memoryId,
+          supermemorySyncedAt: new Date(),
+          supermemoryLastSyncError: null,
+        })
+        .where(eq(brandReferences.id, reference.id))
+        .returning();
+
+      return NextResponse.json({ reference: synced[0] }, { status: 201 });
+    } catch (error) {
+      await db
+        .delete(brandReferences)
+        .where(eq(brandReferences.id, reference.id));
+
+      if (createdDocumentId) {
+        try {
+          await deleteBrandReferenceMemory({ documentId: createdDocumentId });
+        } catch (cleanupError) {
+          console.error(
+            "Error cleaning up failed Supermemory reference:",
+            cleanupError
+          );
+        }
+      }
+
+      if (autumn) {
+        await autumn.track({
+          customerId: organizationId,
+          featureId: FEATURES.REFERENCES,
+          value: -1,
+        });
+      }
+
+      console.error("Error syncing reference to Supermemory:", error);
+      return NextResponse.json(
+        { error: "Failed to sync reference to memory" },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("Error creating reference:", error);
     return NextResponse.json(
@@ -184,12 +269,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const existing = await db.query.brandReferences.findFirst({
-      where: and(
-        eq(brandReferences.id, referenceId),
-        eq(brandReferences.brandSettingsId, voiceId)
-      ),
-    });
+    const existing = await getReferenceById(referenceId, voiceId);
 
     if (!existing) {
       return NextResponse.json(
@@ -204,7 +284,88 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       .where(eq(brandReferences.id, referenceId))
       .returning();
 
-    return NextResponse.json({ reference: updated[0] });
+    const reference = updated[0];
+
+    if (!reference) {
+      throw new Error("Reference update failed");
+    }
+
+    if (!isMemorySyncFieldUpdate(result.data)) {
+      return NextResponse.json({ reference });
+    }
+
+    let createdDocumentId: string | null = null;
+
+    try {
+      const link = await syncBrandReferenceMemory({
+        organizationId,
+        voiceId,
+        reference: reference as ReferenceMemoryRecord,
+      });
+      createdDocumentId = link.documentId;
+
+      await db
+        .update(brandReferences)
+        .set({
+          supermemoryDocumentId: link.documentId,
+          supermemoryMemoryId: link.memoryId,
+          supermemorySyncedAt: new Date(),
+          supermemoryLastSyncError: null,
+        })
+        .where(eq(brandReferences.id, referenceId));
+
+      if (
+        existing.supermemoryDocumentId &&
+        existing.supermemoryDocumentId !== link.documentId
+      ) {
+        try {
+          await removeBrandReferenceMemory(existing as ReferenceMemoryRecord);
+        } catch (cleanupError) {
+          console.error("Error deleting stale reference memory:", cleanupError);
+          await db
+            .update(brandReferences)
+            .set({
+              supermemoryLastSyncError:
+                "Reference updated, but the previous Supermemory document could not be deleted.",
+            })
+            .where(eq(brandReferences.id, referenceId));
+        }
+      }
+
+      const refreshedReference = await getReferenceById(referenceId, voiceId);
+
+      if (!refreshedReference) {
+        throw new Error("Reference update refresh failed");
+      }
+
+      return NextResponse.json({ reference: refreshedReference });
+    } catch (error) {
+      console.error("Error syncing updated reference to Supermemory:", error);
+
+      if (createdDocumentId) {
+        try {
+          await deleteBrandReferenceMemory({ documentId: createdDocumentId });
+        } catch (cleanupError) {
+          console.error(
+            "Error cleaning up failed updated Supermemory reference:",
+            cleanupError
+          );
+        }
+      }
+
+      await db
+        .update(brandReferences)
+        .set({
+          supermemoryLastSyncError:
+            error instanceof Error ? error.message : "Supermemory sync failed",
+        })
+        .where(eq(brandReferences.id, referenceId));
+
+      return NextResponse.json(
+        { error: "Reference updated, but memory sync failed" },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("Error updating reference:", error);
     return NextResponse.json(
@@ -239,18 +400,19 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const existing = await db.query.brandReferences.findFirst({
-      where: and(
-        eq(brandReferences.id, referenceId),
-        eq(brandReferences.brandSettingsId, voiceId)
-      ),
-    });
+    const existing = await getReferenceById(referenceId, voiceId);
 
     if (!existing) {
       return NextResponse.json(
         { error: "Reference not found" },
         { status: 404 }
       );
+    }
+
+    try {
+      await removeBrandReferenceMemory(existing as ReferenceMemoryRecord);
+    } catch (error) {
+      console.error("Error deleting reference memory:", error);
     }
 
     await db.delete(brandReferences).where(eq(brandReferences.id, referenceId));
