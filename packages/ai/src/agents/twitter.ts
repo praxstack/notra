@@ -90,7 +90,7 @@ export async function generateTwitterPost(
     }),
     providerOptions: {
       anthropic: {
-        thinking: { type: "enabled", budgetTokens: 2500 },
+        thinking: { type: "enabled", budgetTokens: 4096 },
       },
     },
     tools: {
