@@ -114,10 +114,16 @@
                 "expanded": true,
                 "pages": [
                   "GET /v1/brand-identities",
-                  "POST /v1/brand-identities",
-                  "GET /v1/brand-identities/generate/{jobId}",
                   "GET /v1/brand-identities/{brandIdentityId}",
-                  "PATCH /v1/brand-identities/{brandIdentityId}"
+                  "PATCH /v1/brand-identities/{brandIdentityId}",
+                  {
+                    "group": "Generation",
+                    "expanded": true,
+                    "pages": [
+                      "POST /v1/brand-identities/generate",
+                      "GET /v1/brand-identities/generate/{jobId}"
+                    ]
+                  }
                 ]
               },
               {

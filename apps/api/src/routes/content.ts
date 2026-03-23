@@ -829,10 +829,10 @@ const getBrandIdentitiesRoute = createRoute({
 
 const createBrandIdentityRoute = createRoute({
   method: "post",
-  path: "/brand-identities",
+  path: "/brand-identities/generate",
   tags: ["Content"],
   operationId: "createBrandIdentity",
-  summary: "Create and analyze a new brand identity",
+  summary: "Queue async brand identity generation",
   request: {
     body: {
       content: {
@@ -845,7 +845,7 @@ const createBrandIdentityRoute = createRoute({
   },
   responses: {
     202: {
-      description: "Brand identity analysis queued successfully",
+      description: "Brand identity generation queued successfully",
       content: {
         "application/json": {
           schema: createBrandIdentityResponseSchema,
@@ -908,13 +908,13 @@ const getBrandAnalysisJobRoute = createRoute({
   path: "/brand-identities/generate/{jobId}",
   tags: ["Content"],
   operationId: "getBrandIdentityGeneration",
-  summary: "Get async brand identity analysis status",
+  summary: "Get async brand identity generation status",
   request: {
     params: getBrandAnalysisJobParamsSchema,
   },
   responses: {
     200: {
-      description: "Brand identity analysis status fetched successfully",
+      description: "Brand identity generation status fetched successfully",
       content: {
         "application/json": {
           schema: getBrandAnalysisJobResponseSchema,

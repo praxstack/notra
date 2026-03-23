@@ -1225,11 +1225,13 @@
             }
           }
         }
-      },
+      }
+    },
+    "/v1/brand-identities/generate": {
       "post": {
         "tags": ["Content"],
         "operationId": "createBrandIdentity",
-        "summary": "Create and analyze a new brand identity",
+        "summary": "Queue async brand identity generation",
         "requestBody": {
           "required": true,
           "content": {
@@ -1256,7 +1258,7 @@
         },
         "responses": {
           "202": {
-            "description": "Brand identity analysis queued successfully",
+            "description": "Brand identity generation queued successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -1412,7 +1414,7 @@
       "get": {
         "tags": ["Content"],
         "operationId": "getBrandIdentityGeneration",
-        "summary": "Get async brand identity analysis status",
+        "summary": "Get async brand identity generation status",
         "parameters": [
           {
             "schema": {
@@ -1427,7 +1429,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Brand identity analysis status fetched successfully",
+            "description": "Brand identity generation status fetched successfully",
             "content": {
               "application/json": {
                 "schema": {
