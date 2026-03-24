@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { changelog } from "@/../.source/server";
+import { listNotraBlogPosts } from "@/utils/blog";
 import { listNotraChangelogPosts } from "@/utils/changelog";
 import { getShowcaseEntrySlug, SHOWCASE_COMPANIES } from "../utils/showcase";
 
@@ -19,6 +20,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(post.updatedAt),
     })
   );
+
+  const notraBlogEntries = (await listNotraBlogPosts()).map((post) => ({
+    url: `https://www.usenotra.com/blog/${post.slug}`,
+    lastModified: new Date(post.updatedAt),
+  }));
 
   return [
     {
@@ -42,6 +48,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
     },
     {
+      url: "https://www.usenotra.com/blog",
+      lastModified: new Date(),
+    },
+    {
       url: "https://www.usenotra.com/changelog",
       lastModified: new Date(),
     },
@@ -55,5 +65,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...showcaseEntries,
     ...notraChangelogEntries,
+    ...notraBlogEntries,
   ];
 }
