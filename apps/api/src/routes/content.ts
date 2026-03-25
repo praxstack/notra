@@ -132,8 +132,7 @@ function getContentGenerationUnavailableReason(runtimeEnv: {
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   QSTASH_TOKEN?: string;
-  CONTENT_GENERATION_WORKFLOW_URL?: string;
-  CONTENT_GENERATION_WORKFLOW_BASE_URL?: string;
+  WORKFLOW_BASE_URL?: string;
 }) {
   if (
     !(runtimeEnv.UPSTASH_REDIS_REST_URL && runtimeEnv.UPSTASH_REDIS_REST_TOKEN)
@@ -145,10 +144,7 @@ function getContentGenerationUnavailableReason(runtimeEnv: {
     return "Content generation is unavailable: QStash is not configured";
   }
 
-  if (
-    !runtimeEnv.CONTENT_GENERATION_WORKFLOW_URL &&
-    !runtimeEnv.CONTENT_GENERATION_WORKFLOW_BASE_URL
-  ) {
+  if (!runtimeEnv.WORKFLOW_BASE_URL) {
     return "Content generation is unavailable: workflow URL is not configured";
   }
 
