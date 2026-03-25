@@ -14,7 +14,7 @@ import { Fragment } from "react";
 import { COMPARISON_FEATURES, PRICING_PLANS } from "../utils/constants";
 
 const plans = [
-  { key: "free" as const, name: PRICING_PLANS.free.name },
+  { key: "basic" as const, name: PRICING_PLANS.basic.name },
   { key: "pro" as const, name: PRICING_PLANS.pro.name },
   { key: "enterprise" as const, name: PRICING_PLANS.enterprise.name },
 ];

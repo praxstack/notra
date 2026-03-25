@@ -121,11 +121,13 @@ function OrgSelectorTrigger({
   isSwitching,
   activeOrganization,
   isPro,
+  isBasic,
 }: {
   isCollapsed: boolean;
   isSwitching: boolean;
   activeOrganization: Organization | null;
   isPro: boolean;
+  isBasic: boolean;
 }) {
   return (
     <DropdownMenuTrigger
@@ -164,11 +166,11 @@ function OrgSelectorTrigger({
                   <Badge className="shrink-0 bg-purple-500/15 px-1.5 py-0 font-semibold text-[10px] text-purple-600 hover:bg-purple-500/15 dark:text-purple-400">
                     PRO
                   </Badge>
-                ) : (
-                  <Badge className="shrink-0 bg-emerald-500/15 px-1.5 py-0 font-semibold text-[10px] text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400">
-                    FREE
+                ) : isBasic ? (
+                  <Badge className="shrink-0 bg-blue-500/15 px-1.5 py-0 font-semibold text-[10px] text-blue-600 hover:bg-blue-500/15 dark:text-blue-400">
+                    BASIC
                   </Badge>
-                )}
+                ) : null}
               </div>
               <HugeiconsIcon className="ml-auto" icon={ArrowDown01Icon} />
             </>
@@ -212,16 +214,16 @@ export function OrgSelector() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const isNavigating = isSwitching || isPending;
 
-  const proSubscription = customer?.subscriptions.find(
-    (subscription) =>
-      !subscription.addOn &&
-      subscription.status === "active" &&
-      (subscription.plan?.id === "pro" ||
-        subscription.plan?.id === "pro_yearly" ||
-        subscription.planId === "pro" ||
-        subscription.planId === "pro_yearly")
+  const activeSubscription = customer?.subscriptions.find(
+    (subscription) => !subscription.addOn && subscription.status === "active"
   );
-  const isPro = Boolean(proSubscription);
+  const activePlanId =
+    activeSubscription?.plan?.id ?? activeSubscription?.planId;
+  const isPro = activePlanId === "pro" || activePlanId === "pro_yearly";
+  const isBasic = activePlanId === "basic" || activePlanId === "basic_yearly";
+  const isTrialing =
+    activeSubscription?.trialEndsAt != null &&
+    activeSubscription.trialEndsAt > Date.now();
 
   async function switchOrganization(org: Organization) {
     if (org.slug === activeOrganization?.slug) {
@@ -279,6 +281,7 @@ export function OrgSelector() {
           {shouldShowTrigger ? (
             <OrgSelectorTrigger
               activeOrganization={activeOrganization}
+              isBasic={isBasic}
               isCollapsed={isCollapsed}
               isPro={isPro}
               isSwitching={isNavigating}
@@ -332,7 +335,22 @@ export function OrgSelector() {
 
             <DropdownMenuItem
               className="flex cursor-pointer items-center gap-4"
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => {
+                const orgCount = organizations?.length ?? 0;
+                if (isTrialing && orgCount >= 2) {
+                  toast("Subscribe to create more organizations", {
+                    action: {
+                      label: "Upgrade",
+                      onClick: () =>
+                        router.push(
+                          `/${activeOrganization?.slug}/billing`
+                        ),
+                    },
+                  });
+                  return;
+                }
+                setIsCreateModalOpen(true);
+              }}
             >
               <div className="flex size-6 items-center justify-center rounded-[0.2rem] bg-muted">
                 <HugeiconsIcon className="size-4" icon={PlusSignIcon} />
