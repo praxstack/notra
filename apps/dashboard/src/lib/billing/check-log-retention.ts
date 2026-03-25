@@ -10,19 +10,27 @@ export async function checkLogRetention(
     return 30;
   }
 
-  let data: AutumnCheckResponse | null = null;
   try {
-    data = await autumn.check({
+    const thirtyDayCheck = await autumn.check({
       customerId: organizationId,
       featureId: FEATURES.LOG_RETENTION_30_DAYS,
     });
+
+    if (thirtyDayCheck?.allowed) {
+      return 30;
+    }
+
+    const fourteenDayCheck = await autumn.check({
+      customerId: organizationId,
+      featureId: FEATURES.LOG_RETENTION_14_DAYS,
+    });
+
+    if (fourteenDayCheck?.allowed) {
+      return 14;
+    }
+
+    return 7;
   } catch {
     return 30;
   }
-
-  if (!data) {
-    return 30;
-  }
-
-  return data.allowed ? 30 : 7;
 }

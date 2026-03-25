@@ -45,6 +45,7 @@ function formatFeatureName(id: string): string {
 function isLogRetentionFeature(feature: FeatureData) {
   return (
     feature.id === FEATURES.LOG_RETENTION_7_DAYS ||
+    feature.id === FEATURES.LOG_RETENTION_14_DAYS ||
     feature.id === FEATURES.LOG_RETENTION_30_DAYS
   );
 }
@@ -100,6 +101,9 @@ export function UsageSection() {
   const logRetention7DaysFeature = features.find(
     (feature) => feature.id === FEATURES.LOG_RETENTION_7_DAYS
   );
+  const logRetention14DaysFeature = features.find(
+    (feature) => feature.id === FEATURES.LOG_RETENTION_14_DAYS
+  );
   const logRetention30DaysFeature = features.find(
     (feature) => feature.id === FEATURES.LOG_RETENTION_30_DAYS
   );
@@ -107,10 +111,15 @@ export function UsageSection() {
     logRetention30DaysFeature?.unlimited === true ||
     (logRetention30DaysFeature?.included ?? 0) > 0 ||
     (logRetention30DaysFeature?.balance ?? 0) > 0;
+  const has14DayRetention =
+    logRetention14DaysFeature?.unlimited === true ||
+    (logRetention14DaysFeature?.included ?? 0) > 0 ||
+    (logRetention14DaysFeature?.balance ?? 0) > 0;
   const hasRetentionFeature =
     logRetention7DaysFeature !== undefined ||
+    logRetention14DaysFeature !== undefined ||
     logRetention30DaysFeature !== undefined;
-  const retentionDays = has30DayRetention ? 30 : 7;
+  const retentionDays = has30DayRetention ? 30 : has14DayRetention ? 14 : 7;
 
   if (customerLoading && !customer) {
     return (

@@ -7,11 +7,14 @@ import type {
 } from "@/types/webhooks/webhooks";
 
 const LOG_TTL_7_DAYS = 60 * 60 * 24 * 7;
+const LOG_TTL_14_DAYS = 60 * 60 * 24 * 14;
 const LOG_TTL_30_DAYS = 60 * 60 * 24 * 30;
 const LOG_LIMIT = 200;
 
 export function getLogTtlSeconds(retentionDays: LogRetentionDays) {
-  return retentionDays === 30 ? LOG_TTL_30_DAYS : LOG_TTL_7_DAYS;
+  if (retentionDays === 30) return LOG_TTL_30_DAYS;
+  if (retentionDays === 14) return LOG_TTL_14_DAYS;
+  return LOG_TTL_7_DAYS;
 }
 
 function getLogKey(

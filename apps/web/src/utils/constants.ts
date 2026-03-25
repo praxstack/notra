@@ -12,18 +12,21 @@ export const SOCIAL_LINKS = {
 } as const;
 
 export const PRICING_PLANS = {
-  free: {
-    name: "Free",
+  basic: {
+    name: "Basic",
     description: "For solo devs and small teams getting started.",
-    pricing: { monthly: 0, annually: 0 },
-    cta: { label: "Start for free", href: "https://app.usenotra.com/signup" },
+    pricing: { monthly: 20, annually: 200 },
+    cta: {
+      label: "Start 3 day free trial",
+      href: "https://app.usenotra.com/signup",
+    },
     features: [
       "2 team members",
-      "15 AI Credits per month",
+      { label: "$12 in AI usage per month", subtitle: "then $0.01 per credit" },
       "3 workflows",
       "2 integrations",
-      "30 references",
-      "7 Days Log Retention",
+      { label: "30 references", subtitle: "then $0.05 per reference / mo" },
+      "14 Days Log Retention",
     ],
   },
   pro: {
@@ -36,11 +39,11 @@ export const PRICING_PLANS = {
     },
     features: [
       "5 team members",
+      { label: "$30 in AI usage per month", subtitle: "then $0.01 per credit" },
       "Unlimited workflows",
       "Unlimited integrations",
-      "30 Days Log Retention",
       { label: "100 references", subtitle: "then $0.05 per reference / mo" },
-      { label: "100 AI Credits", subtitle: "then $0.01 per credit / mo" },
+      "30 Days Log Retention",
     ],
   },
   enterprise: {
@@ -50,7 +53,7 @@ export const PRICING_PLANS = {
     cta: { label: "Contact us", href: "mailto:hello@usenotra.com" },
     features: [
       "Unlimited team members",
-      "Unlimited AI Credits",
+      "Unlimited AI usage",
       "Unlimited workflows",
       "Custom integrations",
       "Unlimited references",
@@ -66,14 +69,14 @@ const FEATURES_TABLE = [
     items: [
       {
         name: "Workflows",
-        free: "3",
+        basic: "3",
         pro: "Unlimited",
         enterprise: "Unlimited",
       },
       {
-        name: "AI Credits",
-        free: "15 / month",
-        pro: "100 / month",
+        name: "AI Usage",
+        basic: "$12 / month",
+        pro: "$30 / month",
         enterprise: "Unlimited",
       },
     ],
@@ -83,19 +86,19 @@ const FEATURES_TABLE = [
     items: [
       {
         name: "Team members",
-        free: "2",
+        basic: "2",
         pro: "5",
         enterprise: "Unlimited",
       },
       {
         name: "Integrations",
-        free: "2",
+        basic: "2",
         pro: "Unlimited",
         enterprise: "Custom",
       },
       {
         name: "References",
-        free: "30",
+        basic: "30",
         pro: "100",
         enterprise: "Unlimited",
       },
@@ -106,7 +109,7 @@ const FEATURES_TABLE = [
     items: [
       {
         name: "Log retention",
-        free: "7 Days",
+        basic: "14 Days",
         pro: "30 Days",
         enterprise: "Unlimited",
       },
@@ -117,19 +120,19 @@ const FEATURES_TABLE = [
     items: [
       {
         name: "Community support",
-        free: true,
+        basic: true,
         pro: true,
         enterprise: true,
       },
       {
         name: "Email support",
-        free: false,
+        basic: false,
         pro: true,
         enterprise: true,
       },
       {
         name: "Dedicated support",
-        free: false,
+        basic: false,
         pro: false,
         enterprise: true,
       },

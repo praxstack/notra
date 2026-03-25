@@ -120,7 +120,7 @@ function PricingCard({
 export function PricingCards() {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
 
-  const { free, pro, enterprise } = PRICING_PLANS;
+  const { basic, pro, enterprise } = PRICING_PLANS;
 
   return (
     <>
@@ -192,14 +192,17 @@ export function PricingCards() {
 
           <div className="grid flex-1 grid-cols-1 gap-y-12 py-12 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:grid-rows-[auto_auto_auto_1fr] md:gap-y-0 md:py-0">
             <PricingCard
-              cta={free.cta}
-              description={free.description}
-              features={free.features}
-              name={free.name}
+              cta={basic.cta}
+              description={basic.description}
+              features={basic.features}
+              name={basic.name}
               price={
                 <div className="flex flex-col items-start justify-start gap-1">
                   <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">
-                    $0
+                    $
+                    {billingPeriod === "monthly"
+                      ? basic.pricing.monthly
+                      : basic.pricing.annually}
                   </div>
                   <div className="font-medium font-sans text-muted-foreground text-sm">
                     per {billingPeriod === "monthly" ? "month" : "year"}.

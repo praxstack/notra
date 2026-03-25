@@ -30,7 +30,10 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   const has30DayRetention = customer
     ? check({ featureId: FEATURES.LOG_RETENTION_30_DAYS }).allowed
     : false;
-  const logRetentionDays = has30DayRetention ? 30 : 7;
+  const has14DayRetention = customer
+    ? check({ featureId: FEATURES.LOG_RETENTION_14_DAYS }).allowed
+    : false;
+  const logRetentionDays = has30DayRetention ? 30 : has14DayRetention ? 14 : 7;
 
   const { data, isPending } = useQuery<LogsResponse>({
     ...dashboardOrpc.logs.webhooks.list.queryOptions({

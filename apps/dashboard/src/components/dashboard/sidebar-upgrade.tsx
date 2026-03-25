@@ -32,13 +32,32 @@ export function SidebarUpgrade() {
   const activePlanId =
     activeSubscription?.plan?.id ?? activeSubscription?.planId;
   const isPro = activePlanId === "pro" || activePlanId === "pro_yearly";
+  const isBasic = activePlanId === "basic" || activePlanId === "basic_yearly";
+  const hasNoPlan = !activePlanId;
 
+  const basicPlan = plans?.find((plan) => plan.id === "basic");
   const proPlan = plans?.find((plan) => plan.id === "pro");
-  const hasFreeTrial =
-    !!proPlan?.freeTrial && !!proPlan.customerEligibility?.trialAvailable;
+
+  const showBasicTrial =
+    hasNoPlan &&
+    !!basicPlan?.freeTrial &&
+    !!basicPlan.customerEligibility?.trialAvailable;
+
+  const targetPlan = hasNoPlan ? basicPlan : proPlan;
+  const targetPlanId = targetPlan?.id ?? (hasNoPlan ? "basic" : "pro");
+
   const buttonLabel = loading
     ? "Loading..."
-    : (hasFreeTrial && "Start 3 day free trial") || "Upgrade to Pro";
+    : showBasicTrial
+      ? "Start 3 day free trial"
+      : isBasic
+        ? "Upgrade to Pro"
+        : "Upgrade";
+
+  const heading = isBasic ? "Upgrade to Pro" : "Get Started";
+  const description = isBasic
+    ? "Get more team seats, unlimited integrations, and higher usage limits."
+    : "Start your 3 day free trial and unlock AI-powered workflows.";
 
   if (
     process.env.NEXT_PUBLIC_SHOW_UPGRADE_BUTTON !== "true" ||
@@ -49,14 +68,13 @@ export function SidebarUpgrade() {
   }
 
   async function handleUpgrade() {
-    const planId = proPlan?.id ?? "pro";
     setLoading(true);
     try {
       const successUrl = activeOrganization?.slug
         ? `${window.location.origin}/${activeOrganization.slug}/billing/success`
         : undefined;
       const result = await attach({
-        planId,
+        planId: targetPlanId,
         redirectMode: "if_required",
         successUrl,
       });
@@ -80,13 +98,10 @@ export function SidebarUpgrade() {
     <SidebarGroup className="px-3 pb-2 group-data-[collapsible=icon]:hidden">
       <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
         <div className="border-b bg-muted/50 px-3 py-3">
-          <p className="font-semibold text-sm">Upgrade to Pro</p>
+          <p className="font-semibold text-sm">{heading}</p>
         </div>
         <div className="space-y-3 p-3">
-          <p className="text-muted-foreground text-xs">
-            Get more team seats, unlimited integrations, and higher usage
-            limits.
-          </p>
+          <p className="text-muted-foreground text-xs">{description}</p>
           <Button
             className="w-full"
             disabled={loading}
