@@ -75,7 +75,11 @@
           },
           {
             "group": "Integrations",
-            "pages": ["integrations/github", "integrations/featul"]
+            "pages": [
+              "integrations/github",
+              "integrations/framer",
+              "integrations/featul"
+            ]
           }
         ],
         "root": "overview"
