@@ -70,6 +70,10 @@
             "pages": ["overview"]
           },
           {
+            "group": "Developer & Productivity Tools",
+            "pages": ["integrations/mcp"]
+          },
+          {
             "group": "Integrations",
             "pages": ["integrations/github", "integrations/featul"]
           }
