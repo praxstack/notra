@@ -219,6 +219,10 @@ const itemCount = `${pagination.totalItems} total items`;
 
 ## Best Practices
 
+- Use a distinct cache key for each combination of `page`, `limit`, `sort`, `status`, and `contentType`.
+- Invalidate paginated list caches after post updates, deletes, and completed generation jobs.
+- For a fuller strategy, see [Caching](/api/caching).
+
 <Tip>
   **Performance:** Use smaller page sizes (5-20 items), especially for mobile
   clients.

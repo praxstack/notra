@@ -89,6 +89,7 @@
         "pages": [
           "api/getting-started",
           "api/authentication",
+          "api/caching",
           "api/common-tasks",
           "api/pagination",
           "api/types",
