@@ -7,6 +7,7 @@ import { Card } from "@notra/ui/components/ui/card";
 import Link from "next/link";
 import { useState } from "react";
 import { PRICING_PLANS } from "../utils/constants";
+import { HatchPattern } from "./hatch-pattern";
 
 type BillingPeriod = "monthly" | "annually";
 
@@ -179,16 +180,7 @@ export function PricingCards() {
 
       <div className="flex items-center justify-center self-stretch shadow-[inset_0_-1px_0_var(--border)]">
         <div className="flex w-full items-start justify-center">
-          <div className="relative hidden w-12 self-stretch overflow-hidden md:block">
-            <div className="absolute top-[-120px] left-[-58px] flex w-[162px] flex-col items-start justify-start">
-              {Array.from({ length: 200 }).map((_, i) => (
-                <div
-                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                  key={i}
-                />
-              ))}
-            </div>
-          </div>
+          <HatchPattern className="hidden w-12 self-stretch md:block" />
 
           <div className="grid flex-1 grid-cols-1 gap-y-12 py-12 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:grid-rows-[auto_auto_auto_1fr] md:gap-y-0 md:py-0">
             <PricingCard
@@ -208,16 +200,7 @@ export function PricingCards() {
               }
             />
 
-            <div className="relative hidden w-6 self-stretch overflow-hidden md:row-span-4 md:block lg:w-8">
-              <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
-                {Array.from({ length: 200 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="hidden w-6 self-stretch md:row-span-4 md:block lg:w-8" />
 
             <PricingCard
               cta={pro.cta}
@@ -240,16 +223,7 @@ export function PricingCards() {
               variant="featured"
             />
 
-            <div className="relative hidden w-6 self-stretch overflow-hidden md:row-span-4 md:block lg:w-8">
-              <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
-                {Array.from({ length: 200 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="hidden w-6 self-stretch md:row-span-4 md:block lg:w-8" />
 
             <PricingCard
               cta={enterprise.cta}
@@ -269,16 +243,7 @@ export function PricingCards() {
             />
           </div>
 
-          <div className="relative hidden w-12 self-stretch overflow-hidden md:block">
-            <div className="absolute top-[-120px] left-[-58px] flex w-[162px] flex-col items-start justify-start">
-              {Array.from({ length: 200 }).map((_, i) => (
-                <div
-                  className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                  key={i}
-                />
-              ))}
-            </div>
-          </div>
+          <HatchPattern className="hidden w-12 self-stretch md:block" />
         </div>
       </div>
     </>

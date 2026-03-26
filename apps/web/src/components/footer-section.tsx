@@ -6,6 +6,7 @@ import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
 import Link from "next/link";
 import { FOOTER_PRODUCT_LINKS } from "@/utils/navigation";
 import { SOCIAL_LINKS } from "../utils/constants";
+import { HatchPattern } from "./hatch-pattern";
 import { NotraMark } from "./notra-mark";
 
 export default function FooterSection() {
@@ -115,22 +116,7 @@ export default function FooterSection() {
       </div>
 
       <div className="relative h-12 self-stretch overflow-hidden border-border border-t">
-        <div className="absolute inset-0 h-full w-full overflow-hidden">
-          <div className="relative h-full w-full">
-            {Array.from({ length: 400 }).map((_, i) => (
-              <div
-                className="absolute h-16 w-75 border border-[rgba(3,7,18,0.08)]"
-                key={i}
-                style={{
-                  left: `${i * 18.75 - 37.5}rem`,
-                  top: "-7.5rem",
-                  transform: "rotate(-45deg)",
-                  transformOrigin: "top left",
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        <HatchPattern className="absolute inset-0 h-full w-full" />
       </div>
     </div>
   );

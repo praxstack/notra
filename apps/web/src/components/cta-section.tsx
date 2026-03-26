@@ -1,27 +1,12 @@
-"use client";
-
 import { Button } from "@notra/ui/components/ui/button";
 import Link from "next/link";
+import { HatchPattern } from "./hatch-pattern";
 
 export default function CTASection() {
   return (
     <div className="relative flex w-full flex-col items-center justify-center gap-2 overflow-hidden">
       <div className="relative z-10 flex items-center justify-center gap-6 self-stretch border-primary/12 border-t border-b px-6 py-12 md:px-24 md:py-12">
-        <div className="absolute inset-0 h-full w-full overflow-hidden">
-          <div className="relative h-full w-full">
-            {Array.from({ length: 300 }).map((_, i) => (
-              <div
-                className="-rotate-45 absolute h-4 w-full origin-top-left outline outline-border/60 outline-offset-[-0.25px]"
-                key={i}
-                style={{
-                  top: `${i * 16 - 120}px`,
-                  left: "-100%",
-                  width: "300%",
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        <HatchPattern className="absolute inset-0 h-full w-full" />
 
         <div className="relative z-20 flex w-full max-w-[586px] flex-col items-center justify-start gap-6 overflow-hidden rounded-lg px-6 py-5 md:py-8">
           <div className="flex flex-col items-start justify-start gap-3 self-stretch">

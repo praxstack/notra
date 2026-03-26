@@ -1,27 +1,66 @@
 import { Button } from "@notra/ui/components/ui/button";
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { ActivityFeed } from "../components/activity-feed";
 import BrandVoicePreview from "../components/brand-voice-preview";
-import CTASection from "../components/cta-section";
-import DocumentationSection from "../components/documentation-section";
-import FAQSection from "../components/faq-section";
-import IntegrationOrbit from "../components/integration-orbit";
-import { PricingCards } from "../components/pricing-section";
+import { HatchPattern } from "../components/hatch-pattern";
 import ReferencesPreview from "../components/references-preview";
 import TestimonialsSection from "../components/testimonials-section";
 import { SOCIAL_PROOF_LOGOS } from "../utils/constants";
+
+const DocumentationSection = dynamic(
+  () => import("../components/documentation-section"),
+);
+const FAQSection = dynamic(() => import("../components/faq-section"));
+const CTASection = dynamic(() => import("../components/cta-section"));
+const PricingCards = dynamic(() =>
+  import("../components/pricing-section").then((mod) => ({
+    default: mod.PricingCards,
+  })),
+);
+const IntegrationOrbit = dynamic(
+  () => import("../components/integration-orbit"),
+);
 
 export const metadata: Metadata = {
   title: "Notra - Turn your daily work into publish-ready content",
   description:
     "Notra connects to GitHub and soon Slack and Linear to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
+  alternates: {
+    canonical: "https://www.usenotra.com",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Notra",
+  url: "https://www.usenotra.com",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  creator: {
+    "@type": "Organization",
+    name: "Notra",
+    url: "https://www.usenotra.com",
+  },
 };
 
 export default function LandingPage() {
   return (
     <div className="flex w-full flex-col items-center justify-start overflow-hidden border-border/70 border-b">
+      <script
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        type="application/ld+json"
+      />
       <main className="flex w-full flex-col items-center justify-start pt-28 sm:pt-20 md:pt-24 lg:pt-54">
         <div className="flex w-full max-w-234.25 flex-col items-center justify-center gap-3 sm:gap-4 md:gap-5 lg:gap-6">
           <div className="flex flex-col items-center justify-center gap-4 self-stretch rounded-[3px] sm:gap-5 md:gap-6 lg:gap-8">
@@ -48,16 +87,7 @@ export default function LandingPage() {
         </div>
 
         <div className="mt-8 hidden items-stretch justify-center self-stretch border-border border-y sm:mt-10 md:mt-12 md:flex lg:mt-14">
-          <div className="relative w-4 overflow-hidden sm:w-6 md:w-8 lg:w-12">
-            <div className="-top-30 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
-              {Array.from({ length: 50 }).map((_, i) => (
-                <div
-                  className="h-3 origin-top-right rotate-45 self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
-                  key={i}
-                />
-              ))}
-            </div>
-          </div>
+          <HatchPattern className="w-4 sm:w-6 md:w-8 lg:w-12" />
 
           <div className="relative z-5 flex max-w-240 flex-1 flex-col">
             <div className="flex aspect-video w-full max-w-240 flex-col items-start justify-start overflow-hidden rounded-md bg-card shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)] sm:rounded-lg lg:rounded-[0.566rem]">
@@ -78,16 +108,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="relative w-4 overflow-hidden sm:w-6 md:w-8 lg:w-12">
-            <div className="-right-10 sm:-right-12.5 -top-30 md:-right-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
-              {Array.from({ length: 50 }).map((_, i) => (
-                <div
-                  className="h-3 origin-top-right rotate-45 self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
-                  key={i}
-                />
-              ))}
-            </div>
-          </div>
+          <HatchPattern className="w-4 sm:w-6 md:w-8 lg:w-12" />
         </div>
 
         <section
@@ -109,16 +130,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-start justify-center self-stretch md:hidden">
-            <div className="relative w-4 self-stretch overflow-hidden">
-              <div className="-top-30 -left-10 absolute flex w-30 flex-col items-start justify-start">
-                {Array.from({ length: 50 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="w-4 self-stretch" spacing={12} />
 
             <div className="flex flex-1 flex-col border-border border-r border-l">
               {SOCIAL_PROOF_LOGOS.map((logo, index) => (
@@ -140,29 +152,11 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <div className="relative w-4 self-stretch overflow-hidden">
-              <div className="-left-10 -top-30 absolute flex w-30 flex-col items-start justify-start">
-                {Array.from({ length: 50 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="w-4 self-stretch" spacing={12} />
           </div>
 
           <div className="hidden items-start justify-center self-stretch md:flex">
-            <div className="relative w-6 self-stretch overflow-hidden md:w-8 lg:w-12">
-              <div className="-top-30 -left-12.5 md:-left-14.5 absolute flex w-35 flex-col items-start justify-start md:w-40.5">
-                {Array.from({ length: 50 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="w-6 self-stretch md:w-8 lg:w-12" />
 
             <div className="flex flex-1 flex-wrap border-border border-r border-l">
               {SOCIAL_PROOF_LOGOS.map((logo, index) => (
@@ -185,16 +179,7 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <div className="relative w-6 self-stretch overflow-hidden md:w-8 lg:w-12">
-              <div className="-left-12.5 -top-30 md:-left-14.5 absolute flex w-35 flex-col items-start justify-start md:w-40.5">
-                {Array.from({ length: 50 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="w-6 self-stretch md:w-8 lg:w-12" />
           </div>
         </section>
 
@@ -217,22 +202,13 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-start justify-center self-stretch">
-            <div className="relative w-4 self-stretch overflow-hidden sm:w-6 md:w-8 lg:w-12">
-              <div className="-top-30 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
-                {Array.from({ length: 200 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="w-4 self-stretch sm:w-6 md:w-8 lg:w-12" />
 
             <div className="grid flex-1 grid-cols-1 gap-0 border-border border-r border-l md:grid-cols-2">
               <div className="flex flex-col items-start justify-start gap-4 border-border border-r-0 border-b p-4 sm:gap-6 sm:p-6 md:border-r md:p-8 lg:p-12">
                 <div className="flex flex-col gap-2">
                   <h3 className="font-sans font-semibold text-foreground text-lg leading-tight sm:text-xl">
-                    Activity feed
+                    Your work, automatically organized
                   </h3>
                   <p className="font-normal font-sans text-muted-foreground text-sm leading-relaxed md:text-base">
                     Every PR, issue, and conversation lands in one organized
@@ -248,7 +224,7 @@ export default function LandingPage() {
               <div className="flex flex-col items-start justify-start gap-4 border-border border-b p-4 sm:gap-6 sm:p-6 md:p-8 lg:p-12">
                 <div className="flex flex-col gap-2">
                   <h3 className="font-sans font-semibold text-foreground text-lg leading-tight sm:text-xl">
-                    Brand voice matching
+                    Sounds like you, not a robot
                   </h3>
                   <p className="font-normal font-sans text-muted-foreground text-sm leading-relaxed md:text-base">
                     Notra learns your tone and style so every draft sounds like
@@ -263,7 +239,7 @@ export default function LandingPage() {
               <div className="flex flex-col items-start justify-start gap-4 border-border border-r-0 bg-transparent p-4 sm:gap-6 sm:p-6 md:border-r md:p-8 lg:p-12">
                 <div className="flex flex-col gap-2">
                   <h3 className="font-sans font-semibold text-foreground text-lg leading-tight sm:text-xl">
-                    One-click integrations
+                    Connected in under a minute
                   </h3>
                   <p className="font-normal font-sans text-muted-foreground text-sm leading-relaxed md:text-base">
                     GitHub, Linear, Slack, and more plug in with a single click.
@@ -278,7 +254,7 @@ export default function LandingPage() {
               <div className="flex flex-col items-start justify-start gap-4 p-4 sm:gap-6 sm:p-6 md:p-8 lg:p-12">
                 <div className="flex flex-col gap-2">
                   <h3 className="font-sans font-semibold text-foreground text-lg leading-tight sm:text-xl">
-                    Writing references
+                    Teach it how you write
                   </h3>
                   <p className="font-normal font-sans text-muted-foreground text-sm leading-relaxed md:text-base">
                     Add tweets, posts, or custom text as references so the AI
@@ -291,16 +267,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="relative w-4 self-stretch overflow-hidden sm:w-6 md:w-8 lg:w-12">
-              <div className="-top-30 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
-                {Array.from({ length: 200 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
+            <HatchPattern className="w-4 self-stretch sm:w-6 md:w-8 lg:w-12" />
           </div>
         </section>
 

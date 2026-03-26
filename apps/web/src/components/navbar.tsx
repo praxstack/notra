@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MARKETING_NAV_LINKS } from "@/utils/navigation";
+import { HatchPattern } from "./hatch-pattern";
 import { NotraMark, notraMarkSvgString } from "./notra-mark";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -45,16 +46,7 @@ export function Navbar() {
     <>
       <div className="absolute top-0 left-0 z-20 flex h-14 w-full items-center justify-center border-border border-b sm:h-14 md:h-16 lg:h-[84px]">
         <div className="relative z-30 flex h-full w-full min-w-[320px] items-stretch justify-center">
-          <div className="relative w-4 overflow-hidden sm:w-6 md:w-8 lg:w-12">
-            <div className="-top-24 -left-10 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
-              {Array.from({ length: 36 }).map((_, i) => (
-                <div
-                  className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
-                  key={`left-rail-${i}`}
-                />
-              ))}
-            </div>
-          </div>
+          <HatchPattern className="w-4 sm:w-6 md:w-8 lg:w-12" />
 
           <div className="flex min-w-0 flex-1 items-center justify-between border-border border-r border-l bg-background/80 px-3 backdrop-blur-sm sm:px-4 md:px-5">
             <div className="flex min-w-0 items-center justify-center">
@@ -142,16 +134,7 @@ export function Navbar() {
             </button>
           </div>
 
-          <div className="relative w-4 overflow-hidden sm:w-6 md:w-8 lg:w-12">
-            <div className="-left-10 -top-24 sm:-left-12.5 md:-left-14.5 absolute flex w-30 flex-col items-start justify-start sm:w-35 md:w-40.5">
-              {Array.from({ length: 36 }).map((_, i) => (
-                <div
-                  className="-rotate-45 h-3 origin-top-left self-stretch outline outline-border/60 outline-offset-[-0.25px] sm:h-4"
-                  key={`right-rail-${i}`}
-                />
-              ))}
-            </div>
-          </div>
+          <HatchPattern className="w-4 sm:w-6 md:w-8 lg:w-12" />
         </div>
       </div>
 
