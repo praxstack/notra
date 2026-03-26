@@ -45,8 +45,8 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
-import { AddRepositoryButton } from "@/components/integrations/add-repository-button";
 import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
+import { AddRepositoryButton } from "@/components/integrations/add-repository-button";
 import { AddRepositoryDialog } from "@/components/integrations/add-repository-dialog";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import type {
@@ -356,181 +356,66 @@ export function AddTriggerDialog({
     [form, setOpen]
   );
 
-  return (<>
-    <Sheet onOpenChange={handleOpenChange} open={open}>
-      {trigger ? (
-        <SheetTrigger render={trigger} />
-      ) : (
-        <SheetTrigger
-          render={
-            <Button size="sm" variant="outline">
-              New trigger
-            </Button>
-          }
-        />
-      )}
-      <SheetContent className="gap-0 overflow-hidden sm:max-w-lg" side="right">
-        <SheetHeader className="shrink-0 border-b">
-          <SheetTitle className="text-2xl">
-            {isEditMode && "Edit Schedule"}
-            {!isEditMode &&
-              (isScheduleContext ? "Add Schedule" : "Add Event Trigger")}
-          </SheetTitle>
-          <SheetDescription>
-            {isEditMode && "Update the schedule configuration."}
-            {!isEditMode &&
-              (isScheduleContext
-                ? "Configure when and how to generate content automatically."
-                : "Choose a source, targets, and output to automate content.")}
-          </SheetDescription>
-        </SheetHeader>
-
-        <form
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
+  return (
+    <>
+      <Sheet onOpenChange={handleOpenChange} open={open}>
+        {trigger ? (
+          <SheetTrigger render={trigger} />
+        ) : (
+          <SheetTrigger
+            render={
+              <Button size="sm" variant="outline">
+                New trigger
+              </Button>
+            }
+          />
+        )}
+        <SheetContent
+          className="gap-0 overflow-hidden sm:max-w-lg"
+          side="right"
         >
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="space-y-4 px-4 py-4 pb-6">
-              <form.Field name="sourceType">
-                {(field) =>
-                  isScheduleContext ? null : (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name}>
-                        <RequiredLabel>Source</RequiredLabel>
-                      </Label>
-                      {isSourceLocked ? (
-                        <Input
-                          disabled
-                          id={field.name}
-                          value={
-                            availableSourceOptions[0]?.label ?? "GitHub webhook"
-                          }
-                        />
-                      ) : (
-                        <Select
-                          onValueChange={(value) => {
-                            if (!value) {
-                              return;
+          <SheetHeader className="shrink-0 border-b">
+            <SheetTitle className="text-2xl">
+              {isEditMode && "Edit Schedule"}
+              {!isEditMode &&
+                (isScheduleContext ? "Add Schedule" : "Add Event Trigger")}
+            </SheetTitle>
+            <SheetDescription>
+              {isEditMode && "Update the schedule configuration."}
+              {!isEditMode &&
+                (isScheduleContext
+                  ? "Configure when and how to generate content automatically."
+                  : "Choose a source, targets, and output to automate content.")}
+            </SheetDescription>
+          </SheetHeader>
+
+          <form
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+            onSubmit={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              form.handleSubmit();
+            }}
+          >
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="space-y-4 px-4 py-4 pb-6">
+                <form.Field name="sourceType">
+                  {(field) =>
+                    isScheduleContext ? null : (
+                      <div className="space-y-2">
+                        <Label htmlFor={field.name}>
+                          <RequiredLabel>Source</RequiredLabel>
+                        </Label>
+                        {isSourceLocked ? (
+                          <Input
+                            disabled
+                            id={field.name}
+                            value={
+                              availableSourceOptions[0]?.label ??
+                              "GitHub webhook"
                             }
-                            field.handleChange(value);
-                          }}
-                          value={field.state.value}
-                        >
-                          <SelectTrigger className="w-full" id={field.name}>
-                            <SelectValue placeholder="Source" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableSourceOptions.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  )
-                }
-              </form.Field>
-
-              <form.Subscribe selector={(state) => state.values.sourceType}>
-                {(sourceType) =>
-                  sourceType === "cron" ? (
-                    <>
-                      <form.Field name="name">
-                        {(field) => (
-                          <div className="space-y-2">
-                            <Label htmlFor={field.name}>
-                              <RequiredLabel>Name</RequiredLabel>
-                            </Label>
-                            <Input
-                              id={field.name}
-                              maxLength={MAX_SCHEDULE_NAME_LENGTH}
-                              onBlur={field.handleBlur}
-                              onChange={(e) =>
-                                field.handleChange(e.target.value)
-                              }
-                              placeholder="Weekly changelog"
-                              value={field.state.value}
-                            />
-                          </div>
-                        )}
-                      </form.Field>
-
-                      <form.Field name="schedule">
-                        {(field) => (
-                          <SchedulePicker
-                            onChange={field.handleChange}
-                            value={field.state.value}
                           />
-                        )}
-                      </form.Field>
-
-                      <form.Field name="lookbackWindow">
-                        {(field) => (
-                          <div className="space-y-2">
-                            <Label htmlFor={field.name}>Lookback window</Label>
-                            <Select
-                              onValueChange={(value) => {
-                                if (!value) {
-                                  return;
-                                }
-                                field.handleChange(value);
-                              }}
-                              value={field.state.value}
-                            >
-                              <SelectTrigger className="w-full" id={field.name}>
-                                <SelectValue placeholder="Lookback window">
-                                  <span className="capitalize">
-                                    {formatSnakeCaseLabel(field.state.value)}
-                                  </span>
-                                </SelectValue>
-                              </SelectTrigger>
-                              <SelectContent>
-                                {LOOKBACK_WINDOWS.map((window) => (
-                                  <SelectItem key={window} value={window}>
-                                    <span className="capitalize">
-                                      {formatSnakeCaseLabel(window)}
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-muted-foreground text-xs">
-                              Choose how far back we look when generating
-                              content.
-                            </p>
-                          </div>
-                        )}
-                      </form.Field>
-
-                      {brandVoices.length > 1 && (
-                        <form.Field name="brandVoiceId">
-                          {(field) => (
-                            <BrandVoiceCombobox
-                              id={field.name}
-                              onChange={field.handleChange}
-                              value={field.state.value}
-                              voices={brandVoices}
-                            />
-                          )}
-                        </form.Field>
-                      )}
-                    </>
-                  ) : (
-                    <form.Field name="eventType">
-                      {(field) => (
-                        <div className="space-y-2">
-                          <Label htmlFor={field.name}>
-                            <RequiredLabel>Event</RequiredLabel>
-                          </Label>
+                        ) : (
                           <Select
                             onValueChange={(value) => {
                               if (!value) {
@@ -541,16 +426,10 @@ export function AddTriggerDialog({
                             value={field.state.value}
                           >
                             <SelectTrigger className="w-full" id={field.name}>
-                              <SelectValue placeholder="Event">
-                                {
-                                  EVENT_OPTIONS.find(
-                                    (o) => o.value === field.state.value
-                                  )?.label
-                                }
-                              </SelectValue>
+                              <SelectValue placeholder="Source" />
                             </SelectTrigger>
                             <SelectContent>
-                              {EVENT_OPTIONS.map((option) => (
+                              {availableSourceOptions.map((option) => (
                                 <SelectItem
                                   key={option.value}
                                   value={option.value}
@@ -560,239 +439,371 @@ export function AddTriggerDialog({
                               ))}
                             </SelectContent>
                           </Select>
+                        )}
+                      </div>
+                    )
+                  }
+                </form.Field>
+
+                <form.Subscribe selector={(state) => state.values.sourceType}>
+                  {(sourceType) =>
+                    sourceType === "cron" ? (
+                      <>
+                        <form.Field name="name">
+                          {(field) => (
+                            <div className="space-y-2">
+                              <Label htmlFor={field.name}>
+                                <RequiredLabel>Name</RequiredLabel>
+                              </Label>
+                              <Input
+                                id={field.name}
+                                maxLength={MAX_SCHEDULE_NAME_LENGTH}
+                                onBlur={field.handleBlur}
+                                onChange={(e) =>
+                                  field.handleChange(e.target.value)
+                                }
+                                placeholder="Weekly changelog"
+                                value={field.state.value}
+                              />
+                            </div>
+                          )}
+                        </form.Field>
+
+                        <form.Field name="schedule">
+                          {(field) => (
+                            <SchedulePicker
+                              onChange={field.handleChange}
+                              value={field.state.value}
+                            />
+                          )}
+                        </form.Field>
+
+                        <form.Field name="lookbackWindow">
+                          {(field) => (
+                            <div className="space-y-2">
+                              <Label htmlFor={field.name}>
+                                Lookback window
+                              </Label>
+                              <Select
+                                onValueChange={(value) => {
+                                  if (!value) {
+                                    return;
+                                  }
+                                  field.handleChange(value);
+                                }}
+                                value={field.state.value}
+                              >
+                                <SelectTrigger
+                                  className="w-full"
+                                  id={field.name}
+                                >
+                                  <SelectValue placeholder="Lookback window">
+                                    <span className="capitalize">
+                                      {formatSnakeCaseLabel(field.state.value)}
+                                    </span>
+                                  </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {LOOKBACK_WINDOWS.map((window) => (
+                                    <SelectItem key={window} value={window}>
+                                      <span className="capitalize">
+                                        {formatSnakeCaseLabel(window)}
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-muted-foreground text-xs">
+                                Choose how far back we look when generating
+                                content.
+                              </p>
+                            </div>
+                          )}
+                        </form.Field>
+
+                        {brandVoices.length > 1 && (
+                          <form.Field name="brandVoiceId">
+                            {(field) => (
+                              <BrandVoiceCombobox
+                                id={field.name}
+                                onChange={field.handleChange}
+                                value={field.state.value}
+                                voices={brandVoices}
+                              />
+                            )}
+                          </form.Field>
+                        )}
+                      </>
+                    ) : (
+                      <form.Field name="eventType">
+                        {(field) => (
+                          <div className="space-y-2">
+                            <Label htmlFor={field.name}>
+                              <RequiredLabel>Event</RequiredLabel>
+                            </Label>
+                            <Select
+                              onValueChange={(value) => {
+                                if (!value) {
+                                  return;
+                                }
+                                field.handleChange(value);
+                              }}
+                              value={field.state.value}
+                            >
+                              <SelectTrigger className="w-full" id={field.name}>
+                                <SelectValue placeholder="Event">
+                                  {
+                                    EVENT_OPTIONS.find(
+                                      (o) => o.value === field.state.value
+                                    )?.label
+                                  }
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {EVENT_OPTIONS.map((option) => (
+                                  <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </form.Field>
+                    )
+                  }
+                </form.Subscribe>
+
+                <form.Field name="repositoryIds">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor={field.name}>
+                        <RequiredLabel>Targets</RequiredLabel>
+                      </Label>
+                      {isLoadingRepos && <Skeleton className="h-10 w-full" />}
+                      {!isLoadingRepos && repositories.length === 0 && (
+                        <div className="flex items-center gap-2 rounded-md border border-dashed p-3">
+                          <span className="flex-1 text-muted-foreground text-xs">
+                            No repositories connected.
+                          </span>
+                          <AddRepositoryButton
+                            onAdd={() => {
+                              setOpen(false);
+                              setAddRepoOpen(true);
+                            }}
+                          />
                         </div>
                       )}
-                    </form.Field>
-                  )
-                }
-              </form.Subscribe>
-
-              <form.Field name="repositoryIds">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>
-                      <RequiredLabel>Targets</RequiredLabel>
-                    </Label>
-                    {isLoadingRepos && <Skeleton className="h-10 w-full" />}
-                    {!isLoadingRepos && repositories.length === 0 && (
-                      <div className="flex items-center gap-2 rounded-md border border-dashed p-3">
-                        <span className="flex-1 text-muted-foreground text-xs">
-                          No repositories connected.
-                        </span>
-                        <AddRepositoryButton
-                          onAdd={() => {
-                            setOpen(false);
-                            setAddRepoOpen(true);
-                          }}
-                        />
-                      </div>
-                    )}
-                    {!isLoadingRepos && repositories.length > 0 && (
-                      <div ref={comboboxAnchor}>
-                        <Combobox
-                          items={repositoryOptions.map((repo) => repo.value)}
-                          multiple
-                          onValueChange={(value) =>
-                            field.handleChange(
-                              Array.isArray(value) ? value : []
-                            )
-                          }
-                          value={field.state.value}
-                        >
-                          <ComboboxChips>
-                            {field.state.value.map((repoId) => {
-                              const repo = repositoryOptions.find(
-                                (option) => option.value === repoId
-                              );
-                              if (!repo) {
-                                return null;
-                              }
-                              return (
-                                <ComboboxChip key={repo.value}>
-                                  {repo.label}
-                                </ComboboxChip>
-                              );
-                            })}
-                            <ComboboxChipsInput placeholder="Search repositories" />
-                          </ComboboxChips>
-                          <ComboboxContent anchor={comboboxAnchor.current}>
-                            <ComboboxEmpty>
-                              No repositories found.
-                            </ComboboxEmpty>
-                            <ComboboxList>
-                              {repositoryOptions.map((repo) => (
-                                <ComboboxItem
-                                  key={repo.value}
-                                  value={repo.value}
-                                >
-                                  {repo.label}
-                                </ComboboxItem>
-                              ))}
-                            </ComboboxList>
-                          </ComboboxContent>
-                        </Combobox>
-                      </div>
-                    )}
-                    <p className="text-muted-foreground text-xs">
-                      Pick one or more repositories.
-                    </p>
-                  </div>
-                )}
-              </form.Field>
-
-              <form.Field name="outputType">
-                {(field) => (
-                  <div className="space-y-2">
-                    <Label htmlFor={field.name}>
-                      <RequiredLabel>Output</RequiredLabel>
-                    </Label>
-                    <Select
-                      onValueChange={(value) => {
-                        if (!value) {
-                          return;
-                        }
-                        field.handleChange(value);
-                      }}
-                      value={field.state.value}
-                    >
-                      <SelectTrigger className="w-full" id={field.name}>
-                        <SelectValue placeholder="Output">
-                          <span className="flex items-center gap-2">
-                            <OutputTypeIcon
-                              className="size-4"
-                              outputType={field.state.value}
-                            />
-                            {
-                              OUTPUT_OPTIONS.find(
-                                (o) => o.value === field.state.value
-                              )?.label
+                      {!isLoadingRepos && repositories.length > 0 && (
+                        <div ref={comboboxAnchor}>
+                          <Combobox
+                            items={repositoryOptions.map((repo) => repo.value)}
+                            multiple
+                            onValueChange={(value) =>
+                              field.handleChange(
+                                Array.isArray(value) ? value : []
+                              )
                             }
-                          </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {OUTPUT_OPTIONS.map((option) => (
-                          <SelectItem
-                            disabled={option.disabled}
-                            key={option.value}
-                            value={option.value}
+                            value={field.state.value}
                           >
+                            <ComboboxChips>
+                              {field.state.value.map((repoId) => {
+                                const repo = repositoryOptions.find(
+                                  (option) => option.value === repoId
+                                );
+                                if (!repo) {
+                                  return null;
+                                }
+                                return (
+                                  <ComboboxChip key={repo.value}>
+                                    {repo.label}
+                                  </ComboboxChip>
+                                );
+                              })}
+                              <ComboboxChipsInput placeholder="Search repositories" />
+                            </ComboboxChips>
+                            <ComboboxContent anchor={comboboxAnchor.current}>
+                              <ComboboxEmpty>
+                                No repositories found.
+                              </ComboboxEmpty>
+                              <ComboboxList>
+                                {repositoryOptions.map((repo) => (
+                                  <ComboboxItem
+                                    key={repo.value}
+                                    value={repo.value}
+                                  >
+                                    {repo.label}
+                                  </ComboboxItem>
+                                ))}
+                              </ComboboxList>
+                            </ComboboxContent>
+                          </Combobox>
+                        </div>
+                      )}
+                      <p className="text-muted-foreground text-xs">
+                        Pick one or more repositories.
+                      </p>
+                    </div>
+                  )}
+                </form.Field>
+
+                <form.Field name="outputType">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor={field.name}>
+                        <RequiredLabel>Output</RequiredLabel>
+                      </Label>
+                      <Select
+                        onValueChange={(value) => {
+                          if (!value) {
+                            return;
+                          }
+                          field.handleChange(value);
+                        }}
+                        value={field.state.value}
+                      >
+                        <SelectTrigger className="w-full" id={field.name}>
+                          <SelectValue placeholder="Output">
                             <span className="flex items-center gap-2">
                               <OutputTypeIcon
                                 className="size-4"
-                                outputType={option.value}
+                                outputType={field.state.value}
                               />
-                              {option.label}
-                              {option.disabled ? " (Coming soon)" : ""}
+                              {
+                                OUTPUT_OPTIONS.find(
+                                  (o) => o.value === field.state.value
+                                )?.label
+                              }
                             </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </form.Field>
-
-              <div className="space-y-2">
-                <Label>Publish destination</Label>
-                <Input disabled placeholder="Coming soon (Webflow, Framer)" />
-              </div>
-
-              <form.Field name="autoPublish">
-                {(field) => (
-                  <div className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="flex items-center gap-1.5">
-                      <Label
-                        className="cursor-pointer font-medium text-sm"
-                        htmlFor={field.name}
-                      >
-                        Instant publish
-                      </Label>
-                      <Tooltip>
-                        <TooltipTrigger className="inline-flex cursor-help text-muted-foreground">
-                          <HugeiconsIcon
-                            icon={InformationCircleIcon}
-                            size={14}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          <p className="max-w-50 text-xs">
-                            When enabled, generated posts are published to the
-                            API immediately instead of saved as drafts.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {OUTPUT_OPTIONS.map((option) => (
+                            <SelectItem
+                              disabled={option.disabled}
+                              key={option.value}
+                              value={option.value}
+                            >
+                              <span className="flex items-center gap-2">
+                                <OutputTypeIcon
+                                  className="size-4"
+                                  outputType={option.value}
+                                />
+                                {option.label}
+                                {option.disabled ? " (Coming soon)" : ""}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Switch
-                      checked={field.state.value}
-                      id={field.name}
-                      onCheckedChange={field.handleChange}
-                    />
-                  </div>
+                  )}
+                </form.Field>
+
+                <div className="space-y-2">
+                  <Label>Publish destination</Label>
+                  <Input disabled placeholder="Coming soon (Webflow, Framer)" />
+                </div>
+
+                <form.Field name="autoPublish">
+                  {(field) => (
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex items-center gap-1.5">
+                        <Label
+                          className="cursor-pointer font-medium text-sm"
+                          htmlFor={field.name}
+                        >
+                          Instant publish
+                        </Label>
+                        <Tooltip>
+                          <TooltipTrigger className="inline-flex cursor-help text-muted-foreground">
+                            <HugeiconsIcon
+                              icon={InformationCircleIcon}
+                              size={14}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p className="max-w-50 text-xs">
+                              When enabled, generated posts are published to the
+                              API immediately instead of saved as drafts.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <Switch
+                        checked={field.state.value}
+                        id={field.name}
+                        onCheckedChange={field.handleChange}
+                      />
+                    </div>
+                  )}
+                </form.Field>
+              </div>
+            </ScrollArea>
+
+            <SheetFooter className="shrink-0 border-t bg-background pt-4">
+              <form.Subscribe
+                selector={(state) => ({
+                  canSubmit:
+                    state.values.repositoryIds.length > 0 &&
+                    (state.values.sourceType !== "cron" ||
+                      state.values.name.trim().length > 0) &&
+                    (state.values.sourceType !== "cron" ||
+                      state.values.schedule?.frequency),
+                  isSubmitting: mutation.isPending,
+                })}
+              >
+                {({ canSubmit, isSubmitting }) => (
+                  <Button disabled={isSubmitting || !canSubmit} type="submit">
+                    {(() => {
+                      if (isSubmitting) {
+                        return isEditMode ? "Saving..." : "Adding...";
+                      }
+
+                      if (isEditMode) {
+                        return "Save changes";
+                      }
+
+                      if (isScheduleContext) {
+                        return "Add schedule";
+                      }
+
+                      return "Add trigger";
+                    })()}
+                  </Button>
                 )}
-              </form.Field>
-            </div>
-          </ScrollArea>
-
-          <SheetFooter className="shrink-0 border-t bg-background pt-4">
-            <form.Subscribe
-              selector={(state) => ({
-                canSubmit:
-                  state.values.repositoryIds.length > 0 &&
-                  (state.values.sourceType !== "cron" ||
-                    state.values.name.trim().length > 0) &&
-                  (state.values.sourceType !== "cron" ||
-                    state.values.schedule?.frequency),
-                isSubmitting: mutation.isPending,
-              })}
-            >
-              {({ canSubmit, isSubmitting }) => (
-                <Button disabled={isSubmitting || !canSubmit} type="submit">
-                  {(() => {
-                    if (isSubmitting) {
-                      return isEditMode ? "Saving..." : "Adding...";
-                    }
-
-                    if (isEditMode) {
-                      return "Save changes";
-                    }
-
-                    if (isScheduleContext) {
-                      return "Add schedule";
-                    }
-
-                    return "Add trigger";
-                  })()}
-                </Button>
-              )}
-            </form.Subscribe>
-          </SheetFooter>
-        </form>
-      </SheetContent>
-    </Sheet>
-    {githubIntegrationId ? (
-      <AddRepositoryDialog
-        integrationId={githubIntegrationId}
-        onOpenChange={(isOpen) => {
-          setAddRepoOpen(isOpen);
-          if (!isOpen) {
-            setOpen(true);
-          }
-        }}
-        open={addRepoOpen}
-        organizationId={organizationId}
-      />
-    ) : (
-      <AddIntegrationDialog
-        onOpenChange={(isOpen) => {
-          setAddRepoOpen(isOpen);
-          if (!isOpen) {
-            setOpen(true);
-          }
-        }}
-        open={addRepoOpen}
-        organizationId={organizationId}
-      />
-    )}
-  </>);
+              </form.Subscribe>
+            </SheetFooter>
+          </form>
+        </SheetContent>
+      </Sheet>
+      {githubIntegrationId ? (
+        <AddRepositoryDialog
+          integrationId={githubIntegrationId}
+          onOpenChange={(isOpen) => {
+            setAddRepoOpen(isOpen);
+            if (!isOpen) {
+              setOpen(true);
+            }
+          }}
+          open={addRepoOpen}
+          organizationId={organizationId}
+        />
+      ) : (
+        <AddIntegrationDialog
+          onOpenChange={(isOpen) => {
+            setAddRepoOpen(isOpen);
+            if (!isOpen) {
+              setOpen(true);
+            }
+          }}
+          open={addRepoOpen}
+          organizationId={organizationId}
+        />
+      )}
+    </>
+  );
 }
