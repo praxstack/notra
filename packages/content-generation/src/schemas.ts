@@ -25,7 +25,7 @@ export const contentDataPointSettingsSchema = z.object({
   includePullRequests: z.boolean().default(true),
   includeCommits: z.boolean().default(true),
   includeReleases: z.boolean().default(true),
-  includeLinearIssues: z.boolean().default(false),
+  includeLinearData: z.boolean().default(false),
 });
 
 export const selectedItemsSchema = z.object({
@@ -47,6 +47,14 @@ export const selectedItemsSchema = z.object({
           tagName: z.string(),
         }),
       ])
+    )
+    .optional(),
+  linearIssueIds: z
+    .array(
+      z.object({
+        integrationId: z.string(),
+        issueId: z.string(),
+      })
     )
     .optional(),
 });
@@ -153,6 +161,7 @@ export const contentGenerationWorkflowPayloadSchema = z.object({
   brandVoiceId: z.string().min(1).optional(),
   dataPoints: contentDataPointSettingsSchema,
   selectedItems: selectedItemsSchema.optional(),
+  linearIntegrationIds: z.array(z.string()).optional(),
   aiCreditReserved: z.boolean(),
   source: z.enum(["api", "dashboard"]).default("dashboard"),
 });

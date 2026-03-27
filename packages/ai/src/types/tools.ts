@@ -1,3 +1,8 @@
+import type {
+  AgentDataPointSettings,
+  ResolveLinearIntegrationContext,
+} from "@notra/ai/types/agents";
+
 export interface CommitWindow {
   since: string;
   until: string;
@@ -32,6 +37,18 @@ export interface GitHubSelectionFilters {
   allowedReleaseTagsByIntegrationId?: Record<string, string[]>;
   allowedReleaseTagsGlobal?: string[];
   allowedCommitShas?: string[];
+}
+
+export interface LinearToolContext {
+  integrationId: string;
+  organizationId: string;
+  accessToken: string;
+  linearTeamId?: string | null;
+}
+
+export interface LinearToolsAccessConfig {
+  organizationId?: string;
+  allowedIntegrationIds?: string[];
 }
 
 export interface ErrorWithStatus {
@@ -73,3 +90,10 @@ export type CachedWrapper = <TTool extends object>(
     debug?: boolean;
   }
 ) => TTool;
+
+export interface BuildLinearDataToolsOptions {
+  organizationId: string;
+  allowedIntegrationIds: string[];
+  dataPointSettings?: AgentDataPointSettings;
+  resolveContext?: ResolveLinearIntegrationContext;
+}
