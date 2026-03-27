@@ -222,7 +222,12 @@ export const auth = betterAuth({
         beforeCreateOrganization: async ({ organization }) => {
           return validateAndNormalizeOrganizationSlug(organization);
         },
-        beforeCreateInvitation: async ({ organization }) => {
+        beforeCreateInvitation: async ({ invitation, organization }) => {
+          if (!isNotDisposableEmail(invitation.email)) {
+            throw new APIError("BAD_REQUEST", {
+              message: "Disposable email addresses are not allowed",
+            });
+          }
           await enforceTeamMembersLimit(organization.id);
         },
         beforeAddMember: async ({ organization }) => {
@@ -286,6 +291,10 @@ export const auth = betterAuth({
         max: 5,
       },
       "/email-otp/*": {
+        window: 60,
+        max: 5,
+      },
+      "/organization/invite-member": {
         window: 60,
         max: 5,
       },
