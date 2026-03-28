@@ -463,6 +463,7 @@ export interface PostSourceMetadata {
   triggerId: string;
   triggerSourceType: string;
   repositories: { owner: string; repo: string }[];
+  linearIntegrations?: Array<{ integrationId: string }>;
   lookbackWindow?: string;
   lookbackRange?: { start: string; end: string };
   eventType?: string;
@@ -472,6 +473,7 @@ export interface PostSourceMetadata {
   selectedCommitShas?: string[];
   selectedPullRequests?: Array<{ repositoryId: string; number: number }>;
   selectedReleases?: Array<{ repositoryId: string; tagName: string }>;
+  selectedLinearIssues?: Array<{ integrationId: string; issueId: string }>;
 }
 
 export const usersRelations = relations(users, ({ many }) => ({

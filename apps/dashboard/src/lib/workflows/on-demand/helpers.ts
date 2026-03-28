@@ -190,6 +190,13 @@ export function buildSelectedItemsInstructions(
     parts.push(`Focus ONLY on these specific releases: ${releaseList}`);
   }
 
+  if (selectedItems.linearIssueIds && selectedItems.linearIssueIds.length > 0) {
+    const issueList = selectedItems.linearIssueIds
+      .map((issue) => `${issue.issueId} (integration: ${issue.integrationId})`)
+      .join(", ");
+    parts.push(`Focus ONLY on these specific Linear issues: ${issueList}`);
+  }
+
   if (parts.length === 0) {
     return null;
   }

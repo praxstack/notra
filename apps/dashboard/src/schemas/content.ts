@@ -14,6 +14,9 @@ export const sourceMetadataSchema = z
     triggerId: z.string(),
     triggerSourceType: z.string(),
     repositories: z.array(z.object({ owner: z.string(), repo: z.string() })),
+    linearIntegrations: z
+      .array(z.object({ integrationId: z.string() }))
+      .optional(),
     lookbackWindow: z.string(),
     lookbackRange: z.object({ start: z.string(), end: z.string() }),
     brandVoiceName: z.string().optional(),
@@ -24,6 +27,9 @@ export const sourceMetadataSchema = z
       .optional(),
     selectedReleases: z
       .array(z.object({ repositoryId: z.string(), tagName: z.string() }))
+      .optional(),
+    selectedLinearIssues: z
+      .array(z.object({ integrationId: z.string(), issueId: z.string() }))
       .optional(),
   })
   .nullable()
@@ -175,6 +181,7 @@ export const createOnDemandContentSchema = z.object({
   lookbackWindow: z.enum(LOOKBACK_WINDOWS).default("last_7_days"),
   brandVoiceId: z.string().min(1).optional(),
   repositoryIds: z.array(z.string().min(1)).optional(),
+  linearIntegrationIds: z.array(z.string().min(1)).optional(),
   dataPoints: contentDataPointSettingsSchema.prefault({}),
   selectedItems: selectedItemsSchema.optional(),
 });

@@ -162,9 +162,17 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
           (repo): repo is RepositoryData => !!(repo.owner && repo.repo)
         );
 
-        if (repositoryIds && repositoryIds.length > 0) {
+        if (repositoryIds !== undefined) {
+          if (repositoryIds.length === 0) {
+            return [];
+          }
+
           const requestedIds = new Set(repositoryIds);
           return validRepos.filter((repo) => requestedIds.has(repo.id));
+        }
+
+        if (linearIntegrationIds && linearIntegrationIds.length > 0) {
+          return [];
         }
 
         return validRepos;
@@ -277,6 +285,9 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
               owner: repo.owner,
               repo: repo.repo,
             })),
+            linearIntegrations: linearIntegrationIds?.map((integrationId) => ({
+              integrationId,
+            })),
             lookbackWindow,
             lookbackRange: {
               start: lookback.start.toISOString(),
@@ -297,6 +308,9 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
                   ): item is { repositoryId: string; tagName: string } =>
                     typeof item !== "string"
                 )
+              : undefined,
+            selectedLinearIssues: selectedItems?.linearIssueIds?.length
+              ? selectedItems.linearIssueIds
               : undefined,
           };
 

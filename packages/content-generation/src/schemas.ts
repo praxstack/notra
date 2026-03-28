@@ -70,6 +70,7 @@ export const requestedGitHubRepositoriesSchema = z.object({
 
 export const requestedIntegrationsSchema = z.object({
   github: z.array(z.string().min(1)).min(1).optional(),
+  linear: z.array(z.string().min(1)).min(1).optional(),
 });
 
 export const createContentGenerationRequestSchema = z
@@ -79,6 +80,7 @@ export const createContentGenerationRequestSchema = z
     brandVoiceId: z.string().min(1).optional(),
     brandIdentityId: z.string().min(1).nullable().optional(),
     repositoryIds: z.array(z.string().min(1)).optional(),
+    linearIntegrationIds: z.array(z.string().min(1)).optional(),
     integrations: requestedIntegrationsSchema.optional(),
     github: requestedGitHubRepositoriesSchema.optional(),
     dataPoints: contentDataPointSettingsSchema.prefault({}),

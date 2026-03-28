@@ -156,6 +156,7 @@ export function CreateContentDialog({
       contentType: DEFAULT_CONTENT_TYPE,
       lookbackWindow: "last_7_days" as LookbackWindow,
       repositoryIds: [] as string[],
+      linearIntegrationIds: [] as string[],
       brandVoiceId: "" as string,
       dataPoints: DEFAULT_DATA_POINTS,
     },
@@ -364,6 +365,7 @@ export function CreateContentDialog({
       contentType: OnDemandContentType;
       lookbackWindow: LookbackWindow;
       repositoryIds: string[];
+      linearIntegrationIds?: string[];
       brandVoiceId?: string;
       dataPoints: ContentDataPointSettings;
       selectedItems?: SelectedItems;
@@ -470,6 +472,7 @@ export function CreateContentDialog({
     mutation.mutate({
       ...value,
       repositoryIds: githubRepoIds,
+      linearIntegrationIds: hasLinear ? selectedLinearIds : undefined,
       dataPoints: {
         ...value.dataPoints,
         includeLinearData: hasLinear,

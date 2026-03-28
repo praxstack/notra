@@ -1079,9 +1079,18 @@ export const contentRouter = {
         const linearIntegrations = await getLinearIntegrationsByOrganization(
           input.organizationId
         );
+        const requestedLinearIds = new Set(
+          input.linearIntegrationIds ?? input.integrations?.linear ?? []
+        );
+
         linearIntegrationIds = linearIntegrations
-          .filter((i) => i.enabled)
-          .map((i) => i.id);
+          .filter(
+            (integration) =>
+              integration.enabled &&
+              (requestedLinearIds.size === 0 ||
+                requestedLinearIds.has(integration.id))
+          )
+          .map((integration) => integration.id);
       }
 
       await triggerOnDemandContent({
@@ -1090,10 +1099,10 @@ export const contentRouter = {
         contentType: input.contentType,
         lookbackWindow: input.lookbackWindow,
         repositoryIds: input.repositoryIds ?? input.integrations?.github,
+        linearIntegrationIds,
         brandVoiceId: input.brandIdentityId ?? input.brandVoiceId,
         dataPoints: input.dataPoints,
         selectedItems: input.selectedItems,
-        linearIntegrationIds,
         aiCreditReserved,
         source: "dashboard",
       });
