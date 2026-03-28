@@ -193,6 +193,15 @@ export const githubIntegrationResponseSchema = z.object({
   defaultBranch: z.string().nullable(),
 });
 
+export const linearIntegrationResponseSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  linearOrganizationId: z.string(),
+  linearOrganizationName: z.string().nullable(),
+  linearTeamId: z.string().nullable(),
+  linearTeamName: z.string().nullable(),
+});
+
 const GITHUB_PAT_PREFIXES = [
   "ghp_",
   "github_pat_",
@@ -435,7 +444,7 @@ export const getBrandIdentityResponseSchema = z.object({
 export const getIntegrationsResponseSchema = z.object({
   github: z.array(githubIntegrationResponseSchema),
   slack: z.array(z.unknown()),
-  linear: z.array(z.unknown()),
+  linear: z.array(linearIntegrationResponseSchema),
   organization: organizationResponseSchema,
 });
 
@@ -476,6 +485,16 @@ export const createPostGenerationRequestSchema = z
       .optional()
       .openapi({
         example: ["repo_1", "repo_2"],
+        description:
+          "Deprecated. Use integrations.github with GitHub integration IDs instead.",
+      }),
+    linearIntegrationIds: z
+      .array(z.string().min(1))
+      .optional()
+      .openapi({
+        example: ["linear_integration_1"],
+        description:
+          "Deprecated. Use integrations.linear with Linear integration IDs instead.",
       }),
     integrations: z
       .object({
@@ -485,6 +504,13 @@ export const createPostGenerationRequestSchema = z
           .optional()
           .openapi({
             example: ["integration_1", "integration_2"],
+          }),
+        linear: z
+          .array(z.string().min(1))
+          .min(1)
+          .optional()
+          .openapi({
+            example: ["linear_integration_1"],
           }),
       })
       .optional(),
@@ -540,6 +566,14 @@ export const createPostGenerationRequestSchema = z
             ])
           )
           .optional(),
+        linearIssueIds: z
+          .array(
+            z.object({
+              integrationId: z.string(),
+              issueId: z.string(),
+            })
+          )
+          .optional(),
       })
       .optional(),
   })
@@ -555,7 +589,22 @@ export const createPostGenerationRequestSchema = z
     },
     {
       message:
-        "Provide only one repository selector: repositoryIds, integrations.github, or github.repositories",
+        "Provide only one GitHub source selector: integrations.github or github.repositories. repositoryIds is deprecated.",
+      path: ["integrations"],
+    }
+  )
+  .refine(
+    (value) => {
+      const linearSourceCount = [
+        value.linearIntegrationIds?.length ? 1 : 0,
+        value.integrations?.linear?.length ? 1 : 0,
+      ].reduce((sum, count) => sum + count, 0);
+
+      return linearSourceCount <= 1;
+    },
+    {
+      message:
+        "Provide only one Linear source selector: integrations.linear. linearIntegrationIds is deprecated.",
       path: ["integrations"],
     }
   )
