@@ -1,4 +1,5 @@
 import { contentTypeSchema } from "@notra/ai/schemas/content";
+import { POST_SLUG_MAX_LENGTH } from "@notra/ai/schemas/post";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 import {
@@ -40,6 +41,7 @@ export type SourceMetadata = z.infer<typeof sourceMetadataSchema>;
 export const contentSchema = z.object({
   id: z.string(),
   title: z.string(),
+  slug: z.string().nullable(),
   content: z.string(),
   markdown: z.string(),
   recommendations: z.string().nullable(),
@@ -54,6 +56,7 @@ export type ContentResponse = z.infer<typeof contentSchema>;
 export const postSchema = z.object({
   id: z.string(),
   title: z.string(),
+  slug: z.string().nullable(),
   content: z.string(),
   markdown: z.string(),
   recommendations: z.string().nullable(),
@@ -109,15 +112,19 @@ export const chatRequestSchema = z.object({
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
 
+const slugFieldSchema = z.string().slugify().min(1).max(POST_SLUG_MAX_LENGTH);
+
 export const updateContentSchema = z
   .object({
     title: z.string().trim().min(1).max(120).optional(),
+    slug: slugFieldSchema.nullable().optional(),
     markdown: z.string().min(1).optional(),
     status: postStatusSchema.optional(),
   })
   .refine(
     (data) =>
       data.title !== undefined ||
+      data.slug !== undefined ||
       data.markdown !== undefined ||
       data.status !== undefined,
     {

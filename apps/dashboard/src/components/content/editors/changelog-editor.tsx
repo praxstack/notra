@@ -1,5 +1,6 @@
 "use client";
 
+import { supportsPostSlug } from "@notra/ai/schemas/post";
 import {
   Tabs,
   TabsContent,
@@ -36,9 +37,12 @@ export function ChangelogEditor({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const slugInputRef = useRef<HTMLInputElement>(null);
 
   const currentMarkdown = state.editedMarkdown ?? content.markdown;
   const title = state.editingTitle ?? state.serverTitle;
+  const slug = state.editingSlug ?? state.serverSlug ?? "";
+  const showSlug = supportsPostSlug(content.contentType);
 
   const handleTextareaSelect = useCallback(() => {
     const textarea = textareaRef.current;
@@ -94,30 +98,106 @@ export function ChangelogEditor({
             </TabsTrigger>
           </TabsList>
         }
+        className={
+          showSlug
+            ? "[&_p.truncate]:overflow-visible [&_p.truncate]:text-clip [&_p.truncate]:whitespace-normal"
+            : undefined
+        }
         heading={
-          <input
-            aria-label="Post title"
-            className="w-full bg-transparent outline-none focus:ring-0"
-            onChange={(e) => actions.setEditingTitle(e.target.value)}
-            onFocus={(e) => {
-              if (state.editingTitle === null) {
-                actions.setEditingTitle(e.target.value);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                titleInputRef.current?.blur();
-              }
-              if (e.key === "Escape") {
-                actions.setEditingTitle(null);
-                titleInputRef.current?.blur();
-              }
-            }}
-            ref={titleInputRef}
-            type="text"
-            value={title}
-          />
+          showSlug ? (
+            <span className="flex flex-col gap-0.5">
+              <input
+                aria-label="Post title"
+                className="w-full bg-transparent outline-none focus:ring-0"
+                onChange={(e) => actions.setEditingTitle(e.target.value)}
+                onFocus={(e) => {
+                  if (state.editingTitle === null) {
+                    actions.setEditingTitle(e.target.value);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    titleInputRef.current?.blur();
+                  }
+                  if (e.key === "Escape") {
+                    actions.setEditingTitle(null);
+                    titleInputRef.current?.blur();
+                  }
+                }}
+                ref={titleInputRef}
+                type="text"
+                value={title}
+              />
+              <span className="flex items-center gap-1">
+                <span className="shrink-0 font-mono text-muted-foreground text-xs">
+                  /
+                </span>
+                <input
+                  aria-label="Post slug"
+                  className="w-full bg-transparent font-mono text-muted-foreground text-xs outline-none placeholder:text-muted-foreground/50 focus:text-foreground focus:ring-0"
+                  onBlur={() => {
+                    if (state.editingSlug !== null) {
+                      actions.setEditingSlug(
+                        state.editingSlug.replace(/^-+|-+$/g, "")
+                      );
+                    }
+                  }}
+                  onChange={(e) => {
+                    const v = e.target.value
+                      .toLowerCase()
+                      .replace(/[^a-z0-9\s-]/g, "")
+                      .replace(/\s+/g, "-")
+                      .replace(/-+/g, "-");
+                    actions.setEditingSlug(v);
+                  }}
+                  onFocus={() => {
+                    if (state.editingSlug === null) {
+                      actions.setEditingSlug(slug);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      slugInputRef.current?.blur();
+                    }
+                    if (e.key === "Escape") {
+                      actions.setEditingSlug(null);
+                      slugInputRef.current?.blur();
+                    }
+                  }}
+                  placeholder="add-a-slug"
+                  ref={slugInputRef}
+                  type="text"
+                  value={slug}
+                />
+              </span>
+            </span>
+          ) : (
+            <input
+              aria-label="Post title"
+              className="w-full bg-transparent outline-none focus:ring-0"
+              onChange={(e) => actions.setEditingTitle(e.target.value)}
+              onFocus={(e) => {
+                if (state.editingTitle === null) {
+                  actions.setEditingTitle(e.target.value);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  titleInputRef.current?.blur();
+                }
+                if (e.key === "Escape") {
+                  actions.setEditingTitle(null);
+                  titleInputRef.current?.blur();
+                }
+              }}
+              ref={titleInputRef}
+              type="text"
+              value={title}
+            />
+          )
         }
       >
         <TabsContent

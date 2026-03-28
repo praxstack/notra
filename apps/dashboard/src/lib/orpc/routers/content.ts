@@ -1,3 +1,4 @@
+import { supportsPostSlug } from "@notra/ai/schemas/post";
 import { createLinearClient } from "@notra/ai/utils/linear";
 import { createOctokit } from "@notra/ai/utils/octokit";
 import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
@@ -49,6 +50,7 @@ import type { AutumnCheckResponse } from "@/types/autumn";
 import { resolveLookbackRange } from "@/utils/lookback";
 import {
   badRequest,
+  conflict,
   internalServerError,
   notFound,
   paymentRequired,
@@ -87,6 +89,7 @@ function serializePost(post: {
   id: string;
   markdown: string;
   recommendations: string | null;
+  slug: string | null;
   status: "draft" | "published";
   title: string;
   updatedAt: Date;
@@ -94,6 +97,7 @@ function serializePost(post: {
   return {
     id: post.id,
     title: post.title,
+    slug: post.slug,
     content: post.content,
     markdown: post.markdown,
     recommendations: post.recommendations,
@@ -112,6 +116,7 @@ function serializeContent(post: {
   id: string;
   markdown: string;
   recommendations: string | null;
+  slug: string | null;
   sourceMetadata: unknown;
   status: "draft" | "published";
   title: string;
@@ -119,6 +124,7 @@ function serializeContent(post: {
   return {
     id: post.id,
     title: post.title,
+    slug: post.slug,
     content: post.content,
     markdown: post.markdown,
     recommendations: post.recommendations,
@@ -589,25 +595,46 @@ export const contentRouter = {
         input
       );
 
-      const [updatedPost] = await db
-        .update(posts)
-        .set(updateData)
-        .where(
-          and(
-            eq(posts.id, input.contentId),
-            eq(posts.organizationId, input.organizationId)
-          )
-        )
-        .returning();
-
-      if (!updatedPost) {
-        throw internalServerError("Failed to update content");
+      if (input.slug !== undefined) {
+        if (!supportsPostSlug(existingPost.contentType)) {
+          throw badRequest(
+            "Slug can only be set for blog posts and changelogs"
+          );
+        }
+        updateData.slug = input.slug;
       }
 
-      return {
-        success: true,
-        content: serializeContent(updatedPost),
-      };
+      try {
+        const [updatedPost] = await db
+          .update(posts)
+          .set(updateData)
+          .where(
+            and(
+              eq(posts.id, input.contentId),
+              eq(posts.organizationId, input.organizationId)
+            )
+          )
+          .returning();
+
+        if (!updatedPost) {
+          throw internalServerError("Failed to update content");
+        }
+
+        return {
+          success: true,
+          content: serializeContent(updatedPost),
+        };
+      } catch (error) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "23505"
+        ) {
+          throw conflict("A post with this slug already exists");
+        }
+        throw error;
+      }
     }),
   delete: baseProcedure
     .input(contentInputSchema)
