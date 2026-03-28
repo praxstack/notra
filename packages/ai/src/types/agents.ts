@@ -125,6 +125,7 @@ export interface BlogPostAgentResult {
 
 export interface BlogPostAgentOptions {
   organizationId: string;
+  voiceId?: string;
   repositories: Array<{
     integrationId: string;
     owner: string;

@@ -11,6 +11,7 @@ export async function handleBlogPost(
   try {
     const { postId, title, posts } = await generateBlogPost({
       organizationId: ctx.organizationId,
+      voiceId: ctx.voiceId,
       repositories: ctx.repositories,
       linearIntegrations: ctx.linearIntegrations,
       tone: ctx.tone,

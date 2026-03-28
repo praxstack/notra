@@ -6,6 +6,7 @@ import { getProfessionalBlogPostPrompt } from "@notra/ai/prompts/blog_post/profe
 import { getUserPrompt } from "@notra/ai/prompts/user";
 import { getValidToneProfile, type ToneProfile } from "@notra/ai/schemas/brand";
 import { getAISDKTelemetry } from "@notra/ai/telemetry";
+import { createGetBrandReferencesTool } from "@notra/ai/tools/brand-references";
 import { buildGitHubDataTools } from "@notra/ai/tools/github";
 import { buildLinearDataTools } from "@notra/ai/tools/linear";
 import {
@@ -37,6 +38,7 @@ export async function generateBlogPost(
 ): Promise<BlogPostAgentResult> {
   const {
     organizationId,
+    voiceId,
     repositories,
     linearIntegrations,
     tone = "Conversational",
@@ -99,6 +101,11 @@ export async function generateBlogPost(
       },
     },
     tools: {
+      getBrandReferences: createGetBrandReferencesTool({
+        organizationId,
+        voiceId,
+        agentType: "blog",
+      }),
       ...buildGitHubDataTools({
         organizationId,
         allowedIntegrationIds,
