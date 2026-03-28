@@ -98,7 +98,22 @@ export const createContentGenerationRequestSchema = z
     },
     {
       message:
-        "Provide only one repository selector: repositoryIds, integrations.github, or github.repositories",
+        "Provide only one GitHub source selector: integrations.github or github.repositories. repositoryIds is deprecated.",
+      path: ["integrations"],
+    }
+  )
+  .refine(
+    (value) => {
+      const linearSourceCount = [
+        value.linearIntegrationIds?.length ? 1 : 0,
+        value.integrations?.linear?.length ? 1 : 0,
+      ].reduce((sum, count) => sum + count, 0);
+
+      return linearSourceCount <= 1;
+    },
+    {
+      message:
+        "Provide only one Linear source selector: integrations.linear. linearIntegrationIds is deprecated.",
       path: ["integrations"],
     }
   )

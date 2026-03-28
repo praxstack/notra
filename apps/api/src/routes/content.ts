@@ -20,6 +20,7 @@ import {
   brandSettings,
   contentTriggers,
   githubIntegrations,
+  linearIntegrations,
   organizations,
   posts,
   repositoryOutputs,
@@ -278,7 +279,6 @@ async function resolveRequestedRepositoryIds(
   db: ReturnType<typeof createDb>,
   organizationId: string,
   request: {
-    repositoryIds?: string[];
     integrations?: {
       github?: string[];
     };
@@ -287,10 +287,6 @@ async function resolveRequestedRepositoryIds(
     };
   }
 ) {
-  if (request.repositoryIds?.length) {
-    return request.repositoryIds;
-  }
-
   if (request.integrations?.github?.length) {
     const uniqueIntegrationIds = Array.from(
       new Set(request.integrations.github)
@@ -400,6 +396,53 @@ async function resolveRequestedRepositoryIds(
   }
 
   return matchedRepositoryIds;
+}
+
+async function resolveRequestedLinearIntegrationIds(
+  db: ReturnType<typeof createDb>,
+  organizationId: string,
+  request: {
+    integrations?: {
+      linear?: string[];
+    };
+  }
+) {
+  const requestedIntegrationIds = request.integrations?.linear;
+
+  if (!requestedIntegrationIds?.length) {
+    return undefined;
+  }
+
+  const uniqueIntegrationIds = Array.from(new Set(requestedIntegrationIds));
+  const connectedIntegrations = await db
+    .select({
+      id: linearIntegrations.id,
+    })
+    .from(linearIntegrations)
+    .where(
+      and(
+        eq(linearIntegrations.organizationId, organizationId),
+        eq(linearIntegrations.enabled, true),
+        inArray(linearIntegrations.id, uniqueIntegrationIds)
+      )
+    );
+
+  const matchedIntegrationIds = connectedIntegrations.map(
+    (integration) => integration.id
+  );
+
+  if (matchedIntegrationIds.length !== uniqueIntegrationIds.length) {
+    const connectedIntegrationIds = new Set(matchedIntegrationIds);
+    const missingIntegrationIds = uniqueIntegrationIds.filter(
+      (integrationId) => !connectedIntegrationIds.has(integrationId)
+    );
+
+    throw new Error(
+      `Requested Linear integrations are not available for this organization: ${missingIntegrationIds.join(", ")}`
+    );
+  }
+
+  return matchedIntegrationIds;
 }
 
 async function resolveRequestedBrandVoiceId(
@@ -1704,14 +1747,25 @@ contentRoutes.openapi(createPostGenerationRoute, async (c) => {
   }
 
   let repositoryIds: string[] | undefined;
+  let linearIntegrationIds: string[] | undefined;
   let resolvedBrandVoiceId: string | null = null;
+  const requestedIntegrations = {
+    github: body.integrations?.github ?? body.repositoryIds,
+    linear: body.integrations?.linear ?? body.linearIntegrationIds,
+  };
 
   try {
     repositoryIds = await resolveRequestedRepositoryIds(db, orgId, {
-      repositoryIds: body.repositoryIds,
-      integrations: body.integrations,
+      integrations: requestedIntegrations,
       github: body.github,
     });
+    linearIntegrationIds = await resolveRequestedLinearIntegrationIds(
+      db,
+      orgId,
+      {
+        integrations: requestedIntegrations,
+      }
+    );
     resolvedBrandVoiceId = await resolveRequestedBrandVoiceId(
       db,
       orgId,
@@ -1767,6 +1821,7 @@ contentRoutes.openapi(createPostGenerationRoute, async (c) => {
     metadata: {
       lookbackWindow: body.lookbackWindow,
       repositoryCount: repositoryIds?.length ?? 0,
+      linearIntegrationCount: linearIntegrationIds?.length ?? 0,
     },
   });
 
@@ -1778,6 +1833,7 @@ contentRoutes.openapi(createPostGenerationRoute, async (c) => {
       contentType: body.contentType,
       lookbackWindow: body.lookbackWindow,
       repositoryIds,
+      linearIntegrationIds,
       brandVoiceId: resolvedBrandVoiceId ?? undefined,
       dataPoints: body.dataPoints,
       selectedItems: body.selectedItems,
@@ -2382,11 +2438,27 @@ contentRoutes.openapi(getIntegrationsRoute, async (c) => {
     },
   });
 
+  const linear = await db.query.linearIntegrations.findMany({
+    where: and(
+      eq(linearIntegrations.organizationId, orgId),
+      eq(linearIntegrations.enabled, true)
+    ),
+    orderBy: [asc(linearIntegrations.displayName), asc(linearIntegrations.id)],
+    columns: {
+      id: true,
+      displayName: true,
+      linearOrganizationId: true,
+      linearOrganizationName: true,
+      linearTeamId: true,
+      linearTeamName: true,
+    },
+  });
+
   return c.json(
     {
       github,
       slack: [],
-      linear: [],
+      linear,
       organization,
     },
     200
