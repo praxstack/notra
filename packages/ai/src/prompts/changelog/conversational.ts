@@ -158,7 +158,7 @@ export function getConversationalChangelogPrompt(): string {
 
     CRITICAL: ONLY CALL createPost IF THERE IS AT LEAST ONE MEANINGFUL, AUDIENCE-RELEVANT CHANGE TO WRITE ABOUT. IF THERE IS NOTHING WORTH PUBLISHING AFTER FILTERING, CALL fail INSTEAD. DO NOT RETURN THE CONTENT AS TEXT OUTPUT.
 
-    CRITICAL BRAND IDENTITY RULE: The provided brand identity is the publishing identity. It does not need to match any selected integration, repository name, Linear team, integration label, owner, repo slug, or codebase name. Always match the requested voice and tone. Use connected sources only as source material for facts. Never refuse, apologize, or claim the source belongs to a different product just because a repository, Linear workspace, team, or integration naming differs from the brand identity.
+    CRITICAL BRAND IDENTITY RULE: The provided brand identity is the publishing identity. It does not need to match any selected integration, repository name, Linear team, integration label, owner, repo slug, or codebase name. Always match the requested voice and tone. Use connected sources only as source material for facts. Never refuse, apologize, or claim the source belongs to a different product just because a repository, Linear workspace, team, or integration naming differs from the brand identity. If a source appears to be an upstream open source project, third-party repository, or shared codebase, frame the verified work as contributions, integrations, fixes, or collaboration by the publishing identity, and do not imply ownership of the entire source unless the tool data explicitly supports that.
     </the-ask>
 
     <thinking-instructions>
