@@ -431,29 +431,6 @@ export function CreateContentDialog({
 
   const handleCreate = useCallback(() => {
     const value = form.state.values;
-    const selectedItems: SelectedItems | undefined =
-      selectionsTouchedRef.current
-        ? {
-            commitShas: value.dataPoints.includeCommits
-              ? Array.from(selectedCommitKeys)
-              : [],
-            pullRequestNumbers: value.dataPoints.includePullRequests
-              ? Array.from(selectedPrKeys)
-                  .map((key) => prSelectionFromKey(key))
-                  .filter(
-                    (selection): selection is PrSelection => selection !== null
-                  )
-              : [],
-            releaseTagNames: value.dataPoints.includeReleases
-              ? Array.from(selectedReleaseKeys)
-                  .map((key) => releaseSelectionFromKey(key))
-                  .filter(
-                    (selection): selection is ReleaseSelection =>
-                      selection !== null
-                  )
-              : [],
-          }
-        : undefined;
     const githubRepoIds = value.repositoryIds.filter(
       (id) => !id.startsWith("linear:")
     );
@@ -469,6 +446,44 @@ export function CreateContentDialog({
       };
     });
 
+    const commitShas =
+      selectionsTouchedRef.current && value.dataPoints.includeCommits
+        ? Array.from(selectedCommitKeys)
+        : undefined;
+    const pullRequestNumbers =
+      selectionsTouchedRef.current && value.dataPoints.includePullRequests
+        ? Array.from(selectedPrKeys)
+            .map((key) => prSelectionFromKey(key))
+            .filter((selection): selection is PrSelection => selection !== null)
+        : undefined;
+    const releaseTagNames =
+      selectionsTouchedRef.current && value.dataPoints.includeReleases
+        ? Array.from(selectedReleaseKeys)
+            .map((key) => releaseSelectionFromKey(key))
+            .filter(
+              (selection): selection is ReleaseSelection => selection !== null
+            )
+        : undefined;
+    const linearIssueIds =
+      selectionsTouchedRef.current &&
+      hasLinear &&
+      selectedLinearIssues.length > 0
+        ? selectedLinearIssues
+        : undefined;
+
+    const selectedItems: SelectedItems =
+      commitShas?.length ||
+      pullRequestNumbers?.length ||
+      releaseTagNames?.length ||
+      linearIssueIds?.length
+        ? {
+            commitShas,
+            pullRequestNumbers,
+            releaseTagNames,
+            linearIssueIds,
+          }
+        : undefined;
+
     mutation.mutate({
       ...value,
       repositoryIds: githubRepoIds,
@@ -478,11 +493,7 @@ export function CreateContentDialog({
         includeLinearData: hasLinear,
       },
       brandVoiceId: value.brandVoiceId || undefined,
-      selectedItems: {
-        ...selectedItems,
-        linearIssueIds:
-          selectedLinearIssues.length > 0 ? selectedLinearIssues : undefined,
-      },
+      selectedItems,
     });
   }, [
     form,
