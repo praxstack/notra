@@ -4,7 +4,10 @@ import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
 import Link from "next/link";
-import { FOOTER_EXTENSION_LINKS, FOOTER_PRODUCT_LINKS } from "@/utils/navigation";
+import {
+  FOOTER_EXTENSION_LINKS,
+  FOOTER_PRODUCT_LINKS,
+} from "@/utils/navigation";
 import { SOCIAL_LINKS } from "../utils/constants";
 import { HatchPattern } from "./hatch-pattern";
 import { NotraMark } from "./notra-mark";
