@@ -28,6 +28,7 @@ import { useOrganizationsContext } from "@/components/providers/organization-pro
 import { useLinearConnectionToast } from "@/lib/hooks/use-linear-connection-toast";
 import {
   ALL_INTEGRATIONS,
+  EXTENSION_SOURCES,
   INPUT_SOURCES,
   INTEGRATION_CATEGORY_MAP,
   OUTPUT_SOURCES,
@@ -111,7 +112,7 @@ const IntegrationCard = memo(function IntegrationCard({
               size="sm"
               variant="outline"
             >
-              Connect
+              {integration.connectLabel ?? "Connect"}
             </Button>
           ) : null}
           {showComingSoon ? (
@@ -294,6 +295,25 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                 </p>
                 <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {OUTPUT_SOURCES.map((integration) => (
+                    <IntegrationCard
+                      activeCount={
+                        integrationsByType?.[integration.id]?.length || 0
+                      }
+                      integration={integration}
+                      isPending={isPending}
+                      key={integration.id}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="mb-4 font-semibold text-lg">Extensions</h2>
+                <p className="mb-4 text-muted-foreground text-sm">
+                  Use Notra from your favorite tools and launchers
+                </p>
+                <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {EXTENSION_SOURCES.map((integration) => (
                     <IntegrationCard
                       activeCount={
                         integrationsByType?.[integration.id]?.length || 0

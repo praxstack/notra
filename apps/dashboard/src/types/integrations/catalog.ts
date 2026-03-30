@@ -8,5 +8,6 @@ export interface IntegrationConfig {
   accentColor: string;
   href: string;
   available: boolean;
-  category: "input" | "output";
+  category: "input" | "output" | "extension";
+  connectLabel?: string;
 }

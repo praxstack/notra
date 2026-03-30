@@ -4,6 +4,7 @@ import { Framer } from "@notra/ui/components/ui/svgs/framer";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linear } from "@notra/ui/components/ui/svgs/linear";
 import { Marble } from "@notra/ui/components/ui/svgs/marble";
+import { Raycast } from "@notra/ui/components/ui/svgs/raycast";
 import { Slack } from "@notra/ui/components/ui/svgs/slack";
 import { Webflow } from "@notra/ui/components/ui/svgs/webflow";
 import type { IntegrationType } from "@/schemas/integrations";
@@ -76,11 +77,29 @@ export const OUTPUT_SOURCES: readonly IntegrationConfig[] = [
   },
 ];
 
-export const ALL_INTEGRATIONS = [...INPUT_SOURCES, ...OUTPUT_SOURCES];
+export const EXTENSION_SOURCES: readonly IntegrationConfig[] = [
+  {
+    id: "raycast",
+    name: "Raycast",
+    description: "Quickly access and search your Notra content from Raycast",
+    icon: <Raycast />,
+    accentColor: "#FF6363",
+    href: "raycast",
+    available: true,
+    category: "extension",
+    connectLabel: "Setup Guide",
+  },
+];
+
+export const ALL_INTEGRATIONS = [
+  ...INPUT_SOURCES,
+  ...OUTPUT_SOURCES,
+  ...EXTENSION_SOURCES,
+];
 
 export const INTEGRATION_CATEGORY_MAP: Record<
   IntegrationType,
-  "input" | "output"
+  "input" | "output" | "extension"
 > = {
   github: "input",
   linear: "input",
@@ -88,4 +107,5 @@ export const INTEGRATION_CATEGORY_MAP: Record<
   framer: "output",
   marble: "output",
   webflow: "output",
+  raycast: "extension",
 };
