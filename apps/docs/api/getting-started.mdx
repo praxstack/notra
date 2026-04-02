@@ -3,14 +3,17 @@ title: "Getting Started"
 description: "Get started with the Notra API."
 ---
 
-We provide two ways to interact with the Notra API:
+We provide three ways to interact with Notra:
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="REST API" icon="globe">
     Use raw `fetch` or `cURL` to call endpoints directly. Full control, no dependencies.
   </Card>
   <Card title="TypeScript SDK" icon="code">
     Use the official `@usenotra/sdk` package for a type-safe, ergonomic integration.
+  </Card>
+  <Card title="MCP Server" icon="sparkles" href="/integrations/mcp">
+    Connect AI tools to the hosted MCP endpoint with a bearer API key.
   </Card>
 </CardGroup>
 
@@ -49,6 +52,17 @@ console.log(result.posts);
 </Tip>
 
 Create and manage API keys in [Authentication](/api/authentication).
+
+<img
+  src="/images/api/api-keys-light.webp"
+  alt="API Keys in the Notra dashboard"
+  className="block dark:hidden"
+/>
+<img
+  src="/images/api/api-keys-dark.webp"
+  alt="API Keys in the Notra dashboard"
+  className="hidden dark:block"
+/>
 
 <Warning>
   Keep API keys private. Even read-only keys can be abused and burn through your
@@ -103,6 +117,10 @@ const post = await notra.content.getPost({
 });
 ```
 
+## Common Tasks
+
+See [Common Tasks](/api/common-tasks) for copy-paste examples such as updating an existing post and guidance on unsupported create-post patterns.
+
 ## Available Endpoints
 
 <CardGroup cols={2}>
@@ -128,5 +146,11 @@ const post = await notra.content.getPost({
   </Card>
   <Card title="TypeScript Types" icon="code" href="/api/types">
     Use our TypeScript definitions for type-safe development.
+  </Card>
+  <Card title="Caching" icon="database" href="/api/caching">
+    Learn how to cache paginated post data and invalidate it safely.
+  </Card>
+  <Card title="Common Tasks" icon="sparkles" href="/api/common-tasks">
+    Find practical examples for updates and other common implementation questions.
   </Card>
 </CardGroup>

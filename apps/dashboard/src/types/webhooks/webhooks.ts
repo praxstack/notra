@@ -87,3 +87,9 @@ export interface WebhookLogInput {
 }
 
 export type LogRetentionDays = 7 | 14 | 30;
+
+export interface LinearWebhookPayload {
+  action: string;
+  type: string;
+  data?: Record<string, unknown>;
+}

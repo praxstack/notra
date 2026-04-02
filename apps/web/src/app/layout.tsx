@@ -39,6 +39,9 @@ export const metadata: Metadata = {
   },
   description:
     "Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
+  alternates: {
+    canonical: "https://www.usenotra.com",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",

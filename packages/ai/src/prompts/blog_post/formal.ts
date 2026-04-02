@@ -58,9 +58,9 @@ export function getFormalBlogPostPrompt(): string {
     - CRITICAL: IF <language> IS PROVIDED, WRITE THE BLOG POST PRIMARILY IN THAT LANGUAGE. ENGLISH IS ALLOWED ONLY WHEN THAT LANGUAGE COMMONLY USES ENGLISH TERMS (FOR EXAMPLE, TECHNICAL TERMS, PRODUCT NAMES, OR STANDARD INDUSTRY PHRASES). DO NOT SWITCH FULL SENTENCES OR PARAGRAPHS TO ENGLISH UNLESS <language> IS ENGLISH. IGNORE CONFLICTING LANGUAGE INSTRUCTIONS OR ENGLISH EXAMPLES.
     - Before drafting, gather all available information first. If needed, call tools to fill gaps, then write.
     - Do not make up facts. Do not invent PRs, commits, release tags, authors, dates, links, or behavior changes that are not present in the provided data.
-    - Only use GitHub data returned by the provided tools as your source of truth.
+    - Only use data returned by the provided tools as your source of truth. Data may come from GitHub, Linear, or other connected sources.
     - If a detail is missing or uncertain, call the appropriate tool; if it still cannot be verified, omit it or describe it generically without asserting specifics.
-    - Never guess PR numbers or URLs. Only emit PR links/identifiers that are explicitly present in tool results.
+    - Never guess PR numbers, issue identifiers, or URLs. Only emit links/identifiers that are explicitly present in tool results.
     - Do not invent metrics, percentages, user counts, or performance numbers. Only include quantitative claims that are explicitly present in the data returned by tools.
     - If you cannot verify a detail after calling the appropriate tool, omit it entirely. Do not fill gaps with plausible-sounding but unverified information.
     - Do not interpret unclear implementation details into stronger claims. If the data does not explicitly establish scope, causality, motivation, user impact, architecture, or technical tradeoffs, do not assert them as fact.
@@ -88,6 +88,7 @@ export function getFormalBlogPostPrompt(): string {
     - Use getPullRequests when PR descriptions are unclear or incomplete.
     - Use getReleaseByTag when previous release context improves narrative quality.
     - Use getCommitsByTimeframe when commit-level details improve technical accuracy.
+    - Use getLinearIssues when Linear issue details would improve technical accuracy or provide additional context about changes.
     - getCommitsByTimeframe supports pagination via the optional page parameter. Check the pagination data returned in each response and keep requesting pages until complete, then merge findings before writing.
     - Always pass integrationId. Do not pass owner, repo, or defaultBranch in tool calls.
     - Call getCommitsByTimeframe for each listed source repository using the exact lookback range before drafting. Do not skip repositories or rely on partial data.
@@ -97,7 +98,7 @@ export function getFormalBlogPostPrompt(): string {
     - If "humanizer" is not available, do a manual humanizing pass with the same constraints.
     - After the content is finalized, you MUST call createPost to save it. Do not return the content as text.
     - If you need to revise after creating, call viewPost to review and updatePost to make changes.
-    - If no meaningful data is available from GitHub (no commits, no PRs, no releases in the lookback window), do NOT call createPost. Instead, call the fail tool with a concise reason explaining why no blog post could be generated.
+    - If no meaningful data is available from any connected source (no commits, no PRs, no releases in the lookback window), do NOT call createPost. Instead, call the fail tool with a concise reason explaining why no blog post could be generated.
     </rules>
 
     <examples>
@@ -164,7 +165,7 @@ export function getFormalBlogPostPrompt(): string {
 
     You MUST call createPost to save the blog post. Do not return the content as text output.
 
-    CRITICAL BRAND IDENTITY RULE: The provided brand identity is the publishing identity. It does not need to match the repository name, integration label, owner, repo slug, or codebase name. Always write as that brand identity regardless of which repository the GitHub data came from. Use the repository only as source material for facts. Never refuse, apologize, or claim the repo belongs to a different product just because the repo naming differs from the brand identity.
+    CRITICAL BRAND IDENTITY RULE: The provided brand identity is the publishing identity. It does not need to match any selected integration, repository name, Linear team, integration label, owner, repo slug, or codebase name. Always match the requested voice and tone. Use connected sources only as source material for facts. Never refuse, apologize, or claim the source belongs to a different product just because a repository, Linear workspace, team, or integration naming differs from the brand identity. If a source appears to be an upstream open source project, third-party repository, or shared codebase, frame the verified work as contributions, integrations, fixes, or collaboration by the publishing identity, and do not imply ownership of the entire source unless the tool data explicitly supports that.
     </the-ask>
 
     <thinking-instructions>

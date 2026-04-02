@@ -70,8 +70,18 @@
             "pages": ["overview"]
           },
           {
+            "group": "Developer & Productivity Tools",
+            "pages": ["integrations/mcp"]
+          },
+          {
             "group": "Integrations",
-            "pages": ["integrations/github", "integrations/featul"]
+            "pages": [
+              "integrations/github",
+              "integrations/linear",
+              "integrations/framer",
+              "integrations/featul",
+              "integrations/kontentspace"
+            ]
           }
         ],
         "root": "overview"
@@ -81,13 +91,15 @@
         "pages": [
           "api/getting-started",
           "api/authentication",
+          "api/caching",
+          "api/common-tasks",
           "api/pagination",
           "api/types",
           {
             "group": "Routes",
             "expanded": true,
             "openapi": {
-              "source": "openapi.json",
+              "source": "https://api.usenotra.com/openapi.json",
               "directory": "api-reference"
             },
             "pages": [

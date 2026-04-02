@@ -40,6 +40,24 @@ const postResponse = await fetch(
   }
 );
 const postData: NotraPostResponse = await postResponse.json();
+
+// Updated post
+const updateResponse = await fetch(
+  "https://api.usenotra.com/v1/posts/YOUR_POST_ID",
+  {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.NOTRA_API_KEY}`,
+    },
+    body: JSON.stringify({
+      title: "Ship notes for week 11",
+      markdown: "# Ship notes\n\nWe shipped a faster editor.",
+      status: "published",
+    }),
+  }
+);
+const updateData: NotraPostUpdateResponse = await updateResponse.json();
 ```
 
 ### Type Definitions
@@ -66,6 +84,7 @@ export type Post = {
   title: string;
   content: string; // HTML string
   markdown: string;
+  recommendations: string | null;
   contentType: string;
   sourceMetadata: SourceMetadata | null;
   status: "draft" | "published";
@@ -89,6 +108,24 @@ export type NotraPostListResponse = {
 
 export type NotraPostResponse = {
   post: Post | null;
+};
+
+export type Organization = {
+  id: string;
+  slug: string;
+  name: string;
+  logo: string | null;
+};
+
+export type NotraPostUpdateRequest = {
+  title?: string;
+  markdown?: string;
+  status?: "draft" | "published";
+};
+
+export type NotraPostUpdateResponse = {
+  organization: Organization;
+  post: Post;
 };
 ```
 
@@ -124,6 +161,7 @@ export const PostSchema = z.object({
   title: z.string(),
   content: z.string(), // HTML string
   markdown: z.string(),
+  recommendations: z.string().nullable(),
   contentType: z.string(),
   sourceMetadata: SourceMetadataSchema.nullable(),
   status: z.enum(["draft", "published"]),
@@ -147,5 +185,23 @@ export const PostListResponseSchema = z.object({
 
 export const PostResponseSchema = z.object({
   post: PostSchema.nullable(),
+});
+
+export const OrganizationSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  logo: z.string().nullable(),
+});
+
+export const PostUpdateRequestSchema = z.object({
+  title: z.string().min(1).max(120).optional(),
+  markdown: z.string().min(1).optional(),
+  status: z.enum(["draft", "published"]).optional(),
+});
+
+export const PostUpdateResponseSchema = z.object({
+  organization: OrganizationSchema,
+  post: PostSchema,
 });
 ```

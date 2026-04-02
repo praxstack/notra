@@ -3,12 +3,7 @@ import { Client as WorkflowClient } from "@upstash/workflow";
 
 interface BrandAnalysisEnv {
   QSTASH_TOKEN?: string;
-  BRAND_ANALYSIS_WORKFLOW_URL?: string;
-  BRAND_ANALYSIS_WORKFLOW_BASE_URL?: string;
-  CONTENT_GENERATION_WORKFLOW_BASE_URL?: string;
-  NEXT_PUBLIC_APP_URL?: string;
-  APP_URL?: string;
-  BETTER_AUTH_URL?: string;
+  WORKFLOW_BASE_URL?: string;
 }
 
 function trimTrailingSlash(value: string) {
@@ -16,16 +11,7 @@ function trimTrailingSlash(value: string) {
 }
 
 export function getBrandAnalysisWorkflowUrl(env: BrandAnalysisEnv) {
-  if (env.BRAND_ANALYSIS_WORKFLOW_URL) {
-    return env.BRAND_ANALYSIS_WORKFLOW_URL;
-  }
-
-  const baseUrl =
-    env.BRAND_ANALYSIS_WORKFLOW_BASE_URL ??
-    env.CONTENT_GENERATION_WORKFLOW_BASE_URL ??
-    env.NEXT_PUBLIC_APP_URL ??
-    env.APP_URL ??
-    env.BETTER_AUTH_URL;
+  const baseUrl = env.WORKFLOW_BASE_URL;
 
   if (!baseUrl) {
     return null;

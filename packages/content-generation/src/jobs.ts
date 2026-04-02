@@ -15,6 +15,18 @@ const JOB_LIMIT = 100;
 
 type SerializedJobFields = Record<string, string>;
 
+function parseStoredValue(value: unknown) {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 function getJobKey(jobId: string) {
   return `content-generation:job:${jobId}`;
 }
@@ -48,10 +60,7 @@ function serializeJobFieldUpdates(updates: Partial<ContentGenerationJob>) {
 function parseStoredJob(raw: Record<string, unknown>) {
   return contentGenerationJobSchema.parse(
     Object.fromEntries(
-      Object.entries(raw).map(([key, value]) => [
-        key,
-        typeof value === "string" ? JSON.parse(value) : value,
-      ])
+      Object.entries(raw).map(([key, value]) => [key, parseStoredValue(value)])
     )
   );
 }
@@ -88,9 +97,7 @@ export async function getContentGenerationJob(redis: Redis, jobId: string) {
     return null;
   }
 
-  return contentGenerationJobSchema.parse(
-    typeof raw === "string" ? JSON.parse(raw) : raw
-  );
+  return contentGenerationJobSchema.parse(parseStoredValue(raw));
 }
 
 export async function updateContentGenerationJob(

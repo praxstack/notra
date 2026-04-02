@@ -14,9 +14,11 @@ import type { WorkflowContext } from "@upstash/workflow";
 import { WorkflowAbort } from "@upstash/workflow";
 import { serve } from "@upstash/workflow/nextjs";
 import { and, eq } from "drizzle-orm";
+import { createRequestLogger } from "evlog";
 import { completeActiveGeneration } from "@/lib/generations/tracking";
 import { redis } from "@/lib/redis";
 import { getGitHubToolRepositoryContextByIntegrationId } from "@/lib/services/github-integration";
+import { getLinearToolContextByIntegrationId } from "@/lib/services/linear-integration";
 import { getBaseUrl } from "@/lib/triggers/qstash";
 import { appendWebhookLog } from "@/lib/webhooks/logging";
 import {
@@ -117,6 +119,7 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
       brandVoiceId,
       dataPoints,
       selectedItems,
+      linearIntegrationIds,
       aiCreditReserved,
       source,
     } = parseResult.data;
@@ -160,33 +163,46 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
           (repo): repo is RepositoryData => !!(repo.owner && repo.repo)
         );
 
-        if (repositoryIds && repositoryIds.length > 0) {
+        if (repositoryIds !== undefined) {
+          if (repositoryIds.length === 0) {
+            return [];
+          }
+
           const requestedIds = new Set(repositoryIds);
           return validRepos.filter((repo) => requestedIds.has(repo.id));
+        }
+
+        if (linearIntegrationIds && linearIntegrationIds.length > 0) {
+          return [];
         }
 
         return validRepos;
       }
     );
 
-    if (repositories.length === 0) {
+    const hasLinearSources =
+      dataPoints.includeLinearData &&
+      linearIntegrationIds &&
+      linearIntegrationIds.length > 0;
+
+    if (repositories.length === 0 && !hasLinearSources) {
       console.error(
-        "[OnDemandContent] No valid repositories found, canceling",
+        "[OnDemandContent] No valid data sources found, canceling",
         { organizationId }
       );
-      await context.run("complete-no-repos", async () => {
+      await context.run("complete-no-sources", async () => {
         await completeActiveGeneration(organizationId, {
           runId,
           triggerId: "manual_on_demand",
           outputType: contentType,
           triggerName: contentType,
           status: "failed",
-          reason: "No valid repositories found",
+          reason: "No valid data sources found",
           completedAt: new Date().toISOString(),
           source,
         });
       });
-      await context.run("refund-no-repos", async () => {
+      await context.run("refund-no-sources", async () => {
         await refundReservedAiCredit(organizationId, aiCreditReserved);
       });
       await context.cancel();
@@ -270,6 +286,9 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
               owner: repo.owner,
               repo: repo.repo,
             })),
+            linearIntegrations: linearIntegrationIds?.map((integrationId) => ({
+              integrationId,
+            })),
             lookbackWindow,
             lookbackRange: {
               start: lookback.start.toISOString(),
@@ -291,45 +310,79 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
                     typeof item !== "string"
                 )
               : undefined,
+            selectedLinearIssues: selectedItems?.linearIssueIds?.length
+              ? selectedItems.linearIssueIds
+              : undefined,
           };
 
-          const sourceTargets = repositories
-            .map(
-              (repo) => `${repo.owner}/${repo.repo} (integrationId: ${repo.id})`
-            )
-            .join(", ");
+          const sourceTargetParts = repositories.map(
+            (repo) => `${repo.owner}/${repo.repo} (integrationId: ${repo.id})`
+          );
 
-          return generateScheduledContent(contentType, {
-            organizationId,
-            repositories: repositories.map((repo) => ({
-              integrationId: repo.id,
-              owner: repo.owner,
-              repo: repo.repo,
-              defaultBranch: repo.defaultBranch,
-            })),
-            tone: getValidToneProfile(brand?.toneProfile, "Conversational"),
-            promptInput: {
-              sourceTargets,
-              todayUtc,
-              lookbackLabel: lookback.label,
-              lookbackStartIso: lookback.start.toISOString(),
-              lookbackEndIso: lookback.end.toISOString(),
-              companyName: brand?.companyName ?? undefined,
-              companyDescription: brand?.companyDescription ?? undefined,
-              audience: brand?.audience ?? undefined,
-              customInstructions: customInstructions || null,
-              language: brand?.language ?? undefined,
-            },
-            sourceMetadata,
-            dataPointSettings: dataPoints,
-            selectionFilters,
-            commitWindow: {
-              since: lookback.start.toISOString(),
-              until: lookback.end.toISOString(),
-            },
-            voiceId: brand?.id,
-            resolveContext: getGitHubToolRepositoryContextByIntegrationId,
+          const linearIntegrationRefs =
+            hasLinearSources && linearIntegrationIds
+              ? linearIntegrationIds.map((id) => ({ integrationId: id }))
+              : [];
+
+          for (const ref of linearIntegrationRefs) {
+            sourceTargetParts.push(
+              `Linear (integrationId: ${ref.integrationId})`
+            );
+          }
+
+          const sourceTargets = sourceTargetParts.join(", ");
+
+          const log = createRequestLogger({
+            method: "POST",
+            path: "/api/workflows/on-demand-content",
           });
+
+          log.set({
+            feature: "on_demand_content_generation",
+            organizationId,
+            contentType,
+            runId,
+            jobId: jobId ?? null,
+          });
+
+          try {
+            return await generateScheduledContent(contentType, {
+              organizationId,
+              repositories: repositories.map((repo) => ({
+                integrationId: repo.id,
+                owner: repo.owner,
+                repo: repo.repo,
+                defaultBranch: repo.defaultBranch,
+              })),
+              linearIntegrations: linearIntegrationRefs,
+              tone: getValidToneProfile(brand?.toneProfile, "Conversational"),
+              promptInput: {
+                sourceTargets,
+                todayUtc,
+                lookbackLabel: lookback.label,
+                lookbackStartIso: lookback.start.toISOString(),
+                lookbackEndIso: lookback.end.toISOString(),
+                companyName: brand?.companyName ?? undefined,
+                companyDescription: brand?.companyDescription ?? undefined,
+                audience: brand?.audience ?? undefined,
+                customInstructions: customInstructions || null,
+                language: brand?.language ?? undefined,
+              },
+              sourceMetadata,
+              dataPointSettings: dataPoints,
+              selectionFilters,
+              commitWindow: {
+                since: lookback.start.toISOString(),
+                until: lookback.end.toISOString(),
+              },
+              voiceId: brand?.id,
+              resolveContext: getGitHubToolRepositoryContextByIntegrationId,
+              resolveLinearContext: getLinearToolContextByIntegrationId,
+              log,
+            });
+          } finally {
+            log.emit();
+          }
         }
       );
 

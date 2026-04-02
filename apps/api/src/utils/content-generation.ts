@@ -3,8 +3,7 @@ import { Client as WorkflowClient } from "@upstash/workflow";
 
 interface ContentGenerationEnv {
   QSTASH_TOKEN?: string;
-  CONTENT_GENERATION_WORKFLOW_URL?: string;
-  CONTENT_GENERATION_WORKFLOW_BASE_URL?: string;
+  WORKFLOW_BASE_URL?: string;
 }
 
 function trimTrailingSlash(value: string) {
@@ -12,12 +11,8 @@ function trimTrailingSlash(value: string) {
 }
 
 export function getContentGenerationWorkflowUrl(env: ContentGenerationEnv) {
-  if (env.CONTENT_GENERATION_WORKFLOW_URL) {
-    return env.CONTENT_GENERATION_WORKFLOW_URL;
-  }
-
-  if (env.CONTENT_GENERATION_WORKFLOW_BASE_URL) {
-    return `${trimTrailingSlash(env.CONTENT_GENERATION_WORKFLOW_BASE_URL)}/api/workflows/on-demand-content`;
+  if (env.WORKFLOW_BASE_URL) {
+    return `${trimTrailingSlash(env.WORKFLOW_BASE_URL)}/api/workflows/on-demand-content`;
   }
 
   return null;

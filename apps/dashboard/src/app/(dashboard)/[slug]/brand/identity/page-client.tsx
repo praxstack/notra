@@ -3,6 +3,11 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ToneProfile } from "@notra/ai/schemas/tone";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@notra/ui/components/ui/alert";
 import { Button } from "@notra/ui/components/ui/button";
 import {
   Card,
@@ -36,6 +41,7 @@ import {
 } from "../../../../../lib/hooks/use-brand-analysis";
 import { useReferences } from "../../../../../lib/hooks/use-brand-references";
 import { AddIdentityDialog } from "./components/add-identity-dialog";
+import { AnalysisStepper } from "./components/analysis-stepper";
 import { BrandForm } from "./components/brand-form";
 import { ModalContent } from "./components/modal-content";
 import { ReferencesList } from "./components/references-list";
@@ -411,6 +417,24 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           organizationId={organizationId}
           startPolling={startPolling}
         />
+
+        {(isAnalyzing || progressError) && (
+          <Alert variant={progressError ? "destructive" : "default"}>
+            <AlertTitle>
+              {progressError
+                ? "Brand analysis failed"
+                : "Brand analysis is running"}
+            </AlertTitle>
+            <AlertDescription className="space-y-3">
+              <p>
+                {progressError
+                  ? progressError
+                  : "We are extracting the website details now. The form updates automatically as soon as the analysis finishes."}
+              </p>
+              {isAnalyzing && <AnalysisStepper progress={effectiveProgress} />}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Tabs
           onValueChange={(v) => {

@@ -105,9 +105,14 @@ const EVENT_ICON: Record<EventType, typeof GitPullRequestIcon> = {
   PR: GitPullRequestIcon,
   Commit: GitCommitIcon,
   Release: Rocket01Icon,
+  LinearIssue: Tick01Icon,
 };
 
+import { Github } from "@notra/ui/components/ui/svgs/github";
+import { Linear } from "@notra/ui/components/ui/svgs/linear";
+import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
 import { AddRepositoryButton } from "@/components/integrations/add-repository-button";
+import { AddRepositoryDialog } from "@/components/integrations/add-repository-dialog";
 import { getOutputTypeLabel, OutputTypeIcon } from "@/utils/output-types";
 
 interface CreateContentDialogProps {
@@ -120,6 +125,11 @@ export function CreateContentDialog({
   organizationId,
 }: CreateContentDialogProps) {
   const [open, setOpen] = useState(false);
+  const [addRepoOpen, setAddRepoOpen] = useState(false);
+  const [addRepoMode, setAddRepoMode] = useState<
+    "integration" | "repository" | null
+  >(null);
+  const [waitingForWebhookSetup, setWaitingForWebhookSetup] = useState(false);
   const [step, setStep] = useState<Step>("configure");
   const [dataSourcesOpen, setDataSourcesOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -130,9 +140,13 @@ export function CreateContentDialog({
   const [selectedReleaseKeys, setSelectedReleaseKeys] = useState<Set<string>>(
     new Set()
   );
+  const [selectedLinearKeys, setSelectedLinearKeys] = useState<Set<string>>(
+    new Set()
+  );
   const lastInitializedParamsRef = useRef("");
   const previewWarningKeyRef = useRef<string>("");
   const selectionsTouchedRef = useRef(false);
+  const openingAddRepoFlowRef = useRef(false);
 
   const queryClient = useQueryClient();
   const comboboxAnchor = useComboboxAnchor();
@@ -142,6 +156,7 @@ export function CreateContentDialog({
       contentType: DEFAULT_CONTENT_TYPE,
       lookbackWindow: "last_7_days" as LookbackWindow,
       repositoryIds: [] as string[],
+      linearIntegrationIds: [] as string[],
       brandVoiceId: "" as string,
       dataPoints: DEFAULT_DATA_POINTS,
     },
@@ -163,38 +178,79 @@ export function CreateContentDialog({
     })
   );
 
-  const { repositories, repositoryOptions, githubIntegrationId } =
-    useMemo(() => {
-      const githubIntegrations =
-        integrationsResponse?.integrations.filter((i) => i.type === "github") ??
-        [];
-      const repos = githubIntegrations.flatMap((i) => i.repositories);
-      return {
-        repositories: repos,
-        repositoryOptions: repos.map((r) => ({
-          value: r.id,
-          label: r.defaultBranch
-            ? `${r.owner}/${r.repo} · ${r.defaultBranch}`
-            : `${r.owner}/${r.repo}`,
-        })),
-        githubIntegrationId: githubIntegrations[0]?.id,
-      };
-    }, [integrationsResponse]);
+  const {
+    repositories,
+    integrationOptions,
+    githubIntegrationId,
+    hasLinearIntegrations,
+  } = useMemo(() => {
+    const githubIntegrations =
+      integrationsResponse?.integrations.filter(
+        (i) => i.type === "github" && i.enabled
+      ) ?? [];
+    const linearIntegrationsList =
+      integrationsResponse?.integrations.filter(
+        (i) => i.type === "linear" && i.enabled
+      ) ?? [];
+    const repos = githubIntegrations.flatMap((i) =>
+      i.repositories.filter((r) => r.enabled)
+    );
+
+    const options: Array<{
+      value: string;
+      label: string;
+      type: "github" | "linear";
+    }> = [
+      ...repos.map((r) => ({
+        value: r.id,
+        label: r.defaultBranch
+          ? `${r.owner}/${r.repo} · ${r.defaultBranch}`
+          : `${r.owner}/${r.repo}`,
+        type: "github" as const,
+      })),
+      ...linearIntegrationsList.map((i) => ({
+        value: `linear:${i.id}`,
+        label: i.displayName,
+        type: "linear" as const,
+      })),
+    ];
+
+    return {
+      repositories: repos,
+      integrationOptions: options,
+      githubIntegrationId: githubIntegrations[0]?.id,
+      hasLinearIntegrations: linearIntegrationsList.length > 0,
+    };
+  }, [integrationsResponse]);
 
   const repositoryIds = useStore(form.store, (s) => s.values.repositoryIds);
   const lookbackWindow = useStore(form.store, (s) => s.values.lookbackWindow);
   const dataPoints = useStore(form.store, (s) => s.values.dataPoints);
 
+  const githubRepoIds = useMemo(
+    () => repositoryIds.filter((id) => !id.startsWith("linear:")),
+    [repositoryIds]
+  );
+
+  const selectedLinearIds = useMemo(
+    () =>
+      repositoryIds
+        .filter((id) => id.startsWith("linear:"))
+        .map((id) => id.replace("linear:", "")),
+    [repositoryIds]
+  );
+
   const previewParamsKey = useMemo(
     () =>
       JSON.stringify({
-        repositoryIds,
+        repositoryIds: githubRepoIds,
+        linearIntegrationIds: selectedLinearIds,
         lookbackWindow,
         includeCommits: dataPoints.includeCommits,
         includePullRequests: dataPoints.includePullRequests,
         includeReleases: dataPoints.includeReleases,
       }),
-    [repositoryIds, lookbackWindow, dataPoints]
+    [githubRepoIds, selectedLinearIds, lookbackWindow, dataPoints]
   );
 
   const {
@@ -205,14 +261,19 @@ export function CreateContentDialog({
     ...dashboardOrpc.content.preview.queryOptions({
       input: {
         organizationId,
-        repositoryIds,
+        repositoryIds: githubRepoIds,
         lookbackWindow,
         includeCommits: dataPoints.includeCommits,
         includePullRequests: dataPoints.includePullRequests,
         includeReleases: dataPoints.includeReleases,
+        linearIntegrationIds:
+          selectedLinearIds.length > 0 ? selectedLinearIds : undefined,
       },
     }),
-    enabled: open && step === "review" && repositoryIds.length > 0,
+    enabled:
+      open &&
+      step === "review" &&
+      (githubRepoIds.length > 0 || selectedLinearIds.length > 0),
     staleTime: 60_000,
   });
 
@@ -232,7 +293,10 @@ export function CreateContentDialog({
   const previewFailures = previewResponse?.failures ?? [];
 
   useEffect(() => {
-    if (!previewData || lastInitializedParamsRef.current === previewParamsKey) {
+    if (
+      (!previewData && !previewResponse?.linearIntegrations) ||
+      lastInitializedParamsRef.current === previewParamsKey
+    ) {
       return;
     }
     lastInitializedParamsRef.current = previewParamsKey;
@@ -241,7 +305,8 @@ export function CreateContentDialog({
     const commitKeys = new Set<string>();
     const prKeys = new Set<string>();
     const relKeys = new Set<string>();
-    for (const repo of previewData) {
+    const linearKeys = new Set<string>();
+    for (const repo of previewData ?? []) {
       for (const commit of repo.commits) {
         commitKeys.add(commit.sha);
       }
@@ -262,9 +327,15 @@ export function CreateContentDialog({
         );
       }
     }
+    for (const li of previewResponse?.linearIntegrations ?? []) {
+      for (const issue of li.issues) {
+        linearKeys.add(`${li.integrationId}:${issue.id}`);
+      }
+    }
     setSelectedCommitKeys(commitKeys);
     setSelectedPrKeys(prKeys);
     setSelectedReleaseKeys(relKeys);
+    setSelectedLinearKeys(linearKeys);
   }, [previewData, previewParamsKey]);
 
   useEffect(() => {
@@ -294,6 +365,7 @@ export function CreateContentDialog({
       contentType: OnDemandContentType;
       lookbackWindow: LookbackWindow;
       repositoryIds: string[];
+      linearIntegrationIds?: string[];
       brandVoiceId?: string;
       dataPoints: ContentDataPointSettings;
       selectedItems?: SelectedItems;
@@ -323,17 +395,29 @@ export function CreateContentDialog({
     (next: boolean) => {
       setOpen(next);
       if (!next) {
+        const preserveState =
+          openingAddRepoFlowRef.current || addRepoMode !== null;
+        openingAddRepoFlowRef.current = false;
+
+        if (preserveState) {
+          return;
+        }
+
+        setAddRepoOpen(false);
+        setAddRepoMode(null);
+        setWaitingForWebhookSetup(false);
         form.reset();
         setStep("configure");
         setCurrentPage(1);
         setSelectedCommitKeys(new Set());
         setSelectedPrKeys(new Set());
         setSelectedReleaseKeys(new Set());
+        setSelectedLinearKeys(new Set());
         lastInitializedParamsRef.current = "";
         selectionsTouchedRef.current = false;
       }
     },
-    [form]
+    [addRepoMode, form]
   );
 
   const handleContinue = useCallback(() => {
@@ -347,43 +431,83 @@ export function CreateContentDialog({
 
   const handleCreate = useCallback(() => {
     const value = form.state.values;
-    const selectedItems: SelectedItems | undefined =
-      selectionsTouchedRef.current
+    const githubRepoIds = value.repositoryIds.filter(
+      (id) => !id.startsWith("linear:")
+    );
+    const hasLinear = value.repositoryIds.some((id) =>
+      id.startsWith("linear:")
+    );
+
+    const selectedLinearIssues = Array.from(selectedLinearKeys).map((key) => {
+      const separatorIdx = key.indexOf(":");
+      return {
+        integrationId: key.slice(0, separatorIdx),
+        issueId: key.slice(separatorIdx + 1),
+      };
+    });
+
+    const commitShas =
+      selectionsTouchedRef.current && value.dataPoints.includeCommits
+        ? Array.from(selectedCommitKeys)
+        : undefined;
+    const pullRequestNumbers =
+      selectionsTouchedRef.current && value.dataPoints.includePullRequests
+        ? Array.from(selectedPrKeys)
+            .map((key) => prSelectionFromKey(key))
+            .filter((selection): selection is PrSelection => selection !== null)
+        : undefined;
+    const releaseTagNames =
+      selectionsTouchedRef.current && value.dataPoints.includeReleases
+        ? Array.from(selectedReleaseKeys)
+            .map((key) => releaseSelectionFromKey(key))
+            .filter(
+              (selection): selection is ReleaseSelection => selection !== null
+            )
+        : undefined;
+    const linearIssueIds =
+      selectionsTouchedRef.current &&
+      hasLinear &&
+      selectedLinearIssues.length > 0
+        ? selectedLinearIssues
+        : undefined;
+
+    const selectedItems: SelectedItems =
+      commitShas?.length ||
+      pullRequestNumbers?.length ||
+      releaseTagNames?.length ||
+      linearIssueIds?.length
         ? {
-            commitShas: value.dataPoints.includeCommits
-              ? Array.from(selectedCommitKeys)
-              : [],
-            pullRequestNumbers: value.dataPoints.includePullRequests
-              ? Array.from(selectedPrKeys)
-                  .map((key) => prSelectionFromKey(key))
-                  .filter(
-                    (selection): selection is PrSelection => selection !== null
-                  )
-              : [],
-            releaseTagNames: value.dataPoints.includeReleases
-              ? Array.from(selectedReleaseKeys)
-                  .map((key) => releaseSelectionFromKey(key))
-                  .filter(
-                    (selection): selection is ReleaseSelection =>
-                      selection !== null
-                  )
-              : [],
+            commitShas,
+            pullRequestNumbers,
+            releaseTagNames,
+            linearIssueIds,
           }
         : undefined;
+
     mutation.mutate({
       ...value,
+      repositoryIds: githubRepoIds,
+      linearIntegrationIds: hasLinear ? selectedLinearIds : undefined,
+      dataPoints: {
+        ...value.dataPoints,
+        includeLinearData: hasLinear,
+      },
       brandVoiceId: value.brandVoiceId || undefined,
       selectedItems,
     });
-  }, [form, mutation, selectedCommitKeys, selectedPrKeys, selectedReleaseKeys]);
+  }, [
+    form,
+    mutation,
+    selectedCommitKeys,
+    selectedPrKeys,
+    selectedReleaseKeys,
+    selectedLinearKeys,
+  ]);
 
   const eventCounts = useMemo(() => {
-    if (!previewData) {
-      return { total: 0, selected: 0 };
-    }
     let total = 0;
     let selected = 0;
-    for (const repo of previewData) {
+    for (const repo of previewData ?? []) {
       if (dataPoints.includeCommits) {
         total += repo.commits.length;
         for (const commit of repo.commits) {
@@ -423,13 +547,23 @@ export function CreateContentDialog({
         }
       }
     }
+    for (const li of previewResponse?.linearIntegrations ?? []) {
+      total += li.issues.length;
+      for (const issue of li.issues) {
+        if (selectedLinearKeys.has(`${li.integrationId}:${issue.id}`)) {
+          selected++;
+        }
+      }
+    }
     return { total, selected };
   }, [
     previewData,
+    previewResponse?.linearIntegrations,
     dataPoints,
     selectedCommitKeys,
     selectedPrKeys,
     selectedReleaseKeys,
+    selectedLinearKeys,
   ]);
 
   const { paginatedRepos, totalPages } = useMemo(() => {
@@ -528,20 +662,19 @@ export function CreateContentDialog({
   }, [previewData, dataPoints, currentPage]);
 
   const handleToggleAll = useCallback(() => {
-    if (!previewData) {
-      return;
-    }
     selectionsTouchedRef.current = true;
     const allSelected = eventCounts.selected === eventCounts.total;
     if (allSelected) {
       setSelectedCommitKeys(new Set());
       setSelectedPrKeys(new Set());
       setSelectedReleaseKeys(new Set());
+      setSelectedLinearKeys(new Set());
     } else {
       const commitKeys = new Set<string>();
       const prKeys = new Set<string>();
       const relKeys = new Set<string>();
-      for (const repo of previewData) {
+      const linearKeys = new Set<string>();
+      for (const repo of previewData ?? []) {
         if (dataPoints.includeCommits) {
           for (const c of repo.commits) {
             commitKeys.add(c.sha);
@@ -568,11 +701,22 @@ export function CreateContentDialog({
           }
         }
       }
+      for (const li of previewResponse?.linearIntegrations ?? []) {
+        for (const issue of li.issues) {
+          linearKeys.add(`${li.integrationId}:${issue.id}`);
+        }
+      }
       setSelectedCommitKeys(commitKeys);
       setSelectedPrKeys(prKeys);
       setSelectedReleaseKeys(relKeys);
+      setSelectedLinearKeys(linearKeys);
     }
-  }, [previewData, dataPoints, eventCounts]);
+  }, [
+    previewData,
+    previewResponse?.linearIntegrations,
+    dataPoints,
+    eventCounts,
+  ]);
 
   const hasSelectableEvents =
     dataPoints.includeCommits ||
@@ -584,496 +728,603 @@ export function CreateContentDialog({
     dataPoints.includeCommits ||
     dataPoints.includeReleases;
 
-  return (
-    <ResponsiveDialog onOpenChange={handleOpenChange} open={open}>
-      <ResponsiveDialogTrigger
-        render={
-          <Button disabled={!organizationId} size="sm">
-            <HugeiconsIcon className="size-4" icon={Add01Icon} />
-            Create Content
-          </Button>
-        }
-      />
-      <ResponsiveDialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
-        <ResponsiveDialogHeader className="shrink-0 space-y-1 border-b p-4">
-          <ResponsiveDialogTitle>
-            {step === "configure" ? "Create Content" : "Review Events"}
-          </ResponsiveDialogTitle>
-          <ResponsiveDialogDescription>
-            {step === "configure"
-              ? "Configure content type, timeframe, and sources."
-              : "Select the events to include in your content."}
-          </ResponsiveDialogDescription>
-        </ResponsiveDialogHeader>
+  const handleOpenAddRepositoryFlow = useCallback(() => {
+    openingAddRepoFlowRef.current = true;
+    setAddRepoMode(githubIntegrationId ? "repository" : "integration");
+    setWaitingForWebhookSetup(false);
+    setAddRepoOpen(true);
+    setOpen(false);
+  }, [githubIntegrationId]);
 
-        <form
-          className="flex min-h-0 flex-1 flex-col overflow-hidden px-0!"
-          onSubmit={(e) => e.preventDefault()}
-        >
-          {/* ── Step 1: Configure ── */}
-          {step === "configure" && (
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="space-y-4 p-4">
-                <form.Field name="contentType">
-                  {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name}>Content Type</Label>
-                      <Select
-                        onValueChange={(v) => {
-                          if (v) {
-                            field.handleChange(v as OnDemandContentType);
-                          }
-                        }}
-                        value={field.state.value}
-                      >
-                        <SelectTrigger className="w-full" id={field.name}>
-                          <SelectValue placeholder="Select content type">
-                            <span className="flex items-center gap-2">
-                              <OutputTypeIcon
-                                className="size-4"
-                                outputType={field.state.value}
-                              />
-                              {getOutputTypeLabel(field.state.value)}
-                            </span>
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SUPPORTED_SCHEDULE_OUTPUT_TYPES.map((type) => (
-                            <SelectItem key={type} value={type}>
+  const handleAddRepoOpenChange = useCallback(
+    (isOpen: boolean) => {
+      setAddRepoOpen(isOpen);
+
+      if (isOpen) {
+        return;
+      }
+
+      if (addRepoMode === "integration" && waitingForWebhookSetup) {
+        return;
+      }
+
+      setAddRepoMode(null);
+      setWaitingForWebhookSetup(false);
+      setOpen(true);
+    },
+    [addRepoMode, waitingForWebhookSetup]
+  );
+
+  const handleIntegrationSuccess = useCallback(() => {
+    setWaitingForWebhookSetup(true);
+  }, []);
+
+  const handleIntegrationFlowComplete = useCallback(() => {
+    setAddRepoMode(null);
+    setWaitingForWebhookSetup(false);
+    setOpen(true);
+  }, []);
+
+  return (
+    <>
+      <ResponsiveDialog onOpenChange={handleOpenChange} open={open}>
+        <ResponsiveDialogTrigger
+          render={
+            <Button disabled={!organizationId} size="sm">
+              <HugeiconsIcon className="size-4" icon={Add01Icon} />
+              Create Content
+            </Button>
+          }
+        />
+        <ResponsiveDialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+          <ResponsiveDialogHeader className="shrink-0 space-y-1 border-b p-4">
+            <ResponsiveDialogTitle>
+              {step === "configure" ? "Create Content" : "Review Events"}
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              {step === "configure"
+                ? "Configure content type, timeframe, and sources."
+                : "Select the events to include in your content."}
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <form
+            className="flex min-h-0 flex-1 flex-col overflow-hidden px-0!"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            {/* ── Step 1: Configure ── */}
+            {step === "configure" && (
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="space-y-4 p-4">
+                  <form.Field name="contentType">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor={field.name}>Content Type</Label>
+                        <Select
+                          onValueChange={(v) => {
+                            if (v) {
+                              field.handleChange(v as OnDemandContentType);
+                            }
+                          }}
+                          value={field.state.value}
+                        >
+                          <SelectTrigger className="w-full" id={field.name}>
+                            <SelectValue placeholder="Select content type">
                               <span className="flex items-center gap-2">
                                 <OutputTypeIcon
                                   className="size-4"
-                                  outputType={type}
+                                  outputType={field.state.value}
                                 />
-                                {getOutputTypeLabel(type)}
+                                {getOutputTypeLabel(field.state.value)}
                               </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </form.Field>
-
-                {brandVoices.length > 1 && (
-                  <form.Field name="brandVoiceId">
-                    {(field) => (
-                      <BrandVoiceCombobox
-                        id={field.name}
-                        onChange={field.handleChange}
-                        value={field.state.value}
-                        voices={brandVoices}
-                      />
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SUPPORTED_SCHEDULE_OUTPUT_TYPES.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                <span className="flex items-center gap-2">
+                                  <OutputTypeIcon
+                                    className="size-4"
+                                    outputType={type}
+                                  />
+                                  {getOutputTypeLabel(type)}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     )}
                   </form.Field>
-                )}
 
-                <form.Field name="lookbackWindow">
-                  {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name}>Timeframe</Label>
-                      <Select
-                        onValueChange={(v) => {
-                          if (v) {
-                            field.handleChange(v as LookbackWindow);
-                          }
-                        }}
-                        value={field.state.value}
-                      >
-                        <SelectTrigger className="w-full" id={field.name}>
-                          <SelectValue placeholder="Select timeframe">
-                            <span className="capitalize">
-                              {formatSnakeCaseLabel(field.state.value)}
-                            </span>
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LOOKBACK_WINDOWS.map((w) => (
-                            <SelectItem key={w} value={w}>
-                              <span className="capitalize">
-                                {formatSnakeCaseLabel(w)}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-muted-foreground text-xs">
-                        How far back to look when gathering activity data.
-                      </p>
-                    </div>
-                  )}
-                </form.Field>
-
-                <form.Field name="repositoryIds">
-                  {(field) => (
-                    <div className="space-y-2">
-                      <Label htmlFor={field.name}>Repositories</Label>
-                      {isLoadingRepos && <Skeleton className="h-10 w-full" />}
-                      {!isLoadingRepos && repositories.length === 0 && (
-                        <div className="flex items-center gap-2 rounded-md border border-dashed p-3">
-                          <span className="flex-1 text-muted-foreground text-xs">
-                            No repositories connected.
-                          </span>
-                          <AddRepositoryButton
-                            githubIntegrationId={githubIntegrationId}
-                            onCloseDialog={() => setOpen(true)}
-                            onOpenDialog={() => setOpen(false)}
-                            organizationId={organizationId}
-                          />
-                        </div>
+                  {brandVoices.length > 1 && (
+                    <form.Field name="brandVoiceId">
+                      {(field) => (
+                        <BrandVoiceCombobox
+                          id={field.name}
+                          onChange={field.handleChange}
+                          value={field.state.value}
+                          voices={brandVoices}
+                        />
                       )}
-                      {!isLoadingRepos && repositories.length > 0 && (
-                        <div ref={comboboxAnchor}>
-                          <Combobox
-                            items={repositoryOptions.map((r) => r.value)}
-                            multiple
-                            onValueChange={(v) =>
-                              field.handleChange(Array.isArray(v) ? v : [])
+                    </form.Field>
+                  )}
+
+                  <form.Field name="lookbackWindow">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor={field.name}>Timeframe</Label>
+                        <Select
+                          onValueChange={(v) => {
+                            if (v) {
+                              field.handleChange(v as LookbackWindow);
                             }
-                            value={field.state.value}
-                          >
-                            <ComboboxChips>
-                              {field.state.value.map((id) => {
-                                const r = repositoryOptions.find(
-                                  (o) => o.value === id
-                                );
-                                if (!r) {
-                                  return null;
-                                }
-                                return (
-                                  <ComboboxChip key={r.value}>
-                                    {r.label}
-                                  </ComboboxChip>
-                                );
-                              })}
-                              <ComboboxChipsInput placeholder="Search repositories" />
-                            </ComboboxChips>
-                            <ComboboxContent anchor={comboboxAnchor.current}>
-                              <ComboboxEmpty>
-                                No repositories found.
-                              </ComboboxEmpty>
-                              <ComboboxList>
-                                {repositoryOptions.map((r) => (
-                                  <ComboboxItem key={r.value} value={r.value}>
-                                    {r.label}
-                                  </ComboboxItem>
-                                ))}
-                              </ComboboxList>
-                            </ComboboxContent>
-                          </Combobox>
-                        </div>
-                      )}
-                      <p className="text-muted-foreground text-xs">
-                        Pick one or more repositories.
-                      </p>
-                    </div>
-                  )}
-                </form.Field>
-
-                <Collapsible
-                  defaultOpen={false}
-                  onOpenChange={setDataSourcesOpen}
-                  open={dataSourcesOpen}
-                >
-                  <CollapsibleTrigger className="flex w-full items-center gap-2 font-medium text-sm">
-                    <HugeiconsIcon
-                      className={`size-4 transition-transform ${dataSourcesOpen ? "" : "-rotate-90"}`}
-                      icon={ArrowDown01Icon}
-                    />
-                    Data Sources
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-3 space-y-3">
-                    <form.Field name="dataPoints.includePullRequests">
-                      {(field) => (
-                        <DataPointToggle
-                          checked={field.state.value}
-                          description="Include PR metadata and summaries."
-                          disabled={mutation.isPending}
-                          label="Pull Requests"
-                          onCheckedChange={field.handleChange}
-                        />
-                      )}
-                    </form.Field>
-                    <form.Field name="dataPoints.includeCommits">
-                      {(field) => (
-                        <DataPointToggle
-                          checked={field.state.value}
-                          description="Include commit-level change data."
-                          disabled={mutation.isPending}
-                          label="Commits"
-                          onCheckedChange={field.handleChange}
-                        />
-                      )}
-                    </form.Field>
-                    <form.Field name="dataPoints.includeReleases">
-                      {(field) => (
-                        <DataPointToggle
-                          checked={field.state.value}
-                          description="Include GitHub releases and changelogs."
-                          disabled={mutation.isPending}
-                          label="Releases"
-                          onCheckedChange={field.handleChange}
-                        />
-                      )}
-                    </form.Field>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            </div>
-          )}
-
-          {/* ── Step 2: Review Events ── */}
-          {step === "review" && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              {isLoadingPreview && (
-                <div className="space-y-2 p-4">
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-6 w-40" />
-                  <Skeleton className="h-8 w-full" />
-                </div>
-              )}
-              {!isLoadingPreview && isPreviewError && (
-                <div className="p-4">
-                  <div className="flex flex-col items-center gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-center text-sm">
-                    <p>Failed to load events.</p>
-                    <Button
-                      onClick={() =>
-                        queryClient.invalidateQueries({
-                          queryKey: ["content-preview", organizationId],
-                        })
-                      }
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      <HugeiconsIcon
-                        className="size-3.5"
-                        icon={ArrowReloadHorizontalIcon}
-                      />
-                      Retry
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {!isLoadingPreview &&
-                !isPreviewError &&
-                previewFailures.length > 0 && (
-                  <div className="shrink-0 px-4 pt-4">
-                    <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 text-xs dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200">
-                      <p className="font-medium text-sm">
-                        Partial preview ({previewFailures.length} warning
-                        {previewFailures.length === 1 ? "" : "s"})
-                      </p>
-                      {previewFailures.slice(0, 3).map((failure) => (
-                        <p
-                          className="mt-1"
-                          key={`${failure.repositoryId}:${failure.stage}`}
+                          }}
+                          value={field.state.value}
                         >
-                          {(failure.owner && failure.repo
-                            ? `${failure.owner}/${failure.repo}`
-                            : failure.repositoryId) +
-                            ": " +
-                            failure.message}
+                          <SelectTrigger className="w-full" id={field.name}>
+                            <SelectValue placeholder="Select timeframe">
+                              <span className="capitalize">
+                                {formatSnakeCaseLabel(field.state.value)}
+                              </span>
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LOOKBACK_WINDOWS.map((w) => (
+                              <SelectItem key={w} value={w}>
+                                <span className="capitalize">
+                                  {formatSnakeCaseLabel(w)}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-muted-foreground text-xs">
+                          How far back to look when gathering activity data.
                         </p>
-                      ))}
-                      {previewFailures.length > 3 && (
-                        <p className="mt-1">
-                          +{previewFailures.length - 3} more warnings
+                      </div>
+                    )}
+                  </form.Field>
+
+                  <form.Field name="repositoryIds">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor={field.name}>Integrations</Label>
+                        {isLoadingRepos && <Skeleton className="h-10 w-full" />}
+                        {!isLoadingRepos && integrationOptions.length === 0 && (
+                          <div className="flex items-center gap-2 rounded-md border border-dashed p-3">
+                            <span className="flex-1 text-muted-foreground text-xs">
+                              No integrations connected.
+                            </span>
+                            <AddRepositoryButton
+                              onAdd={handleOpenAddRepositoryFlow}
+                            />
+                          </div>
+                        )}
+                        {!isLoadingRepos && integrationOptions.length > 0 && (
+                          <div ref={comboboxAnchor}>
+                            <Combobox
+                              items={integrationOptions.map((o) => o.value)}
+                              multiple
+                              onValueChange={(v) =>
+                                field.handleChange(Array.isArray(v) ? v : [])
+                              }
+                              value={field.state.value}
+                            >
+                              <ComboboxChips>
+                                {field.state.value.map((id) => {
+                                  const opt = integrationOptions.find(
+                                    (o) => o.value === id
+                                  );
+                                  if (!opt) {
+                                    return null;
+                                  }
+                                  return (
+                                    <ComboboxChip key={opt.value}>
+                                      <span className="flex items-center gap-1.5">
+                                        {opt.type === "github" ? (
+                                          <Github className="size-3 shrink-0" />
+                                        ) : (
+                                          <Linear className="size-3 shrink-0" />
+                                        )}
+                                        {opt.label}
+                                      </span>
+                                    </ComboboxChip>
+                                  );
+                                })}
+                                <ComboboxChipsInput placeholder="Search integrations" />
+                              </ComboboxChips>
+                              <ComboboxContent anchor={comboboxAnchor.current}>
+                                <ComboboxEmpty>
+                                  No integrations found.
+                                </ComboboxEmpty>
+                                <ComboboxList>
+                                  {integrationOptions.map((opt) => (
+                                    <ComboboxItem
+                                      key={opt.value}
+                                      value={opt.value}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        {opt.type === "github" ? (
+                                          <Github className="size-3.5 shrink-0" />
+                                        ) : (
+                                          <Linear className="size-3.5 shrink-0" />
+                                        )}
+                                        {opt.label}
+                                      </span>
+                                    </ComboboxItem>
+                                  ))}
+                                </ComboboxList>
+                              </ComboboxContent>
+                            </Combobox>
+                          </div>
+                        )}
+                        <p className="text-muted-foreground text-xs">
+                          Pick one or more integrations to pull data from.
                         </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
+                  </form.Field>
+
+                  <Collapsible
+                    defaultOpen={false}
+                    onOpenChange={setDataSourcesOpen}
+                    open={dataSourcesOpen}
+                  >
+                    <CollapsibleTrigger className="flex w-full items-center gap-2 font-medium text-sm">
+                      <HugeiconsIcon
+                        className={`size-4 transition-transform ${dataSourcesOpen ? "" : "-rotate-90"}`}
+                        icon={ArrowDown01Icon}
+                      />
+                      Data Sources
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-3 space-y-3">
+                      <form.Field name="dataPoints.includePullRequests">
+                        {(field) => (
+                          <DataPointToggle
+                            checked={field.state.value}
+                            description="Include PR metadata and summaries."
+                            disabled={mutation.isPending}
+                            label="Pull Requests"
+                            onCheckedChange={field.handleChange}
+                          />
+                        )}
+                      </form.Field>
+                      <form.Field name="dataPoints.includeCommits">
+                        {(field) => (
+                          <DataPointToggle
+                            checked={field.state.value}
+                            description="Include commit-level change data."
+                            disabled={mutation.isPending}
+                            label="Commits"
+                            onCheckedChange={field.handleChange}
+                          />
+                        )}
+                      </form.Field>
+                      <form.Field name="dataPoints.includeReleases">
+                        {(field) => (
+                          <DataPointToggle
+                            checked={field.state.value}
+                            description="Include GitHub releases and changelogs."
+                            disabled={mutation.isPending}
+                            label="Releases"
+                            onCheckedChange={field.handleChange}
+                          />
+                        )}
+                      </form.Field>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </div>
+            )}
+
+            {/* ── Step 2: Review Events ── */}
+            {step === "review" && (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                {isLoadingPreview && (
+                  <div className="space-y-2 p-4">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-6 w-40" />
+                    <Skeleton className="h-8 w-full" />
                   </div>
                 )}
-              {!isLoadingPreview && !isPreviewError && previewData && (
-                <>
-                  {eventCounts.total > 0 && (
-                    <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
-                      <span className="text-muted-foreground text-xs">
-                        {eventCounts.selected} / {eventCounts.total} selected
-                        {totalPages > 1 &&
-                          ` · Page ${currentPage} of ${totalPages}`}
-                      </span>
+                {!isLoadingPreview && isPreviewError && (
+                  <div className="p-4">
+                    <div className="flex flex-col items-center gap-3 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-center text-sm">
+                      <p>Failed to load events.</p>
                       <Button
-                        onClick={handleToggleAll}
+                        onClick={() =>
+                          queryClient.invalidateQueries({
+                            queryKey: ["content-preview", organizationId],
+                          })
+                        }
                         size="sm"
                         type="button"
-                        variant="ghost"
+                        variant="outline"
                       >
-                        {eventCounts.selected === eventCounts.total
-                          ? "Deselect all"
-                          : "Select all"}
+                        <HugeiconsIcon
+                          className="size-3.5"
+                          icon={ArrowReloadHorizontalIcon}
+                        />
+                        Retry
                       </Button>
                     </div>
-                  )}
-                  <div className="min-h-0 flex-1 overflow-y-auto">
-                    <div className="space-y-3 p-4">
-                      {eventCounts.total === 0 ? (
-                        <div className="rounded-md border border-dashed p-4 text-center text-muted-foreground text-xs">
-                          No events found for the selected timeframe.
-                        </div>
-                      ) : (
-                        paginatedRepos.map((repo) => (
-                          <RepoSection
-                            dataPoints={dataPoints}
-                            key={repo.repositoryId}
-                            onToggleCommit={(sha) => {
-                              selectionsTouchedRef.current = true;
-                              setSelectedCommitKeys((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(sha)) {
-                                  next.delete(sha);
-                                } else {
-                                  next.add(sha);
-                                }
-                                return next;
-                              });
-                            }}
-                            onTogglePr={(key) => {
-                              selectionsTouchedRef.current = true;
-                              setSelectedPrKeys((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(key)) {
-                                  next.delete(key);
-                                } else {
-                                  next.add(key);
-                                }
-                                return next;
-                              });
-                            }}
-                            onToggleRelease={(tag) => {
-                              selectionsTouchedRef.current = true;
-                              setSelectedReleaseKeys((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(tag)) {
-                                  next.delete(tag);
-                                } else {
-                                  next.add(tag);
-                                }
-                                return next;
-                              });
-                            }}
-                            repo={repo}
-                            selectedCommitKeys={selectedCommitKeys}
-                            selectedPrKeys={selectedPrKeys}
-                            selectedReleaseKeys={selectedReleaseKeys}
-                          />
-                        ))
-                      )}
-                      {totalPages > 1 && (
-                        <Pagination>
-                          <PaginationContent>
-                            <PaginationItem>
-                              <PaginationPrevious
-                                className={cn(
-                                  currentPage === 1 &&
-                                    "pointer-events-none opacity-50"
-                                )}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setCurrentPage((p) => Math.max(1, p - 1));
-                                }}
-                              />
-                            </PaginationItem>
-                            {getPageNumbers(currentPage, totalPages).map(
-                              (page, i) =>
-                                page === "ellipsis" ? (
-                                  <PaginationItem key={`ellipsis-${i}`}>
-                                    <PaginationEllipsis />
-                                  </PaginationItem>
-                                ) : (
-                                  <PaginationItem key={page}>
-                                    <PaginationLink
-                                      isActive={page === currentPage}
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        setCurrentPage(page);
-                                      }}
-                                    >
-                                      {page}
-                                    </PaginationLink>
-                                  </PaginationItem>
-                                )
-                            )}
-                            <PaginationItem>
-                              <PaginationNext
-                                className={cn(
-                                  currentPage === totalPages &&
-                                    "pointer-events-none opacity-50"
-                                )}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setCurrentPage((p) =>
-                                    Math.min(totalPages, p + 1)
-                                  );
-                                }}
-                              />
-                            </PaginationItem>
-                          </PaginationContent>
-                        </Pagination>
-                      )}
-                    </div>
                   </div>
-                </>
+                )}
+                {!isLoadingPreview &&
+                  !isPreviewError &&
+                  previewFailures.length > 0 && (
+                    <div className="shrink-0 px-4 pt-4">
+                      <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 text-xs dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-200">
+                        <p className="font-medium text-sm">
+                          Partial preview ({previewFailures.length} warning
+                          {previewFailures.length === 1 ? "" : "s"})
+                        </p>
+                        {previewFailures.slice(0, 3).map((failure) => (
+                          <p
+                            className="mt-1"
+                            key={`${failure.repositoryId}:${failure.stage}`}
+                          >
+                            {(failure.owner && failure.repo
+                              ? `${failure.owner}/${failure.repo}`
+                              : failure.repositoryId) +
+                              ": " +
+                              failure.message}
+                          </p>
+                        ))}
+                        {previewFailures.length > 3 && (
+                          <p className="mt-1">
+                            +{previewFailures.length - 3} more warnings
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                {!isLoadingPreview && !isPreviewError && previewResponse && (
+                  <>
+                    {eventCounts.total > 0 && (
+                      <div className="flex shrink-0 items-center justify-between border-b px-4 py-2">
+                        <span className="text-muted-foreground text-xs">
+                          {eventCounts.selected} / {eventCounts.total} selected
+                          {totalPages > 1 &&
+                            ` · Page ${currentPage} of ${totalPages}`}
+                        </span>
+                        <Button
+                          onClick={handleToggleAll}
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          {eventCounts.selected === eventCounts.total
+                            ? "Deselect all"
+                            : "Select all"}
+                        </Button>
+                      </div>
+                    )}
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      <div className="space-y-3 p-4">
+                        {eventCounts.total === 0 ? (
+                          <div className="rounded-md border border-dashed p-4 text-center text-muted-foreground text-xs">
+                            No events found for the selected timeframe.
+                          </div>
+                        ) : (
+                          paginatedRepos.map((repo) => (
+                            <RepoSection
+                              dataPoints={dataPoints}
+                              key={repo.repositoryId}
+                              onToggleCommit={(sha) => {
+                                selectionsTouchedRef.current = true;
+                                setSelectedCommitKeys((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(sha)) {
+                                    next.delete(sha);
+                                  } else {
+                                    next.add(sha);
+                                  }
+                                  return next;
+                                });
+                              }}
+                              onTogglePr={(key) => {
+                                selectionsTouchedRef.current = true;
+                                setSelectedPrKeys((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(key)) {
+                                    next.delete(key);
+                                  } else {
+                                    next.add(key);
+                                  }
+                                  return next;
+                                });
+                              }}
+                              onToggleRelease={(tag) => {
+                                selectionsTouchedRef.current = true;
+                                setSelectedReleaseKeys((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(tag)) {
+                                    next.delete(tag);
+                                  } else {
+                                    next.add(tag);
+                                  }
+                                  return next;
+                                });
+                              }}
+                              repo={repo}
+                              selectedCommitKeys={selectedCommitKeys}
+                              selectedPrKeys={selectedPrKeys}
+                              selectedReleaseKeys={selectedReleaseKeys}
+                            />
+                          ))
+                        )}
+                        {previewResponse?.linearIntegrations?.map(
+                          (li) =>
+                            li.issues.length > 0 && (
+                              <div
+                                className="overflow-hidden rounded-lg border"
+                                key={li.integrationId}
+                              >
+                                <div className="flex items-center gap-2 bg-muted/30 px-3 py-2">
+                                  <Linear className="size-4 shrink-0" />
+                                  <span className="font-medium text-sm">
+                                    {li.displayName}
+                                  </span>
+                                </div>
+                                <div className="divide-y">
+                                  {li.issues.map((issue) => {
+                                    const key = `${li.integrationId}:${issue.id}`;
+                                    return (
+                                      <EventRow
+                                        key={issue.id}
+                                        label={`${issue.identifier} ${issue.title}`}
+                                        meta={`${issue.assignee ?? "Unassigned"} · ${issue.completedAt ? formatEventDate(issue.completedAt) : ""}`}
+                                        onToggle={() => {
+                                          selectionsTouchedRef.current = true;
+                                          setSelectedLinearKeys((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(key)) {
+                                              next.delete(key);
+                                            } else {
+                                              next.add(key);
+                                            }
+                                            return next;
+                                          });
+                                        }}
+                                        selected={selectedLinearKeys.has(key)}
+                                        type="LinearIssue"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )
+                        )}
+                        {totalPages > 1 && (
+                          <Pagination>
+                            <PaginationContent>
+                              <PaginationItem>
+                                <PaginationPrevious
+                                  className={cn(
+                                    currentPage === 1 &&
+                                      "pointer-events-none opacity-50"
+                                  )}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCurrentPage((p) => Math.max(1, p - 1));
+                                  }}
+                                />
+                              </PaginationItem>
+                              {getPageNumbers(currentPage, totalPages).map(
+                                (page, i) =>
+                                  page === "ellipsis" ? (
+                                    <PaginationItem key={`ellipsis-${i}`}>
+                                      <PaginationEllipsis />
+                                    </PaginationItem>
+                                  ) : (
+                                    <PaginationItem key={page}>
+                                      <PaginationLink
+                                        isActive={page === currentPage}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          setCurrentPage(page);
+                                        }}
+                                      >
+                                        {page}
+                                      </PaginationLink>
+                                    </PaginationItem>
+                                  )
+                              )}
+                              <PaginationItem>
+                                <PaginationNext
+                                  className={cn(
+                                    currentPage === totalPages &&
+                                      "pointer-events-none opacity-50"
+                                  )}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCurrentPage((p) =>
+                                      Math.min(totalPages, p + 1)
+                                    );
+                                  }}
+                                />
+                              </PaginationItem>
+                            </PaginationContent>
+                          </Pagination>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ── Footer ── */}
+            <div className="shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
+              {step === "configure" && (
+                <div className="flex items-center justify-end">
+                  <Button
+                    disabled={repositoryIds.length === 0}
+                    onClick={handleContinue}
+                    type="button"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              )}
+              {step === "review" && (
+                <div className="flex items-center justify-between">
+                  <Button
+                    disabled={mutation.isPending}
+                    onClick={handleBack}
+                    type="button"
+                    variant="outline"
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    disabled={
+                      mutation.isPending ||
+                      isLoadingPreview ||
+                      eventCounts.selected === 0
+                    }
+                    onClick={handleCreate}
+                    type="button"
+                  >
+                    {mutation.isPending ? (
+                      <>
+                        <HugeiconsIcon
+                          className="size-4 animate-spin"
+                          icon={Loading03Icon}
+                        />
+                        Generating...
+                      </>
+                    ) : (
+                      "Create content"
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
-          )}
-
-          {/* ── Footer ── */}
-          <div className="shrink-0 rounded-b-xl border-t bg-muted/50 p-4">
-            {step === "configure" && (
-              <div className="flex items-center justify-end">
-                <Button
-                  disabled={
-                    repositoryIds.length === 0 || !hasAnyGitHubDataPointActive
-                  }
-                  onClick={handleContinue}
-                  type="button"
-                >
-                  Continue
-                </Button>
-              </div>
-            )}
-            {step === "review" && (
-              <div className="flex items-center justify-between">
-                <Button
-                  disabled={mutation.isPending}
-                  onClick={handleBack}
-                  type="button"
-                  variant="outline"
-                >
-                  Back
-                </Button>
-                <Button
-                  disabled={
-                    mutation.isPending ||
-                    isLoadingPreview ||
-                    (hasSelectableEvents &&
-                      eventCounts.total > 0 &&
-                      eventCounts.selected === 0)
-                  }
-                  onClick={handleCreate}
-                  type="button"
-                >
-                  {mutation.isPending ? (
-                    <>
-                      <HugeiconsIcon
-                        className="size-4 animate-spin"
-                        icon={Loading03Icon}
-                      />
-                      Generating...
-                    </>
-                  ) : (
-                    "Create content"
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        </form>
-      </ResponsiveDialogContent>
-    </ResponsiveDialog>
+          </form>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+      {addRepoMode === "repository" ? (
+        <AddRepositoryDialog
+          integrationId={githubIntegrationId!}
+          onOpenChange={handleAddRepoOpenChange}
+          open={addRepoOpen}
+          organizationId={organizationId}
+        />
+      ) : addRepoMode === "integration" ? (
+        <AddIntegrationDialog
+          onFlowComplete={handleIntegrationFlowComplete}
+          onOpenChange={handleAddRepoOpenChange}
+          onSuccess={handleIntegrationSuccess}
+          open={addRepoOpen}
+          organizationId={organizationId}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -1135,7 +1386,8 @@ function RepoSection({
 
   return (
     <div className="overflow-hidden rounded-lg border">
-      <div className="bg-muted/30 px-3 py-2">
+      <div className="flex items-center gap-2 bg-muted/30 px-3 py-2">
+        <Github className="size-4 shrink-0" />
         <span className="font-medium text-sm">
           {repo.owner}/{repo.repo}
         </span>
@@ -1229,7 +1481,7 @@ function EventRow({
       </div>
       <Badge className={cn("shrink-0", EVENT_BADGE[type])}>
         <HugeiconsIcon className="size-3!" icon={EVENT_ICON[type]} />
-        {type}
+        {type === "LinearIssue" ? "Issue" : type}
       </Badge>
     </button>
   );

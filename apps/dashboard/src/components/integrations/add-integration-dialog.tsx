@@ -64,6 +64,7 @@ export function AddIntegrationDialog({
   organizationId: propOrganizationId,
   organizationSlug: propOrganizationSlug,
   onSuccess,
+  onFlowComplete,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   trigger,
@@ -285,6 +286,7 @@ export function AddIntegrationDialog({
       }
       setShowWebhookDialog(false);
       setCreatedIntegration(null);
+      onFlowComplete?.();
     }
   };
 

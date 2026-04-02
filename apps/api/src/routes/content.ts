@@ -6,6 +6,7 @@ import {
   setBrandAnalysisJobStatus,
   updateBrandAnalysisJob,
 } from "@notra/ai/jobs/brand-analysis";
+import { supportsPostSlug } from "@notra/ai/schemas/post";
 import {
   appendContentGenerationJobEvent,
   createContentGenerationJob,
@@ -20,6 +21,7 @@ import {
   brandSettings,
   contentTriggers,
   githubIntegrations,
+  linearIntegrations,
   organizations,
   posts,
   repositoryOutputs,
@@ -36,6 +38,7 @@ import {
   createPostGenerationRequestSchema,
   createPostGenerationResponseSchema,
   deleteBrandIdentityResponseSchema,
+  deleteIntegrationResponseSchema,
   deletePostResponseSchema,
   errorResponseSchema,
   generationQueueErrorResponseSchema,
@@ -44,6 +47,7 @@ import {
   getBrandIdentitiesResponseSchema,
   getBrandIdentityParamsSchema,
   getBrandIdentityResponseSchema,
+  getIntegrationParamsSchema,
   getIntegrationsResponseSchema,
   getPostGenerationParamsSchema,
   getPostGenerationResponseSchema,
@@ -132,8 +136,7 @@ function getContentGenerationUnavailableReason(runtimeEnv: {
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   QSTASH_TOKEN?: string;
-  CONTENT_GENERATION_WORKFLOW_URL?: string;
-  CONTENT_GENERATION_WORKFLOW_BASE_URL?: string;
+  WORKFLOW_BASE_URL?: string;
 }) {
   if (
     !(runtimeEnv.UPSTASH_REDIS_REST_URL && runtimeEnv.UPSTASH_REDIS_REST_TOKEN)
@@ -145,10 +148,7 @@ function getContentGenerationUnavailableReason(runtimeEnv: {
     return "Content generation is unavailable: QStash is not configured";
   }
 
-  if (
-    !runtimeEnv.CONTENT_GENERATION_WORKFLOW_URL &&
-    !runtimeEnv.CONTENT_GENERATION_WORKFLOW_BASE_URL
-  ) {
+  if (!runtimeEnv.WORKFLOW_BASE_URL) {
     return "Content generation is unavailable: workflow URL is not configured";
   }
 
@@ -278,11 +278,104 @@ async function getTriggersForBrandIdentity(
   });
 }
 
+type IntegrationTrigger = Awaited<
+  ReturnType<typeof getTriggersForIntegration>
+>[number];
+type DbTransaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+
+async function getTriggersForIntegration(
+  db: DbClient,
+  organizationId: string,
+  integrationId: string
+) {
+  // Triggers currently persist both GitHub integration IDs and Linear selections
+  // inside targets.repositoryIds. Linear values are stored with a `linear:` prefix.
+  // This mirrors the trigger contract used by the dashboard today.
+  const allTriggers = await db.query.contentTriggers.findMany({
+    where: eq(contentTriggers.organizationId, organizationId),
+    columns: {
+      id: true,
+      name: true,
+      sourceType: true,
+      targets: true,
+      qstashScheduleId: true,
+    },
+  });
+
+  // We already fetch all org triggers for brand-identity cleanup, and trigger counts
+  // are expected to stay small enough that an in-memory filter is acceptable here.
+  return allTriggers.filter((trigger) => {
+    const targets = trigger.targets as
+      | {
+          repositoryIds?: string[];
+        }
+      | undefined;
+
+    if (!targets?.repositoryIds?.length) {
+      return false;
+    }
+
+    return targets.repositoryIds.some(
+      (targetId) =>
+        targetId === integrationId || targetId === `linear:${integrationId}`
+    );
+  });
+}
+
+async function disableTriggersAndDeleteIntegration(
+  db: DbClient,
+  organizationId: string,
+  affectedTriggers: IntegrationTrigger[],
+  deleteIntegration: (tx: DbTransaction) => Promise<unknown>
+) {
+  await db.transaction(async (tx) => {
+    if (affectedTriggers.length > 0) {
+      await tx
+        .update(contentTriggers)
+        .set({
+          enabled: false,
+          qstashScheduleId: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(contentTriggers.organizationId, organizationId),
+            inArray(
+              contentTriggers.id,
+              affectedTriggers.map((trigger) => trigger.id)
+            )
+          )
+        );
+    }
+
+    await deleteIntegration(tx);
+  });
+}
+
+async function deleteQstashSchedulesForTriggers(
+  runtimeEnv: Record<string, unknown>,
+  affectedTriggers: IntegrationTrigger[]
+) {
+  for (const trigger of affectedTriggers) {
+    if (!trigger.qstashScheduleId) {
+      continue;
+    }
+
+    await deleteQstashSchedule(runtimeEnv, trigger.qstashScheduleId).catch(
+      (error) => {
+        console.error(
+          `Failed to delete qstash schedule ${trigger.qstashScheduleId}:`,
+          error
+        );
+      }
+    );
+  }
+}
+
 async function resolveRequestedRepositoryIds(
   db: ReturnType<typeof createDb>,
   organizationId: string,
   request: {
-    repositoryIds?: string[];
     integrations?: {
       github?: string[];
     };
@@ -291,10 +384,6 @@ async function resolveRequestedRepositoryIds(
     };
   }
 ) {
-  if (request.repositoryIds?.length) {
-    return request.repositoryIds;
-  }
-
   if (request.integrations?.github?.length) {
     const uniqueIntegrationIds = Array.from(
       new Set(request.integrations.github)
@@ -404,6 +493,53 @@ async function resolveRequestedRepositoryIds(
   }
 
   return matchedRepositoryIds;
+}
+
+async function resolveRequestedLinearIntegrationIds(
+  db: ReturnType<typeof createDb>,
+  organizationId: string,
+  request: {
+    integrations?: {
+      linear?: string[];
+    };
+  }
+) {
+  const requestedIntegrationIds = request.integrations?.linear;
+
+  if (!requestedIntegrationIds?.length) {
+    return undefined;
+  }
+
+  const uniqueIntegrationIds = Array.from(new Set(requestedIntegrationIds));
+  const connectedIntegrations = await db
+    .select({
+      id: linearIntegrations.id,
+    })
+    .from(linearIntegrations)
+    .where(
+      and(
+        eq(linearIntegrations.organizationId, organizationId),
+        eq(linearIntegrations.enabled, true),
+        inArray(linearIntegrations.id, uniqueIntegrationIds)
+      )
+    );
+
+  const matchedIntegrationIds = connectedIntegrations.map(
+    (integration) => integration.id
+  );
+
+  if (matchedIntegrationIds.length !== uniqueIntegrationIds.length) {
+    const connectedIntegrationIds = new Set(matchedIntegrationIds);
+    const missingIntegrationIds = uniqueIntegrationIds.filter(
+      (integrationId) => !connectedIntegrationIds.has(integrationId)
+    );
+
+    throw new Error(
+      `Requested Linear integrations are not available for this organization: ${missingIntegrationIds.join(", ")}`
+    );
+  }
+
+  return matchedIntegrationIds;
 }
 
 async function resolveRequestedBrandVoiceId(
@@ -697,6 +833,14 @@ const deletePostRoute = createRoute({
         },
       },
     },
+    409: {
+      description: "Post slug already exists",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
     503: {
       description: "Authentication service unavailable",
       content: {
@@ -760,6 +904,14 @@ const patchPostRoute = createRoute({
     },
     404: {
       description: "Post not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    409: {
+      description: "Post slug already exists",
       content: {
         "application/json": {
           schema: errorResponseSchema,
@@ -1388,6 +1540,61 @@ const createGitHubIntegrationRoute = createRoute({
   },
 });
 
+const deleteIntegrationRoute = createRoute({
+  method: "delete",
+  path: "/integrations/{integrationId}",
+  tags: ["Content"],
+  operationId: "deleteIntegration",
+  summary: "Delete a single integration",
+  description:
+    "Deletes a GitHub or Linear integration. Any automation triggers targeting a deleted GitHub integration are disabled.",
+  request: {
+    params: getIntegrationParamsSchema,
+  },
+  responses: {
+    200: {
+      description: "Integration deleted successfully",
+      content: {
+        "application/json": {
+          schema: deleteIntegrationResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "Integration not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Authentication service unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
 const getPostGenerationRoute = createRoute({
   method: "get",
   path: "/posts/generate/{jobId}",
@@ -1489,6 +1696,7 @@ contentRoutes.openapi(getPostsRoute, async (c) => {
     columns: {
       id: true,
       title: true,
+      slug: true,
       content: true,
       markdown: true,
       recommendations: true,
@@ -1539,6 +1747,7 @@ contentRoutes.openapi(getPostRoute, async (c) => {
     columns: {
       id: true,
       title: true,
+      slug: true,
       content: true,
       markdown: true,
       recommendations: true,
@@ -1615,6 +1824,8 @@ contentRoutes.openapi(patchPostRoute, async (c) => {
     columns: {
       id: true,
       title: true,
+      slug: true,
+      contentType: true,
     },
   });
 
@@ -1628,6 +1839,17 @@ contentRoutes.openapi(patchPostRoute, async (c) => {
 
   if (body.title !== undefined) {
     updateData.title = body.title;
+  }
+
+  if (body.slug !== undefined) {
+    if (!supportsPostSlug(existingPost.contentType)) {
+      return c.json(
+        { error: "Slug can only be set for blog posts and changelogs" },
+        400
+      );
+    }
+
+    updateData.slug = body.slug;
   }
 
   if (body.markdown !== undefined) {
@@ -1652,22 +1874,50 @@ contentRoutes.openapi(patchPostRoute, async (c) => {
     updateData.status = body.status;
   }
 
-  const [updatedPost] = await db
-    .update(posts)
-    .set(updateData)
-    .where(and(eq(posts.id, postId), eq(posts.organizationId, orgId)))
-    .returning({
-      id: posts.id,
-      title: posts.title,
-      content: posts.content,
-      markdown: posts.markdown,
-      recommendations: posts.recommendations,
-      contentType: posts.contentType,
-      sourceMetadata: posts.sourceMetadata,
-      status: posts.status,
-      createdAt: posts.createdAt,
-      updatedAt: posts.updatedAt,
-    });
+  let updatedRows: Array<{
+    id: string;
+    title: string;
+    slug: string | null;
+    content: string;
+    markdown: string;
+    recommendations: string | null;
+    contentType: string;
+    sourceMetadata: unknown;
+    status: "draft" | "published";
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
+
+  try {
+    updatedRows = await db
+      .update(posts)
+      .set(updateData)
+      .where(and(eq(posts.id, postId), eq(posts.organizationId, orgId)))
+      .returning({
+        id: posts.id,
+        title: posts.title,
+        slug: posts.slug,
+        content: posts.content,
+        markdown: posts.markdown,
+        recommendations: posts.recommendations,
+        contentType: posts.contentType,
+        sourceMetadata: posts.sourceMetadata,
+        status: posts.status,
+        createdAt: posts.createdAt,
+        updatedAt: posts.updatedAt,
+      });
+  } catch (error) {
+    if (
+      isPgUniqueViolation(error) &&
+      isConstraintViolation(error, "posts_org_slug_uidx")
+    ) {
+      return c.json({ error: "A post with this slug already exists" }, 409);
+    }
+
+    throw error;
+  }
+
+  const [updatedPost] = updatedRows;
 
   if (!updatedPost) {
     return c.json({ error: "Post not found" }, 404);
@@ -1708,14 +1958,25 @@ contentRoutes.openapi(createPostGenerationRoute, async (c) => {
   }
 
   let repositoryIds: string[] | undefined;
+  let linearIntegrationIds: string[] | undefined;
   let resolvedBrandVoiceId: string | null = null;
+  const requestedIntegrations = {
+    github: body.integrations?.github ?? body.repositoryIds,
+    linear: body.integrations?.linear ?? body.linearIntegrationIds,
+  };
 
   try {
     repositoryIds = await resolveRequestedRepositoryIds(db, orgId, {
-      repositoryIds: body.repositoryIds,
-      integrations: body.integrations,
+      integrations: requestedIntegrations,
       github: body.github,
     });
+    linearIntegrationIds = await resolveRequestedLinearIntegrationIds(
+      db,
+      orgId,
+      {
+        integrations: requestedIntegrations,
+      }
+    );
     resolvedBrandVoiceId = await resolveRequestedBrandVoiceId(
       db,
       orgId,
@@ -1771,6 +2032,7 @@ contentRoutes.openapi(createPostGenerationRoute, async (c) => {
     metadata: {
       lookbackWindow: body.lookbackWindow,
       repositoryCount: repositoryIds?.length ?? 0,
+      linearIntegrationCount: linearIntegrationIds?.length ?? 0,
     },
   });
 
@@ -1782,6 +2044,7 @@ contentRoutes.openapi(createPostGenerationRoute, async (c) => {
       contentType: body.contentType,
       lookbackWindow: body.lookbackWindow,
       repositoryIds,
+      linearIntegrationIds,
       brandVoiceId: resolvedBrandVoiceId ?? undefined,
       dataPoints: body.dataPoints,
       selectedItems: body.selectedItems,
@@ -2386,11 +2649,27 @@ contentRoutes.openapi(getIntegrationsRoute, async (c) => {
     },
   });
 
+  const linear = await db.query.linearIntegrations.findMany({
+    where: and(
+      eq(linearIntegrations.organizationId, orgId),
+      eq(linearIntegrations.enabled, true)
+    ),
+    orderBy: [asc(linearIntegrations.displayName), asc(linearIntegrations.id)],
+    columns: {
+      id: true,
+      displayName: true,
+      linearOrganizationId: true,
+      linearOrganizationName: true,
+      linearTeamId: true,
+      linearTeamName: true,
+    },
+  });
+
   return c.json(
     {
       github,
       slack: [],
-      linear: [],
+      linear,
       organization,
     },
     200
@@ -2533,6 +2812,122 @@ contentRoutes.openapi(createGitHubIntegrationRoute, async (c) => {
       400
     );
   }
+});
+
+contentRoutes.openapi(deleteIntegrationRoute, async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const { integrationId } = c.req.valid("param");
+  const runtimeEnv = (c.env ?? {}) as Record<string, unknown>;
+  const db = c.get("db");
+  const organization = await getOrganizationResponse(db, orgId);
+
+  if (!organization) {
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const githubIntegration = await db.query.githubIntegrations.findFirst({
+    where: and(
+      eq(githubIntegrations.id, integrationId),
+      eq(githubIntegrations.organizationId, orgId)
+    ),
+    columns: {
+      id: true,
+    },
+  });
+
+  if (githubIntegration) {
+    const affectedTriggers = await getTriggersForIntegration(
+      db,
+      orgId,
+      integrationId
+    );
+
+    await disableTriggersAndDeleteIntegration(
+      db,
+      orgId,
+      affectedTriggers,
+      (tx) =>
+        tx
+          .delete(githubIntegrations)
+          .where(
+            and(
+              eq(githubIntegrations.id, integrationId),
+              eq(githubIntegrations.organizationId, orgId)
+            )
+          )
+    );
+
+    await deleteQstashSchedulesForTriggers(runtimeEnv, affectedTriggers);
+
+    return c.json(
+      {
+        id: integrationId,
+        organization,
+        disabledSchedules: affectedTriggers
+          .filter((trigger) => trigger.sourceType === "cron")
+          .map((trigger) => ({ id: trigger.id, name: trigger.name })),
+        disabledEvents: affectedTriggers
+          .filter((trigger) => trigger.sourceType !== "cron")
+          .map((trigger) => ({ id: trigger.id, name: trigger.name })),
+      },
+      200
+    );
+  }
+
+  const [deletedLinearIntegration] = await db
+    .select({ id: linearIntegrations.id })
+    .from(linearIntegrations)
+    .where(
+      and(
+        eq(linearIntegrations.id, integrationId),
+        eq(linearIntegrations.organizationId, orgId)
+      )
+    )
+    .limit(1);
+
+  if (!deletedLinearIntegration) {
+    return c.json({ error: "Integration not found" }, 404);
+  }
+
+  const affectedTriggers = await getTriggersForIntegration(
+    db,
+    orgId,
+    integrationId
+  );
+
+  await disableTriggersAndDeleteIntegration(db, orgId, affectedTriggers, (tx) =>
+    tx
+      .delete(linearIntegrations)
+      .where(
+        and(
+          eq(linearIntegrations.id, integrationId),
+          eq(linearIntegrations.organizationId, orgId)
+        )
+      )
+  );
+
+  await deleteQstashSchedulesForTriggers(runtimeEnv, affectedTriggers);
+
+  return c.json(
+    {
+      id: deletedLinearIntegration.id,
+      organization,
+      disabledSchedules: affectedTriggers
+        .filter((trigger) => trigger.sourceType === "cron")
+        .map((trigger) => ({ id: trigger.id, name: trigger.name })),
+      disabledEvents: affectedTriggers
+        .filter((trigger) => trigger.sourceType !== "cron")
+        .map((trigger) => ({ id: trigger.id, name: trigger.name })),
+    },
+    200
+  );
 });
 
 contentRoutes.openapi(getPostGenerationRoute, async (c) => {

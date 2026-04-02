@@ -1,4 +1,5 @@
 import { contentTypeSchema } from "@notra/ai/schemas/content";
+import { POST_SLUG_MAX_LENGTH } from "@notra/ai/schemas/post";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 import {
@@ -14,6 +15,9 @@ export const sourceMetadataSchema = z
     triggerId: z.string(),
     triggerSourceType: z.string(),
     repositories: z.array(z.object({ owner: z.string(), repo: z.string() })),
+    linearIntegrations: z
+      .array(z.object({ integrationId: z.string() }))
+      .optional(),
     lookbackWindow: z.string(),
     lookbackRange: z.object({ start: z.string(), end: z.string() }),
     brandVoiceName: z.string().optional(),
@@ -25,6 +29,9 @@ export const sourceMetadataSchema = z
     selectedReleases: z
       .array(z.object({ repositoryId: z.string(), tagName: z.string() }))
       .optional(),
+    selectedLinearIssues: z
+      .array(z.object({ integrationId: z.string(), issueId: z.string() }))
+      .optional(),
   })
   .nullable()
   .optional();
@@ -34,6 +41,7 @@ export type SourceMetadata = z.infer<typeof sourceMetadataSchema>;
 export const contentSchema = z.object({
   id: z.string(),
   title: z.string(),
+  slug: z.string().nullable(),
   content: z.string(),
   markdown: z.string(),
   recommendations: z.string().nullable(),
@@ -48,6 +56,7 @@ export type ContentResponse = z.infer<typeof contentSchema>;
 export const postSchema = z.object({
   id: z.string(),
   title: z.string(),
+  slug: z.string().nullable(),
   content: z.string(),
   markdown: z.string(),
   recommendations: z.string().nullable(),
@@ -103,15 +112,19 @@ export const chatRequestSchema = z.object({
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
 
+const slugFieldSchema = z.string().slugify().min(1).max(POST_SLUG_MAX_LENGTH);
+
 export const updateContentSchema = z
   .object({
     title: z.string().trim().min(1).max(120).optional(),
+    slug: slugFieldSchema.nullable().optional(),
     markdown: z.string().min(1).optional(),
     status: postStatusSchema.optional(),
   })
   .refine(
     (data) =>
       data.title !== undefined ||
+      data.slug !== undefined ||
       data.markdown !== undefined ||
       data.status !== undefined,
     {
@@ -130,7 +143,7 @@ export const contentDataPointSettingsSchema = z.object({
   includePullRequests: z.boolean().default(true),
   includeCommits: z.boolean().default(true),
   includeReleases: z.boolean().default(true),
-  includeLinearIssues: z.boolean().default(false),
+  includeLinearData: z.boolean().default(false),
 });
 
 export type ContentDataPointSettings = z.infer<
@@ -158,6 +171,14 @@ export const selectedItemsSchema = z.object({
       ])
     )
     .optional(),
+  linearIssueIds: z
+    .array(
+      z.object({
+        integrationId: z.string(),
+        issueId: z.string(),
+      })
+    )
+    .optional(),
 });
 
 export type SelectedItems = z.infer<typeof selectedItemsSchema> | undefined;
@@ -167,6 +188,7 @@ export const createOnDemandContentSchema = z.object({
   lookbackWindow: z.enum(LOOKBACK_WINDOWS).default("last_7_days"),
   brandVoiceId: z.string().min(1).optional(),
   repositoryIds: z.array(z.string().min(1)).optional(),
+  linearIntegrationIds: z.array(z.string().min(1)).optional(),
   dataPoints: contentDataPointSettingsSchema.prefault({}),
   selectedItems: selectedItemsSchema.optional(),
 });

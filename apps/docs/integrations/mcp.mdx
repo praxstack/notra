@@ -1,0 +1,123 @@
+---
+title: "MCP Server"
+description: "Connect the Notra MCP server to AI tools using bearer token authentication."
+---
+
+Notra provides a hosted MCP server at `https://mcp.usenotra.com/mcp` so AI agents can work with your Notra workspace directly.
+
+With the MCP server connected, an AI agent can manage your brand identity, create content for you, and add new integrations without you having to wire everything up by hand.
+
+## Authentication
+
+The MCP server requires a bearer API key in the `Authorization` header:
+
+```text
+Authorization: Bearer YOUR_API_KEY
+```
+
+Create and manage API keys in [Authentication](/api/authentication).
+
+<img
+  src="/images/api/api-keys-light.webp"
+  alt="Create an API key with read & write permissions for MCP"
+  className="block dark:hidden"
+/>
+<img
+  src="/images/api/api-keys-dark.webp"
+  alt="Create an API key with read & write permissions for MCP"
+  className="hidden dark:block"
+/>
+
+<Tip>
+  For the best experience, use an API key with both read and write permissions so
+  the MCP server can complete the full set of actions your client requests.
+</Tip>
+
+## Install
+
+### `add-mcp` (Recommended)
+
+If your client supports [`add-mcp`](https://www.npmjs.com/package/add-mcp), you can install the server with a header override:
+
+```bash
+npx add-mcp https://mcp.usenotra.com/mcp --header "Authorization: Bearer $TOKEN"
+```
+
+<Tip>
+  Set `TOKEN` to a Notra API key before running the command.
+</Tip>
+
+### Manual installation
+
+Add something like this to your MCP client config:
+
+<CodeGroup>
+```json opencode.json
+"notra": {
+  "type": "remote",
+  "url": "https://mcp.usenotra.com/mcp",
+  "enabled": true,
+  "headers": {
+    "Authorization": "Bearer YOUR_API_KEY"
+  }
+}
+```
+
+```json mcp.json (Cursor)
+"notra": {
+  "url": "https://mcp.usenotra.com/mcp",
+  "headers": {
+    "Authorization": "Bearer YOUR_API_KEY"
+  }
+}
+```
+
+```json claude.json
+"notra": {
+  "type": "http",
+  "url": "https://mcp.usenotra.com/mcp",
+  "headers": {
+    "Authorization": "Bearer YOUR_API_KEY"
+  }
+}
+```
+</CodeGroup>
+
+## Available tools
+
+Once installed, the Notra MCP server currently exposes these tools:
+
+**Posts**
+
+- `notra_list_posts`
+- `notra_get_post`
+- `notra_update_post`
+- `notra_delete_post`
+- `notra_generate_post`
+- `notra_get_post_generation_status`
+
+**Brand identities**
+
+- `notra_list_brand_identities`
+- `notra_get_brand_identity`
+- `notra_update_brand_identity`
+- `notra_delete_brand_identity`
+- `notra_generate_brand_identity`
+- `notra_get_brand_identity_generation_status`
+
+**Integrations**
+
+- `notra_list_integrations`
+- `notra_create_github_integration`
+
+## Composio
+
+If you want to use the Notra MCP server with [Composio](https://composio.dev/), please upvote our request at [request.composio.dev/boards/tool-requests/posts/notra](https://request.composio.dev/boards/tool-requests/posts/notra).
+
+That helps the Composio team see demand for a Notra integration and prioritize it on their roadmap.
+
+## Notes
+
+- Use a server-side or local-secret store for your API key.
+- Do not commit MCP config files that contain live bearer tokens.
+- Revoke and replace the key immediately if it is exposed.

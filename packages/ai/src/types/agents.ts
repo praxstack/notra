@@ -1,3 +1,4 @@
+import type { AILogTarget } from "@notra/ai/observability";
 import type { ToneProfile } from "@notra/ai/schemas/brand";
 import type { PostSourceMetadata } from "@notra/db/schema";
 import type { PostSummary } from "./posts";
@@ -11,6 +12,7 @@ import type {
   CommitWindow,
   GitHubSelectionFilters,
   GitHubToolRepositoryContext,
+  LinearToolContext,
 } from "./tools";
 
 export type ResolveIntegrationContext = (
@@ -18,17 +20,29 @@ export type ResolveIntegrationContext = (
   options?: { organizationId?: string }
 ) => Promise<GitHubToolRepositoryContext>;
 
+export type ResolveLinearIntegrationContext = (
+  integrationId: string,
+  options?: { organizationId?: string }
+) => Promise<LinearToolContext>;
+
+export type { AILogTarget } from "@notra/ai/observability";
+
 export interface AgentDataPointSettings {
   includePullRequests?: boolean;
   includeCommits?: boolean;
   includeReleases?: boolean;
-  includeLinearIssues?: boolean;
+  includeLinearData?: boolean;
 }
 
 export interface ChangelogAgentResult {
   postId: string;
   title: string;
   posts: PostSummary[];
+}
+
+export interface LinearIntegrationRef {
+  integrationId: string;
+  teamName?: string;
 }
 
 export interface ChangelogAgentOptions {
@@ -40,6 +54,7 @@ export interface ChangelogAgentOptions {
     repo: string;
     defaultBranch?: string | null;
   }>;
+  linearIntegrations?: LinearIntegrationRef[];
   tone?: ToneProfile;
   promptInput: ChangelogTonePromptInput;
   sourceMetadata?: PostSourceMetadata;
@@ -48,6 +63,8 @@ export interface ChangelogAgentOptions {
   commitWindow?: CommitWindow;
   autoPublish?: boolean;
   resolveContext: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+  log?: AILogTarget;
 }
 
 export interface LinkedInAgentResult {
@@ -65,6 +82,7 @@ export interface LinkedInAgentOptions {
     repo: string;
     defaultBranch?: string | null;
   }>;
+  linearIntegrations?: LinearIntegrationRef[];
   tone?: ToneProfile;
   promptInput: LinkedInTonePromptInput;
   sourceMetadata?: PostSourceMetadata;
@@ -73,6 +91,8 @@ export interface LinkedInAgentOptions {
   commitWindow?: CommitWindow;
   autoPublish?: boolean;
   resolveContext: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+  log?: AILogTarget;
 }
 
 export interface TwitterAgentResult {
@@ -90,6 +110,7 @@ export interface TwitterAgentOptions {
     repo: string;
     defaultBranch?: string | null;
   }>;
+  linearIntegrations?: LinearIntegrationRef[];
   tone?: ToneProfile;
   promptInput: TwitterTonePromptInput;
   sourceMetadata?: PostSourceMetadata;
@@ -98,6 +119,8 @@ export interface TwitterAgentOptions {
   commitWindow?: CommitWindow;
   autoPublish?: boolean;
   resolveContext: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+  log?: AILogTarget;
 }
 
 export interface BlogPostAgentResult {
@@ -108,12 +131,14 @@ export interface BlogPostAgentResult {
 
 export interface BlogPostAgentOptions {
   organizationId: string;
+  voiceId?: string;
   repositories: Array<{
     integrationId: string;
     owner: string;
     repo: string;
     defaultBranch?: string | null;
   }>;
+  linearIntegrations?: LinearIntegrationRef[];
   tone?: ToneProfile;
   promptInput: BlogPostTonePromptInput;
   sourceMetadata?: PostSourceMetadata;
@@ -122,6 +147,8 @@ export interface BlogPostAgentOptions {
   commitWindow?: CommitWindow;
   autoPublish?: boolean;
   resolveContext: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+  log?: AILogTarget;
 }
 
 export interface ChatAgentContext {
@@ -130,4 +157,5 @@ export interface ChatAgentContext {
   selectedText?: string;
   onMarkdownUpdate: (markdown: string) => void;
   brandContext?: string;
+  log?: AILogTarget;
 }

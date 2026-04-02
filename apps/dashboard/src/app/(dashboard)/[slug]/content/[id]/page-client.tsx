@@ -22,7 +22,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
 import { useCustomer } from "autumn-js/react";
 import Link from "next/link";
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import remend from "remend";
 import { toast } from "sonner";
@@ -155,9 +154,16 @@ export default function PageClient({
   const title = editingTitle ?? serverTitle;
   const hasTitleChanges =
     editingTitle !== null && editingTitle.trim() !== serverTitle;
+
+  const [persistedSlug, setPersistedSlug] = useState<string | null>(null);
+  const serverSlug = persistedSlug ?? data?.content?.slug ?? null;
+  const [editingSlug, setEditingSlug] = useState<string | null>(null);
+  const hasSlugChanges =
+    editingSlug !== null && editingSlug !== (serverSlug ?? "");
+
   const hasMarkdownChanges =
     editedMarkdown !== null && editedMarkdown !== originalMarkdown;
-  const hasChanges = hasMarkdownChanges || hasTitleChanges;
+  const hasChanges = hasMarkdownChanges || hasTitleChanges || hasSlugChanges;
 
   const [, setIsSaving] = useState(false);
 
@@ -189,6 +195,9 @@ export default function PageClient({
       if (hasTitleChanges) {
         body.title = title.trim();
       }
+      if (hasSlugChanges) {
+        body.slug = editingSlug?.trim() || null;
+      }
       if (editedMarkdown) {
         body.markdown = editedMarkdown;
       }
@@ -198,7 +207,7 @@ export default function PageClient({
         contentId,
         ...body,
       })) as {
-        content?: { title?: string };
+        content?: { title?: string; slug?: string | null };
       };
 
       if (editedMarkdown) {
@@ -207,6 +216,8 @@ export default function PageClient({
       }
       setPersistedTitle(responseData.content?.title ?? title.trim());
       setEditingTitle(null);
+      setPersistedSlug(responseData.content?.slug ?? null);
+      setEditingSlug(null);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: dashboardOrpc.content.get.queryKey({
@@ -218,14 +229,20 @@ export default function PageClient({
         }),
       ]);
       toast.success("Content saved");
-    } catch {
-      toast.error("Failed to save content");
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("already exists")) {
+        toast.error("A post with this slug already exists");
+      } else {
+        toast.error("Failed to save content");
+      }
     } finally {
       setIsSaving(false);
     }
   }, [
     hasChanges,
     hasTitleChanges,
+    hasSlugChanges,
+    editingSlug,
     title,
     editedMarkdown,
     organizationId,
@@ -238,6 +255,7 @@ export default function PageClient({
     editedMarkdownRef.current = originalMarkdown;
     editorRef.current?.setMarkdown(originalMarkdown);
     setEditingTitle(null);
+    setEditingSlug(null);
   }, [originalMarkdown]);
 
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
@@ -785,12 +803,14 @@ export default function PageClient({
             },
             setOriginalMarkdown,
             setEditingTitle,
+            setEditingSlug,
             onEditorChange: handleEditorChange,
             onSelectionChange: handleSelectionChange,
           }}
           content={{
             id: content.id,
             title: content.title,
+            slug: content.slug,
             markdown: content.markdown,
             contentType: content.contentType,
             date: content.date,
@@ -808,9 +828,12 @@ export default function PageClient({
             originalMarkdown,
             editingTitle,
             serverTitle,
+            editingSlug,
+            serverSlug,
             hasChanges,
             hasMarkdownChanges,
             hasTitleChanges,
+            hasSlugChanges,
           }}
         />
 

@@ -17,6 +17,21 @@ export const MARKETING_NAV_LINKS = [
   },
 ] as const;
 
+export const FOOTER_EXTENSION_LINKS = [
+  {
+    href: "https://www.framer.com/marketplace/plugins/notra/",
+    label: "Framer",
+    rel: "noreferrer",
+    target: "_blank",
+  },
+  {
+    href: "https://www.raycast.com/dominikdev/notra",
+    label: "Raycast",
+    rel: "noreferrer",
+    target: "_blank",
+  },
+] as const;
+
 export const FOOTER_PRODUCT_LINKS = [
   {
     href: "/#features",

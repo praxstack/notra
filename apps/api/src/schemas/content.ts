@@ -1,5 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import { supportedLanguageSchema } from "@notra/ai/schemas/language";
+import { POST_SLUG_MAX_LENGTH, POST_SLUG_REGEX } from "@notra/ai/schemas/post";
 import { toneProfileSchema } from "@notra/ai/schemas/tone";
 import {
   LOOKBACK_WINDOWS,
@@ -7,7 +8,6 @@ import {
 } from "@notra/content-generation/schemas";
 
 const HTTP_PROTOCOL_REGEX = /^https?:\/\//i;
-
 export const getPostsParamsSchema = z.object({});
 
 export const postStatusSchema = z.enum(["draft", "published"]);
@@ -147,6 +147,20 @@ export const getBrandIdentityParamsSchema = z.object({
     }),
 });
 
+export const getIntegrationParamsSchema = z.object({
+  integrationId: z
+    .string()
+    .trim()
+    .min(1, "integrationId is required")
+    .openapi({
+      param: {
+        in: "path",
+        name: "integrationId",
+      },
+      example: "51c2f3aa-efdd-4e28-8e69-23fa2dfd3561",
+    }),
+});
+
 export const errorResponseSchema = z
   .object({
     error: z.string(),
@@ -193,6 +207,15 @@ export const githubIntegrationResponseSchema = z.object({
   defaultBranch: z.string().nullable(),
 });
 
+export const linearIntegrationResponseSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  linearOrganizationId: z.string(),
+  linearOrganizationName: z.string().nullable(),
+  linearTeamId: z.string().nullable(),
+  linearTeamName: z.string().nullable(),
+});
+
 const GITHUB_PAT_PREFIXES = [
   "ghp_",
   "github_pat_",
@@ -233,6 +256,7 @@ export const createGitHubIntegrationResponseSchema = z.object({
 export const postResponseSchema = z.object({
   id: z.string(),
   title: z.string(),
+  slug: z.string().nullable(),
   content: z.string(),
   markdown: z.string(),
   recommendations: z.string().nullable(),
@@ -268,6 +292,20 @@ export const patchPostRequestSchema = z
     title: z.string().trim().min(1).max(120).optional().openapi({
       example: "Ship notes for week 11",
     }),
+    slug: z
+      .string()
+      .trim()
+      .min(1)
+      .max(POST_SLUG_MAX_LENGTH)
+      .regex(
+        POST_SLUG_REGEX,
+        "Slug must contain lowercase letters, numbers, and hyphens only"
+      )
+      .nullable()
+      .optional()
+      .openapi({
+        example: "ship-notes-week-11",
+      }),
     markdown: z.string().min(1).optional().openapi({
       example: "# Ship notes\n\nWe shipped a faster editor.",
     }),
@@ -278,6 +316,7 @@ export const patchPostRequestSchema = z
   .refine(
     (data) =>
       data.title !== undefined ||
+      data.slug !== undefined ||
       data.markdown !== undefined ||
       data.status !== undefined,
     {
@@ -422,6 +461,13 @@ export const deletePostResponseSchema = z.object({
   organization: organizationResponseSchema,
 });
 
+export const deleteIntegrationResponseSchema = z.object({
+  id: z.string(),
+  organization: organizationResponseSchema,
+  disabledSchedules: z.array(disabledTriggerSchema),
+  disabledEvents: z.array(disabledTriggerSchema),
+});
+
 export const getBrandIdentitiesResponseSchema = z.object({
   organization: organizationResponseSchema,
   brandIdentities: z.array(brandIdentityResponseSchema),
@@ -435,7 +481,7 @@ export const getBrandIdentityResponseSchema = z.object({
 export const getIntegrationsResponseSchema = z.object({
   github: z.array(githubIntegrationResponseSchema),
   slack: z.array(z.unknown()),
-  linear: z.array(z.unknown()),
+  linear: z.array(linearIntegrationResponseSchema),
   organization: organizationResponseSchema,
 });
 
@@ -476,6 +522,16 @@ export const createPostGenerationRequestSchema = z
       .optional()
       .openapi({
         example: ["repo_1", "repo_2"],
+        description:
+          "Deprecated. Use integrations.github with GitHub integration IDs instead.",
+      }),
+    linearIntegrationIds: z
+      .array(z.string().min(1))
+      .optional()
+      .openapi({
+        example: ["linear_integration_1"],
+        description:
+          "Deprecated. Use integrations.linear with Linear integration IDs instead.",
       }),
     integrations: z
       .object({
@@ -485,6 +541,13 @@ export const createPostGenerationRequestSchema = z
           .optional()
           .openapi({
             example: ["integration_1", "integration_2"],
+          }),
+        linear: z
+          .array(z.string().min(1))
+          .min(1)
+          .optional()
+          .openapi({
+            example: ["linear_integration_1"],
           }),
       })
       .optional(),
@@ -510,13 +573,13 @@ export const createPostGenerationRequestSchema = z
         includePullRequests: z.boolean().default(true),
         includeCommits: z.boolean().default(true),
         includeReleases: z.boolean().default(true),
-        includeLinearIssues: z.boolean().default(false),
+        includeLinearData: z.boolean().default(false),
       })
       .default({
         includePullRequests: true,
         includeCommits: true,
         includeReleases: true,
-        includeLinearIssues: false,
+        includeLinearData: false,
       }),
     selectedItems: z
       .object({
@@ -540,6 +603,14 @@ export const createPostGenerationRequestSchema = z
             ])
           )
           .optional(),
+        linearIssueIds: z
+          .array(
+            z.object({
+              integrationId: z.string(),
+              issueId: z.string(),
+            })
+          )
+          .optional(),
       })
       .optional(),
   })
@@ -555,7 +626,22 @@ export const createPostGenerationRequestSchema = z
     },
     {
       message:
-        "Provide only one repository selector: repositoryIds, integrations.github, or github.repositories",
+        "Provide only one GitHub source selector: integrations.github or github.repositories. repositoryIds is deprecated.",
+      path: ["integrations"],
+    }
+  )
+  .refine(
+    (value) => {
+      const linearSourceCount = [
+        value.linearIntegrationIds?.length ? 1 : 0,
+        value.integrations?.linear?.length ? 1 : 0,
+      ].reduce((sum, count) => sum + count, 0);
+
+      return linearSourceCount <= 1;
+    },
+    {
+      message:
+        "Provide only one Linear source selector: integrations.linear. linearIntegrationIds is deprecated.",
       path: ["integrations"],
     }
   )

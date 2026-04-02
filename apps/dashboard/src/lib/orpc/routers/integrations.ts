@@ -24,6 +24,12 @@ import {
   validateRepositoryBranchExists,
 } from "@/lib/services/github-integration";
 import { getIntegrationsByOrganization } from "@/lib/services/integrations";
+import {
+  deleteLinearIntegration,
+  getLinearIntegrationById,
+  getLinearIntegrationsByOrganization,
+  updateLinearIntegration,
+} from "@/lib/services/linear-integration";
 import { deleteQstashSchedule } from "@/lib/triggers/qstash";
 import {
   addRepositoryRequestSchema,
@@ -38,6 +44,7 @@ import {
   updateOutputBodySchema,
   updateRepositoryBodySchema,
 } from "@/schemas/integrations";
+import { updateLinearIntegrationBodySchema } from "@/schemas/linear";
 import type {
   GitHubIntegration,
   GitHubRepository,
@@ -677,6 +684,115 @@ export const integrationsRouter = {
         await requireOutputInOrganization(input.organizationId, input.outputId);
 
         return toggleOutput(input.outputId, input.enabled);
+      }),
+  },
+  linear: {
+    list: baseProcedure
+      .input(organizationIdInputSchema)
+      .handler(async ({ context, input }) => {
+        await assertOrganizationAccess({
+          headers: context.headers,
+          organizationId: input.organizationId,
+        });
+
+        const integrations = await getLinearIntegrationsByOrganization(
+          input.organizationId
+        );
+
+        return {
+          integrations: integrations.map((integration) => ({
+            id: integration.id,
+            displayName: integration.displayName,
+            enabled: integration.enabled,
+            createdAt: integration.createdAt.toISOString(),
+            linearOrganizationName: integration.linearOrganizationName,
+            linearTeamName: integration.linearTeamName,
+            createdByUser: integration.createdByUser
+              ? {
+                  id: integration.createdByUser.id,
+                  name: integration.createdByUser.name,
+                  email: integration.createdByUser.email,
+                  image: integration.createdByUser.image,
+                }
+              : undefined,
+          })),
+        };
+      }),
+    get: baseProcedure
+      .input(integrationInputSchema)
+      .handler(async ({ context, input }) => {
+        await assertOrganizationAccess({
+          headers: context.headers,
+          organizationId: input.organizationId,
+        });
+
+        const integration = await getLinearIntegrationById(input.integrationId);
+
+        if (!integration) {
+          return notFound("Linear integration not found");
+        }
+
+        if (integration.organizationId !== input.organizationId) {
+          return notFound("Linear integration not found");
+        }
+
+        return {
+          id: integration.id,
+          displayName: integration.displayName,
+          enabled: integration.enabled,
+          createdAt: integration.createdAt.toISOString(),
+          linearOrganizationId: integration.linearOrganizationId,
+          linearOrganizationName: integration.linearOrganizationName,
+          linearTeamId: integration.linearTeamId,
+          linearTeamName: integration.linearTeamName,
+          createdByUser: integration.createdByUser
+            ? {
+                id: integration.createdByUser.id,
+                name: integration.createdByUser.name,
+                email: integration.createdByUser.email,
+                image: integration.createdByUser.image,
+              }
+            : undefined,
+        };
+      }),
+    update: baseProcedure
+      .input(integrationInputSchema.and(updateLinearIntegrationBodySchema))
+      .handler(async ({ context, input }) => {
+        await assertOrganizationAccess({
+          headers: context.headers,
+          organizationId: input.organizationId,
+        });
+
+        const existing = await getLinearIntegrationById(input.integrationId);
+        if (!existing || existing.organizationId !== input.organizationId) {
+          return notFound("Linear integration not found");
+        }
+
+        const updated = await updateLinearIntegration(input.integrationId, {
+          enabled: input.enabled,
+          displayName: input.displayName,
+          linearTeamId: input.linearTeamId,
+          linearTeamName: input.linearTeamName,
+        });
+
+        return updated;
+      }),
+    delete: baseProcedure
+      .input(integrationInputSchema)
+      .handler(async ({ context, input }) => {
+        await assertOrganizationAccess({
+          headers: context.headers,
+          organizationId: input.organizationId,
+        });
+
+        const existing = await getLinearIntegrationById(input.integrationId);
+        if (!existing || existing.organizationId !== input.organizationId) {
+          return notFound("Linear integration not found");
+        }
+
+        await deleteLinearIntegration(input.integrationId);
+
+        return { success: true };
       }),
   },
 };

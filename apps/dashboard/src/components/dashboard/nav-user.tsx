@@ -43,6 +43,7 @@ export function NavUser() {
   const { isMobile, state } = useSidebar();
   const { setTheme, resolvedTheme } = useTheme();
   const isCollapsed = state === "collapsed";
+  const dropdownSide = isMobile ? "bottom" : isCollapsed ? "right" : "top";
   const isDark = resolvedTheme === "dark";
   const toggleTheme = () => setTheme(isDark ? "light" : "dark");
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -112,7 +113,7 @@ export function NavUser() {
             render={
               <SidebarMenuButton
                 className={cn(
-                  "cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+                  "cursor-pointer data-popup-open:bg-sidebar-accent/90 data-popup-open:text-sidebar-accent-foreground data-popup-open:ring-1 data-popup-open:ring-sidebar-border/70",
                   isCollapsed ? "size-10 min-w-0 justify-center p-1" : ""
                 )}
                 disabled={isSigningOut}
@@ -154,7 +155,7 @@ export function NavUser() {
           <DropdownMenuContent
             align="end"
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
+            side={dropdownSide}
             sideOffset={4}
           >
             <DropdownMenuGroup>

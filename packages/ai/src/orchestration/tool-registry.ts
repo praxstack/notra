@@ -4,10 +4,19 @@ import {
   createGetPullRequestsTool,
   createGetReleaseByTagTool,
 } from "@notra/ai/tools/github";
+import {
+  createGetLinearCyclesTool,
+  createGetLinearIssuesTool,
+  createGetLinearProjectsTool,
+} from "@notra/ai/tools/linear";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
-import type { ResolveIntegrationContext } from "@notra/ai/types/agents";
+import type {
+  ResolveIntegrationContext,
+  ResolveLinearIntegrationContext,
+} from "@notra/ai/types/agents";
 import type {
   BuildToolSetParams,
+  LinearContext,
   RepoContext,
   ToolSet,
   ValidatedIntegration,
@@ -16,6 +25,7 @@ import type { Tool } from "ai";
 
 export interface BuildToolSetDeps {
   resolveContext?: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
 }
 
 export function buildToolSet(
@@ -91,6 +101,36 @@ export function buildToolSet(
     );
   }
 
+  const hasLinear = validatedIntegrations.some((i) => i.type === "linear");
+
+  if (hasLinear) {
+    const allowedLinearIntegrationIds = Array.from(
+      new Set(
+        validatedIntegrations
+          .filter((integration) => integration.type === "linear")
+          .map((integration) => integration.id)
+      )
+    );
+
+    tools.getLinearIssues = createGetLinearIssuesTool(
+      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
+      deps?.resolveLinearContext
+    );
+    tools.getLinearProjects = createGetLinearProjectsTool(
+      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
+      deps?.resolveLinearContext
+    );
+    tools.getLinearCycles = createGetLinearCyclesTool(
+      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
+      deps?.resolveLinearContext
+    );
+
+    const teams = getLinearTeamList(validatedIntegrations);
+    descriptions.push(
+      `**Linear Integration**: Fetch issues, projects, and cycles${teams ? ` from: ${teams}` : ""}`
+    );
+  }
+
   return { tools, descriptions };
 }
 
@@ -106,6 +146,16 @@ function getGitHubRepoList(integrations: ValidatedIntegration[]): string {
   return repos.join(", ");
 }
 
+function getLinearTeamList(integrations: ValidatedIntegration[]): string {
+  const teams: string[] = [];
+  for (const integration of integrations) {
+    if (integration.type === "linear") {
+      teams.push(integration.linearTeamName ?? integration.displayName);
+    }
+  }
+  return teams.join(", ");
+}
+
 export function getRepoContextFromIntegrations(
   integrations: ValidatedIntegration[]
 ): RepoContext[] {
@@ -113,6 +163,18 @@ export function getRepoContextFromIntegrations(
     new Set(
       integrations
         .filter((integration) => integration.type === "github")
+        .map((integration) => integration.id)
+    )
+  ).map((integrationId) => ({ integrationId }));
+}
+
+export function getLinearContextFromIntegrations(
+  integrations: ValidatedIntegration[]
+): LinearContext[] {
+  return Array.from(
+    new Set(
+      integrations
+        .filter((integration) => integration.type === "linear")
         .map((integration) => integration.id)
     )
   ).map((integrationId) => ({ integrationId }));

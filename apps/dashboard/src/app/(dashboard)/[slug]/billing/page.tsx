@@ -35,11 +35,11 @@ import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import {
   ADDONS,
-  TOPUP_MAX_DOLLARS,
-  TOPUP_MIN_DOLLARS,
   calculateTopupFee,
   calculateTopupTotal,
   dollarsToCredits,
+  TOPUP_MAX_DOLLARS,
+  TOPUP_MIN_DOLLARS,
 } from "@/constants/features";
 import type { ProductFeature } from "@/types/hooks/billing";
 
@@ -67,6 +67,19 @@ const INVOICE_PRODUCT_NAME_MAP: Record<string, string> = {
 };
 
 const INVOICE_TABLE_COLUMN_COUNT = 4;
+
+const TOPUP_OPTIONS = [10, 50]
+  .filter(
+    (dollars) => dollars >= TOPUP_MIN_DOLLARS && dollars <= TOPUP_MAX_DOLLARS
+  )
+  .map((dollars) => ({
+    id: `${ADDONS.AI_CREDITS_TOPUP}_${dollars}`,
+    label: `$${dollars}`,
+    credits: dollarsToCredits(dollars),
+    creditValue: dollars,
+    price: calculateTopupTotal(dollars),
+    fee: calculateTopupFee(dollars),
+  }));
 
 type BillingPlan = Exclude<
   ReturnType<typeof useListPlans>["data"],
@@ -240,7 +253,9 @@ export default function BillingPage() {
 
   const basicMonthlyPlan = plans?.find((plan) => plan.id === "basic");
   const basicYearlyPlan = plans?.find((plan) => plan.id === "basic_yearly");
-  const basicPlan = isYearly ? (basicYearlyPlan ?? basicMonthlyPlan) : basicMonthlyPlan;
+  const basicPlan = isYearly
+    ? (basicYearlyPlan ?? basicMonthlyPlan)
+    : basicMonthlyPlan;
   const basicPrice = basicPlan
     ? getProductPrice(basicPlan)
     : { amount: 0, interval: isYearly ? "year" : "month" };
@@ -356,8 +371,8 @@ export default function BillingPage() {
                     <div>
                       <h2 className="font-semibold text-lg">Plans</h2>
                       <p className="text-muted-foreground text-sm">
-                        Upgrade or change your plan. Basic includes a 3 day
-                        free trial
+                        Upgrade or change your plan. Basic includes a 3 day free
+                        trial
                       </p>
                     </div>
                     <Tabs
@@ -401,7 +416,8 @@ export default function BillingPage() {
                       <div className="space-y-4">
                         <div>
                           <p className="text-muted-foreground text-sm">
-                            {basicPlan?.description ?? "For solo devs and small teams"}
+                            {basicPlan?.description ??
+                              "For solo devs and small teams"}
                           </p>
                           <div className="mt-2 flex items-end">
                             <span className="font-bold text-3xl leading-none">

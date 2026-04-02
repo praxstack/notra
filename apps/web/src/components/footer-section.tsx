@@ -4,8 +4,12 @@ import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
 import Link from "next/link";
-import { FOOTER_PRODUCT_LINKS } from "@/utils/navigation";
+import {
+  FOOTER_EXTENSION_LINKS,
+  FOOTER_PRODUCT_LINKS,
+} from "@/utils/navigation";
 import { SOCIAL_LINKS } from "../utils/constants";
+import { HatchPattern } from "./hatch-pattern";
 import { NotraMark } from "./notra-mark";
 
 export default function FooterSection() {
@@ -87,6 +91,25 @@ export default function FooterSection() {
           </div>
 
           <div className="flex min-w-30 flex-1 flex-col items-start justify-start gap-3">
+            <div className="self-stretch font-medium font-sans text-foreground/50 text-sm leading-5">
+              Extensions
+            </div>
+            <div className="flex flex-col items-start justify-end gap-2">
+              {FOOTER_EXTENSION_LINKS.map((link) => (
+                <Link
+                  className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                  href={link.href}
+                  key={link.href}
+                  rel={link.rel}
+                  target={link.target}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex min-w-30 flex-1 flex-col items-start justify-start gap-3">
             <div className="font-medium font-sans text-foreground/50 text-sm leading-5">
               Legal
             </div>
@@ -115,22 +138,7 @@ export default function FooterSection() {
       </div>
 
       <div className="relative h-12 self-stretch overflow-hidden border-border border-t">
-        <div className="absolute inset-0 h-full w-full overflow-hidden">
-          <div className="relative h-full w-full">
-            {Array.from({ length: 400 }).map((_, i) => (
-              <div
-                className="absolute h-16 w-75 border border-[rgba(3,7,18,0.08)]"
-                key={i}
-                style={{
-                  left: `${i * 18.75 - 37.5}rem`,
-                  top: "-7.5rem",
-                  transform: "rotate(-45deg)",
-                  transformOrigin: "top left",
-                }}
-              />
-            ))}
-          </div>
-        </div>
+        <HatchPattern className="absolute inset-0 h-full w-full" />
       </div>
     </div>
   );

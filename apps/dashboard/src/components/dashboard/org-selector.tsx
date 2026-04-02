@@ -134,7 +134,7 @@ function OrgSelectorTrigger({
       render={
         <SidebarMenuButton
           className={cn(
-            "cursor-pointer border border-transparent transition hover:bg-sidebar-accent data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+            "cursor-pointer data-popup-open:bg-sidebar-accent/90 data-popup-open:text-sidebar-accent-foreground data-popup-open:ring-1 data-popup-open:ring-sidebar-border/70",
             isCollapsed ? "size-10 min-w-0 justify-center p-1" : ""
           )}
           disabled={isSwitching}
@@ -203,6 +203,7 @@ export function OrgSelector() {
   const queryClient = useQueryClient();
   const { isMobile, state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const dropdownSide = isMobile ? "bottom" : isCollapsed ? "right" : "bottom";
   const { activeOrganization, organizations, isLoading } =
     useOrganizationsContext();
   const { data: customer } = useCustomer({
@@ -291,25 +292,25 @@ export function OrgSelector() {
           )}
           <DropdownMenuContent
             align="start"
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-64 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
+            side={dropdownSide}
             sideOffset={4}
           >
             {organizations?.length ? (
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="text-muted-foreground text-xs">
-                  Organizations
-                </DropdownMenuLabel>
+                <DropdownMenuLabel>Organizations</DropdownMenuLabel>
                 {organizations.map((org) => (
                   <DropdownMenuItem
-                    className="flex items-center gap-4 pr-8"
+                    className="cursor-pointer gap-2 pr-8"
                     disabled={isNavigating}
                     key={org.id}
                     onClick={() => switchOrganization(org)}
                   >
-                    <Avatar className="size-6 rounded-[0.2rem]">
+                    <Avatar className="size-6 rounded-lg after:rounded-lg">
                       <AvatarImage src={org.logo || undefined} />
-                      <AvatarFallback>{org.name.slice(0, 2)}</AvatarFallback>
+                      <AvatarFallback className="rounded-lg">
+                        {org.name.slice(0, 2)}
+                      </AvatarFallback>
                     </Avatar>
                     <OverflowAwareText
                       className="text-sm"
@@ -318,7 +319,7 @@ export function OrgSelector() {
                     />
                     {activeOrganization?.id === org.id ? (
                       <HugeiconsIcon
-                        className="absolute right-0 size-4 text-muted-foreground"
+                        className="absolute right-2 size-4 text-muted-foreground"
                         icon={Tick02Icon}
                       />
                     ) : null}
@@ -342,9 +343,7 @@ export function OrgSelector() {
                     action: {
                       label: "Upgrade",
                       onClick: () =>
-                        router.push(
-                          `/${activeOrganization?.slug}/billing`
-                        ),
+                        router.push(`/${activeOrganization?.slug}/billing`),
                     },
                   });
                   return;
@@ -352,9 +351,7 @@ export function OrgSelector() {
                 setIsCreateModalOpen(true);
               }}
             >
-              <div className="flex size-6 items-center justify-center rounded-[0.2rem] bg-muted">
-                <HugeiconsIcon className="size-4" icon={PlusSignIcon} />
-              </div>
+              <HugeiconsIcon icon={PlusSignIcon} />
               Create Organization
             </DropdownMenuItem>
           </DropdownMenuContent>

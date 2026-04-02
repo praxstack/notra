@@ -18,14 +18,17 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { memo, useMemo, useState } from "react";
+import { AddLinearIntegrationDialog } from "@/components/integrations/add-linear-integration-dialog";
 import { InstalledIntegrationCard } from "@/components/integrations-card";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { useLinearConnectionToast } from "@/lib/hooks/use-linear-connection-toast";
 import {
   ALL_INTEGRATIONS,
+  EXTENSION_SOURCES,
   INPUT_SOURCES,
   INTEGRATION_CATEGORY_MAP,
   OUTPUT_SOURCES,
@@ -51,12 +54,6 @@ interface Integration {
   type: IntegrationType;
   enabled: boolean;
   createdAt: string;
-  repositories: Array<{
-    id: string;
-    owner: string;
-    repo: string;
-    enabled: boolean;
-  }>;
 }
 
 interface PageClientProps {
@@ -76,11 +73,13 @@ const IntegrationCard = memo(function IntegrationCard({
   const organizationId = activeOrganization?.id;
   const organizationSlug = activeOrganization?.slug;
   const router = useRouter();
+  const pathname = usePathname();
   const isActive = activeCount > 0;
   const [dialogOpen, setDialogOpen] = useState(false);
   const showConnectButton = integration.available;
   const showComingSoon = !integration.available;
   const showGitHubDialog = integration.available && integration.id === "github";
+  const showLinearDialog = integration.available && integration.id === "linear";
 
   if (!(organizationId && organizationSlug)) {
     return null;
@@ -102,7 +101,7 @@ const IntegrationCard = memo(function IntegrationCard({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (showGitHubDialog) {
+                if (showGitHubDialog || showLinearDialog) {
                   setDialogOpen(true);
                 } else {
                   router.push(
@@ -113,7 +112,7 @@ const IntegrationCard = memo(function IntegrationCard({
               size="sm"
               variant="outline"
             >
-              Connect
+              {integration.connectLabel ?? "Connect"}
             </Button>
           ) : null}
           {showComingSoon ? (
@@ -140,8 +139,8 @@ const IntegrationCard = memo(function IntegrationCard({
       }
       className={
         integration.available
-          ? "cursor-pointer transition-colors hover:bg-muted/80"
-          : undefined
+          ? "h-full cursor-pointer transition-colors hover:bg-muted/80"
+          : "h-full"
       }
       disabled={!integration.available}
       heading={integration.name}
@@ -157,7 +156,7 @@ const IntegrationCard = memo(function IntegrationCard({
     <>
       {integration.available ? (
         <Link
-          className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-full rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           href={`/${organizationSlug}/integrations/${integration.href}`}
         >
           {cardContent}
@@ -175,6 +174,13 @@ const IntegrationCard = memo(function IntegrationCard({
           organizationId={organizationId}
         />
       ) : null}
+      {showLinearDialog ? (
+        <AddLinearIntegrationDialog
+          authorizeUrl={`/api/integrations/linear/authorize?organizationId=${organizationId}&callbackPath=${encodeURIComponent(pathname)}`}
+          onOpenChange={setDialogOpen}
+          open={dialogOpen}
+        />
+      ) : null}
     </>
   );
 });
@@ -183,6 +189,8 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   const { getOrganization } = useOrganizationsContext();
   const organization = getOrganization(organizationSlug);
   const organizationId = organization?.id;
+
+  useLinearConnectionToast();
 
   const [activeTab, setActiveTab] = useQueryState(
     "tab",
@@ -287,6 +295,25 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                 </p>
                 <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {OUTPUT_SOURCES.map((integration) => (
+                    <IntegrationCard
+                      activeCount={
+                        integrationsByType?.[integration.id]?.length || 0
+                      }
+                      integration={integration}
+                      isPending={isPending}
+                      key={integration.id}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="mb-4 font-semibold text-lg">Extensions</h2>
+                <p className="mb-4 text-muted-foreground text-sm">
+                  Use Notra from your favorite tools and launchers
+                </p>
+                <div className="grid gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {EXTENSION_SOURCES.map((integration) => (
                     <IntegrationCard
                       activeCount={
                         integrationsByType?.[integration.id]?.length || 0

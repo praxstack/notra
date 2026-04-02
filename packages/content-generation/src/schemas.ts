@@ -25,7 +25,7 @@ export const contentDataPointSettingsSchema = z.object({
   includePullRequests: z.boolean().default(true),
   includeCommits: z.boolean().default(true),
   includeReleases: z.boolean().default(true),
-  includeLinearIssues: z.boolean().default(false),
+  includeLinearData: z.boolean().default(false),
 });
 
 export const selectedItemsSchema = z.object({
@@ -49,6 +49,14 @@ export const selectedItemsSchema = z.object({
       ])
     )
     .optional(),
+  linearIssueIds: z
+    .array(
+      z.object({
+        integrationId: z.string(),
+        issueId: z.string(),
+      })
+    )
+    .optional(),
 });
 
 export const requestedGitHubRepositorySchema = z.object({
@@ -62,6 +70,7 @@ export const requestedGitHubRepositoriesSchema = z.object({
 
 export const requestedIntegrationsSchema = z.object({
   github: z.array(z.string().min(1)).min(1).optional(),
+  linear: z.array(z.string().min(1)).min(1).optional(),
 });
 
 export const createContentGenerationRequestSchema = z
@@ -71,6 +80,7 @@ export const createContentGenerationRequestSchema = z
     brandVoiceId: z.string().min(1).optional(),
     brandIdentityId: z.string().min(1).nullable().optional(),
     repositoryIds: z.array(z.string().min(1)).optional(),
+    linearIntegrationIds: z.array(z.string().min(1)).optional(),
     integrations: requestedIntegrationsSchema.optional(),
     github: requestedGitHubRepositoriesSchema.optional(),
     dataPoints: contentDataPointSettingsSchema.prefault({}),
@@ -88,7 +98,22 @@ export const createContentGenerationRequestSchema = z
     },
     {
       message:
-        "Provide only one repository selector: repositoryIds, integrations.github, or github.repositories",
+        "Provide only one GitHub source selector: integrations.github or github.repositories. repositoryIds is deprecated.",
+      path: ["integrations"],
+    }
+  )
+  .refine(
+    (value) => {
+      const linearSourceCount = [
+        value.linearIntegrationIds?.length ? 1 : 0,
+        value.integrations?.linear?.length ? 1 : 0,
+      ].reduce((sum, count) => sum + count, 0);
+
+      return linearSourceCount <= 1;
+    },
+    {
+      message:
+        "Provide only one Linear source selector: integrations.linear. linearIntegrationIds is deprecated.",
       path: ["integrations"],
     }
   )
@@ -153,6 +178,7 @@ export const contentGenerationWorkflowPayloadSchema = z.object({
   brandVoiceId: z.string().min(1).optional(),
   dataPoints: contentDataPointSettingsSchema,
   selectedItems: selectedItemsSchema.optional(),
+  linearIntegrationIds: z.array(z.string()).optional(),
   aiCreditReserved: z.boolean(),
   source: z.enum(["api", "dashboard"]).default("dashboard"),
 });

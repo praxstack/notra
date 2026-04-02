@@ -13,11 +13,16 @@ export const OUTPUT_INTEGRATION_TYPES = [
   "webflow",
   "framer",
 ] as const;
+
+export const EXTENSION_INTEGRATION_TYPES = ["raycast"] as const;
+export type ExtensionIntegrationType =
+  (typeof EXTENSION_INTEGRATION_TYPES)[number];
 export type OutputIntegrationType = (typeof OUTPUT_INTEGRATION_TYPES)[number];
 
 export const INTEGRATION_TYPES = [
   ...INPUT_INTEGRATION_TYPES,
   ...OUTPUT_INTEGRATION_TYPES,
+  ...EXTENSION_INTEGRATION_TYPES,
 ] as const;
 export type IntegrationType = (typeof INTEGRATION_TYPES)[number];
 

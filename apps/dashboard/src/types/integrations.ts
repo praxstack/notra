@@ -33,6 +33,23 @@ export interface GitHubIntegration {
   repositories: GitHubRepository[];
 }
 
+export interface LinearIntegration {
+  id: string;
+  displayName: string;
+  enabled: boolean;
+  createdAt: string;
+  linearOrganizationId?: string;
+  linearOrganizationName?: string | null;
+  linearTeamId?: string | null;
+  linearTeamName?: string | null;
+  createdByUser?: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+}
+
 export type WebhookLogType = "release" | "push" | "ping";
 
 export interface IntegrationWebhookLog {
@@ -88,6 +105,7 @@ export interface AddIntegrationDialogProps {
   organizationId?: string;
   organizationSlug?: string;
   onSuccess?: () => void;
+  onFlowComplete?: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode;
@@ -141,8 +159,16 @@ export interface WebhookSetupDialogProps {
 }
 
 export interface AddRepositoryButtonProps {
+  onAdd?: () => void;
+}
+
+export interface CreateLinearIntegrationParams {
   organizationId: string;
-  githubIntegrationId: string | undefined;
-  onOpenDialog?: () => void;
-  onCloseDialog?: () => void;
+  userId: string;
+  displayName: string;
+  accessToken: string;
+  linearOrganizationId: string;
+  linearOrganizationName?: string;
+  linearTeamId?: string;
+  linearTeamName?: string;
 }

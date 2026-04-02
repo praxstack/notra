@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import type {
@@ -19,8 +20,12 @@ interface ActiveGenerationsResponse {
 
 export function useActiveGenerations(organizationId: string) {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const router = useRouter();
   const previousCountRef = useRef<number | null>(null);
   const toastedResultsRef = useRef(new Set<string>());
+  const slug = pathname.split("/").filter(Boolean)[0];
+  const logsPath = slug ? `/${slug}/logs` : "/logs";
 
   const query = useQuery<ActiveGenerationsResponse>(
     dashboardOrpc.content.activeGenerations.list.queryOptions({
@@ -71,7 +76,13 @@ export function useActiveGenerations(organizationId: string) {
             result.title ? `"${result.title}" generated` : "Content generated"
           );
         } else {
-          toast.error("Content generation failed, check logs for details");
+          toast.error("Content generation failed", {
+            action: {
+              label: "View logs",
+              onClick: () => router.push(logsPath),
+            },
+            description: "Check the logs page for details.",
+          });
         }
 
         clearResultMutate({
@@ -80,7 +91,7 @@ export function useActiveGenerations(organizationId: string) {
         });
       }
     },
-    [clearResultMutate, organizationId]
+    [clearResultMutate, logsPath, organizationId, router]
   );
 
   useEffect(() => {

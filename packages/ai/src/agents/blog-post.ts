@@ -5,8 +5,9 @@ import { getFormalBlogPostPrompt } from "@notra/ai/prompts/blog_post/formal";
 import { getProfessionalBlogPostPrompt } from "@notra/ai/prompts/blog_post/professional";
 import { getUserPrompt } from "@notra/ai/prompts/user";
 import { getValidToneProfile, type ToneProfile } from "@notra/ai/schemas/brand";
-import { getAISDKTelemetry } from "@notra/ai/telemetry";
+import { createGetBrandReferencesTool } from "@notra/ai/tools/brand-references";
 import { buildGitHubDataTools } from "@notra/ai/tools/github";
+import { buildLinearDataTools } from "@notra/ai/tools/linear";
 import {
   createCreatePostTool,
   createFailTool,
@@ -36,7 +37,9 @@ export async function generateBlogPost(
 ): Promise<BlogPostAgentResult> {
   const {
     organizationId,
+    voiceId,
     repositories,
+    linearIntegrations,
     tone = "Conversational",
     promptInput,
     sourceMetadata,
@@ -45,15 +48,25 @@ export async function generateBlogPost(
     commitWindow,
     autoPublish,
     resolveContext,
+    resolveLinearContext,
+    log,
   } = options;
 
-  if (!repositories || repositories.length === 0) {
+  if (
+    (!repositories || repositories.length === 0) &&
+    (!linearIntegrations || linearIntegrations.length === 0)
+  ) {
     throw new Error(
-      "At least one repository must be provided to generate a blog post."
+      "At least one repository or Linear integration must be provided to generate a blog post."
     );
   }
 
-  const model = createModel(organizationId, "anthropic/claude-haiku-4.5");
+  const model = createModel(
+    organizationId,
+    "anthropic/claude-haiku-4.5",
+    undefined,
+    log
+  );
 
   const resolvedTone = getValidToneProfile(tone, "Conversational");
 
@@ -63,7 +76,11 @@ export async function generateBlogPost(
   const prompt = getUserPrompt("blog post", promptInput);
 
   const allowedIntegrationIds = Array.from(
-    new Set(repositories.map((repo) => repo.integrationId))
+    new Set((repositories ?? []).map((repo) => repo.integrationId))
+  );
+
+  const allowedLinearIntegrationIds = Array.from(
+    new Set((linearIntegrations ?? []).map((li) => li.integrationId))
   );
 
   const postToolsResult: PostToolsResult = {};
@@ -76,19 +93,17 @@ export async function generateBlogPost(
 
   const agent = new ToolLoopAgent({
     model,
-    experimental_telemetry: await getAISDKTelemetry("generateBlogPost", {
-      organizationId,
-      metadata: {
-        agent: "blog_post",
-        contentType: "blog_post",
-      },
-    }),
     providerOptions: {
       anthropic: {
         thinking: { type: "enabled", budgetTokens: 4096 },
       },
     },
     tools: {
+      getBrandReferences: createGetBrandReferencesTool({
+        organizationId,
+        voiceId,
+        agentType: "blog",
+      }),
       ...buildGitHubDataTools({
         organizationId,
         allowedIntegrationIds,
@@ -96,6 +111,12 @@ export async function generateBlogPost(
         selectionFilters,
         commitWindow,
         resolveContext,
+      }),
+      ...buildLinearDataTools({
+        organizationId,
+        allowedIntegrationIds: allowedLinearIntegrationIds,
+        dataPointSettings,
+        resolveContext: resolveLinearContext,
       }),
       listAvailableSkills: listAvailableSkills(),
       getSkillByName: getSkillByName(),

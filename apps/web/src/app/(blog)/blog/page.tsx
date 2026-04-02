@@ -70,22 +70,25 @@ export default async function BlogPage() {
         </div>
       </div>
 
-      <div className="mt-14 grid w-full max-w-[760px] gap-8 self-center">
+      <div className="mt-14 w-full max-w-[760px] divide-y divide-border self-center">
         {timelineItems.map((item) => (
-          <Link className="group block" href={item.href} key={item.id}>
-            <article className="rounded-2xl border border-border bg-card/50 p-6 transition-colors hover:border-primary/30 hover:bg-card sm:p-8">
-              <time className="block font-sans text-foreground/45 text-sm">
-                {formatBlogDate(item.date)}
-              </time>
-              <h2 className="mt-2 font-sans font-semibold text-foreground text-xl tracking-tight transition-colors group-hover:text-primary sm:text-2xl">
-                {item.title}
-              </h2>
-              <p className="mt-2 line-clamp-3 font-sans text-muted-foreground text-sm leading-6 sm:text-base">
+          <Link
+            className="group block py-8 first:pt-0"
+            href={item.href}
+            key={item.id}
+          >
+            <article>
+              <div className="flex items-start justify-between gap-4">
+                <h2 className="font-sans font-semibold text-foreground text-xl tracking-tight sm:text-2xl">
+                  {item.title}
+                </h2>
+                <time className="shrink-0 pt-1 font-sans text-muted-foreground text-sm">
+                  {formatBlogDate(item.date)}
+                </time>
+              </div>
+              <p className="mt-3 line-clamp-3 font-sans text-base text-muted-foreground leading-7">
                 {item.description}
               </p>
-              <span className="mt-4 inline-block font-medium font-sans text-primary text-sm">
-                Read more &rarr;
-              </span>
             </article>
           </Link>
         ))}

@@ -173,6 +173,7 @@ export function useDynamicDasharray({
             if (index === 0) return acc;
 
             const prevPoint = points[index - 1];
+            if (!prevPoint) return acc;
 
             const dx = (point.x || 0) - (prevPoint.x || 0);
             const dy = (point.y || 0) - (prevPoint.y || 0);
