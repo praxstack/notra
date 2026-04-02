@@ -99,7 +99,7 @@
             "group": "Routes",
             "expanded": true,
             "openapi": {
-              "source": "openapi.json",
+              "source": "https://api.usenotra.com/openapi.json",
               "directory": "api-reference"
             },
             "pages": [
