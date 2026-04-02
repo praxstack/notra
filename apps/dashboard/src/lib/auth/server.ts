@@ -16,7 +16,7 @@ import { customAlphabet } from "nanoid";
 import { cookies } from "next/headers";
 import { LAST_VISITED_ORGANIZATION_COOKIE } from "@/constants/cookies";
 import { FEATURES } from "@/constants/features";
-import { autumn, ensureAutumnCustomer } from "@/lib/billing/autumn";
+import { autumn } from "@/lib/billing/autumn";
 import {
   TEAM_MEMBER_LIMIT_CHECK_UNAVAILABLE_MESSAGE,
   TEAM_MEMBER_LIMIT_ERROR_MESSAGE,
@@ -375,7 +375,7 @@ export const auth = betterAuth({
             );
             return;
           }
-          await ensureAutumnCustomer({
+          await autumn.customers.getOrCreate({
             customerId: org.id,
             name: org.name,
             metadata: {
