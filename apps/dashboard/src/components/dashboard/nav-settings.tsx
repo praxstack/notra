@@ -6,6 +6,7 @@ import {
   Settings01Icon,
   UserCircleIcon,
   UserGroupIcon,
+  Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
@@ -52,6 +53,11 @@ const organizationItems: NavSettingsItem[] = [
     label: "Billing & Usage",
     url: "billing",
     icon: CreditCardIcon,
+  },
+  {
+    label: "Credits",
+    url: "credits",
+    icon: Wallet01Icon,
   },
 ];
 

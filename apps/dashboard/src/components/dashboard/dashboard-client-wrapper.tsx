@@ -13,12 +13,14 @@ interface DashboardClientWrapperProps {
   children: React.ReactNode;
   initialActiveOrganization?: InitialActiveOrganization | null;
   initialSidebarOpen?: boolean;
+  modal?: React.ReactNode;
 }
 
 export function DashboardClientWrapper({
   children,
   initialActiveOrganization,
   initialSidebarOpen = true,
+  modal,
 }: DashboardClientWrapperProps) {
   return (
     <OrganizationsProvider
@@ -36,6 +38,7 @@ export function DashboardClientWrapper({
           </div>
         </SidebarInset>
       </SidebarProvider>
+      {modal}
     </OrganizationsProvider>
   );
 }

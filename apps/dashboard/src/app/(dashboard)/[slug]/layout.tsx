@@ -8,11 +8,13 @@ import { validateOrganizationAccess } from "@/lib/auth/actions";
 
 interface OrganizationLayoutProps {
   children: React.ReactNode;
+  modal: React.ReactNode;
   params: Promise<{ slug: string }>;
 }
 
 export default async function OrganizationLayout({
   children,
+  modal,
   params,
 }: OrganizationLayoutProps) {
   const { slug } = await params;
@@ -32,6 +34,7 @@ export default async function OrganizationLayout({
         slug: organization.slug,
       }}
       initialSidebarOpen={initialSidebarOpen}
+      modal={modal}
     >
       {children}
     </DashboardClientWrapper>

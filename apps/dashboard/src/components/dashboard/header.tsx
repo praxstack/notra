@@ -16,6 +16,7 @@ import { useHotkey } from "@tanstack/react-hotkeys";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId } from "react";
+import { CreditBalanceButton } from "@/components/billing/credit-balance-button";
 
 const NON_ORG_PATHS: string[] = [];
 
@@ -100,20 +101,23 @@ export function SiteHeader() {
         <Breadcrumb>
           <BreadcrumbList>{breadcrumbs}</BreadcrumbList>
         </Breadcrumb>
-        <Button
-          className="ml-auto gap-1.5"
-          data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
-          data-cal-link="dominikkoch/15min"
-          data-cal-namespace="15min"
-          size="sm"
-          variant="outline"
-        >
-          <HugeiconsIcon icon={Calendar03Icon} size={16} />
-          Book a Call
-          <kbd className="pointer-events-none ml-1 hidden select-none rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-muted-foreground text-xs sm:inline-block">
-            C
-          </kbd>
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <CreditBalanceButton />
+          <Button
+            className="gap-1.5"
+            data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
+            data-cal-link="dominikkoch/15min"
+            data-cal-namespace="15min"
+            size="sm"
+            variant="outline"
+          >
+            <HugeiconsIcon icon={Calendar03Icon} size={16} />
+            Book a Call
+            <kbd className="pointer-events-none ml-1 hidden select-none rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-muted-foreground text-xs sm:inline-block">
+              C
+            </kbd>
+          </Button>
+        </div>
       </div>
     </header>
   );

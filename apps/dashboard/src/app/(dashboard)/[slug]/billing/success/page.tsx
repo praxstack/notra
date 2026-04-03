@@ -12,7 +12,20 @@ import { toast } from "sonner";
 
 export default function BillingSuccessPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { openCustomerPortal } = useCustomer();
+  const { openCustomerPortal, data: customer } = useCustomer({
+    expand: ["subscriptions.plan"],
+  });
+
+  const activeSubscription = customer?.subscriptions?.find(
+    (sub) => !sub.addOn && sub.status === "active"
+  );
+  const planId = activeSubscription?.plan?.id ?? activeSubscription?.planId;
+  const planName =
+    planId === "pro" || planId === "pro_yearly"
+      ? "Pro"
+      : planId === "basic" || planId === "basic_yearly"
+        ? "Basic"
+        : "your new plan";
 
   async function handleManageBilling() {
     try {
@@ -57,8 +70,8 @@ export default function BillingSuccessPage() {
           Payment Successful!
         </h1>
         <p className="mt-3 text-base text-muted-foreground leading-relaxed">
-          Thanks for upgrading to Pro. Your new plan is active and all features
-          are ready to use.
+          Thanks for subscribing to {planName}. Your plan is active and all
+          features are ready to use.
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">

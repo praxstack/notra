@@ -17,7 +17,7 @@ export const PLANS = {
 } as const;
 
 export const ADDONS = {
-  AI_CREDITS_TOPUP: "ai_credits_topup",
+  AI_CREDITS_TOPUP: "ai_credits_top_up",
 } as const;
 
 export const TOPUP_MIN_DOLLARS = 5;
@@ -42,5 +42,17 @@ export function calculateTopupTotal(dollars: number): number {
 export function dollarsToCredits(dollars: number): number {
   return dollars * 100;
 }
+
+export const TOPUP_OPTIONS = [10, 50]
+  .filter(
+    (dollars) => dollars >= TOPUP_MIN_DOLLARS && dollars <= TOPUP_MAX_DOLLARS
+  )
+  .map((dollars) => ({
+    label: `$${dollars}`,
+    credits: dollarsToCredits(dollars),
+    creditValue: dollars,
+    price: calculateTopupTotal(dollars),
+    fee: calculateTopupFee(dollars),
+  }));
 
 export type FeatureId = (typeof FEATURES)[keyof typeof FEATURES];

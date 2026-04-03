@@ -50,7 +50,8 @@ export function DashboardSidebar({
   const slug = pathnameSegments[0] ?? activeOrganization?.slug ?? "";
 
   const section = pathnameSegments[1];
-  const isSettingsRoute = section === "settings" || section === "billing";
+  const isSettingsRoute =
+    section === "settings" || section === "billing" || section === "credits";
 
   const mainVariants = shouldReduceMotion
     ? createMainVariants(true)

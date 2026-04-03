@@ -8,6 +8,7 @@ import { useOrganizationsContext } from "@/components/providers/organization-pro
 
 const ALLOWED_PATH_SEGMENTS = [
   "/billing",
+  "/credits",
   "/settings/account",
   "/settings/general",
 ];

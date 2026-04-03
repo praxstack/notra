@@ -33,15 +33,7 @@ import { toast } from "sonner";
 import { UsageSection } from "@/components/billing/usage-section";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
-import {
-  ADDONS,
-  calculateTopupFee,
-  calculateTopupTotal,
-  dollarsToCredits,
-  FEATURES,
-  TOPUP_MAX_DOLLARS,
-  TOPUP_MIN_DOLLARS,
-} from "@/constants/features";
+import { ADDONS, FEATURES, TOPUP_OPTIONS } from "@/constants/features";
 import type { ProductFeature } from "@/types/hooks/billing";
 
 const BILLING_SECTION_VALUES = ["billing", "usage"] as const;
@@ -63,24 +55,10 @@ const INVOICE_PRODUCT_NAME_MAP: Record<string, string> = {
   basic_yearly: "Basic",
   pro: "Pro",
   pro_yearly: "Pro",
-  ai_credits_topup_10: "AI Credits Top-up ($10)",
-  ai_credits_topup_50: "AI Credits Top-up ($50)",
+  ai_credits_top_up: "AI Credits Top-up",
 };
 
 const INVOICE_TABLE_COLUMN_COUNT = 4;
-
-const TOPUP_OPTIONS = [10, 50]
-  .filter(
-    (dollars) => dollars >= TOPUP_MIN_DOLLARS && dollars <= TOPUP_MAX_DOLLARS
-  )
-  .map((dollars) => ({
-    id: `${ADDONS.AI_CREDITS_TOPUP}_${dollars}`,
-    label: `$${dollars}`,
-    credits: dollarsToCredits(dollars),
-    creditValue: dollars,
-    price: calculateTopupTotal(dollars),
-    fee: calculateTopupFee(dollars),
-  }));
 
 type BillingPlan = Exclude<
   ReturnType<typeof useListPlans>["data"],
@@ -223,7 +201,9 @@ export default function BillingPage() {
     activeSubscription?.plan?.id ?? activeSubscription?.planId;
 
   useEffect(() => {
-    if (activePlanId === "pro") {
+    if (activePlanId === "pro_yearly" || activePlanId === "basic_yearly") {
+      setIsYearly(true);
+    } else if (activePlanId === "pro" || activePlanId === "basic") {
       setIsYearly(false);
     }
   }, [activePlanId]);
@@ -234,7 +214,10 @@ export default function BillingPage() {
     activeSubscription?.trialEndsAt != null &&
     activeSubscription.trialEndsAt > Date.now();
 
-  async function handleCheckout(planId: string) {
+  async function handleCheckout(
+    planId: string,
+    featureQuantities?: { featureId: string; quantity: number }[]
+  ) {
     setLoading(planId);
     try {
       const successUrl = activeOrganization?.slug
@@ -243,6 +226,7 @@ export default function BillingPage() {
 
       const result = await attach({
         planId,
+        featureQuantities,
         redirectMode: "if_required",
         successUrl,
       });
@@ -282,10 +266,7 @@ export default function BillingPage() {
     ? getProductPrice(proPlan)
     : { amount: 0, interval: isYearly ? "year" : "month" };
 
-  const hasTopups = plans?.some(
-    (plan) =>
-      plan.id === "ai_credits_topup_10" || plan.id === "ai_credits_topup_50"
-  );
+  const hasTopups = plans?.some((plan) => plan.id === ADDONS.AI_CREDITS_TOPUP);
 
   const basicFeatures = getProductFeatures(basicPlan);
   const proFeatures = getProductFeatures(proPlan);
@@ -659,7 +640,7 @@ export default function BillingPage() {
                       {TOPUP_OPTIONS.map((option) => (
                         <TitleCard
                           heading={`${option.label} in credits`}
-                          key={option.id}
+                          key={option.creditValue}
                         >
                           <div className="space-y-3">
                             <div className="space-y-1">
@@ -675,7 +656,14 @@ export default function BillingPage() {
                             <Button
                               className="w-full"
                               disabled={loading !== null}
-                              onClick={() => handleCheckout(option.id)}
+                              onClick={() =>
+                                handleCheckout(ADDONS.AI_CREDITS_TOPUP, [
+                                  {
+                                    featureId: FEATURES.AI_CREDITS,
+                                    quantity: option.credits,
+                                  },
+                                ])
+                              }
                               size="sm"
                               variant={
                                 option.creditValue === 50
@@ -683,7 +671,7 @@ export default function BillingPage() {
                                   : "outline"
                               }
                             >
-                              {loading === option.id
+                              {loading === ADDONS.AI_CREDITS_TOPUP
                                 ? "Loading..."
                                 : `Buy for $${option.price.toFixed(2)}`}
                             </Button>

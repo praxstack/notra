@@ -1,0 +1,65 @@
+"use client";
+
+import { Wallet01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@notra/ui/components/ui/button";
+import { Skeleton } from "@notra/ui/components/ui/skeleton";
+import { useCustomer } from "autumn-js/react";
+import { useRouter } from "next/navigation";
+import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { FEATURES } from "@/constants/features";
+
+function formatDollars(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
+}
+
+export function CreditBalanceButton() {
+  const router = useRouter();
+  const { activeOrganization } = useOrganizationsContext();
+  const { data: customer, isLoading } = useCustomer({
+    expand: ["balances.feature", "subscriptions.plan"],
+  });
+
+  if (isLoading) {
+    return <Skeleton className="h-8 w-20 rounded-md" />;
+  }
+
+  if (!customer) {
+    return null;
+  }
+
+  const activeSubscription = customer.subscriptions?.find(
+    (sub) => !sub.addOn && sub.status === "active"
+  );
+  const planId = activeSubscription?.plan?.id ?? activeSubscription?.planId;
+  const isBasic = planId === "basic" || planId === "basic_yearly";
+
+  if (!isBasic) {
+    return null;
+  }
+
+  const aiCredits = customer.balances?.[FEATURES.AI_CREDITS];
+  const balance =
+    typeof aiCredits?.remaining === "number" ? aiCredits.remaining : null;
+
+  const slug = activeOrganization?.slug;
+
+  return (
+    <Button
+      className="gap-1.5 tabular-nums"
+      onClick={() => {
+        if (slug) {
+          router.push(`/${slug}/credits`);
+        }
+      }}
+      size="sm"
+      variant="outline"
+    >
+      <HugeiconsIcon icon={Wallet01Icon} size={16} />
+      {balance !== null ? formatDollars(balance) : "-"}
+    </Button>
+  );
+}
