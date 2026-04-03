@@ -200,7 +200,7 @@ export default function BillingPage() {
     parseAsStringLiteral(BILLING_SECTION_VALUES).withDefault("billing")
   );
   const [loading, setLoading] = useState<string | null>(null);
-  const [isYearly, setIsYearly] = useState(true);
+  const [isYearly, setIsYearly] = useState(false);
   const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc">("desc");
   const invoiceListId = useId();
   const freeFeatureListId = useId();
