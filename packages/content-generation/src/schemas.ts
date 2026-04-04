@@ -180,6 +180,7 @@ export const contentGenerationWorkflowPayloadSchema = z.object({
   selectedItems: selectedItemsSchema.optional(),
   linearIntegrationIds: z.array(z.string()).optional(),
   aiCreditReserved: z.boolean(),
+  aiCreditMarkup: z.boolean().default(false),
   source: z.enum(["api", "dashboard"]).default("dashboard"),
 });
 

@@ -12,6 +12,7 @@ import type {
 } from "@notra/ai/types/orchestration";
 import {
   convertToModelMessages,
+  type LanguageModelUsage,
   stepCountIs,
   streamText,
   type UIMessage,
@@ -32,6 +33,7 @@ export interface OrchestrateDeps {
   integrationFetchers?: IntegrationFetchers;
   resolveContext?: ResolveIntegrationContext;
   resolveLinearContext?: ResolveLinearIntegrationContext;
+  onUsage?: (usage: LanguageModelUsage, modelId: string) => void;
   log?: AILogTarget;
 }
 
@@ -116,6 +118,9 @@ export async function orchestrateChat(
     messages: await convertToModelMessages(messages),
     tools,
     stopWhen: stepCountIs(maxSteps),
+    onFinish({ totalUsage }) {
+      deps?.onUsage?.(totalUsage, routingDecision.model);
+    },
     onError({ error }) {
       console.error("[Chat Stream Error]", {
         organizationId,

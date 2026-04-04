@@ -9,7 +9,7 @@ export async function handleLinkedIn(
   ctx: ContentGenerationContext
 ): Promise<ContentGenerationResult> {
   try {
-    const { postId, title, posts } = await generateLinkedInPost({
+    const { postId, title, posts, usage } = await generateLinkedInPost({
       organizationId: ctx.organizationId,
       voiceId: ctx.voiceId,
       repositories: ctx.repositories,
@@ -26,7 +26,7 @@ export async function handleLinkedIn(
       log: ctx.log,
     });
 
-    return { status: "ok", postId, title, posts };
+    return { status: "ok", postId, title, posts, usage };
   } catch (error) {
     if (isGitHubRateLimitError(error)) {
       return {

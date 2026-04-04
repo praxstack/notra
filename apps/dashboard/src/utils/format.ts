@@ -1,3 +1,38 @@
+export function formatDollars(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
+}
+
+export function formatShortDate(timestamp: number): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(timestamp));
+}
+
+export function formatFullDate(timestamp: number): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(timestamp));
+}
+
+export function usageBarColor(percent: number): string {
+  return percent > 70 ? "bg-amber-500" : "bg-emerald-500";
+}
+
+export function isCreditRange<T extends string>(
+  value: string,
+  ranges: readonly T[]
+): value is T {
+  return (ranges as readonly string[]).includes(value);
+}
+
 export function formatSnakeCaseLabel(value: string): string {
   return value.replaceAll("_", " ").trim();
 }

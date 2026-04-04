@@ -25,6 +25,11 @@ import {
   TabsTrigger,
 } from "@notra/ui/components/ui/tabs";
 import { TitleCard } from "@notra/ui/components/ui/title-card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@notra/ui/components/ui/tooltip";
 import { cn } from "@notra/ui/lib/utils";
 import { useCustomer, useListPlans } from "autumn-js/react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
@@ -33,7 +38,8 @@ import { toast } from "sonner";
 import { UsageSection } from "@/components/billing/usage-section";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
-import { ADDONS, FEATURES, TOPUP_OPTIONS } from "@/constants/features";
+import { FEATURES } from "@/constants/features";
+import { MARKUP_PERCENT } from "@/lib/billing/token-pricing";
 import type { ProductFeature } from "@/types/hooks/billing";
 
 const BILLING_SECTION_VALUES = ["billing", "usage"] as const;
@@ -127,7 +133,11 @@ function getProductFeatures(plan: BillingPlan | undefined): ProductFeature[] {
             style: "currency",
             currency: "USD",
           }).format(cents / 100);
-          return { text: `${dollars} AI Credits`, overageText };
+          return {
+            text: `${dollars} AI Credits`,
+            overageText: `${MARKUP_PERCENT}% platform fee on top-ups`,
+            overageTooltip: `Plan-included credits are charged at cost. A ${MARKUP_PERCENT}% fee is applied only on purchased top-up credits.`,
+          };
         }
         return null;
       }
@@ -214,10 +224,7 @@ export default function BillingPage() {
     activeSubscription?.trialEndsAt != null &&
     activeSubscription.trialEndsAt > Date.now();
 
-  async function handleCheckout(
-    planId: string,
-    featureQuantities?: { featureId: string; quantity: number }[]
-  ) {
+  async function handleCheckout(planId: string) {
     setLoading(planId);
     try {
       const successUrl = activeOrganization?.slug
@@ -226,7 +233,6 @@ export default function BillingPage() {
 
       const result = await attach({
         planId,
-        featureQuantities,
         redirectMode: "if_required",
         successUrl,
       });
@@ -265,8 +271,6 @@ export default function BillingPage() {
   const proPrice = proPlan
     ? getProductPrice(proPlan)
     : { amount: 0, interval: isYearly ? "year" : "month" };
-
-  const hasTopups = plans?.some((plan) => plan.id === ADDONS.AI_CREDITS_TOPUP);
 
   const basicFeatures = getProductFeatures(basicPlan);
   const proFeatures = getProductFeatures(proPlan);
@@ -447,11 +451,24 @@ export default function BillingPage() {
                               />
                               <div>
                                 <span>{feature.text}</span>
-                                {feature.overageText && (
-                                  <p className="text-muted-foreground text-xs">
-                                    {feature.overageText}
-                                  </p>
-                                )}
+                                {feature.overageText &&
+                                  (feature.overageTooltip ? (
+                                    <Tooltip>
+                                      <TooltipTrigger
+                                        className="cursor-help border-muted-foreground/30 border-b border-dashed text-muted-foreground text-xs"
+                                        render={<p />}
+                                      >
+                                        {feature.overageText}
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-[14rem]">
+                                        {feature.overageTooltip}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <p className="text-muted-foreground text-xs">
+                                      {feature.overageText}
+                                    </p>
+                                  ))}
                               </div>
                             </li>
                           ))}
@@ -514,11 +531,24 @@ export default function BillingPage() {
                               />
                               <div>
                                 <span>{feature.text}</span>
-                                {feature.overageText && (
-                                  <p className="text-muted-foreground text-xs">
-                                    {feature.overageText}
-                                  </p>
-                                )}
+                                {feature.overageText &&
+                                  (feature.overageTooltip ? (
+                                    <Tooltip>
+                                      <TooltipTrigger
+                                        className="cursor-help border-muted-foreground/30 border-b border-dashed text-muted-foreground text-xs"
+                                        render={<p />}
+                                      >
+                                        {feature.overageText}
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-[14rem]">
+                                        {feature.overageTooltip}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <p className="text-muted-foreground text-xs">
+                                      {feature.overageText}
+                                    </p>
+                                  ))}
                               </div>
                             </li>
                           ))}
@@ -626,61 +656,6 @@ export default function BillingPage() {
                     </Table>
                   </div>
                 </div>
-
-                {hasTopups && (
-                  <div className="space-y-3">
-                    <div>
-                      <h2 className="font-semibold text-lg">Top Up Credits</h2>
-                      <p className="text-muted-foreground text-sm">
-                        Purchase additional AI credits that carry over to the
-                        next month
-                      </p>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {TOPUP_OPTIONS.map((option) => (
-                        <TitleCard
-                          heading={`${option.label} in credits`}
-                          key={option.creditValue}
-                        >
-                          <div className="space-y-3">
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground text-sm">
-                                {option.credits.toLocaleString()} credits
-                              </p>
-                              <p className="text-muted-foreground text-xs">
-                                ${option.creditValue.toFixed(2)} + $
-                                {(option.price - option.creditValue).toFixed(2)}{" "}
-                                processing fee
-                              </p>
-                            </div>
-                            <Button
-                              className="w-full"
-                              disabled={loading !== null}
-                              onClick={() =>
-                                handleCheckout(ADDONS.AI_CREDITS_TOPUP, [
-                                  {
-                                    featureId: FEATURES.AI_CREDITS,
-                                    quantity: option.credits,
-                                  },
-                                ])
-                              }
-                              size="sm"
-                              variant={
-                                option.creditValue === 50
-                                  ? "default"
-                                  : "outline"
-                              }
-                            >
-                              {loading === ADDONS.AI_CREDITS_TOPUP
-                                ? "Loading..."
-                                : `Buy for $${option.price.toFixed(2)}`}
-                            </Button>
-                          </div>
-                        </TitleCard>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </TabsContent>

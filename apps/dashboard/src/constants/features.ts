@@ -22,37 +22,7 @@ export const ADDONS = {
 
 export const TOPUP_MIN_DOLLARS = 5;
 export const TOPUP_MAX_DOLLARS = 500;
-export const STRIPE_FEE_PERCENT = 0.029;
-export const STRIPE_FEE_FIXED = 0.3;
 
-export function calculateTopupFee(dollars: number): number {
-  return Number(
-    ((dollars + STRIPE_FEE_FIXED) / (1 - STRIPE_FEE_PERCENT) - dollars).toFixed(
-      2
-    )
-  );
-}
-
-export function calculateTopupTotal(dollars: number): number {
-  return Number(
-    ((dollars + STRIPE_FEE_FIXED) / (1 - STRIPE_FEE_PERCENT)).toFixed(2)
-  );
-}
-
-export function dollarsToCredits(dollars: number): number {
-  return dollars * 100;
-}
-
-export const TOPUP_OPTIONS = [10, 50]
-  .filter(
-    (dollars) => dollars >= TOPUP_MIN_DOLLARS && dollars <= TOPUP_MAX_DOLLARS
-  )
-  .map((dollars) => ({
-    label: `$${dollars}`,
-    credits: dollarsToCredits(dollars),
-    creditValue: dollars,
-    price: calculateTopupTotal(dollars),
-    fee: calculateTopupFee(dollars),
-  }));
+export const TOPUP_PRESETS = [5, 10, 25, 50] as const;
 
 export type FeatureId = (typeof FEATURES)[keyof typeof FEATURES];

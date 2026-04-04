@@ -388,10 +388,6 @@ export const auth = betterAuth({
               customerId: org.id,
               planId: "basic",
             });
-            console.log("[Autumn] Basic trial started for:", {
-              orgId: org.id,
-              orgName: org.name,
-            });
           } catch (attachError) {
             console.error(
               "[Autumn] Failed to attach basic trial:",

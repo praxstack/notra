@@ -129,7 +129,7 @@ export async function generateBlogPost(
     stopWhen: stepCountIs(35),
   });
 
-  await agent.generate({ prompt });
+  const result = await agent.generate({ prompt });
 
   if (postToolsResult.failReason) {
     throw new Error(postToolsResult.failReason);
@@ -151,5 +151,15 @@ export async function generateBlogPost(
     postId: primaryPost.postId,
     title: primaryPost.title,
     posts: postToolsResult.posts,
+    usage: {
+      inputTokens: result.totalUsage.inputTokens ?? 0,
+      outputTokens: result.totalUsage.outputTokens ?? 0,
+      totalTokens: result.totalUsage.totalTokens ?? 0,
+      cacheReadTokens:
+        result.totalUsage.inputTokenDetails?.cacheReadTokens ?? 0,
+      cacheWriteTokens:
+        result.totalUsage.inputTokenDetails?.cacheWriteTokens ?? 0,
+      raw: result.totalUsage,
+    },
   };
 }

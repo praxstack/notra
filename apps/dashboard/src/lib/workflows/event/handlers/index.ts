@@ -57,6 +57,7 @@ export async function generateEventBasedContent(
       postId: result.postId,
       title: result.title,
       posts: result.posts,
+      usage: result.usage,
     };
   } catch (error) {
     return {

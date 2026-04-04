@@ -27,6 +27,7 @@ import {
 import { FEATURES } from "@/constants/features";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
+import { shouldApplyMarkup } from "@/lib/billing/token-pricing";
 import {
   addActiveGeneration,
   clearCompletedGeneration,
@@ -1067,7 +1068,8 @@ export const contentRouter = {
         }
       }
 
-      let aiCreditReserved = false;
+      let aiCreditChecked = false;
+      let aiCreditMarkup = false;
 
       if (autumn) {
         let data: AutumnCheckResponse | null = null;
@@ -1077,7 +1079,6 @@ export const contentRouter = {
             customerId: input.organizationId,
             featureId: FEATURES.AI_CREDITS,
             requiredBalance: 1,
-            sendEvent: true,
           });
         } catch {
           throw internalServerError("Failed to verify AI credits");
@@ -1087,7 +1088,8 @@ export const contentRouter = {
           throw paymentRequired("AI credit limit reached");
         }
 
-        aiCreditReserved = true;
+        aiCreditChecked = true;
+        aiCreditMarkup = shouldApplyMarkup(data?.balance ?? null);
       }
 
       const runId = generateRunId("manual_on_demand");
@@ -1130,7 +1132,8 @@ export const contentRouter = {
         brandVoiceId: input.brandIdentityId ?? input.brandVoiceId,
         dataPoints: input.dataPoints,
         selectedItems: input.selectedItems,
-        aiCreditReserved,
+        aiCreditReserved: aiCreditChecked,
+        aiCreditMarkup,
         source: "dashboard",
       });
 

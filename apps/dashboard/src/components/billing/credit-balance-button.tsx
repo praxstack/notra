@@ -5,8 +5,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { useCustomer } from "autumn-js/react";
-import { useRouter } from "next/navigation";
-import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { useState } from "react";
+import { CreditTopupModal } from "@/components/billing/credit-topup-modal";
 import { FEATURES } from "@/constants/features";
 
 function formatDollars(cents: number) {
@@ -17,8 +17,7 @@ function formatDollars(cents: number) {
 }
 
 export function CreditBalanceButton() {
-  const router = useRouter();
-  const { activeOrganization } = useOrganizationsContext();
+  const [open, setOpen] = useState(false);
   const { data: customer, isLoading } = useCustomer({
     expand: ["balances.feature", "subscriptions.plan"],
   });
@@ -45,21 +44,18 @@ export function CreditBalanceButton() {
   const balance =
     typeof aiCredits?.remaining === "number" ? aiCredits.remaining : null;
 
-  const slug = activeOrganization?.slug;
-
   return (
-    <Button
-      className="gap-1.5 tabular-nums"
-      onClick={() => {
-        if (slug) {
-          router.push(`/${slug}/credits`);
-        }
-      }}
-      size="sm"
-      variant="outline"
-    >
-      <HugeiconsIcon icon={Wallet01Icon} size={16} />
-      {balance !== null ? formatDollars(balance) : "-"}
-    </Button>
+    <>
+      <Button
+        className="gap-1.5 tabular-nums"
+        onClick={() => setOpen(true)}
+        size="sm"
+        variant="outline"
+      >
+        <HugeiconsIcon icon={Wallet01Icon} size={16} />
+        {balance !== null ? formatDollars(balance) : "-"}
+      </Button>
+      <CreditTopupModal onOpenChange={setOpen} open={open} />
+    </>
   );
 }

@@ -1,5 +1,8 @@
 import type { ToneProfile } from "@notra/ai/schemas/tone";
-import type { ResolveIntegrationContext } from "@notra/ai/types/agents";
+import type {
+  AgentTokenUsage,
+  ResolveIntegrationContext,
+} from "@notra/ai/types/agents";
 import type { PostSourceMetadata } from "@notra/db/schema";
 import type { PostSummary } from "@/types/posts";
 
@@ -60,6 +63,7 @@ export type EventGenerationResult =
       postId: string;
       title: string;
       posts: PostSummary[];
+      usage?: AgentTokenUsage;
     }
   | { status: "generation_failed"; reason: string }
   | { status: "unsupported_output_type"; outputType: string };

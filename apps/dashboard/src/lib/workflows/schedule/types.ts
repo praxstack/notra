@@ -1,6 +1,7 @@
 import type { ToneProfile } from "@notra/ai/schemas/tone";
 import type {
   AgentDataPointSettings,
+  AgentTokenUsage,
   AILogTarget,
   LinearIntegrationRef,
   ResolveIntegrationContext,
@@ -52,6 +53,7 @@ export type ContentGenerationResult =
       postId: string;
       title: string;
       posts: PostSummary[];
+      usage?: AgentTokenUsage;
     }
   | { status: "rate_limited"; retryAfterSeconds?: number }
   | { status: "generation_failed"; reason: string }

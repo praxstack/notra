@@ -19,6 +19,10 @@ import { FEATURES } from "@/constants/features";
 import { autumn } from "@/lib/billing/autumn";
 import { checkLogRetention } from "@/lib/billing/check-log-retention";
 import {
+  calculateTokenCostCents,
+  shouldApplyMarkup,
+} from "@/lib/billing/token-pricing";
+import {
   trackScheduledContentCreated,
   trackScheduledContentFailed,
 } from "@/lib/databuddy";
@@ -189,9 +193,10 @@ export const { POST } = serve<EventWorkflowPayload>(
     const aiCreditReservation = await context.run<{
       canceled: boolean;
       reserved: boolean;
+      useMarkup: boolean;
     }>("reserve-ai-credit", async () => {
       if (!autumn) {
-        return { canceled: false, reserved: false };
+        return { canceled: false, reserved: false, useMarkup: false };
       }
 
       let data: AutumnCheckResponse | null = null;
@@ -200,7 +205,6 @@ export const { POST } = serve<EventWorkflowPayload>(
           customerId: trigger.organizationId,
           featureId: FEATURES.AI_CREDITS,
           requiredBalance: 1,
-          sendEvent: true,
         });
       } catch (error) {
         throw new Error(`Autumn check failed: ${String(error)}`);
@@ -212,10 +216,12 @@ export const { POST } = serve<EventWorkflowPayload>(
           { balance: data?.balance ?? 0 }
         );
         await context.cancel();
-        return { canceled: true, reserved: false };
+        return { canceled: true, reserved: false, useMarkup: false };
       }
 
-      return { canceled: false, reserved: true };
+      const useMarkup = shouldApplyMarkup(data?.balance ?? null);
+
+      return { canceled: false, reserved: true, useMarkup };
     });
 
     if (aiCreditReservation.canceled) {
@@ -478,6 +484,51 @@ export const { POST } = serve<EventWorkflowPayload>(
           });
         }
       });
+
+      const autumnClientSuccess = autumn;
+      if (
+        aiCreditReservation.reserved &&
+        autumnClientSuccess &&
+        contentResult.usage
+      ) {
+        await context.run("track-ai-credit-usage", async () => {
+          const costCents = calculateTokenCostCents(
+            contentResult.usage!,
+            "anthropic/claude-haiku-4.5",
+            aiCreditReservation.useMarkup
+          );
+          await autumnClientSuccess.track({
+            customerId: trigger.organizationId,
+            featureId: FEATURES.AI_CREDITS,
+            value: costCents,
+            properties: {
+              source: "workflow_event",
+              output_type: trigger.outputType,
+              trigger_name: trigger.name,
+              input_tokens: contentResult.usage!.inputTokens,
+              output_tokens: contentResult.usage!.outputTokens,
+              cache_read_tokens: contentResult.usage!.cacheReadTokens,
+              cache_write_tokens: contentResult.usage!.cacheWriteTokens,
+              total_tokens: contentResult.usage!.totalTokens,
+              cost_cents: costCents,
+            },
+          });
+        });
+      } else if (aiCreditReservation.reserved && autumnClientSuccess) {
+        await context.run("track-ai-credit-fallback", async () => {
+          await autumnClientSuccess.track({
+            customerId: trigger.organizationId,
+            featureId: FEATURES.AI_CREDITS,
+            value: 1,
+            properties: {
+              source: "workflow_event",
+              output_type: trigger.outputType,
+              trigger_name: trigger.name,
+              fallback: true,
+            },
+          });
+        });
+      }
 
       const notificationData = await context.run<{
         enabled: boolean;

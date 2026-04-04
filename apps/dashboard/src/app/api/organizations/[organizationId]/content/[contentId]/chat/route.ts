@@ -5,6 +5,10 @@ import { NextResponse } from "next/server";
 import { FEATURES } from "@/constants/features";
 import { withOrganizationAuth } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
+import {
+  calculateTokenCostCents,
+  shouldApplyMarkup,
+} from "@/lib/billing/token-pricing";
 import { useLogger, withEvlog } from "@/lib/evlog";
 import {
   getGitHubIntegrationById,
@@ -47,6 +51,7 @@ export const POST = withEvlog(async function POST(
     }
 
     // Check billing if Autumn is configured
+    let useMarkup = false;
     if (autumn) {
       console.log("[Autumn] Checking feature access:", {
         requestId,
@@ -87,6 +92,8 @@ export const POST = withEvlog(async function POST(
           { status: 403 }
         );
       }
+
+      useMarkup = shouldApplyMarkup(checkData?.balance ?? null);
     } else {
       console.log(
         "[Autumn] Skipping billing check - AUTUMN_SECRET_KEY not configured",
@@ -107,23 +114,7 @@ export const POST = withEvlog(async function POST(
     const { messages, currentMarkdown, contentType, selection, context } =
       parseResult.data;
 
-    let tracked = false;
-    if (autumn) {
-      try {
-        await autumn.track({
-          customerId: organizationId,
-          featureId: FEATURES.AI_CREDITS,
-          value: 1,
-        });
-        tracked = true;
-      } catch (trackError) {
-        console.error("[Autumn] Track error:", {
-          requestId,
-          customerId: organizationId,
-          error: trackError,
-        });
-      }
-    }
+    const autumnClient = autumn;
 
     try {
       const { stream, routingDecision } = await orchestrateChat(
@@ -144,6 +135,51 @@ export const POST = withEvlog(async function POST(
           },
           resolveContext: getGitHubToolRepositoryContextByIntegrationId,
           resolveLinearContext: getLinearToolContextByIntegrationId,
+          onUsage(usage, modelId) {
+            if (!autumnClient) {
+              return;
+            }
+
+            const costCents = calculateTokenCostCents(
+              {
+                inputTokens: usage.inputTokens ?? 0,
+                outputTokens: usage.outputTokens ?? 0,
+                totalTokens: usage.totalTokens ?? 0,
+                cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? 0,
+                cacheWriteTokens:
+                  usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+              },
+              modelId,
+              useMarkup
+            );
+
+            autumnClient
+              .track({
+                customerId: organizationId,
+                featureId: FEATURES.AI_CREDITS,
+                value: costCents,
+                properties: {
+                  source: "chat",
+                  content_id: contentId,
+                  model: modelId,
+                  input_tokens: usage.inputTokens ?? 0,
+                  output_tokens: usage.outputTokens ?? 0,
+                  cache_read_tokens:
+                    usage.inputTokenDetails?.cacheReadTokens ?? 0,
+                  cache_write_tokens:
+                    usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+                  total_tokens: usage.totalTokens ?? 0,
+                  cost_cents: costCents,
+                },
+              })
+              .catch((trackError) => {
+                console.error("[Autumn] Track error after chat completion:", {
+                  requestId,
+                  customerId: organizationId,
+                  error: trackError,
+                });
+              });
+          },
           log,
         }
       );
@@ -163,27 +199,6 @@ export const POST = withEvlog(async function POST(
         },
       });
     } catch (orchestrationError) {
-      if (tracked && autumn) {
-        try {
-          await autumn.track({
-            customerId: organizationId,
-            featureId: FEATURES.AI_CREDITS,
-            value: 0,
-          });
-          console.log(
-            "[Autumn] Usage compensated after orchestration failure:",
-            {
-              requestId,
-            }
-          );
-        } catch (refundError) {
-          console.error("[Autumn] Failed to compensate usage:", {
-            requestId,
-            customerId: organizationId,
-            error: refundError,
-          });
-        }
-      }
       throw orchestrationError;
     }
   } catch (e) {

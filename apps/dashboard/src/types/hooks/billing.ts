@@ -1,6 +1,7 @@
 export interface ProductFeature {
   text: string;
   overageText?: string;
+  overageTooltip?: string;
 }
 
 export interface FeatureData {

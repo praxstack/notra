@@ -2,8 +2,8 @@
 
 import { Button } from "@notra/ui/components/ui/button";
 import { Input } from "@notra/ui/components/ui/input";
-import { Label } from "@notra/ui/components/ui/label";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
+import { cn } from "@notra/ui/lib/utils";
 import { useCustomer } from "autumn-js/react";
 import { Loader2Icon } from "lucide-react";
 import { useState } from "react";
@@ -11,12 +11,10 @@ import { toast } from "sonner";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import {
   ADDONS,
-  calculateTopupFee,
-  calculateTopupTotal,
   FEATURES,
   TOPUP_MAX_DOLLARS,
   TOPUP_MIN_DOLLARS,
-  TOPUP_OPTIONS,
+  TOPUP_PRESETS,
 } from "@/constants/features";
 
 function formatDollars(cents: number) {
@@ -40,8 +38,10 @@ export function CreditTopupContent({ onSuccess }: CreditTopupContentProps) {
   } = useCustomer({
     expand: ["balances.feature"],
   });
-  const [loading, setLoading] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
+  const [isCustom, setIsCustom] = useState(false);
 
   const aiCredits = customer?.balances?.[FEATURES.AI_CREDITS];
   const aiCreditsBalance =
@@ -49,14 +49,31 @@ export function CreditTopupContent({ onSuccess }: CreditTopupContentProps) {
   const aiCreditsIncluded =
     typeof aiCredits?.granted === "number" ? aiCredits.granted : null;
 
-  async function handleTopup(dollars: number) {
-    setLoading(dollars);
+  const parsedCustom = Number.parseInt(customAmount, 10);
+  const isCustomValid =
+    isCustom &&
+    !Number.isNaN(parsedCustom) &&
+    Number.isInteger(parsedCustom) &&
+    parsedCustom >= TOPUP_MIN_DOLLARS &&
+    parsedCustom <= TOPUP_MAX_DOLLARS;
+
+  const activeAmount = isCustom
+    ? isCustomValid
+      ? parsedCustom
+      : null
+    : selected;
+
+  async function handleTopup() {
+    if (!activeAmount) {
+      return;
+    }
+    setLoading(true);
     try {
       const successUrl = activeOrganization?.slug
         ? `${window.location.origin}/${activeOrganization.slug}/credits?success=true`
         : undefined;
 
-      const credits = dollars * 100;
+      const credits = activeAmount * 100;
 
       const result = await attach({
         planId: ADDONS.AI_CREDITS_TOPUP,
@@ -81,23 +98,12 @@ export function CreditTopupContent({ onSuccess }: CreditTopupContentProps) {
           : "Could not process top-up. Please try again."
       );
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   }
 
-  const parsedCustomAmount = Number.parseInt(customAmount, 10);
-  const isCustomValid =
-    !Number.isNaN(parsedCustomAmount) &&
-    Number.isInteger(parsedCustomAmount) &&
-    parsedCustomAmount >= TOPUP_MIN_DOLLARS &&
-    parsedCustomAmount <= TOPUP_MAX_DOLLARS;
-  const customFee = isCustomValid ? calculateTopupFee(parsedCustomAmount) : 0;
-  const customTotal = isCustomValid
-    ? calculateTopupTotal(parsedCustomAmount)
-    : 0;
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {isLoading ? (
         <Skeleton className="h-16 rounded-lg" />
       ) : (
@@ -115,83 +121,82 @@ export function CreditTopupContent({ onSuccess }: CreditTopupContentProps) {
       )}
 
       <div className="space-y-3">
-        <Label className="font-medium text-sm">Quick Top-Up</Label>
-        <div className="grid grid-cols-2 gap-3">
-          {TOPUP_OPTIONS.map((option) => (
+        <p className="font-medium text-sm">Select amount</p>
+        <div className="grid grid-cols-4 gap-2">
+          {TOPUP_PRESETS.map((amount) => (
             <button
-              className="flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={loading !== null}
-              key={option.creditValue}
-              onClick={() => handleTopup(option.creditValue)}
+              className={cn(
+                "rounded-lg border py-2.5 font-medium text-sm transition-colors",
+                !isCustom && selected === amount
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "hover:bg-accent"
+              )}
+              disabled={loading}
+              key={amount}
+              onClick={() => {
+                setSelected(amount);
+                setIsCustom(false);
+              }}
               type="button"
             >
-              <span className="font-semibold text-base">{option.label}</span>
-              <span className="text-muted-foreground text-xs">
-                {option.credits.toLocaleString()} credits
-              </span>
-              <span className="text-muted-foreground text-xs">
-                ${option.creditValue.toFixed(2)} + $
-                {(option.price - option.creditValue).toFixed(2)} fee
-              </span>
-              {loading === option.creditValue && (
-                <Loader2Icon className="mt-1 size-4 animate-spin" />
-              )}
+              ${amount}
             </button>
           ))}
         </div>
+
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-muted-foreground text-xs">or</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <div className="relative">
+          <span className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-muted-foreground text-sm">
+            $
+          </span>
+          <Input
+            className={cn(
+              "pl-7",
+              isCustom && isCustomValid && "border-primary"
+            )}
+            max={TOPUP_MAX_DOLLARS}
+            min={TOPUP_MIN_DOLLARS}
+            onChange={(e) => {
+              setCustomAmount(e.target.value.replace(/\./g, ""));
+              setIsCustom(true);
+              setSelected(null);
+            }}
+            onFocus={() => {
+              setIsCustom(true);
+              setSelected(null);
+            }}
+            placeholder={`Custom amount ($${TOPUP_MIN_DOLLARS}–$${TOPUP_MAX_DOLLARS})`}
+            step={1}
+            type="number"
+            value={customAmount}
+          />
+        </div>
+        {isCustom && customAmount && !isCustomValid && (
+          <p className="text-destructive text-xs">
+            Enter a whole number between ${TOPUP_MIN_DOLLARS} and $
+            {TOPUP_MAX_DOLLARS}
+          </p>
+        )}
       </div>
 
-      <div className="space-y-3">
-        <Label className="font-medium text-sm" htmlFor="custom-amount">
-          Custom Amount
-        </Label>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <span className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3 text-muted-foreground text-sm">
-              $
-            </span>
-            <Input
-              className="pl-7"
-              id="custom-amount"
-              max={TOPUP_MAX_DOLLARS}
-              min={TOPUP_MIN_DOLLARS}
-              onChange={(e) =>
-                setCustomAmount(e.target.value.replace(/\./g, ""))
-              }
-              placeholder={`${TOPUP_MIN_DOLLARS}–${TOPUP_MAX_DOLLARS}`}
-              step={1}
-              type="number"
-              value={customAmount}
-            />
-          </div>
-          <Button
-            disabled={!isCustomValid || loading !== null}
-            onClick={() => {
-              if (isCustomValid) {
-                handleTopup(parsedCustomAmount);
-              }
-            }}
-          >
-            {loading !== null &&
-            !TOPUP_OPTIONS.some((o) => o.creditValue === loading) ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              "Buy"
-            )}
-          </Button>
-        </div>
-        {customAmount && !isCustomValid && (
-          <p className="text-destructive text-xs">
-            Amount must be between ${TOPUP_MIN_DOLLARS} and ${TOPUP_MAX_DOLLARS}
-          </p>
+      <Button
+        className="w-full"
+        disabled={!activeAmount || loading}
+        onClick={handleTopup}
+      >
+        {loading ? (
+          <Loader2Icon className="size-4 animate-spin" />
+        ) : activeAmount ? (
+          `Add $${activeAmount} in credits`
+        ) : (
+          "Select an amount"
         )}
-        {isCustomValid && (
-          <p className="text-muted-foreground text-xs">
-            Total: ${customTotal.toFixed(2)} (${parsedCustomAmount.toFixed(2)} +
-            ${customFee.toFixed(2)} processing fee)
-          </p>
-        )}
-      </div>
+      </Button>
     </div>
   );
 }

@@ -1,6 +1,13 @@
+export interface AutumnCheckBalance {
+  remaining?: number;
+  includedGrant?: number;
+  prepaidGrant?: number;
+  unlimited?: boolean;
+}
+
 export interface AutumnCheckResponse {
   allowed?: boolean;
-  balance?: unknown;
+  balance?: AutumnCheckBalance | null;
 }
 
 export interface AutumnBalanceCheckResponse {

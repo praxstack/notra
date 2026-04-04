@@ -1,6 +1,7 @@
 import type { AILogTarget } from "@notra/ai/observability";
 import type { ToneProfile } from "@notra/ai/schemas/brand";
 import type { PostSourceMetadata } from "@notra/db/schema";
+import type { LanguageModelUsage } from "ai";
 import type { PostSummary } from "./posts";
 import type {
   BlogPostTonePromptInput,
@@ -34,10 +35,20 @@ export interface AgentDataPointSettings {
   includeLinearData?: boolean;
 }
 
+export interface AgentTokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  raw?: LanguageModelUsage;
+}
+
 export interface ChangelogAgentResult {
   postId: string;
   title: string;
   posts: PostSummary[];
+  usage?: AgentTokenUsage;
 }
 
 export interface LinearIntegrationRef {
@@ -71,6 +82,7 @@ export interface LinkedInAgentResult {
   postId: string;
   title: string;
   posts: PostSummary[];
+  usage?: AgentTokenUsage;
 }
 
 export interface LinkedInAgentOptions {
@@ -99,6 +111,7 @@ export interface TwitterAgentResult {
   postId: string;
   title: string;
   posts: PostSummary[];
+  usage?: AgentTokenUsage;
 }
 
 export interface TwitterAgentOptions {
@@ -127,6 +140,7 @@ export interface BlogPostAgentResult {
   postId: string;
   title: string;
   posts: PostSummary[];
+  usage?: AgentTokenUsage;
 }
 
 export interface BlogPostAgentOptions {

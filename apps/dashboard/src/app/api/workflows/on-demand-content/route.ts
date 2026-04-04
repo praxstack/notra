@@ -15,6 +15,9 @@ import { WorkflowAbort } from "@upstash/workflow";
 import { serve } from "@upstash/workflow/nextjs";
 import { and, eq } from "drizzle-orm";
 import { createRequestLogger } from "evlog";
+import { FEATURES } from "@/constants/features";
+import { autumn } from "@/lib/billing/autumn";
+import { calculateTokenCostCents } from "@/lib/billing/token-pricing";
 import { completeActiveGeneration } from "@/lib/generations/tracking";
 import { redis } from "@/lib/redis";
 import { getGitHubToolRepositoryContextByIntegrationId } from "@/lib/services/github-integration";
@@ -121,6 +124,7 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
       selectedItems,
       linearIntegrationIds,
       aiCreditReserved,
+      aiCreditMarkup,
       source,
     } = parseResult.data;
 
@@ -516,6 +520,45 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
           { postId: createdPosts[0]?.postId ?? null }
         );
       });
+
+      const autumnClient = autumn;
+      if (aiCreditReserved && autumnClient && contentResult.usage) {
+        await context.run("track-ai-credit-usage", async () => {
+          const costCents = calculateTokenCostCents(
+            contentResult.usage!,
+            "anthropic/claude-haiku-4.5",
+            aiCreditMarkup
+          );
+          await autumnClient.track({
+            customerId: organizationId,
+            featureId: FEATURES.AI_CREDITS,
+            value: costCents,
+            properties: {
+              source: "manual",
+              output_type: contentType,
+              input_tokens: contentResult.usage!.inputTokens,
+              output_tokens: contentResult.usage!.outputTokens,
+              cache_read_tokens: contentResult.usage!.cacheReadTokens,
+              cache_write_tokens: contentResult.usage!.cacheWriteTokens,
+              total_tokens: contentResult.usage!.totalTokens,
+              cost_cents: costCents,
+            },
+          });
+        });
+      } else if (aiCreditReserved && autumnClient) {
+        await context.run("track-ai-credit-fallback", async () => {
+          await autumnClient.track({
+            customerId: organizationId,
+            featureId: FEATURES.AI_CREDITS,
+            value: 1,
+            properties: {
+              source: "manual",
+              output_type: contentType,
+              fallback: true,
+            },
+          });
+        });
+      }
 
       await context.run("log-generation-success", async () => {
         await appendWebhookLog({

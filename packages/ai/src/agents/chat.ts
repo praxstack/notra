@@ -55,6 +55,7 @@ export async function createChatAgent(
 - deleteRange: { op: "deleteRange", startLine: number, endLine: number }
 
 ## Guidelines
+- Always assume the user wants to edit this specific document, not some pasted markdown
 - Make minimal edits
 - Line numbers are 1-indexed
 - For multi-line content use \\n in content string

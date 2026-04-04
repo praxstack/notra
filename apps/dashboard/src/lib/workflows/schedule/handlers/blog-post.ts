@@ -9,7 +9,7 @@ export async function handleBlogPost(
   ctx: ContentGenerationContext
 ): Promise<ContentGenerationResult> {
   try {
-    const { postId, title, posts } = await generateBlogPost({
+    const { postId, title, posts, usage } = await generateBlogPost({
       organizationId: ctx.organizationId,
       voiceId: ctx.voiceId,
       repositories: ctx.repositories,
@@ -26,7 +26,7 @@ export async function handleBlogPost(
       log: ctx.log,
     });
 
-    return { status: "ok", postId, title, posts };
+    return { status: "ok", postId, title, posts, usage };
   } catch (error) {
     if (isGitHubRateLimitError(error)) {
       return {
