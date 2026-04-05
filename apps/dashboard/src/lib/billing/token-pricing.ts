@@ -80,7 +80,7 @@ export function shouldApplyMarkup(
   }
   const remaining = balance.remaining ?? 0;
   const includedGrant = balance.includedGrant ?? 0;
-  return remaining > includedGrant;
+  return includedGrant === 0 && remaining > 0;
 }
 
 export function getModelPricing(modelId?: string): ModelPricing {
