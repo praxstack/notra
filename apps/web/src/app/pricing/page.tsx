@@ -5,7 +5,7 @@ import { PricingCards } from "../../components/pricing-section";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Choose the right Notra plan for your team. Compare features across Free, Pro, and Enterprise tiers.",
+    "Choose the right Notra plan for your team. Compare features across Basic, Pro, and Enterprise tiers.",
 };
 
 export default function PricingPage() {
@@ -20,7 +20,7 @@ export default function PricingPage() {
             </h1>
 
             <div className="self-stretch text-center font-normal font-sans text-base text-muted-foreground leading-7">
-              Start generating content for free. Upgrade when you
+              Start with a 3-day free trial. Upgrade when you
               <br />
               need more integrations, posts, or team seats.
             </div>
