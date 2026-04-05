@@ -10,6 +10,7 @@ import { customAlphabet } from "nanoid";
 import { z } from "zod";
 import { DEFAULT_LOOKBACK_WINDOW } from "@/constants/workflows";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { baseProcedure } from "@/lib/orpc/base";
 import {
   ManualTriggerRunError,
@@ -261,6 +262,7 @@ export const automationRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         if (input.sourceType !== "github_webhook") {
           throw badRequest("Only event triggers are supported here");
@@ -317,6 +319,7 @@ export const automationRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         if (input.sourceType !== "github_webhook") {
           throw badRequest("Only event triggers are supported here");
@@ -515,6 +518,7 @@ export const automationRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         const normalized = normalizeTriggerConfig({
           sourceConfig: input.sourceConfig,
@@ -631,6 +635,7 @@ export const automationRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         const normalized = normalizeTriggerConfig({
           sourceConfig: input.sourceConfig,
@@ -797,6 +802,7 @@ export const automationRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         try {
           const { workflowRunId } = await triggerManualAutomationRun({

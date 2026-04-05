@@ -13,6 +13,7 @@ import { FEATURES } from "@/constants/features";
 import { normalizeTwitterProfileImageUrl } from "@/constants/twitter";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { baseProcedure } from "@/lib/orpc/base";
 import { getWorkflowClient } from "@/lib/qstash";
 import { redis } from "@/lib/redis";
@@ -307,6 +308,7 @@ export const brandRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         const name =
           typeof input.name === "string" && input.name.trim()
@@ -364,6 +366,7 @@ export const brandRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
@@ -481,6 +484,7 @@ export const brandRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
@@ -576,6 +580,7 @@ export const brandRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await getWorkflowClient().trigger({
           url: `${getAppUrl()}/api/workflows/brand-analysis`,
@@ -617,6 +622,7 @@ export const brandRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
@@ -747,6 +753,7 @@ export const brandRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
@@ -921,6 +928,7 @@ export const brandRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         const { success: withinLimit } = await ratelimit.importTweets.limit(
           input.organizationId

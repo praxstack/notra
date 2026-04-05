@@ -65,13 +65,10 @@ export function ModalContent({
           )}
         </Button>
       </div>
-      {progress.status === "failed" && (
+      {(inlineError || progress.status === "failed") && (
         <p className="text-center text-destructive text-sm">
-          Try again with a different URL
+          {inlineError ?? "Try again with a different URL"}
         </p>
-      )}
-      {inlineError && (
-        <p className="text-center text-destructive text-sm">{inlineError}</p>
       )}
     </div>
   );
