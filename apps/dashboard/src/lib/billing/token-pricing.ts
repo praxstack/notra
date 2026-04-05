@@ -71,16 +71,25 @@ export function calculateTokenCostCents(
 export function shouldApplyMarkup(
   balance: {
     remaining?: number;
-    includedGrant?: number;
-    prepaidGrant?: number;
+    breakdown?: Array<{
+      remaining: number;
+      reset: { interval: string } | null;
+    }>;
   } | null
 ): boolean {
-  if (!balance) {
+  if (!balance || (balance.remaining ?? 0) <= 0) {
     return false;
   }
-  const remaining = balance.remaining ?? 0;
-  const includedGrant = balance.includedGrant ?? 0;
-  return includedGrant === 0 && remaining > 0;
+
+  if (!balance.breakdown?.length) {
+    return false;
+  }
+
+  const hasRemainingPlanCredits = balance.breakdown.some(
+    (entry) => entry.remaining > 0 && entry.reset?.interval !== "one_off"
+  );
+
+  return !hasRemainingPlanCredits;
 }
 
 export function getModelPricing(modelId?: string): ModelPricing {
