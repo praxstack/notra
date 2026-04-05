@@ -3,6 +3,7 @@ import { connectedSocialAccounts } from "@notra/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { authorizedProcedure } from "@/lib/orpc/base";
 import { redis } from "@/lib/redis";
 import { organizationIdSchema } from "@/schemas/auth/organization";
@@ -115,6 +116,7 @@ export const socialAccountsRouter = {
           organizationId: input.organizationId,
           user: context.user,
         });
+        await assertActiveSubscription(input.organizationId);
 
         const clientId = process.env.TWITTER_CLIENT_ID;
         if (!clientId) {

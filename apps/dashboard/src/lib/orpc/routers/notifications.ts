@@ -3,6 +3,7 @@ import { organizationNotificationSettings } from "@notra/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { authorizedProcedure } from "@/lib/orpc/base";
 import { organizationIdSchema } from "@/schemas/auth/organization";
 import { updateNotificationSettingsSchema } from "@/schemas/notification-settings";
@@ -50,6 +51,7 @@ export const notificationsRouter = {
         organizationId: input.organizationId,
         user: context.user,
       });
+      await assertActiveSubscription(input.organizationId);
 
       if (access.membership.role !== "owner") {
         throw forbidden(

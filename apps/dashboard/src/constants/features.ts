@@ -10,11 +10,20 @@ export const FEATURES = {
 } as const;
 
 export const PLANS = {
+  FREE: "free",
   BASIC: "basic",
   BASIC_YEARLY: "basic_yearly",
   PRO: "pro",
   PRO_YEARLY: "pro_yearly",
 } as const;
+
+export const PAID_OR_LEGACY_PLAN_IDS: Set<string> = new Set([
+  PLANS.FREE,
+  PLANS.BASIC,
+  PLANS.BASIC_YEARLY,
+  PLANS.PRO,
+  PLANS.PRO_YEARLY,
+]);
 
 export const ADDONS = {
   AI_CREDITS_TOPUP: "ai_credits_top_up",

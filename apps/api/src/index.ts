@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { createDb } from "@notra/db/drizzle-http";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import { authMiddleware } from "./middleware/auth";
+import { subscriptionMiddleware } from "./middleware/subscription";
 import { contentRoutes } from "./routes/content";
 
 const FRAMER_PLUGIN_ID = "8d4wmwtko6960jsu3ojmalvqm";
@@ -30,6 +31,7 @@ function getAllowedOrigin(origin: string | undefined): string | null {
 interface Bindings {
   UNKEY_ROOT_KEY: string;
   DATABASE_URL: string;
+  AUTUMN_SECRET_KEY?: string;
   UPSTASH_REDIS_REST_URL?: string;
   UPSTASH_REDIS_REST_TOKEN?: string;
   QSTASH_TOKEN?: string;
@@ -90,6 +92,8 @@ app.use("/v1/*", (c, next) => {
     : "api.read";
   return authMiddleware({ permissions })(c, next);
 });
+
+app.use("/v1/*", subscriptionMiddleware());
 
 app.get("/", (c) => {
   return c.text("ok");

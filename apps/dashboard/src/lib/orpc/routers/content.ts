@@ -27,6 +27,7 @@ import {
 import { FEATURES } from "@/constants/features";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { shouldApplyMarkup } from "@/lib/billing/token-pricing";
 import {
   addActiveGeneration,
@@ -579,6 +580,7 @@ export const contentRouter = {
         headers: context.headers,
         organizationId: input.organizationId,
       });
+      await assertActiveSubscription(input.organizationId);
 
       const existingPost = await db.query.posts.findFirst({
         where: and(
@@ -1046,6 +1048,7 @@ export const contentRouter = {
         headers: context.headers,
         organizationId: input.organizationId,
       });
+      await assertActiveSubscription(input.organizationId);
 
       if (
         !input.dataPoints.includePullRequests &&
@@ -1165,6 +1168,7 @@ export const contentRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await clearCompletedGeneration(input.organizationId, input.runId);
 

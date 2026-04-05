@@ -3,6 +3,7 @@ import { contentTriggers } from "@notra/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { baseProcedure } from "@/lib/orpc/base";
 import {
   addRepository,
@@ -291,6 +292,7 @@ export const integrationsRouter = {
         headers: context.headers,
         organizationId: input.organizationId,
       });
+      await assertActiveSubscription(input.organizationId);
 
       try {
         const displayName = `${input.owner}/${input.repo}`;
@@ -330,6 +332,7 @@ export const integrationsRouter = {
         headers: context.headers,
         organizationId: input.organizationId,
       });
+      await assertActiveSubscription(input.organizationId);
 
       const integration = await requireIntegrationInOrganization(
         input.organizationId,
@@ -495,6 +498,7 @@ export const integrationsRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await requireIntegrationInOrganization(
           input.organizationId,
@@ -535,6 +539,7 @@ export const integrationsRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         const repository = await requireRepositoryInOrganization(
           input.organizationId,
@@ -599,6 +604,7 @@ export const integrationsRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await requireRepositoryInOrganization(
           input.organizationId,
@@ -655,6 +661,7 @@ export const integrationsRouter = {
             headers: context.headers,
             organizationId: input.organizationId,
           });
+          await assertActiveSubscription(input.organizationId);
 
           await requireRepositoryInOrganization(
             input.organizationId,
@@ -680,6 +687,7 @@ export const integrationsRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await requireOutputInOrganization(input.organizationId, input.outputId);
 
@@ -762,6 +770,7 @@ export const integrationsRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         const existing = await getLinearIntegrationById(input.integrationId);
         if (!existing || existing.organizationId !== input.organizationId) {

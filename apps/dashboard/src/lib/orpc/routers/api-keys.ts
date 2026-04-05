@@ -5,6 +5,7 @@ import {
 } from "@/lib/api-keys/permissions";
 import { unkey } from "@/lib/api-keys/unkey";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { authorizedProcedure } from "@/lib/orpc/base";
 import {
   createApiKeySchema,
@@ -143,6 +144,7 @@ export const apiKeysRouter = {
         organizationId: input.organizationId,
         user: context.user,
       });
+      await assertActiveSubscription(input.organizationId);
 
       const { apiId, client } = requireUnkeyConfig();
       const expiresMs = EXPIRATION_MS[input.expiration];
@@ -182,6 +184,7 @@ export const apiKeysRouter = {
         organizationId: input.organizationId,
         user: context.user,
       });
+      await assertActiveSubscription(input.organizationId);
 
       const { apiId, client } = requireUnkeyConfig();
 
