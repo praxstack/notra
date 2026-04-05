@@ -178,6 +178,7 @@ export default function BillingPage() {
   const { data: plans, isLoading: plansLoading } = useListPlans();
   const {
     attach,
+    openCustomerPortal,
     data: customer,
     isLoading: customerLoading,
     refetch,
@@ -189,6 +190,7 @@ export default function BillingPage() {
     parseAsStringLiteral(BILLING_SECTION_VALUES).withDefault("billing")
   );
   const [loading, setLoading] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [isYearly, setIsYearly] = useState(false);
   const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc">("desc");
   const invoiceListId = useId();
@@ -252,6 +254,23 @@ export default function BillingPage() {
       );
     } finally {
       setLoading(null);
+    }
+  }
+
+  async function handleManageSubscription() {
+    setPortalLoading(true);
+    try {
+      await openCustomerPortal({
+        returnUrl: `${window.location.origin}/${activeOrganization?.slug}/billing`,
+      });
+    } catch (err) {
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Could not open billing portal. Please try again."
+      );
+    } finally {
+      setPortalLoading(false);
     }
   }
 
@@ -344,7 +363,21 @@ export default function BillingPage() {
     <PageContainer className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
       <div className="w-full space-y-6 px-4 lg:px-6">
         <div className="space-y-1">
-          <h1 className="font-bold text-3xl tracking-tight">Billing & Usage</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="font-bold text-3xl tracking-tight">
+              Billing & Usage
+            </h1>
+            {activeSubscription && (
+              <Button
+                disabled={portalLoading}
+                onClick={handleManageSubscription}
+                size="sm"
+                variant="outline"
+              >
+                {portalLoading ? "Loading..." : "Manage Subscription"}
+              </Button>
+            )}
+          </div>
           <p className="text-muted-foreground">
             Manage your plan, invoices, and feature usage
           </p>
