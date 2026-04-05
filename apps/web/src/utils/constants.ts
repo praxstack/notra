@@ -22,7 +22,7 @@ export const PRICING_PLANS = {
     },
     features: [
       "2 team members",
-      { label: "$12 in AI usage per month", subtitle: "then $0.01 per credit" },
+      "$12 in AI Credits per month",
       "3 workflows",
       "2 integrations",
       { label: "30 references", subtitle: "then $0.05 per reference / mo" },
@@ -39,7 +39,7 @@ export const PRICING_PLANS = {
     },
     features: [
       "5 team members",
-      { label: "$30 in AI usage per month", subtitle: "then $0.01 per credit" },
+      "$32 in AI Credits per month",
       "Unlimited workflows",
       "Unlimited integrations",
       { label: "100 references", subtitle: "then $0.05 per reference / mo" },
@@ -53,7 +53,7 @@ export const PRICING_PLANS = {
     cta: { label: "Contact us", href: "mailto:hello@usenotra.com" },
     features: [
       "Unlimited team members",
-      "Unlimited AI usage",
+      "Unlimited AI Credits",
       "Unlimited workflows",
       "Custom integrations",
       "Unlimited references",
@@ -74,9 +74,9 @@ const FEATURES_TABLE = [
         enterprise: "Unlimited",
       },
       {
-        name: "AI Usage",
+        name: "AI Credits",
         basic: "$12 / month",
-        pro: "$30 / month",
+        pro: "$32 / month",
         enterprise: "Unlimited",
       },
     ],

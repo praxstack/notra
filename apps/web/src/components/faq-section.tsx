@@ -41,9 +41,14 @@ const faqData: FAQItem[] = [
       "Integration tokens are encrypted at rest. Your source code is never stored. Notra only reads the metadata it needs to write drafts, like PR titles, descriptions, and commit messages.",
   },
   {
+    question: "Is there a free tier?",
+    answer:
+      "There is no permanent free tier. When you sign up, an automatic Basic trial is applied for 3 days at no cost so you can explore Notra before committing to a paid plan.",
+  },
+  {
     question: "How do I get started?",
     answer:
-      "Sign up for free, connect your GitHub, and Notra starts generating content within minutes. No credit card required.",
+      "Sign up, connect your GitHub, and Notra starts generating content within minutes. Your 3-day Basic trial begins automatically.",
   },
 ];
 
