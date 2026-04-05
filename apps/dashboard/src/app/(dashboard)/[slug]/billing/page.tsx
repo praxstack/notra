@@ -57,6 +57,7 @@ const SCENARIO_TEXT: Record<string, string> = {
 };
 
 const INVOICE_PRODUCT_NAME_MAP: Record<string, string> = {
+  free: "Free",
   basic: "Basic",
   basic_yearly: "Basic",
   pro: "Pro",

@@ -12,15 +12,6 @@ const PAID_OR_LEGACY_PLAN_IDS = new Set([
   "pro_yearly",
 ]);
 
-let autumnInstance: Autumn | null = null;
-
-function getAutumn(secretKey: string): Autumn {
-  if (!autumnInstance) {
-    autumnInstance = new Autumn({ secretKey });
-  }
-  return autumnInstance;
-}
-
 export function subscriptionMiddleware() {
   return async (c: Context, next: Next) => {
     if (!RESTRICTED_METHODS.has(c.req.method)) {
@@ -37,7 +28,7 @@ export function subscriptionMiddleware() {
       return next();
     }
 
-    const autumn = getAutumn(secretKey);
+    const autumn = new Autumn({ secretKey });
 
     try {
       const customer = await autumn.customers.getOrCreate({
