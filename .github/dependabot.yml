@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "bun"
+    directories:
+      - "/"
+      - "/apps/*"
+      - "/packages/*"
+    schedule:
+      interval: "weekly"
+    groups:
+      workspace-dependencies:
+        applies-to: "version-updates"
+        group-by: "dependency-name"
