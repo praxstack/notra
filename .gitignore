@@ -52,3 +52,4 @@ opencode.json
 
 # Openlogs
 .openlogs/
+.opencode/package-lock.json
