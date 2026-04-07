@@ -1,4 +1,4 @@
-import { Databuddy } from "@databuddy/sdk/react";
+import { Databuddy, FlagsProvider } from "@databuddy/sdk/react";
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { Instrument_Serif, Inter } from "next/font/google";
@@ -66,6 +66,8 @@ export const metadata: Metadata = {
   },
 };
 
+const databuddyClientId = process.env.NEXT_PUBLIC_DATABUDDY_WEB_WEBSITE_ID;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -86,29 +88,36 @@ export default function RootLayout({
           disableTransitionOnChange
           enableSystem
         >
-          <div className="relative flex min-h-screen w-full flex-col items-center justify-start bg-background">
-            <div className="relative flex w-full flex-col items-center justify-start">
-              <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-265 lg:max-w-265 lg:px-0">
-                <div className="absolute top-0 left-4 z-0 h-full w-px bg-border/60 sm:left-6 md:left-8 lg:left-0" />
-                <div className="absolute top-0 right-4 z-0 h-full w-px bg-border/60 sm:right-6 md:right-8 lg:right-0" />
+          <FlagsProvider
+            clientId={databuddyClientId ?? ""}
+            disabled={!databuddyClientId}
+          >
+            <div className="relative flex min-h-screen w-full flex-col items-center justify-start bg-background">
+              <div className="relative flex w-full flex-col items-center justify-start">
+                <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-265 lg:max-w-265 lg:px-0">
+                  <div className="absolute top-0 left-4 z-0 h-full w-px bg-border/60 sm:left-6 md:left-8 lg:left-0" />
+                  <div className="absolute top-0 right-4 z-0 h-full w-px bg-border/60 sm:right-6 md:right-8 lg:right-0" />
 
-                <div className="relative z-10 flex flex-col items-center self-stretch pt-2.25 pb-8 md:pb-12">
-                  <Navbar />
-                  {children}
-                  <div className="w-full">
-                    <FooterSection />
+                  <div className="relative z-10 flex flex-col items-center self-stretch pt-2.25 pb-8 md:pb-12">
+                    <Navbar />
+                    {children}
+                    <div className="w-full">
+                      <FooterSection />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </FlagsProvider>
           <Toaster position="bottom-right" />
-          <Databuddy
-            clientId={process.env.NEXT_PUBLIC_DATABUDDY_ID!}
-            trackAttributes={true}
-            trackErrors={true}
-            trackHashChanges={true}
-          />
+          {databuddyClientId && (
+            <Databuddy
+              clientId={databuddyClientId}
+              trackAttributes={true}
+              trackErrors={true}
+              trackHashChanges={true}
+            />
+          )}
           <Analytics />
         </ThemeProvider>
       </body>

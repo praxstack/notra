@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { PRICING_PLANS } from "../utils/constants";
 import { HatchPattern } from "./hatch-pattern";
+import { TrackedSignupLink } from "./tracked-signup-link";
 
 type BillingPeriod = "monthly" | "annually";
 
@@ -18,15 +19,23 @@ function PricingCard({
   cta,
   features,
   variant = "default",
+  signupSource,
 }: {
   name: string;
   description: string;
   price: React.ReactNode;
   cta: { label: string; href: string };
   features: readonly (string | { label: string; subtitle: string })[];
+  signupSource: string;
   variant?: "default" | "featured";
 }) {
   const isFeatured = variant === "featured";
+  const ctaLink =
+    cta.href === "https://app.usenotra.com/signup" ? (
+      <TrackedSignupLink href={cta.href} source={signupSource} />
+    ) : (
+      <Link href={cta.href} />
+    );
 
   return (
     <Card
@@ -62,7 +71,7 @@ function PricingCard({
             : "bg-primary hover:bg-primary-hover"
         }`}
         nativeButton={false}
-        render={<Link href={cta.href} />}
+        render={ctaLink}
       >
         <span
           className={`flex max-w-[108px] flex-col justify-center font-medium font-sans text-[13px] leading-5 ${
@@ -188,6 +197,7 @@ export function PricingCards() {
               description={basic.description}
               features={basic.features}
               name={basic.name}
+              signupSource="pricing_basic"
               price={
                 <div className="flex flex-col items-start justify-start gap-1">
                   <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">
@@ -210,6 +220,7 @@ export function PricingCards() {
               description={pro.description}
               features={pro.features}
               name={pro.name}
+              signupSource="pricing_pro"
               price={
                 <div className="flex flex-col items-start justify-start gap-1">
                   <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary-foreground/95 leading-[60px]">
@@ -233,6 +244,7 @@ export function PricingCards() {
               description={enterprise.description}
               features={enterprise.features}
               name={enterprise.name}
+              signupSource="pricing_enterprise"
               price={
                 <div className="flex flex-col items-start justify-start gap-1">
                   <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">

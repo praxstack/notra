@@ -16,6 +16,7 @@ import { MARKETING_NAV_LINKS } from "@/utils/navigation";
 import { HatchPattern } from "./hatch-pattern";
 import { NotraMark, notraMarkSvgString } from "./notra-mark";
 import { ThemeToggle } from "./theme-toggle";
+import { TrackedSignupLink } from "./tracked-signup-link";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -112,13 +113,13 @@ export function Navbar() {
                   </span>
                 </Button>
               </Link>
-              <Link href="https://app.usenotra.com/signup">
+              <TrackedSignupLink source="navbar_desktop_signup">
                 <Button className="overflow-hidden rounded-lg border-transparent bg-primary px-2 py-1 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-primary-hover sm:px-3 sm:py-[6px] md:px-[14px]">
                   <span className="flex flex-col justify-center font-medium font-sans text-primary-foreground text-xs leading-5 md:text-[13px]">
                     Sign up
                   </span>
                 </Button>
-              </Link>
+              </TrackedSignupLink>
             </div>
             <button
               aria-label={isOpen ? "Close menu" : "Open menu"}
@@ -154,13 +155,16 @@ export function Navbar() {
           </nav>
           <div className="flex flex-col items-center gap-3">
             <ThemeToggle />
-            <Link href="https://app.usenotra.com/signup">
+            <TrackedSignupLink
+              onClick={() => setIsOpen(false)}
+              source="navbar_mobile_signup"
+            >
               <Button className="h-11 overflow-hidden rounded-lg border-transparent bg-primary px-8 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-primary-hover">
                 <span className="font-medium font-sans text-base text-primary-foreground">
                   Sign up
                 </span>
               </Button>
-            </Link>
+            </TrackedSignupLink>
             <Link href="https://app.usenotra.com/login">
               <Button
                 className="h-11 overflow-hidden rounded-lg border-transparent bg-card px-8 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-muted"

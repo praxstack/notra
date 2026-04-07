@@ -14,7 +14,8 @@ import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { toast } from "sonner";
 
-const databuddyClientID = process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID;
+const databuddyClientID =
+  process.env.NEXT_PUBLIC_DATABUDDY_DASHBOARD_WEBSITE_ID;
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -53,7 +54,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
               {children}
               {databuddyClientID && (
                 <Databuddy
-                  clientId={process.env.NEXT_PUBLIC_DATABUDDY_CLIENT_ID}
+                  clientId={
+                    process.env.NEXT_PUBLIC_DATABUDDY_DASHBOARD_WEBSITE_ID
+                  }
                   trackAttributes={true}
                   trackErrors={true}
                   trackHashChanges={true}

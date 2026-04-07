@@ -1,6 +1,6 @@
 import { Button } from "@notra/ui/components/ui/button";
-import Link from "next/link";
 import { HatchPattern } from "./hatch-pattern";
+import { TrackedSignupLink } from "./tracked-signup-link";
 
 export default function CTASection() {
   return (
@@ -25,7 +25,7 @@ export default function CTASection() {
               <Button
                 className="h-10 border-transparent bg-primary px-12 py-[6px] transition-colors hover:bg-primary-hover"
                 nativeButton={false}
-                render={<Link href="https://app.usenotra.com/signup" />}
+                render={<TrackedSignupLink source="cta_section" />}
               >
                 <span className="flex flex-col justify-center font-medium font-sans text-[13px] text-primary-foreground leading-5">
                   Start for free
