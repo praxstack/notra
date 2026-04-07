@@ -10,6 +10,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@notra/ui/components/ui/chart";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@notra/ui/components/ui/pagination";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import {
   Table,
@@ -22,13 +29,15 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@notra/ui/components/ui/tabs";
 import { TitleCard } from "@notra/ui/components/ui/title-card";
 import { cn } from "@notra/ui/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import {
   useAggregateEvents,
+  useAutumnClient,
   useCustomer,
-  useListEvents,
 } from "autumn-js/react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
+import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { CreditTopupModal } from "@/components/billing/credit-topup-modal";
@@ -38,6 +47,7 @@ import {
   CREDIT_RANGE_LABELS,
   CREDIT_RANGES,
   type CreditRangeOption,
+  type ListEventsRow,
 } from "@/types/billing/credits";
 import {
   formatDollars,
@@ -55,7 +65,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-function renderEventRows(events: ReturnType<typeof useListEvents>["list"]) {
+function renderEventRows(events: ListEventsRow[] | undefined) {
   if (!events?.length) {
     return (
       <TableRow>
@@ -110,10 +120,37 @@ export default function CreditsPageClient() {
     binSize: "day",
   });
 
-  const { list: eventsList, isLoading: eventsLoading } = useListEvents({
-    featureId: FEATURES.AI_CREDITS,
-    limit: 20,
+  const [page, setPage] = useQueryState(
+    "page",
+    parseAsInteger.withDefault(1).withOptions({ clearOnDefault: true })
+  );
+  const eventsLimit = 20;
+  const eventsOffset = Math.max(0, page - 1) * eventsLimit;
+  const autumnClient = useAutumnClient({ caller: "CreditsPageClient" });
+  const { data: eventsData, isLoading: eventsLoading } = useQuery({
+    queryKey: [
+      "autumn",
+      "events",
+      "list",
+      FEATURES.AI_CREDITS,
+      eventsOffset,
+      eventsLimit,
+    ],
+    queryFn: () =>
+      autumnClient.listEvents({
+        featureId: FEATURES.AI_CREDITS,
+        offset: eventsOffset,
+        limit: eventsLimit,
+      }),
   });
+
+  const hasMore = eventsData?.hasMore ?? false;
+  const hasPrevious = page > 1;
+
+  const visibleEvents = useMemo(
+    () => eventsData?.list.filter((event) => event.value !== 0),
+    [eventsData]
+  );
 
   const aiCredits = customer?.balances?.[FEATURES.AI_CREDITS];
   const aiCreditsBalance =
@@ -376,10 +413,40 @@ export default function CreditsPageClient() {
                         </TableCell>
                       </TableRow>
                     ))
-                  : renderEventRows(eventsList)}
+                  : renderEventRows(visibleEvents)}
               </TableBody>
             </Table>
           </div>
+          {(hasPrevious || hasMore) && (
+            <Pagination className="justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    className={cn(
+                      !hasPrevious && "pointer-events-none opacity-50"
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (hasPrevious) {
+                        setPage(Math.max(1, page - 1));
+                      }
+                    }}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    className={cn(!hasMore && "pointer-events-none opacity-50")}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (hasMore) {
+                        setPage(page + 1);
+                      }
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       </div>
 
