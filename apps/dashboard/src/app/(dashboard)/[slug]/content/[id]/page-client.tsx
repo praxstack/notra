@@ -758,6 +758,7 @@ export default function PageClient({
             {content.contentType === "linkedin_post" && (
               <Button
                 className="text-white hover:opacity-90"
+                nativeButton={false}
                 render={
                   <a
                     href={createLinkedInPostUrl(currentMarkdown)}
