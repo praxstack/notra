@@ -1,3 +1,5 @@
+import { createSerializer, parseAsString } from "nuqs";
+
 export const LANDING_PAGE_H1_EXPERIMENT_KEY = "landing-page-h1";
 export const LANDING_PAGE_H1_TEAM_MARKETER_VARIANT = "team-marketer";
 
@@ -7,6 +9,25 @@ export const LANDING_PAGE_H1_TEAM_MARKETER_COPY =
   "Make everyone on your team a marketer";
 
 export const DATABUDDY_SIGNUP_STARTED_EVENT = "signup_started";
+
+export const signupAttributionSearchParams = {
+  landingPageH1Copy: parseAsString,
+  landingPageH1Variant: parseAsString,
+  source: parseAsString,
+};
+
+export const signupAttributionUrlKeys = {
+  landingPageH1Copy: "db_landing_page_h1_copy",
+  landingPageH1Variant: "db_landing_page_h1_variant",
+  source: "db_source",
+} as const;
+
+export const serializeSignupAttribution = createSerializer(
+  signupAttributionSearchParams,
+  {
+    urlKeys: signupAttributionUrlKeys,
+  }
+);
 
 export function normalizeLandingPageH1Variant(variant?: string): string {
   return variant === LANDING_PAGE_H1_TEAM_MARKETER_VARIANT

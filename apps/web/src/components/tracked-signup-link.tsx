@@ -8,9 +8,23 @@ import {
   getLandingPageH1Copy,
   LANDING_PAGE_H1_EXPERIMENT_KEY,
   normalizeLandingPageH1Variant,
+  serializeSignupAttribution,
 } from "@/utils/databuddy";
 
 const DEFAULT_SIGNUP_URL = "https://app.usenotra.com/signup";
+
+function buildTrackedSignupHref(
+  href: string,
+  source: string,
+  variant: string | undefined
+): string {
+  const normalizedVariant = normalizeLandingPageH1Variant(variant);
+  return serializeSignupAttribution(new URL(href, DEFAULT_SIGNUP_URL), {
+    landingPageH1Copy: getLandingPageH1Copy(normalizedVariant),
+    landingPageH1Variant: normalizedVariant,
+    source,
+  });
+}
 
 type TrackedSignupLinkProps = Omit<ComponentProps<typeof Link>, "href"> & {
   children?: React.ReactNode;
@@ -26,6 +40,7 @@ export function TrackedSignupLink({
   ...props
 }: TrackedSignupLinkProps) {
   const { variant } = useFlag(LANDING_PAGE_H1_EXPERIMENT_KEY);
+  const trackedHref = buildTrackedSignupHref(href, source, variant);
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     onClick?.(event);
@@ -35,7 +50,7 @@ export function TrackedSignupLink({
     }
 
     track(DATABUDDY_SIGNUP_STARTED_EVENT, {
-      destination: href,
+      destination: trackedHref,
       landing_page_h1_copy: getLandingPageH1Copy(variant),
       landing_page_h1_variant: normalizeLandingPageH1Variant(variant),
       source,
@@ -43,7 +58,7 @@ export function TrackedSignupLink({
   }
 
   return (
-    <Link href={href} onClick={handleClick} {...props}>
+    <Link href={trackedHref} onClick={handleClick} {...props}>
       {children}
     </Link>
   );

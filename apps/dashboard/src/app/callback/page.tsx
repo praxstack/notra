@@ -1,12 +1,38 @@
 import { redirect } from "next/navigation";
+import { createLoader, createSerializer } from "nuqs/server";
 import { getLastActiveOrganization, getSession } from "@/lib/auth/actions";
 import { hasPaidSubscriptionHistory } from "@/lib/billing/subscription";
+import {
+  marketingAttributionServerSearchParams,
+  marketingAttributionServerUrlKeys,
+} from "@/utils/marketing-attribution.server";
+
+const loadMarketingAttribution = createLoader(
+  marketingAttributionServerSearchParams,
+  {
+    urlKeys: marketingAttributionServerUrlKeys,
+  }
+);
+
+const serializeMarketingAttribution = createSerializer(
+  marketingAttributionServerSearchParams,
+  {
+    urlKeys: marketingAttributionServerUrlKeys,
+  }
+);
 
 export default async function AuthCallback(props: {
-  searchParams: Promise<{ returnTo?: string }>;
+  searchParams: Promise<{
+    returnTo?: string;
+    db_source?: string;
+    db_landing_page_h1_variant?: string;
+    db_landing_page_h1_copy?: string;
+    signup_method?: string;
+  }>;
 }) {
   const session = await getSession();
   const searchParams = await props.searchParams;
+  const marketingAttribution = await loadMarketingAttribution(searchParams);
   let returnTo = searchParams.returnTo;
 
   if (!session?.user) {
@@ -36,10 +62,14 @@ export default async function AuthCallback(props: {
   }
 
   const hasSubHistory = await hasPaidSubscriptionHistory(organization.id);
+  const onboardingUrl = serializeMarketingAttribution(
+    "/onboarding",
+    marketingAttribution
+  );
 
   if (hasSubHistory) {
     redirect(`/${organization.slug}`);
   }
 
-  redirect("/onboarding");
+  redirect(onboardingUrl);
 }

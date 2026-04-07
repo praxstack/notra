@@ -26,7 +26,95 @@ export const databuddy = apiKey
     })
   : null;
 
+const marketingWebsiteId = process.env.NEXT_PUBLIC_DATABUDDY_WEB_WEBSITE_ID;
+
+export const marketingDatabuddy =
+  apiKey && marketingWebsiteId
+    ? new Databuddy({
+        websiteId: marketingWebsiteId,
+        apiKey,
+        enableBatching: false,
+      })
+    : null;
+
 const isDevelopment = process.env.NODE_ENV === "development";
+
+interface MarketingSignupCompletedEvent {
+  userId: string;
+  organizationId?: string;
+  source?: string;
+  landingPageH1Variant?: string;
+  landingPageH1Copy?: string;
+  signupMethod?: "email" | "google" | "github";
+}
+
+interface MarketingSignupPlanSelectedEvent
+  extends MarketingSignupCompletedEvent {
+  selectedProduct: "basic" | "pro" | "other";
+  selectedPlanId: string;
+  billingPeriod: "monthly" | "yearly";
+}
+
+async function trackMarketingEvent(
+  name: string,
+  properties: Record<string, unknown>
+): Promise<void> {
+  if (!marketingDatabuddy) {
+    return;
+  }
+
+  try {
+    const result = await marketingDatabuddy.track({
+      name,
+      namespace: "signup",
+      source: "dashboard",
+      properties,
+    });
+
+    if (!result.success && isDevelopment) {
+      console.warn(`[Databuddy] ${name} failed`, {
+        error: result.error,
+        properties,
+      });
+    }
+  } catch (error) {
+    if (isDevelopment) {
+      console.warn(`[Databuddy] ${name} error`, {
+        error,
+        properties,
+      });
+    }
+  }
+}
+
+export async function trackMarketingSignupCompleted(
+  event: MarketingSignupCompletedEvent
+): Promise<void> {
+  await trackMarketingEvent("signup_completed", {
+    landing_page_h1_copy: event.landingPageH1Copy,
+    landing_page_h1_variant: event.landingPageH1Variant,
+    organization_id: event.organizationId,
+    signup_method: event.signupMethod,
+    source: event.source,
+    user_id: event.userId,
+  });
+}
+
+export async function trackMarketingSignupPlanSelected(
+  event: MarketingSignupPlanSelectedEvent
+): Promise<void> {
+  await trackMarketingEvent("signup_plan_selected", {
+    billing_period: event.billingPeriod,
+    landing_page_h1_copy: event.landingPageH1Copy,
+    landing_page_h1_variant: event.landingPageH1Variant,
+    organization_id: event.organizationId,
+    selected_plan_id: event.selectedPlanId,
+    selected_product: event.selectedProduct,
+    signup_method: event.signupMethod,
+    source: event.source,
+    user_id: event.userId,
+  });
+}
 
 export async function trackScheduledContentCreated(
   event: ContentCreatedTrackingEvent

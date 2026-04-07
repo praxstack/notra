@@ -10,10 +10,17 @@ import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Google } from "@notra/ui/components/ui/svgs/google";
 import Link from "next/link";
 import { useState } from "react";
+import { useQueryStates } from "nuqs";
 import { toast } from "sonner";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 import { authClient } from "@/lib/auth/client";
+import { marketingAttributionUrlKeys } from "@/utils/marketing-attribution-keys";
+import {
+  marketingAttributionSearchParams,
+  persistMarketingAttribution,
+  readMarketingAttributionFromValues,
+} from "@/utils/marketing-attribution";
 
 const signupSchema = z.object({
   email: z
@@ -45,10 +52,44 @@ export function SignupForm({
 }: SignupFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [attributionParams] = useQueryStates(marketingAttributionSearchParams, {
+    history: "replace",
+    urlKeys: marketingAttributionUrlKeys,
+  });
 
-  const callbackURL = returnTo
-    ? `/callback?returnTo=${encodeURIComponent(returnTo)}`
-    : "/callback";
+  const attribution = readMarketingAttributionFromValues({
+    landingPageH1Copy: attributionParams.dbLandingPageH1Copy,
+    landingPageH1Variant: attributionParams.dbLandingPageH1Variant,
+    source: attributionParams.dbSource,
+    signupMethod: attributionParams.signupMethod,
+  });
+
+  function buildCallbackUrl(signupMethod: "email" | "google" | "github") {
+    const params = new URLSearchParams();
+
+    if (returnTo) {
+      params.set("returnTo", encodeURIComponent(returnTo));
+    }
+
+    if (attribution.source) {
+      params.set("db_source", attribution.source);
+    }
+    if (attribution.landingPageH1Variant) {
+      params.set(
+        "db_landing_page_h1_variant",
+        attribution.landingPageH1Variant
+      );
+    }
+    if (attribution.landingPageH1Copy) {
+      params.set("db_landing_page_h1_copy", attribution.landingPageH1Copy);
+    }
+
+    params.set("signup_method", signupMethod);
+
+    const query = params.toString();
+
+    return query ? `/callback?${query}` : "/callback";
+  }
 
   async function handleSocialSignup(provider: "google" | "github") {
     if (isAuthLoading) {
@@ -57,9 +98,11 @@ export function SignupForm({
 
     setIsAuthLoading(true);
     try {
+      persistMarketingAttribution({ ...attribution, signupMethod: provider });
+
       await authClient.signIn.social({
         provider,
-        callbackURL,
+        callbackURL: buildCallbackUrl(provider),
       });
     } catch (error) {
       console.error("Social signup error:", error);
@@ -102,7 +145,8 @@ export function SignupForm({
       if (onSuccess) {
         onSuccess();
       } else {
-        window.location.href = callbackURL;
+        persistMarketingAttribution({ ...attribution, signupMethod: "email" });
+        window.location.href = buildCallbackUrl("email");
       }
     } catch (error) {
       console.error("Email signup error:", error);
