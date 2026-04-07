@@ -206,7 +206,7 @@ function PageClient({
                     {" "}
                     <Link
                       className="font-medium underline underline-offset-2"
-                      href={`/${invitation.organizationSlug}/billing`}
+                      href={`/${invitation.organizationSlug}/settings/billing`}
                     >
                       View plans
                     </Link>
@@ -330,7 +330,7 @@ function PageClient({
                 {" "}
                 <Link
                   className="font-medium underline underline-offset-2"
-                  href={`/${invitation.organizationSlug}/billing`}
+                  href={`/${invitation.organizationSlug}/settings/billing`}
                 >
                   View plans
                 </Link>

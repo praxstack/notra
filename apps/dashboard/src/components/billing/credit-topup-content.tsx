@@ -70,7 +70,7 @@ export function CreditTopupContent({ onSuccess }: CreditTopupContentProps) {
     setLoading(true);
     try {
       const successUrl = activeOrganization?.slug
-        ? `${window.location.origin}/${activeOrganization.slug}/credits?success=true`
+        ? `${window.location.origin}/${activeOrganization.slug}/settings/credits?success=true`
         : undefined;
 
       const credits = activeAmount * 100;

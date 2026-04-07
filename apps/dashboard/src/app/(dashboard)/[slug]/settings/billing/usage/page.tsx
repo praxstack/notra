@@ -6,5 +6,5 @@ interface PageProps {
 
 export default async function BillingUsagePage({ params }: PageProps) {
   const { slug } = await params;
-  redirect(`/${slug}/billing?tab=usage`);
+  redirect(`/${slug}/settings/billing?tab=usage`);
 }

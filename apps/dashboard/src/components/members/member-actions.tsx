@@ -109,7 +109,8 @@ export function MemberActions({ member }: MemberActionsProps) {
           toast.error(message, {
             action: {
               label: "View plans",
-              onClick: () => router.push(`/${activeOrganization.slug}/billing`),
+              onClick: () =>
+                router.push(`/${activeOrganization.slug}/settings/billing`),
             },
           });
           return;

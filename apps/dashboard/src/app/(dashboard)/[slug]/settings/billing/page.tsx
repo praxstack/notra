@@ -231,7 +231,7 @@ export default function BillingPage() {
     setLoading(planId);
     try {
       const successUrl = activeOrganization?.slug
-        ? `${window.location.origin}/${activeOrganization.slug}/billing/success`
+        ? `${window.location.origin}/${activeOrganization.slug}/settings/billing/success`
         : undefined;
 
       const result = await attach({
@@ -261,7 +261,7 @@ export default function BillingPage() {
     setPortalLoading(true);
     try {
       await openCustomerPortal({
-        returnUrl: `${window.location.origin}/${activeOrganization?.slug}/billing`,
+        returnUrl: `${window.location.origin}/${activeOrganization?.slug}/settings/billing`,
       });
     } catch (err) {
       toast.error(

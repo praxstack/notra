@@ -343,7 +343,9 @@ export function OrgSelector() {
                     action: {
                       label: "Upgrade",
                       onClick: () =>
-                        router.push(`/${activeOrganization?.slug}/billing`),
+                        router.push(
+                          `/${activeOrganization?.slug}/settings/billing`
+                        ),
                     },
                   });
                   return;

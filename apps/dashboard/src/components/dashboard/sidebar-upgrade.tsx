@@ -71,7 +71,7 @@ export function SidebarUpgrade() {
     setLoading(true);
     try {
       const successUrl = activeOrganization?.slug
-        ? `${window.location.origin}/${activeOrganization.slug}/billing/success`
+        ? `${window.location.origin}/${activeOrganization.slug}/settings/billing/success`
         : undefined;
       const result = await attach({
         planId: targetPlanId,

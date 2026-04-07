@@ -30,7 +30,7 @@ export default function BillingSuccessPage() {
   async function handleManageBilling() {
     try {
       await openCustomerPortal({
-        returnUrl: `${window.location.origin}/${slug}/billing`,
+        returnUrl: `${window.location.origin}/${slug}/settings/billing`,
       });
     } catch (err) {
       toast.error(
@@ -92,7 +92,7 @@ export default function BillingSuccessPage() {
 
         <Link
           className="mt-6 text-muted-foreground text-sm underline underline-offset-4 transition-colors hover:text-foreground"
-          href={`/${slug}/billing`}
+          href={`/${slug}/settings/billing`}
         >
           View invoices & usage
         </Link>

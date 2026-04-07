@@ -279,7 +279,7 @@ const ChatInput = ({
                   {organizationSlug && (
                     <Link
                       className="font-medium underline underline-offset-2"
-                      href={`/${organizationSlug}/billing/plans`}
+                      href={`/${organizationSlug}/settings/billing`}
                     >
                       Upgrade
                     </Link>

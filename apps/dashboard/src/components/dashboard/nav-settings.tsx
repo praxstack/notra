@@ -51,12 +51,12 @@ const organizationItems: NavSettingsItem[] = [
   },
   {
     label: "Billing & Usage",
-    url: "billing",
+    url: "settings/billing",
     icon: CreditCardIcon,
   },
   {
     label: "Credits",
-    url: "credits",
+    url: "settings/credits",
     icon: Wallet01Icon,
   },
 ];

@@ -34,7 +34,7 @@ export function SubscriptionGate({ children }: { children: React.ReactNode }) {
         </p>
         <Button
           nativeButton={false}
-          render={<Link href={`/${slug}/billing`} />}
+          render={<Link href={`/${slug}/settings/billing`} />}
           size="sm"
         >
           Choose a Plan
