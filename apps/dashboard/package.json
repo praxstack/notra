@@ -58,7 +58,7 @@
     "@upstash/workflow": "^1.1.0",
     "@vercel/analytics": "^1.6.1",
     "ai": "^6.0.116",
-    "autumn-js": "^1.2.5",
+    "autumn-js": "^1.2.7",
     "axios": "^1.13.6",
     "better-auth": "^1.5.5",
     "clsx": "^2.1.1",
