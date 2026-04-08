@@ -86,6 +86,8 @@ function validateAndNormalizeOrganizationSlug(org: {
     data: {
       ...org,
       slug: validation.data,
+      userId: undefined,
+      keepCurrentActiveOrganization: undefined,
     },
   };
 }
