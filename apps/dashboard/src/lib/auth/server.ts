@@ -350,14 +350,23 @@ export const auth = betterAuth({
 
           const slug = `${base || "notra"}-${nanoid()}`;
 
-          await auth.api.createOrganization({
-            body: {
-              name: "Personal",
-              slug,
+          try {
+            await auth.api.createOrganization({
+              body: {
+                name: "Personal",
+                slug,
+                userId: user.id,
+                logo: generateOrganizationAvatar(slug),
+              },
+            });
+          } catch (error) {
+            console.error("[Auth] Failed to auto-create org on signup:", {
               userId: user.id,
-              logo: generateOrganizationAvatar(slug),
-            },
-          });
+              slug,
+              error,
+            });
+            throw error;
+          }
 
           // Send welcome email (not awaited to avoid blocking signup)
           sendWelcomeEmailAction({ userEmail: email });

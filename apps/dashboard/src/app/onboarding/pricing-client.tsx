@@ -9,12 +9,11 @@ import { Tabs, TabsList, TabsTrigger } from "@notra/ui/components/ui/tabs";
 import { TitleCard } from "@notra/ui/components/ui/title-card";
 import { useMutation } from "@tanstack/react-query";
 import { useCustomer, useListPlans } from "autumn-js/react";
-import { useEffect, useState } from "react";
 import { useQueryStates } from "nuqs";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { FEATURES, PLANS } from "@/constants/features";
 import type { ProductFeature } from "@/types/hooks/billing";
-import { marketingAttributionUrlKeys } from "@/utils/marketing-attribution-keys";
 import {
   getPlanSelectionMetadata,
   marketingAttributionSearchParams,
@@ -22,6 +21,7 @@ import {
   readMarketingAttributionFromStorage,
   readMarketingAttributionFromValues,
 } from "@/utils/marketing-attribution";
+import { marketingAttributionUrlKeys } from "@/utils/marketing-attribution-keys";
 
 interface PricingClientProps {
   slug: string;

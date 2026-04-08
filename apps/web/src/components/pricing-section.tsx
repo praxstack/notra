@@ -197,7 +197,6 @@ export function PricingCards() {
               description={basic.description}
               features={basic.features}
               name={basic.name}
-              signupSource="pricing_basic"
               price={
                 <div className="flex flex-col items-start justify-start gap-1">
                   <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">
@@ -211,6 +210,7 @@ export function PricingCards() {
                   </div>
                 </div>
               }
+              signupSource="pricing_basic"
             />
 
             <HatchPattern className="hidden w-6 self-stretch md:row-span-4 md:block lg:w-8" />
@@ -220,7 +220,6 @@ export function PricingCards() {
               description={pro.description}
               features={pro.features}
               name={pro.name}
-              signupSource="pricing_pro"
               price={
                 <div className="flex flex-col items-start justify-start gap-1">
                   <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary-foreground/95 leading-[60px]">
@@ -234,6 +233,7 @@ export function PricingCards() {
                   </div>
                 </div>
               }
+              signupSource="pricing_pro"
               variant="featured"
             />
 
@@ -244,7 +244,6 @@ export function PricingCards() {
               description={enterprise.description}
               features={enterprise.features}
               name={enterprise.name}
-              signupSource="pricing_enterprise"
               price={
                 <div className="flex flex-col items-start justify-start gap-1">
                   <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">
@@ -255,6 +254,7 @@ export function PricingCards() {
                   </div>
                 </div>
               }
+              signupSource="pricing_enterprise"
             />
           </div>
 

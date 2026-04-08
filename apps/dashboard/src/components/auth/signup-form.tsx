@@ -9,18 +9,18 @@ import { Separator } from "@notra/ui/components/ui/separator";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Google } from "@notra/ui/components/ui/svgs/google";
 import Link from "next/link";
-import { useState } from "react";
 import { useQueryStates } from "nuqs";
+import { useState } from "react";
 import { toast } from "sonner";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 import { authClient } from "@/lib/auth/client";
-import { marketingAttributionUrlKeys } from "@/utils/marketing-attribution-keys";
 import {
   marketingAttributionSearchParams,
   persistMarketingAttribution,
   readMarketingAttributionFromValues,
 } from "@/utils/marketing-attribution";
+import { marketingAttributionUrlKeys } from "@/utils/marketing-attribution-keys";
 
 const signupSchema = z.object({
   email: z
