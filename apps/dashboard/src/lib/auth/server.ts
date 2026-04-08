@@ -342,7 +342,7 @@ export const auth = betterAuth({
             });
           }
         },
-        after: async (user) => {
+        after: async (user, ctx) => {
           const email = user.email || "";
           const raw = email.split("@")[0] || "";
           const base = raw
@@ -374,11 +374,15 @@ export const auth = betterAuth({
             where: eq(members.userId, user.id),
             columns: { organizationId: true },
           });
-          if (member) {
-            await db
-              .update(sessions)
-              .set({ activeOrganizationId: member.organizationId })
-              .where(eq(sessions.userId, user.id));
+          const session = await db.query.sessions.findFirst({
+            where: eq(sessions.userId, user.id),
+            orderBy: (s, { desc }) => [desc(s.createdAt)],
+            columns: { token: true },
+          });
+          if (member && session && ctx?.context?.internalAdapter) {
+            await ctx.context.internalAdapter.updateSession(session.token, {
+              activeOrganizationId: member.organizationId,
+            });
           }
 
           sendWelcomeEmailAction({ userEmail: email });
