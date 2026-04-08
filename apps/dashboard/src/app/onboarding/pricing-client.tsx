@@ -12,6 +12,7 @@ import { useCustomer, useListPlans } from "autumn-js/react";
 import { useQueryStates } from "nuqs";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { OnboardingAccountMenu } from "@/components/onboarding/account-menu";
 import { FEATURES, PLANS } from "@/constants/features";
 import type { ProductFeature } from "@/types/hooks/billing";
 import {
@@ -214,7 +215,10 @@ export function PricingClient({ slug }: PricingClientProps) {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-12">
+    <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-4 py-12">
+      <div className="absolute top-4 right-4">
+        <OnboardingAccountMenu />
+      </div>
       <div className="space-y-3 text-center">
         <h1 className="font-bold text-3xl tracking-tight md:text-4xl">
           Choose your plan
