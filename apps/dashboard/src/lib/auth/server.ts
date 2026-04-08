@@ -370,7 +370,17 @@ export const auth = betterAuth({
             throw error;
           }
 
-          // Send welcome email (not awaited to avoid blocking signup)
+          const member = await db.query.members.findFirst({
+            where: eq(members.userId, user.id),
+            columns: { organizationId: true },
+          });
+          if (member) {
+            await db
+              .update(sessions)
+              .set({ activeOrganizationId: member.organizationId })
+              .where(eq(sessions.userId, user.id));
+          }
+
           sendWelcomeEmailAction({ userEmail: email });
         },
       },
