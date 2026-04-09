@@ -3,7 +3,6 @@ import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 import "@/styles/globals.css";
 import { Analytics } from "@vercel/analytics/next";
 
-import { XPixel } from "@/components/analytics/x-pixel";
 import { Providers } from "@/utils/providers";
 import { SITE_CONFIG } from "../utils/site";
 
@@ -53,7 +52,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>{children}</Providers>
-        <XPixel />
         <Analytics />
       </body>
     </html>
