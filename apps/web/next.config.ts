@@ -38,6 +38,10 @@ const nextConfig: NextConfig = {
         destination: "/markdown",
       },
       {
+        source: "/blog/engineers-are-great-marketing",
+        destination: "/blog/engineers-are-great-for-marketing",
+      },
+      {
         source: "/changelog/notra",
         destination: "/changelog/markdown",
         has: [
