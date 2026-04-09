@@ -8,13 +8,19 @@ import { cn } from "@notra/ui/lib/utils";
 import { useCustomer } from "autumn-js/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+
+const PAID_PLAN_IDS = ["pro", "pro_yearly", "basic", "basic_yearly"];
+const X_PAID_CONVERSION_EVENT_ID =
+  process.env.NEXT_PUBLIC_X_PAID_CONVERSION_EVENT_ID;
 
 export default function BillingSuccessPage() {
   const { slug } = useParams<{ slug: string }>();
   const { openCustomerPortal, data: customer } = useCustomer({
     expand: ["subscriptions.plan"],
   });
+  const trackedRef = useRef(false);
 
   const activeSubscription = customer?.subscriptions?.find(
     (sub) => !sub.addOn && sub.status === "active"
@@ -26,6 +32,24 @@ export default function BillingSuccessPage() {
       : planId === "basic" || planId === "basic_yearly"
         ? "Basic"
         : "your new plan";
+
+  useEffect(() => {
+    if (
+      !X_PAID_CONVERSION_EVENT_ID ||
+      !planId ||
+      !PAID_PLAN_IDS.includes(planId) ||
+      trackedRef.current
+    ) {
+      return;
+    }
+
+    trackedRef.current = true;
+
+    const twq = (window as Record<string, unknown>).twq;
+    if (typeof twq === "function") {
+      twq("event", X_PAID_CONVERSION_EVENT_ID, { value: null });
+    }
+  }, [planId]);
 
   async function handleManageBilling() {
     try {
