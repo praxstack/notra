@@ -110,6 +110,26 @@ export async function getLastActiveOrganization(userId: string) {
   return;
 }
 
+export async function getAllUserOrganizations(userId: string) {
+  const userMemberships = await db.query.members.findMany({
+    where: eq(members.userId, userId),
+    columns: { organizationId: true },
+  });
+
+  const orgs = await Promise.all(
+    userMemberships.map((m) =>
+      db.query.organizations.findFirst({
+        where: eq(organizations.id, m.organizationId),
+        columns: { slug: true, id: true },
+      })
+    )
+  );
+
+  return orgs.filter(
+    (org): org is { slug: string; id: string } => org !== undefined
+  );
+}
+
 export async function getInvitationById(
   invitationId: string
 ): InvitationResponse {

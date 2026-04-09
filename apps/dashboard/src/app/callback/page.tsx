@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createLoader, createSerializer } from "nuqs/server";
-import { getLastActiveOrganization, getSession } from "@/lib/auth/actions";
+import {
+  getAllUserOrganizations,
+  getLastActiveOrganization,
+  getSession,
+} from "@/lib/auth/actions";
 import { hasPaidSubscriptionHistory } from "@/lib/billing/subscription";
 import {
   marketingAttributionServerSearchParams,
@@ -62,14 +66,24 @@ export default async function AuthCallback(props: {
   }
 
   const hasSubHistory = await hasPaidSubscriptionHistory(organization.id);
-  const onboardingUrl = serializeMarketingAttribution(
-    "/onboarding",
-    marketingAttribution
-  );
 
   if (hasSubHistory) {
     redirect(`/${organization.slug}`);
   }
 
+  const allOrgs = await getAllUserOrganizations(session.user.id);
+  for (const org of allOrgs) {
+    if (
+      org.id !== organization.id &&
+      (await hasPaidSubscriptionHistory(org.id))
+    ) {
+      redirect(`/${org.slug}`);
+    }
+  }
+
+  const onboardingUrl = serializeMarketingAttribution(
+    "/onboarding",
+    marketingAttribution
+  );
   redirect(onboardingUrl);
 }

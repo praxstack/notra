@@ -3,10 +3,8 @@ import {
   SIDEBAR_COOKIE_NAME,
 } from "@notra/ui/lib/sidebar-state";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { DashboardClientWrapper } from "@/components/dashboard/dashboard-client-wrapper";
 import { validateOrganizationAccess } from "@/lib/auth/actions";
-import { hasPaidSubscriptionHistory } from "@/lib/billing/subscription";
 
 interface OrganizationLayoutProps {
   children: React.ReactNode;
@@ -26,11 +24,6 @@ export default async function OrganizationLayout({
   );
 
   const { organization } = await validateOrganizationAccess(slug);
-
-  const hasSubHistory = await hasPaidSubscriptionHistory(organization.id);
-  if (!hasSubHistory) {
-    redirect("/onboarding");
-  }
 
   return (
     <DashboardClientWrapper
