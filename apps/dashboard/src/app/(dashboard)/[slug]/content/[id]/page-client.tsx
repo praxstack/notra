@@ -25,10 +25,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import remend from "remend";
 import { toast } from "sonner";
-import ChatInput, {
-  type ContextItem,
-  type TextSelection,
-} from "@/components/chat-input";
+import ChatInput from "@/components/chat-input";
 import { getContentTypeLabel } from "@/components/content/content-card";
 import type { EditorRefHandle } from "@/components/content/editor/plugins/editor-ref-plugin";
 import { ContentEditorSwitch } from "@/components/content/editors";
@@ -39,6 +36,7 @@ import { TWITTER_BRAND_COLOR } from "@/constants/twitter";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import { sourceMetadataSchema } from "@/schemas/content";
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
+import type { ContextItem, TextSelection } from "@/types/chat";
 import { getBrandFaviconUrl } from "@/utils/brand";
 import { formatSnakeCaseLabel } from "@/utils/format";
 import { createLinkedInPostUrl } from "@/utils/linkedin";

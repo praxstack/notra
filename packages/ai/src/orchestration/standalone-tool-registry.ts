@@ -1,0 +1,190 @@
+import { contentTypeSchema } from "@notra/ai/schemas/content";
+import {
+  createGetCommitsByTimeframeTool,
+  createGetPullRequestsTool,
+  createGetReleaseByTagTool,
+} from "@notra/ai/tools/github";
+import {
+  createGetLinearCyclesTool,
+  createGetLinearIssuesTool,
+  createGetLinearProjectsTool,
+} from "@notra/ai/tools/linear";
+import {
+  createCreatePostTool,
+  createUpdatePostTool,
+  createViewPostTool,
+} from "@notra/ai/tools/post";
+import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
+import type {
+  ResolveIntegrationContext,
+  ResolveLinearIntegrationContext,
+} from "@notra/ai/types/agents";
+import type {
+  LinearContext,
+  RepoContext,
+  ToolSet,
+  ValidatedIntegration,
+} from "@notra/ai/types/orchestration";
+import type {
+  PostToolsConfig,
+  PostToolsResult,
+} from "@notra/ai/types/post-tools";
+import type { Tool } from "ai";
+
+interface BuildStandaloneToolSetParams {
+  organizationId: string;
+  validatedIntegrations: ValidatedIntegration[];
+  postResult: PostToolsResult;
+}
+
+interface BuildStandaloneToolSetDeps {
+  resolveContext?: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+}
+
+export function buildStandaloneToolSet(
+  params: BuildStandaloneToolSetParams,
+  deps?: BuildStandaloneToolSetDeps
+): ToolSet {
+  const { organizationId, validatedIntegrations, postResult } = params;
+
+  const tools: Record<string, Tool> = {};
+  const descriptions: string[] = [];
+
+  for (const contentType of contentTypeSchema.options) {
+    tools[`create_${contentType}`] = createCreatePostTool(
+      { organizationId, contentType, needsApproval: true },
+      postResult
+    );
+  }
+
+  tools.update_post = createUpdatePostTool(
+    { organizationId, contentType: "blog_post" },
+    postResult
+  );
+
+  tools.view_post = createViewPostTool({
+    organizationId,
+    contentType: "blog_post",
+  });
+
+  descriptions.push(
+    "**Content Creation**: Create posts of any type (changelog, blog_post, twitter_post, linkedin_post, investor_update) using create_<type>, update_post, and view_post"
+  );
+
+  tools.listAvailableSkills = listAvailableSkills();
+  tools.getSkillByName = getSkillByName();
+  descriptions.push(
+    "**Skills**: Access knowledge and writing guidelines using listAvailableSkills and getSkillByName"
+  );
+
+  const hasGitHub = validatedIntegrations.some(
+    (i) => i.type === "github" && i.repositories.length > 0
+  );
+
+  if (hasGitHub) {
+    const allowedIntegrationIds = Array.from(
+      new Set(
+        validatedIntegrations
+          .filter((integration) => integration.type === "github")
+          .map((integration) => integration.id)
+      )
+    );
+
+    tools.getPullRequests = createGetPullRequestsTool(
+      { organizationId, allowedIntegrationIds },
+      deps?.resolveContext
+    );
+    tools.getReleaseByTag = createGetReleaseByTagTool(
+      { organizationId, allowedIntegrationIds },
+      deps?.resolveContext
+    );
+    tools.getCommitsByTimeframe = createGetCommitsByTimeframeTool(
+      { organizationId, allowedIntegrationIds },
+      deps?.resolveContext
+    );
+
+    const repos = getGitHubRepoList(validatedIntegrations);
+    descriptions.push(
+      `**GitHub Integration**: Fetch PRs, releases, and commits from: ${repos}`
+    );
+  }
+
+  const hasLinear = validatedIntegrations.some((i) => i.type === "linear");
+
+  if (hasLinear) {
+    const allowedLinearIntegrationIds = Array.from(
+      new Set(
+        validatedIntegrations
+          .filter((integration) => integration.type === "linear")
+          .map((integration) => integration.id)
+      )
+    );
+
+    tools.getLinearIssues = createGetLinearIssuesTool(
+      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
+      deps?.resolveLinearContext
+    );
+    tools.getLinearProjects = createGetLinearProjectsTool(
+      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
+      deps?.resolveLinearContext
+    );
+    tools.getLinearCycles = createGetLinearCyclesTool(
+      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
+      deps?.resolveLinearContext
+    );
+
+    const teams = getLinearTeamList(validatedIntegrations);
+    descriptions.push(
+      `**Linear Integration**: Fetch issues, projects, and cycles${teams ? ` from: ${teams}` : ""}`
+    );
+  }
+
+  return { tools, descriptions };
+}
+
+function getGitHubRepoList(integrations: ValidatedIntegration[]): string {
+  const repos: string[] = [];
+  for (const integration of integrations) {
+    if (integration.type === "github") {
+      for (const repo of integration.repositories) {
+        repos.push(`${repo.owner}/${repo.repo}`);
+      }
+    }
+  }
+  return repos.join(", ");
+}
+
+function getLinearTeamList(integrations: ValidatedIntegration[]): string {
+  const teams: string[] = [];
+  for (const integration of integrations) {
+    if (integration.type === "linear") {
+      teams.push(integration.linearTeamName ?? integration.displayName);
+    }
+  }
+  return teams.join(", ");
+}
+
+export function getRepoContextFromIntegrations(
+  integrations: ValidatedIntegration[]
+): RepoContext[] {
+  return Array.from(
+    new Set(
+      integrations
+        .filter((integration) => integration.type === "github")
+        .map((integration) => integration.id)
+    )
+  ).map((integrationId) => ({ integrationId }));
+}
+
+export function getLinearContextFromIntegrations(
+  integrations: ValidatedIntegration[]
+): LinearContext[] {
+  return Array.from(
+    new Set(
+      integrations
+        .filter((integration) => integration.type === "linear")
+        .map((integration) => integration.id)
+    )
+  ).map((integrationId) => ({ integrationId }));
+}

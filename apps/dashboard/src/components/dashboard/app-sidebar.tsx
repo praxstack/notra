@@ -20,6 +20,7 @@ import { NavSettings } from "./nav-settings";
 import { NavUser } from "./nav-user";
 import { OrgSelector } from "./org-selector";
 import { SidebarOnboarding } from "./sidebar-onboarding";
+import { SidebarTrialExpired } from "./sidebar-trial-expired";
 import { SidebarUpgrade } from "./sidebar-upgrade";
 
 const createMainVariants = (shouldReduceMotion: boolean | null) => ({
@@ -119,6 +120,7 @@ export function DashboardSidebar({
             >
               <NavMain />
               <div className="mt-auto">
+                <SidebarTrialExpired />
                 <SidebarOnboarding />
                 <SidebarUpgrade />
               </div>

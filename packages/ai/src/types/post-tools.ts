@@ -7,6 +7,7 @@ export interface PostToolsConfig {
   contentType: ContentType;
   sourceMetadata?: PostSourceMetadata;
   autoPublish?: boolean;
+  needsApproval?: boolean;
 }
 
 export interface PostToolsResult {

@@ -5,6 +5,7 @@ import {
   CorporateIcon,
   Home01Icon,
   Key01Icon,
+  Message01Icon,
   NoteIcon,
   Notification03Icon,
   PlugIcon,
@@ -44,6 +45,12 @@ const navMainItems: NavMainItem[] = [
     link: "",
     icon: Home01Icon,
     label: "Home",
+    category: "none",
+  },
+  {
+    link: "/chat",
+    icon: Message01Icon,
+    label: "Chat",
     category: "none",
   },
   {
