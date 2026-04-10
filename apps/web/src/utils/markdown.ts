@@ -10,30 +10,19 @@ export function markdownResponse(content: string, status = 200) {
   });
 }
 
+export function textResponse(content: string, status = 200) {
+  return new Response(content, {
+    status,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+    },
+  });
+}
+
 export function markdownSection(title: string, lines: string[]) {
   return [`## ${title}`, "", ...lines, ""].join("\n");
 }
 
-function stripFrontmatter(source: string) {
+export function stripFrontmatter(source: string) {
   return source.replace(FRONTMATTER_REGEX, "").trim();
-}
-
-function decodeHtmlEntities(source: string) {
-  const namedEntities: Record<string, string> = {
-    amp: "&",
-    apos: "'",
-    gt: ">",
-    lt: "<",
-    nbsp: " ",
-    quot: '"',
-  };
-
-  return source
-    .replace(/&#(\d+);/g, (_, decimal) =>
-      String.fromCodePoint(Number.parseInt(decimal, 10))
-    )
-    .replace(/&#x([\da-fA-F]+);/g, (_, hex) =>
-      String.fromCodePoint(Number.parseInt(hex, 16))
-    )
-    .replace(/&([a-zA-Z]+);/g, (match, name) => namedEntities[name] ?? match);
 }
