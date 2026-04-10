@@ -92,6 +92,7 @@ export default function LandingPage() {
                 className="h-full w-full object-cover dark:hidden"
                 height={1080}
                 priority
+                sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 768px) calc(100vw - 3rem), (max-width: 1024px) calc(100vw - 4rem), calc(100vw - 6rem)"
                 src="/demo.webp"
                 width={1920}
               />
@@ -100,6 +101,7 @@ export default function LandingPage() {
                 className="hidden h-full w-full object-cover dark:block"
                 height={1080}
                 priority
+                sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 768px) calc(100vw - 3rem), (max-width: 1024px) calc(100vw - 4rem), calc(100vw - 6rem)"
                 src="/demo-dark.webp"
                 width={1920}
               />
