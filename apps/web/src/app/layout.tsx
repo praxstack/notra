@@ -94,7 +94,7 @@ export default function RootLayout({
           >
             <div className="relative flex min-h-screen w-full flex-col items-center justify-start bg-background">
               <div className="relative flex w-full flex-col items-center justify-start">
-                <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-265 lg:max-w-265 lg:px-0">
+                <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-320 lg:max-w-320 lg:px-0">
                   <div className="absolute top-0 left-4 z-0 h-full w-px bg-border/60 sm:left-6 md:left-8 lg:left-0" />
                   <div className="absolute top-0 right-4 z-0 h-full w-px bg-border/60 sm:right-6 md:right-8 lg:right-0" />
 

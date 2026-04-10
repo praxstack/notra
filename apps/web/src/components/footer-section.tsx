@@ -9,7 +9,6 @@ import {
   FOOTER_PRODUCT_LINKS,
 } from "@/utils/navigation";
 import { SOCIAL_LINKS } from "../utils/constants";
-import { HatchPattern } from "./hatch-pattern";
 import { NotraMark } from "./notra-mark";
 
 export default function FooterSection() {
@@ -137,9 +136,6 @@ export default function FooterSection() {
         </div>
       </div>
 
-      <div className="relative h-12 self-stretch overflow-hidden border-border border-t">
-        <HatchPattern className="absolute inset-0 h-full w-full" />
-      </div>
     </div>
   );
 }

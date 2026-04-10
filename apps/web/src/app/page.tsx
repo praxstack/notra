@@ -85,8 +85,8 @@ export default function LandingPage() {
         <div className="mt-8 hidden items-stretch justify-center self-stretch border-border border-y sm:mt-10 md:mt-12 md:flex lg:mt-14">
           <HatchPattern className="w-4 sm:w-6 md:w-8 lg:w-12" />
 
-          <div className="relative z-5 flex max-w-240 flex-1 flex-col">
-            <div className="flex aspect-video w-full max-w-240 flex-col items-start justify-start overflow-hidden rounded-md bg-card shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)] sm:rounded-lg lg:rounded-[0.566rem]">
+          <div className="relative z-5 flex flex-1 flex-col">
+            <div className="flex aspect-video w-full flex-col items-start justify-start overflow-hidden rounded-md bg-card shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)] sm:rounded-lg lg:rounded-[0.566rem]">
               <Image
                 alt="Notra product demo"
                 className="h-full w-full object-cover dark:hidden"
