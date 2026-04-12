@@ -7,6 +7,11 @@ import {
   formatChangelogDate,
   getNotraChangelogPostBySlug,
 } from "@/utils/changelog";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "@/utils/metadata";
 import type { ChangelogEntryPageProps } from "~types/changelog";
 
 export async function generateMetadata({
@@ -19,7 +24,7 @@ export async function generateMetadata({
     return {};
   }
 
-  const url = `https://usenotra.com/changelog/notra/${slug}`;
+  const url = `${SITE_URL}/changelog/notra/${slug}`;
 
   return {
     title: { absolute: post.title },
@@ -33,11 +38,15 @@ export async function generateMetadata({
       publishedTime: post.createdAt,
       modifiedTime: post.updatedAt,
       siteName: "Notra",
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.excerpt,
+      images: [DEFAULT_SOCIAL_IMAGE.url],
+      site: TWITTER_HANDLE,
+      creator: TWITTER_HANDLE,
     },
   };
 }

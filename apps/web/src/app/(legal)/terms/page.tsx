@@ -1,10 +1,38 @@
 import type { Metadata } from "next";
 import TermsContent from "../../../content/legal/terms.mdx";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "../../../utils/metadata";
+
+const title = "Terms of Service";
+const description =
+  "Terms of Service for using Notra, the content automation platform.";
+const url = `${SITE_URL}/terms`;
 
 export const metadata: Metadata = {
-  title: "Terms of Service",
-  description:
-    "Terms of Service for using Notra, the content automation platform.",
+  title,
+  description,
+  alternates: {
+    canonical: url,
+  },
+  openGraph: {
+    title,
+    description,
+    url,
+    type: "website",
+    siteName: "Notra",
+    images: [DEFAULT_SOCIAL_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [DEFAULT_SOCIAL_IMAGE.url],
+    site: TWITTER_HANDLE,
+    creator: TWITTER_HANDLE,
+  },
 };
 
 export default function TermsPage() {

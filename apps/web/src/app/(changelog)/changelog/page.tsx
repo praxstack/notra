@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { changelog } from "@/../.source/server";
 import { ChangelogPageHeader } from "@/components/changelog-page-header";
 import { ShowcaseOverviewGrid } from "@/components/showcase-overview-grid";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "@/utils/metadata";
 import { SHOWCASE_COMPANIES } from "@/utils/showcase";
 import { SHOWCASE_COMPANY_ICONS } from "@/utils/showcase-icons";
 
@@ -13,19 +18,23 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: {
-    canonical: "https://usenotra.com/changelog",
+    canonical: `${SITE_URL}/changelog`,
   },
   openGraph: {
     title,
     description,
-    url: "https://usenotra.com/changelog",
+    url: `${SITE_URL}/changelog`,
     type: "website",
     siteName: "Notra",
+    images: [DEFAULT_SOCIAL_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: [DEFAULT_SOCIAL_IMAGE.url],
+    site: TWITTER_HANDLE,
+    creator: TWITTER_HANDLE,
   },
 };
 

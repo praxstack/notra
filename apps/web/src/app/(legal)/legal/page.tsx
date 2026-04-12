@@ -1,10 +1,38 @@
 import type { Metadata } from "next";
 import LegalContent from "../../../content/legal/legal.mdx";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "../../../utils/metadata";
+
+const title = "Legal Notice";
+const description =
+  "Legal notice and imprint for Notra in accordance with German Telemedia Act (TMG).";
+const url = `${SITE_URL}/legal`;
 
 export const metadata: Metadata = {
-  title: "Legal Notice",
-  description:
-    "Legal notice and imprint for Notra in accordance with German Telemedia Act (TMG).",
+  title,
+  description,
+  alternates: {
+    canonical: url,
+  },
+  openGraph: {
+    title,
+    description,
+    url,
+    type: "website",
+    siteName: "Notra",
+    images: [DEFAULT_SOCIAL_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [DEFAULT_SOCIAL_IMAGE.url],
+    site: TWITTER_HANDLE,
+    creator: TWITTER_HANDLE,
+  },
 };
 
 export default function LegalPage() {

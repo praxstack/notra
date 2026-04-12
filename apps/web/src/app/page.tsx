@@ -10,6 +10,7 @@ import ReferencesPreview from "../components/references-preview";
 import TestimonialsSection from "../components/testimonials-section";
 import { TrackedSignupLink } from "../components/tracked-signup-link";
 import { SOCIAL_PROOF_LOGOS } from "../utils/constants";
+import { SITE_URL } from "../utils/metadata";
 
 const DocumentationSection = dynamic(
   () => import("../components/documentation-section")
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   description:
     "Notra connects to GitHub and soon Slack and Linear to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
   alternates: {
-    canonical: "https://www.usenotra.com",
+    canonical: SITE_URL,
   },
 };
 
@@ -38,7 +39,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Notra",
-  url: "https://www.usenotra.com",
+  url: SITE_URL,
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
@@ -51,7 +52,7 @@ const jsonLd = {
   creator: {
     "@type": "Organization",
     name: "Notra",
-    url: "https://www.usenotra.com",
+    url: SITE_URL,
   },
 };
 

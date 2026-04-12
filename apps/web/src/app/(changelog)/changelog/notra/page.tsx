@@ -5,6 +5,11 @@ import {
   buildChangelogTimelineItems,
   listNotraChangelogPosts,
 } from "@/utils/changelog";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "@/utils/metadata";
 
 const title = "Notra Changelog";
 const description =
@@ -14,19 +19,23 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: {
-    canonical: "https://usenotra.com/changelog/notra",
+    canonical: `${SITE_URL}/changelog/notra`,
   },
   openGraph: {
     title,
     description,
-    url: "https://usenotra.com/changelog/notra",
+    url: `${SITE_URL}/changelog/notra`,
     type: "website",
     siteName: "Notra",
+    images: [DEFAULT_SOCIAL_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: [DEFAULT_SOCIAL_IMAGE.url],
+    site: TWITTER_HANDLE,
+    creator: TWITTER_HANDLE,
   },
 };
 

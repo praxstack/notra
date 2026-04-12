@@ -4,6 +4,11 @@ import { notFound } from "next/navigation";
 import { ChangelogHtmlArticle } from "@/components/changelog-html-article";
 import { NotraMark } from "@/components/notra-mark";
 import { formatBlogDate, getNotraBlogPostBySlug } from "@/utils/blog";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "@/utils/metadata";
 import type { BlogEntryPageProps } from "~types/blog";
 
 export async function generateMetadata({
@@ -16,7 +21,7 @@ export async function generateMetadata({
     return {};
   }
 
-  const url = `https://usenotra.com/blog/${slug}`;
+  const url = `${SITE_URL}/blog/${slug}`;
 
   return {
     title: { absolute: post.title },
@@ -30,11 +35,15 @@ export async function generateMetadata({
       publishedTime: post.createdAt,
       modifiedTime: post.updatedAt,
       siteName: "Notra",
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.excerpt,
+      images: [DEFAULT_SOCIAL_IMAGE.url],
+      site: TWITTER_HANDLE,
+      creator: TWITTER_HANDLE,
     },
   };
 }
