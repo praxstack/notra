@@ -1,0 +1,193 @@
+import { orchestrateStandaloneChat } from "@notra/ai/orchestration/orchestrate-standalone";
+import { standaloneChatContextSchema } from "@notra/ai/schemas/standalone-chat";
+import type { StandaloneChatContextItem } from "@notra/ai/types/standalone-chat";
+import { serve } from "@upstash/workflow/nextjs";
+import type { UIMessageChunk } from "ai";
+import { nanoid } from "nanoid";
+import { z } from "zod";
+import { FEATURES } from "@/constants/features";
+import { autumn } from "@/lib/billing/autumn";
+import { calculateTokenCostCents } from "@/lib/billing/token-pricing";
+import {
+  clearActiveChatStream,
+  getChatStreamChannelName,
+  loadChatHistory,
+  replaceChatHistory,
+} from "@/lib/chat-history";
+import { realtime } from "@/lib/realtime";
+import {
+  getGitHubIntegrationById,
+  getGitHubToolRepositoryContextByIntegrationId,
+} from "@/lib/services/github-integration";
+import {
+  getLinearIntegrationById,
+  getLinearToolContextByIntegrationId,
+} from "@/lib/services/linear-integration";
+
+const chatWorkflowPayloadSchema = z.object({
+  requestId: z.string(),
+  organizationId: z.string(),
+  chatId: z.string(),
+  context: z.array(standaloneChatContextSchema),
+  useMarkup: z.boolean(),
+});
+
+type ChatWorkflowPayload = z.infer<typeof chatWorkflowPayloadSchema>;
+
+export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
+  const parseResult = chatWorkflowPayloadSchema.safeParse(
+    context.requestPayload
+  );
+
+  if (!parseResult.success) {
+    console.error(
+      "[Chat Workflow] Invalid payload:",
+      parseResult.error.flatten()
+    );
+    await context.cancel();
+    return;
+  }
+
+  const {
+    requestId,
+    organizationId,
+    chatId,
+    context: standaloneContext,
+    useMarkup,
+  } = parseResult.data;
+
+  const messages = await context.run("load-chat-history", () =>
+    loadChatHistory(organizationId, chatId)
+  );
+
+  if (messages.length === 0) {
+    await context.cancel();
+    return;
+  }
+
+  const latestMessage = messages[messages.length - 1];
+  if (!latestMessage?.id) {
+    await context.cancel();
+    return;
+  }
+
+  const channelName = getChatStreamChannelName(
+    organizationId,
+    chatId,
+    latestMessage.id
+  );
+
+  const channel = realtime?.channel(channelName);
+
+  try {
+    const { stream, routingDecision } = await orchestrateStandaloneChat(
+      {
+        organizationId,
+        messages,
+        context: standaloneContext as StandaloneChatContextItem[],
+        maxSteps: 5,
+      },
+      {
+        integrationFetchers: {
+          getGitHubIntegrationById,
+          getLinearIntegrationById,
+        },
+        resolveContext: getGitHubToolRepositoryContextByIntegrationId,
+        resolveLinearContext: getLinearToolContextByIntegrationId,
+        onUsage(usage, modelId) {
+          if (!autumn) {
+            return;
+          }
+
+          const costCents = calculateTokenCostCents(
+            {
+              inputTokens: usage.inputTokens ?? 0,
+              outputTokens: usage.outputTokens ?? 0,
+              totalTokens: usage.totalTokens ?? 0,
+              cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? 0,
+              cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+            },
+            modelId,
+            useMarkup
+          );
+
+          autumn
+            .track({
+              customerId: organizationId,
+              featureId: FEATURES.AI_CREDITS,
+              value: costCents,
+              properties: {
+                source: "standalone_chat",
+                model: modelId,
+                input_tokens: usage.inputTokens ?? 0,
+                output_tokens: usage.outputTokens ?? 0,
+                cache_read_tokens:
+                  usage.inputTokenDetails?.cacheReadTokens ?? 0,
+                cache_write_tokens:
+                  usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+                total_tokens: usage.totalTokens ?? 0,
+                cost_cents: costCents,
+              },
+            })
+            .catch((trackError) => {
+              console.error("[Autumn] Track error after standalone chat:", {
+                requestId,
+                customerId: organizationId,
+                error: trackError,
+              });
+            });
+        },
+      }
+    );
+
+    console.log("[Chat Workflow] Routing decision:", {
+      requestId,
+      chatId,
+      decision: routingDecision,
+    });
+
+    const uiStream = stream.toUIMessageStream({
+      originalMessages: messages,
+      generateMessageId: nanoid,
+      sendReasoning: true,
+      onFinish: async ({ messages: responseMessages }) => {
+        try {
+          await replaceChatHistory(organizationId, chatId, responseMessages);
+        } finally {
+          await clearActiveChatStream(organizationId, chatId);
+        }
+      },
+      onError: (error) => {
+        console.error("[Chat Workflow] Stream error:", { requestId, error });
+        if (error instanceof Error) {
+          return error.message;
+        }
+        return "An error occurred while processing your request.";
+      },
+    });
+
+    for await (const chunk of uiStream) {
+      await channel?.emit("ai.chunk", chunk as UIMessageChunk);
+    }
+  } catch (error) {
+    console.error("[Chat Workflow] Error:", {
+      requestId,
+      chatId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    if (channel) {
+      await channel.emit("ai.chunk", {
+        type: "error",
+        errorText:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while processing your request.",
+      });
+      await channel.emit("ai.chunk", { type: "finish", finishReason: "error" });
+    }
+
+    await clearActiveChatStream(organizationId, chatId);
+    throw error;
+  }
+});

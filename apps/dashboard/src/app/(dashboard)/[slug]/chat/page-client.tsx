@@ -19,7 +19,6 @@ import {
 import { useCustomer } from "autumn-js/react";
 import { Loader2Icon } from "lucide-react";
 import { nanoid } from "nanoid";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContentPreviewCard } from "@/components/ai/content-preview-card";
 import { BrailleLoader } from "@/components/braille-loader";
@@ -66,7 +65,7 @@ export default function PageClient({
   const organizationId = organization?.id ?? "";
   const { data: session } = authClient.useSession();
   const { refetch: refetchCustomer } = useCustomer();
-  const router = useRouter();
+  const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
 
   const stableChatId = useMemo(
     () => initialChatId || nanoid(16),
@@ -74,11 +73,14 @@ export default function PageClient({
   );
 
   const [context, setContext] = useState<ContextItem[]>([]);
+  const [hasCustomizedContext, setHasCustomizedContext] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const contextRef = useRef(context);
+  const hasCustomizedContextRef = useRef(hasCustomizedContext);
   contextRef.current = context;
+  hasCustomizedContextRef.current = hasCustomizedContext;
 
   const {
     messages,
@@ -88,30 +90,73 @@ export default function PageClient({
     status,
   } = useChat({
     id: stableChatId,
+    resume: Boolean(initialChatId && pendingMessageId),
+    experimental_throttle: 50,
     transport: new DefaultChatTransport({
       api: `/api/organizations/${organizationId}/chat`,
-      body: () => ({ chatId: stableChatId, context: contextRef.current }),
+      prepareSendMessagesRequest: ({ id, messages }) => ({
+        body: {
+          chatId: id,
+          messages,
+          context: hasCustomizedContextRef.current
+            ? contextRef.current
+            : undefined,
+        },
+      }),
+      prepareReconnectToStreamRequest: ({ id }) => ({
+        api: `/api/organizations/${organizationId}/chat/${id}/stream`,
+        headers: { "x-chat-reconnect": "true" },
+      }),
+      fetch: async (input, init) => {
+        const headers = new Headers(init?.headers);
+
+        if (headers.get("x-chat-reconnect") === "true") {
+          return fetch(input, init);
+        }
+
+        const body = JSON.parse(String(init?.body)) as {
+          chatId: string;
+          messages: Array<{ id?: string }>;
+        };
+        const latestMessageId = body.messages.at(-1)?.id;
+
+        if (latestMessageId) {
+          setPendingMessageId(latestMessageId);
+        }
+
+        const triggerResponse = await fetch(input, init);
+        if (!triggerResponse.ok) {
+          return triggerResponse;
+        }
+
+        const contentType = triggerResponse.headers.get("content-type") ?? "";
+        if (contentType.includes("text/event-stream")) {
+          return triggerResponse;
+        }
+
+        return fetch(
+          `/api/organizations/${organizationId}/chat/${body.chatId}/stream`,
+          {
+            method: "GET",
+            headers: init?.headers,
+            credentials: init?.credentials,
+          }
+        );
+      },
     }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
     onFinish: () => {
+      setPendingMessageId(null);
       refetchCustomer();
-      if (!initialChatId) {
-        router.push(`/${organizationSlug}/chat/${stableChatId}`);
-      }
     },
     onError: (err) => {
       const errorMessage = err.message || String(err);
-      if (
-        errorMessage.includes("USAGE_LIMIT_REACHED") ||
-        errorMessage.includes("Usage limit reached")
-      ) {
-        setChatError(
-          "You've used all your chat messages this month. Upgrade for more."
-        );
-        return;
-      }
+
       try {
         const errorData = JSON.parse(errorMessage);
+        if (typeof errorData.error === "string" && errorData.error.length > 0) {
+          setChatError(errorData.error);
+        }
         if (errorData.code === "USAGE_LIMIT_REACHED") {
           setChatError(
             "You've used all your chat messages this month. Upgrade for more."
@@ -121,7 +166,18 @@ export default function PageClient({
       } catch {
         // Ignore non-JSON error payloads.
       }
+
+      if (
+        errorMessage.includes("USAGE_LIMIT_REACHED") ||
+        errorMessage.includes("Usage limit reached")
+      ) {
+        setChatError(
+          "You've used all your chat messages this month. Upgrade for more."
+        );
+        return;
+      }
       console.error("Standalone chat error:", err);
+      setPendingMessageId(null);
     },
   });
 
@@ -130,7 +186,7 @@ export default function PageClient({
       return;
     }
     fetch(
-      `/api/organizations/${organizationId}/chat?chatId=${encodeURIComponent(initialChatId)}`
+      `/api/organizations/${organizationId}/chat/${encodeURIComponent(initialChatId)}`
     )
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -145,6 +201,7 @@ export default function PageClient({
   const hasMessages = messages.length > 0;
 
   const handleAddContext = useCallback((item: ContextItem) => {
+    setHasCustomizedContext(true);
     setContext((prev) => {
       if (
         prev.some(
@@ -161,6 +218,7 @@ export default function PageClient({
   }, []);
 
   const handleRemoveContext = useCallback((item: ContextItem) => {
+    setHasCustomizedContext(true);
     setContext((prev) =>
       prev.filter(
         (c) =>
@@ -175,9 +233,16 @@ export default function PageClient({
 
   const handleSend = useCallback(
     async (text: string) => {
+      if (!initialChatId) {
+        window.history.replaceState(
+          null,
+          "",
+          `/${organizationSlug}/chat/${stableChatId}`
+        );
+      }
       await sendMessage({ text });
     },
-    [sendMessage]
+    [initialChatId, organizationSlug, sendMessage, stableChatId]
   );
 
   const messageCount = messages.length;
@@ -397,7 +462,7 @@ export default function PageClient({
         className="flex-1 overflow-y-auto px-4 pt-6 pb-4"
         ref={scrollContainerRef}
       >
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+        <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-end gap-4">
           {messages.map((message) => (
             <Message from={message.role} key={message.id}>
               <MessageContent>

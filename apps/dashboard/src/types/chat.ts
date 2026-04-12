@@ -1,6 +1,6 @@
 import type {
-  ContextItem as OrchestrationContextItem,
   GitHubContextItem,
+  ContextItem as OrchestrationContextItem,
   TextSelection as OrchestrationTextSelection,
 } from "@notra/ai/types/orchestration";
 

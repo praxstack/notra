@@ -18,6 +18,7 @@ import type {
 } from "@notra/ai/types/standalone-chat";
 import {
   convertToModelMessages,
+  smoothStream,
   stepCountIs,
   streamText,
   type UIMessage,
@@ -102,6 +103,7 @@ export async function orchestrateStandaloneChat(
     messages: await convertToModelMessages(messages),
     tools,
     stopWhen: stepCountIs(maxSteps),
+    experimental_transform: smoothStream(),
     onFinish({ totalUsage }) {
       deps?.onUsage?.(totalUsage, routingDecision.model);
     },

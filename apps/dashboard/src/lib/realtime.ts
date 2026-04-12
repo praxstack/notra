@@ -6,6 +6,15 @@ const schema = {
   ai: { chunk: z.any() as z.ZodType<unknown> },
 };
 
-export const realtime = redis ? new Realtime({ schema, redis }) : null;
+export const realtime = redis
+  ? new Realtime({
+      schema,
+      redis,
+      history: {
+        maxLength: 1000,
+        expireAfterSecs: 60 * 60,
+      },
+    })
+  : null;
 
 export type RealtimeSchema = typeof schema;

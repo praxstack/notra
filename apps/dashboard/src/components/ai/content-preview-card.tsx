@@ -16,8 +16,8 @@ import {
 } from "@notra/ui/components/ui/collapsible";
 import Link from "next/link";
 import {
-  getContentTypeLabel,
   type ContentType,
+  getContentTypeLabel,
 } from "@/components/content/content-card";
 import { OutputTypeIcon } from "@/utils/output-types";
 

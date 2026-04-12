@@ -15,6 +15,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type * as React from "react";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { ChatHistoryNav } from "./chat-history-nav";
 import { NavMain } from "./nav-main";
 import { NavSettings } from "./nav-settings";
 import { NavUser } from "./nav-user";
@@ -31,7 +32,7 @@ const createMainVariants = (shouldReduceMotion: boolean | null) => ({
   exit: shouldReduceMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: "-100%" },
 });
 
-const createSettingsVariants = (shouldReduceMotion: boolean | null) => ({
+const createSubpageVariants = (shouldReduceMotion: boolean | null) => ({
   initial: shouldReduceMotion
     ? { opacity: 1, x: 0 }
     : { opacity: 0, x: "100%" },
@@ -52,13 +53,11 @@ export function DashboardSidebar({
 
   const section = pathnameSegments[1];
   const isSettingsRoute = section === "settings";
+  const isChatRoute = section === "chat";
+  const isSubpage = isSettingsRoute || isChatRoute;
 
-  const mainVariants = shouldReduceMotion
-    ? createMainVariants(true)
-    : createMainVariants(false);
-  const settingsVariants = shouldReduceMotion
-    ? createSettingsVariants(true)
-    : createSettingsVariants(false);
+  const mainVariants = createMainVariants(shouldReduceMotion);
+  const subpageVariants = createSubpageVariants(shouldReduceMotion);
 
   return (
     <Sidebar
@@ -69,14 +68,14 @@ export function DashboardSidebar({
       <SidebarHeader>
         <OrgSelector />
         <AnimatePresence initial={false} mode="popLayout">
-          {isSettingsRoute && (
+          {isSubpage && (
             <motion.div
               animate="animate"
               exit="exit"
               initial="initial"
               key="back-button"
               transition={TRANSITION}
-              variants={settingsVariants}
+              variants={subpageVariants}
             >
               <SidebarMenu>
                 <SidebarMenuButton
@@ -104,9 +103,21 @@ export function DashboardSidebar({
               initial="initial"
               key="settings"
               transition={TRANSITION}
-              variants={settingsVariants}
+              variants={subpageVariants}
             >
               <NavSettings slug={slug} />
+            </motion.div>
+          ) : isChatRoute ? (
+            <motion.div
+              animate="animate"
+              className="flex flex-1 flex-col"
+              exit="exit"
+              initial="initial"
+              key="chat"
+              transition={TRANSITION}
+              variants={subpageVariants}
+            >
+              <ChatHistoryNav />
             </motion.div>
           ) : (
             <motion.div

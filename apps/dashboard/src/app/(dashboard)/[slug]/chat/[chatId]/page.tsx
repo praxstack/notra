@@ -7,7 +7,9 @@ export const metadata: Metadata = {
 
 async function Page({
   params,
-}: { params: Promise<{ slug: string; chatId: string }> }) {
+}: {
+  params: Promise<{ slug: string; chatId: string }>;
+}) {
   const { slug, chatId } = await params;
 
   return <PageClient chatId={chatId} organizationSlug={slug} />;

@@ -1,11 +1,11 @@
 import type { AILogTarget } from "@notra/ai/observability";
 import type { StandaloneChatContextItem } from "@notra/ai/schemas/standalone-chat";
 import type { LanguageModelUsage, UIMessage } from "ai";
-import type { IntegrationFetchers, OrchestrateResult } from "./orchestration";
 import type {
   ResolveIntegrationContext,
   ResolveLinearIntegrationContext,
 } from "./agents";
+import type { IntegrationFetchers, OrchestrateResult } from "./orchestration";
 
 export interface StandaloneChatInput {
   organizationId: string;

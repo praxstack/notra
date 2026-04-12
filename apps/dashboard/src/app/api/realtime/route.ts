@@ -1,12 +1,14 @@
 import { handle } from "@upstash/realtime";
-import { realtime } from "@/lib/realtime";
 import { getServerSession } from "@/lib/auth/session";
+import { realtime } from "@/lib/realtime";
 
 const handler = realtime
   ? handle({
       realtime,
       middleware: async ({ request }) => {
-        const { session } = await getServerSession({ headers: request.headers });
+        const { session } = await getServerSession({
+          headers: request.headers,
+        });
 
         if (!session) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
