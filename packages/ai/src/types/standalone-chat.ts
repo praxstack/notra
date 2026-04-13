@@ -13,6 +13,8 @@ export interface StandaloneChatInput {
   context?: StandaloneChatContextItem[];
   maxSteps?: number;
   log?: AILogTarget;
+  requestedModel?: string;
+  enableThinking?: boolean;
 }
 
 export interface StandaloneChatDeps {

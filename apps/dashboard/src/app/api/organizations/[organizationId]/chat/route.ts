@@ -40,6 +40,9 @@ const triggerStandaloneChatSchema = z.object({
   chatId: z.string().optional(),
   messages: z.array(z.any()),
   context: z.array(standaloneChatContextSchema).optional(),
+  model: z.string().optional(),
+  enableThinking: z.boolean().optional(),
+  thinkingLevel: z.enum(["off", "low", "medium", "high"]).optional(),
 });
 
 interface RouteContext {
@@ -165,6 +168,8 @@ export const POST = withEvlog(async function POST(
         useMarkup,
         requestId,
         log,
+        model: parseResult.data.model,
+        enableThinking: parseResult.data.enableThinking,
       });
     }
 
@@ -295,6 +300,8 @@ async function createDirectStandaloneChatResponse({
   useMarkup,
   requestId,
   log,
+  model,
+  enableThinking,
 }: {
   organizationId: string;
   chatId: string;
@@ -303,6 +310,8 @@ async function createDirectStandaloneChatResponse({
   useMarkup: boolean;
   requestId: string;
   log: ReturnType<typeof useLogger>;
+  model?: string;
+  enableThinking?: boolean;
 }) {
   const autumnClient = autumn;
 
@@ -313,6 +322,8 @@ async function createDirectStandaloneChatResponse({
       context,
       maxSteps: 5,
       log,
+      requestedModel: model,
+      enableThinking,
     },
     {
       integrationFetchers: {
@@ -370,7 +381,7 @@ async function createDirectStandaloneChatResponse({
   return stream.toUIMessageStreamResponse({
     originalMessages: messages as never,
     generateMessageId: nanoid,
-    sendReasoning: true,
+    sendReasoning: enableThinking !== false,
     headers: { "X-Chat-Id": chatId },
     onFinish: async ({ messages: responseMessages }) => {
       try {

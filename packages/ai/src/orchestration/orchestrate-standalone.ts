@@ -44,6 +44,7 @@ export async function orchestrateStandaloneChat(
     context = [],
     maxSteps = 5,
     log: inputLog,
+    requestedModel,
   } = input;
 
   const log = deps?.log ?? inputLog;
@@ -59,11 +60,14 @@ export async function orchestrateStandaloneChat(
   const hasDataSources = hasGitHub || hasLinear;
 
   const lastUserMessage = getLastUserMessage(messages);
-  const routingDecision = await routeAndSelectModel(
-    lastUserMessage,
-    hasDataSources,
-    log
-  );
+  const routingDecision = requestedModel
+    ? {
+        model: requestedModel,
+        complexity: "complex" as const,
+        requiresTools: true,
+        reasoning: "User selected model explicitly",
+      }
+    : await routeAndSelectModel(lastUserMessage, hasDataSources, log);
 
   const modelWithMemory = createModel(
     organizationId,
