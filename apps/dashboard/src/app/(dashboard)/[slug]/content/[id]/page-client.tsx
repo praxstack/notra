@@ -355,30 +355,27 @@ export default function PageClient({
 
   const handleAddContext = useCallback((item: ContextItem) => {
     setContext((prev) => {
-      if (
-        prev.some(
-          (c) =>
-            c.type === item.type &&
-            c.owner === item.owner &&
-            c.repo === item.repo
-        )
-      ) {
-        return prev;
-      }
+      const exists = prev.some((c) => {
+        if (c.type !== item.type) return false;
+        if (c.type === "github-repo" && item.type === "github-repo") {
+          return c.owner === item.owner && c.repo === item.repo;
+        }
+        return c.integrationId === item.integrationId;
+      });
+      if (exists) return prev;
       return [...prev, item];
     });
   }, []);
 
   const handleRemoveContext = useCallback((item: ContextItem) => {
     setContext((prev) =>
-      prev.filter(
-        (c) =>
-          !(
-            c.type === item.type &&
-            c.owner === item.owner &&
-            c.repo === item.repo
-          )
-      )
+      prev.filter((c) => {
+        if (c.type !== item.type) return true;
+        if (c.type === "github-repo" && item.type === "github-repo") {
+          return !(c.owner === item.owner && c.repo === item.repo);
+        }
+        return c.integrationId !== item.integrationId;
+      })
     );
   }, []);
 

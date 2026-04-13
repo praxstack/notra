@@ -275,25 +275,33 @@ const ChatInput = ({
             )}
             {(context.length > 0 || selection) && (
               <div className="flex items-center gap-2 overflow-x-auto px-3 pt-2 pb-1">
-                {context.map((item, index) => (
-                  <div
-                    className="flex shrink-0 items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-foreground text-xs"
-                    key={`${item.type}-${item.owner}-${item.repo}-${index}`}
-                  >
-                    <Github className="size-3.5" />
-                    <span className="font-medium">
-                      {item.owner}/{item.repo}
-                    </span>
-                    <button
-                      aria-label={`Remove ${item.owner}/${item.repo} from context`}
-                      className="ml-0.5 cursor-pointer rounded p-0.5 transition-colors hover:bg-accent"
-                      onClick={() => onRemoveContext?.(item)}
-                      type="button"
+                {context.map((item, index) => {
+                  const label =
+                    item.type === "github-repo"
+                      ? `${item.owner}/${item.repo}`
+                      : (item.teamName ?? "Linear");
+                  return (
+                    <div
+                      className="flex shrink-0 items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-foreground text-xs"
+                      key={`${item.type}-${item.integrationId}-${index}`}
                     >
-                      <HugeiconsIcon className="size-3" icon={Cancel01Icon} />
-                    </button>
-                  </div>
-                ))}
+                      {item.type === "github-repo" ? (
+                        <Github className="size-3.5" />
+                      ) : (
+                        <Linear className="size-3.5" />
+                      )}
+                      <span className="font-medium">{label}</span>
+                      <button
+                        aria-label={`Remove ${label} from context`}
+                        className="ml-0.5 cursor-pointer rounded p-0.5 transition-colors hover:bg-accent"
+                        onClick={() => onRemoveContext?.(item)}
+                        type="button"
+                      >
+                        <HugeiconsIcon className="size-3" icon={Cancel01Icon} />
+                      </button>
+                    </div>
+                  );
+                })}
                 {selection && (
                   <Tooltip>
                     <TooltipTrigger
