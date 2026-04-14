@@ -145,7 +145,8 @@
                 "expanded": true,
                 "pages": [
                   "GET /v1/integrations",
-                  "POST /v1/integrations/github"
+                  "POST /v1/integrations/github",
+                  "DELETE /v1/integrations/{integrationId}"
                 ]
               },
               {
