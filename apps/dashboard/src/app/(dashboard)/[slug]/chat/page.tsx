@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  return <PageClient organizationSlug={slug} />;
+  return <PageClient key="new-chat" organizationSlug={slug} />;
 }
 
 export default Page;
