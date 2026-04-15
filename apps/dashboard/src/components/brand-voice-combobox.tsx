@@ -19,7 +19,7 @@ export function BrandVoiceCombobox({
   onChange,
   id,
 }: BrandVoiceComboboxProps) {
-  const [inputValue, setInputValue] = useState("");
+  const [filterQuery, setFilterQuery] = useState("");
 
   const defaultVoiceName = useMemo(
     () => voices.find((v) => v.isDefault)?.name,
@@ -27,7 +27,7 @@ export function BrandVoiceCombobox({
   );
 
   const defaultLabel = defaultVoiceName
-    ? `Default Voice (${defaultVoiceName})`
+    ? `${defaultVoiceName} (Default)`
     : "Default Voice";
 
   const options = useMemo(() => {
@@ -39,12 +39,12 @@ export function BrandVoiceCombobox({
   }, [voices, defaultLabel]);
 
   const filteredOptions = useMemo(() => {
-    if (!inputValue) {
+    if (!filterQuery) {
       return options;
     }
-    const query = inputValue.toLowerCase();
+    const query = filterQuery.toLowerCase();
     return options.filter((o) => o.label.toLowerCase().includes(query));
-  }, [options, inputValue]);
+  }, [options, filterQuery]);
 
   const labelMap = useMemo(
     () => Object.fromEntries(options.map((o) => [o.id, o.label])),
@@ -58,30 +58,37 @@ export function BrandVoiceCombobox({
       const resolved =
         next && next !== DEFAULT_SENTINEL ? (next as string) : "";
       onChange(resolved);
+      setFilterQuery("");
     },
     [onChange]
   );
 
   const handleInputValueChange = useCallback(
     (nextInput: string) => {
-      // When the user selects an item, input is set to the label — don't
-      // treat that as a filter query.
       const isLabelMatch = Object.values(labelMap).some(
         (label) => label === nextInput
       );
-      setInputValue(isLabelMatch ? "" : nextInput);
+      if (!isLabelMatch) {
+        setFilterQuery(nextInput);
+      }
     },
     [labelMap]
   );
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setFilterQuery("");
+    }
+  }, []);
 
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>Brand Voice</Label>
       <Combobox
         filter={null}
-        inputValue={inputValue}
         itemToStringLabel={(itemId) => labelMap[itemId] ?? itemId}
         onInputValueChange={handleInputValueChange}
+        onOpenChange={handleOpenChange}
         onValueChange={handleValueChange}
         value={comboboxValue}
       >
