@@ -192,7 +192,7 @@ async function saveSessionMetadata(
 
   const session: ChatSessionSummary = {
     chatId,
-    title: getChatTitle(messages) ?? parsedExisting?.title ?? "New chat",
+    title: parsedExisting?.title ?? getChatTitle(messages) ?? "New chat",
     createdAt: parsedExisting?.createdAt ?? new Date(timestamp).toISOString(),
     updatedAt: new Date(timestamp).toISOString(),
   };
@@ -242,17 +242,25 @@ export async function generateAndSetChatTitle(
   userMessage: string
 ) {
   try {
+    const fallbackTitle = getFallbackTitle(userMessage);
+
     const { text } = await generateText({
-      model: gateway("openai/gpt-oss-120b"),
+      model: gateway("openai/gpt-5.4"),
       system: `Generate a short, descriptive title (max 50 chars) for a chat conversation based on the user's first message. Return ONLY the title text, nothing else. No quotes, no prefix. Be specific and concise.`,
       prompt: userMessage,
       maxOutputTokens: 30,
     });
 
-    const title = text.replace(/^["']|["']$/g, "").trim();
-    if (!title) {
-      return;
-    }
+    console.log("[Chat Title] AI response:", {
+      organizationId,
+      chatId,
+      userMessage,
+      fallbackTitle,
+      rawText: text,
+    });
+
+    const aiTitle = text.replace(/^["']|["']$/g, "").trim();
+    const title = aiTitle || fallbackTitle;
 
     if (!redis) {
       return;
@@ -266,6 +274,13 @@ export async function generateAndSetChatTitle(
     if (!parsed) {
       return;
     }
+
+    console.log("[Chat Title] Persisting title:", {
+      organizationId,
+      chatId,
+      aiTitle,
+      persistedTitle: title,
+    });
 
     await redis.set(metaKey, { ...parsed, title });
   } catch (err) {

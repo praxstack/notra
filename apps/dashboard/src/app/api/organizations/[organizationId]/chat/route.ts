@@ -151,9 +151,7 @@ export const POST = withEvlog(async function POST(
       );
       const userText = textPart?.text?.trim();
       if (userText) {
-        generateAndSetChatTitle(organizationId, chatId, userText).catch(
-          () => undefined
-        );
+        await generateAndSetChatTitle(organizationId, chatId, userText);
       }
     }
 
