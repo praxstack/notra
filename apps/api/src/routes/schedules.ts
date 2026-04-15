@@ -9,6 +9,7 @@ import {
 } from "@notra/db/schema";
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { z } from "zod";
+import { errorResponseSchema } from "../schemas/content";
 import {
   createScheduleRequestSchema,
   deleteScheduleResponseSchema,
@@ -17,11 +18,10 @@ import {
   patchScheduleRequestSchema,
   scheduleOutputConfigSchema,
   scheduleParamsSchema,
+  scheduleResponseSchema,
   scheduleSourceConfigSchema,
   scheduleTargetsSchema,
-  scheduleResponseSchema,
 } from "../schemas/schedules";
-import { errorResponseSchema } from "../schemas/content";
 import { getOrganizationId } from "../utils/auth";
 import {
   buildCronExpression,
