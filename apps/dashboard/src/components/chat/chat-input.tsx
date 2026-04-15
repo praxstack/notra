@@ -6,7 +6,6 @@ import {
   Cancel01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert, AlertDescription } from "@notra/ui/components/ui/alert";
 import { Button } from "@notra/ui/components/ui/button";
 import {
   Card,
@@ -430,19 +429,17 @@ export function ChatInputAdvanced({
         >
           <div className="p-0.5">
             {usageLimitError && (
-              <Alert className="mx-2 mt-2 mb-1" variant="destructive">
-                <AlertDescription className="wrap-break-word flex flex-wrap items-center gap-1 text-sm">
-                  <span>{usageLimitError}</span>
-                  {organizationSlug && (
-                    <Link
-                      className="font-medium underline underline-offset-2"
-                      href={`/${organizationSlug}/settings/billing`}
-                    >
-                      Upgrade
-                    </Link>
-                  )}
-                </AlertDescription>
-              </Alert>
+              <div className="mx-2 mt-2 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-destructive text-xs">
+                <span>{usageLimitError}</span>
+                {organizationSlug && (
+                  <Link
+                    className="font-medium underline underline-offset-2"
+                    href={`/${organizationSlug}/settings/billing`}
+                  >
+                    Upgrade
+                  </Link>
+                )}
+              </div>
             )}
             {context.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5 pb-0.5">
