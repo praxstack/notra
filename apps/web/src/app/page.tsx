@@ -10,6 +10,7 @@ import ReferencesPreview from "../components/references-preview";
 import TestimonialsSection from "../components/testimonials-section";
 import { TrackedSignupLink } from "../components/tracked-signup-link";
 import { SOCIAL_PROOF_LOGOS } from "../utils/constants";
+import { SITE_URL } from "../utils/metadata";
 
 const DocumentationSection = dynamic(
   () => import("../components/documentation-section")
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   description:
     "Notra connects to GitHub and soon Slack and Linear to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
   alternates: {
-    canonical: "https://www.usenotra.com",
+    canonical: SITE_URL,
   },
 };
 
@@ -38,7 +39,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Notra",
-  url: "https://www.usenotra.com",
+  url: SITE_URL,
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
@@ -51,7 +52,7 @@ const jsonLd = {
   creator: {
     "@type": "Organization",
     name: "Notra",
-    url: "https://www.usenotra.com",
+    url: SITE_URL,
   },
 };
 
@@ -85,13 +86,14 @@ export default function LandingPage() {
         <div className="mt-8 hidden items-stretch justify-center self-stretch border-border border-y sm:mt-10 md:mt-12 md:flex lg:mt-14">
           <HatchPattern className="w-4 sm:w-6 md:w-8 lg:w-12" />
 
-          <div className="relative z-5 flex max-w-240 flex-1 flex-col">
-            <div className="flex aspect-video w-full max-w-240 flex-col items-start justify-start overflow-hidden rounded-md bg-card shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)] sm:rounded-lg lg:rounded-[0.566rem]">
+          <div className="relative z-5 flex flex-1 flex-col">
+            <div className="flex aspect-video w-full flex-col items-start justify-start overflow-hidden rounded-md bg-card shadow-[0px_0px_0px_1px_rgba(0,0,0,0.08)] sm:rounded-lg lg:rounded-[0.566rem]">
               <Image
                 alt="Notra product demo"
                 className="h-full w-full object-cover dark:hidden"
                 height={1080}
                 priority
+                sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 768px) calc(100vw - 3rem), (max-width: 1024px) calc(100vw - 4rem), calc(100vw - 6rem)"
                 src="/demo.webp"
                 width={1920}
               />
@@ -100,6 +102,7 @@ export default function LandingPage() {
                 className="hidden h-full w-full object-cover dark:block"
                 height={1080}
                 priority
+                sizes="(max-width: 640px) calc(100vw - 2rem), (max-width: 768px) calc(100vw - 3rem), (max-width: 1024px) calc(100vw - 4rem), calc(100vw - 6rem)"
                 src="/demo-dark.webp"
                 width={1920}
               />

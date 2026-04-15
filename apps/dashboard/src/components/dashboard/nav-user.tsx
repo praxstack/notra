@@ -120,12 +120,7 @@ export function NavUser() {
                 size="lg"
                 tooltip={"Account"}
               >
-                <Avatar
-                  className={cn(
-                    "size-8 rounded-lg after:rounded-lg",
-                    isCollapsed ? "size-6.5" : ""
-                  )}
-                >
+                <Avatar className="size-8 rounded-lg after:rounded-lg">
                   <AvatarImage
                     alt={user.name}
                     className="rounded-lg"

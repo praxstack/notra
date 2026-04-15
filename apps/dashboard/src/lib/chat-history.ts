@@ -246,7 +246,7 @@ export async function generateAndSetChatTitle(
       model: gateway("openai/gpt-oss-120b"),
       system: `Generate a short, descriptive title (max 50 chars) for a chat conversation based on the user's first message. Return ONLY the title text, nothing else. No quotes, no prefix. Be specific and concise.`,
       prompt: userMessage,
-      maxTokens: 30,
+      maxOutputTokens: 30,
     });
 
     const title = text.replace(/^["']|["']$/g, "").trim();

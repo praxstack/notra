@@ -7,6 +7,11 @@ import { NotraMark } from "@/components/notra-mark";
 import { TableOfContents } from "@/components/table-of-contents";
 import { formatChangelogDate } from "@/utils/changelog";
 import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "@/utils/metadata";
+import {
   getShowcaseCompany,
   getShowcaseEntrySlug,
   SHOWCASE_COMPANIES,
@@ -36,7 +41,7 @@ export async function generateMetadata({
     return {};
   }
 
-  const url = `https://usenotra.com/changelog/${name}/${slug}`;
+  const url = `${SITE_URL}/changelog/${name}/${slug}`;
 
   return {
     title: { absolute: entry.title },
@@ -49,11 +54,15 @@ export async function generateMetadata({
       type: "article",
       publishedTime: entry.date,
       siteName: "Notra",
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: entry.title,
       description: entry.description,
+      images: [DEFAULT_SOCIAL_IMAGE.url],
+      site: TWITTER_HANDLE,
+      creator: TWITTER_HANDLE,
     },
   };
 }

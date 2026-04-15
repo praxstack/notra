@@ -44,7 +44,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { FEATURES } from "@/constants/features";
 import { ALL_INTEGRATIONS } from "@/lib/integrations/catalog";
 import { dashboardOrpc } from "@/lib/orpc/query";
-import type { ContextItem, TextSelection } from "@/types/chat";
+import type { ContextItem, TextSelection } from "@/schemas/content";
 import type { GitHubRepository } from "@/types/integrations";
 
 interface ChatInputProps {
@@ -276,20 +276,13 @@ const ChatInput = ({
             {(context.length > 0 || selection) && (
               <div className="flex items-center gap-2 overflow-x-auto px-3 pt-2 pb-1">
                 {context.map((item, index) => {
-                  const label =
-                    item.type === "github-repo"
-                      ? `${item.owner}/${item.repo}`
-                      : (item.teamName ?? "Linear");
+                  const label = `${item.owner}/${item.repo}`;
                   return (
                     <div
                       className="flex shrink-0 items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-foreground text-xs"
                       key={`${item.type}-${item.integrationId}-${index}`}
                     >
-                      {item.type === "github-repo" ? (
-                        <Github className="size-3.5" />
-                      ) : (
-                        <Linear className="size-3.5" />
-                      )}
+                      <Github className="size-3.5" />
                       <span className="font-medium">{label}</span>
                       <button
                         aria-label={`Remove ${label} from context`}

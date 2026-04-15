@@ -16,7 +16,7 @@ import { TablePlugin } from "@lexical/react/LexicalTablePlugin";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { type RefObject, useCallback, useMemo, useRef, useState } from "react";
-import type { TextSelection } from "@/types/chat";
+import type { TextSelection } from "@/schemas/content";
 import { editorTheme } from "./editor-theme";
 import { EDITOR_TRANSFORMERS } from "./markdown-transformers";
 import { KiboCodeBlockNode } from "./nodes/kibo-code-block-node";

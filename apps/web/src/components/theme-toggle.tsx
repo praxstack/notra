@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon02Icon, Sun03Icon } from "@hugeicons/core-free-icons";
+import { Moon02Icon, Sun02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import { useTheme } from "next-themes";
@@ -20,15 +20,16 @@ export function ThemeToggle() {
     setTheme(isDark ? "light" : "dark");
   }
 
+  let ariaLabel = "Toggle theme";
+  if (mounted && isDark) {
+    ariaLabel = "Switch to light mode";
+  } else if (mounted) {
+    ariaLabel = "Switch to dark mode";
+  }
+
   return (
     <Button
-      aria-label={
-        mounted
-          ? isDark
-            ? "Switch to light mode"
-            : "Switch to dark mode"
-          : "Toggle theme"
-      }
+      aria-label={ariaLabel}
       className="h-9 w-9 rounded-lg p-0 text-foreground"
       onClick={handleToggle}
       type="button"
@@ -37,7 +38,7 @@ export function ThemeToggle() {
       {mounted ? (
         <HugeiconsIcon
           className="size-4"
-          icon={isDark ? Sun03Icon : Moon02Icon}
+          icon={isDark ? Sun02Icon : Moon02Icon}
         />
       ) : (
         <span className="size-4" />

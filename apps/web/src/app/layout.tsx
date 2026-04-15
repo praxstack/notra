@@ -6,6 +6,11 @@ import { Toaster } from "sonner";
 import FooterSection from "../components/footer-section";
 import { Navbar } from "../components/navbar";
 import { ThemeProvider } from "../components/theme-provider";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "../utils/metadata";
 
 import "@/styles/globals.css";
 
@@ -32,7 +37,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://usenotra.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Notra - Turn your daily work into publish-ready content",
     template: "%s - Notra",
@@ -40,22 +45,26 @@ export const metadata: Metadata = {
   description:
     "Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
   alternates: {
-    canonical: "https://www.usenotra.com",
+    canonical: SITE_URL,
   },
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://usenotra.com",
+    url: SITE_URL,
     siteName: "Notra",
     title: "Notra - Turn your daily work into publish-ready content",
     description:
       "Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
+    images: [DEFAULT_SOCIAL_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "Notra - Turn your daily work into publish-ready content",
     description:
       "Notra connects to GitHub, Linear and Slack to turn shipped work into ready-to-publish changelogs, blog posts, and social updates.",
+    images: [DEFAULT_SOCIAL_IMAGE.url],
+    site: TWITTER_HANDLE,
+    creator: TWITTER_HANDLE,
   },
   robots: {
     index: true,
@@ -94,7 +103,7 @@ export default function RootLayout({
           >
             <div className="relative flex min-h-screen w-full flex-col items-center justify-start bg-background">
               <div className="relative flex w-full flex-col items-center justify-start">
-                <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-265 lg:max-w-265 lg:px-0">
+                <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-320 lg:max-w-320 lg:px-0">
                   <div className="absolute top-0 left-4 z-0 h-full w-px bg-border/60 sm:left-6 md:left-8 lg:left-0" />
                   <div className="absolute top-0 right-4 z-0 h-full w-px bg-border/60 sm:right-6 md:right-8 lg:right-0" />
 

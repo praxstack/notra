@@ -145,7 +145,18 @@
                 "expanded": true,
                 "pages": [
                   "GET /v1/integrations",
-                  "POST /v1/integrations/github"
+                  "POST /v1/integrations/github",
+                  "DELETE /v1/integrations/{integrationId}"
+                ]
+              },
+              {
+                "group": "Schedules",
+                "expanded": true,
+                "pages": [
+                  "GET /v1/schedules",
+                  "POST /v1/schedules",
+                  "PATCH /v1/schedules/{scheduleId}",
+                  "DELETE /v1/schedules/{scheduleId}"
                 ]
               }
             ]

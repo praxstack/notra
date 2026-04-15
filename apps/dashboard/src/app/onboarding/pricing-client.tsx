@@ -7,49 +7,19 @@ import { Button } from "@notra/ui/components/ui/button";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@notra/ui/components/ui/tabs";
 import { TitleCard } from "@notra/ui/components/ui/title-card";
-import { useMutation } from "@tanstack/react-query";
 import { useCustomer, useListPlans } from "autumn-js/react";
-import { useQueryStates } from "nuqs";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { OnboardingAccountMenu } from "@/components/onboarding/account-menu";
 import { FEATURES, PLANS } from "@/constants/features";
+import type { BillingPlan } from "@/types/billing/plan";
 import type { ProductFeature } from "@/types/hooks/billing";
-import {
-  getPlanSelectionMetadata,
-  marketingAttributionSearchParams,
-  persistMarketingAttribution,
-  readMarketingAttributionFromStorage,
-  readMarketingAttributionFromValues,
-} from "@/utils/marketing-attribution";
-import { marketingAttributionUrlKeys } from "@/utils/marketing-attribution-keys";
 
 interface PricingClientProps {
   slug: string;
 }
 
-async function postMarketingSignupEvent(payload: unknown) {
-  const response = await fetch("/api/marketing/signup", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    throw new Error("Could not track signup event");
-  }
-
-  return response.json();
-}
-
 const PRICE_REGEX = /^\d+([.,]\d+)?$/;
-
-type BillingPlan = Exclude<
-  ReturnType<typeof useListPlans>["data"],
-  undefined
->[number];
 
 function getProductPrice(plan: BillingPlan | undefined): number {
   return plan?.price?.amount ?? 0;
@@ -115,10 +85,6 @@ export function PricingClient({ slug }: PricingClientProps) {
   const { attach } = useCustomer();
   const [isYearly, setIsYearly] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
-  const [attributionParams] = useQueryStates(marketingAttributionSearchParams, {
-    history: "replace",
-    urlKeys: marketingAttributionUrlKeys,
-  });
 
   const basicMonthly = plans?.find((p) => p.id === PLANS.BASIC);
   const basicYearly = plans?.find((p) => p.id === PLANS.BASIC_YEARLY);
@@ -130,47 +96,6 @@ export function PricingClient({ slug }: PricingClientProps) {
 
   const basicFeatures = getProductFeatures(basicPlan);
   const proFeatures = getProductFeatures(proPlan);
-  const attribution = readMarketingAttributionFromValues({
-    landingPageH1Copy: attributionParams.dbLandingPageH1Copy,
-    landingPageH1Variant: attributionParams.dbLandingPageH1Variant,
-    source: attributionParams.dbSource,
-    signupMethod: attributionParams.signupMethod,
-  });
-  const signupCompletedMutation = useMutation({
-    mutationFn: postMarketingSignupEvent,
-  });
-  const signupPlanSelectedMutation = useMutation({
-    mutationFn: postMarketingSignupEvent,
-  });
-
-  useEffect(() => {
-    const persistedAttribution = persistMarketingAttribution(attribution);
-
-    if (persistedAttribution.signupCompletedTracked) {
-      return;
-    }
-
-    signupCompletedMutation.mutate(
-      {
-        event: "signup_completed",
-        landingPageH1Copy: persistedAttribution.landingPageH1Copy,
-        landingPageH1Variant: persistedAttribution.landingPageH1Variant,
-        signupMethod: persistedAttribution.signupMethod,
-        source: persistedAttribution.source,
-      },
-      {
-        onSuccess: () => {
-          persistMarketingAttribution({ signupCompletedTracked: true });
-        },
-      }
-    );
-  }, [
-    attribution.landingPageH1Copy,
-    attribution.landingPageH1Variant,
-    attribution.signupMethod,
-    attribution.source,
-    signupCompletedMutation,
-  ]);
 
   async function handleSelectPlan(planId: string | undefined) {
     if (!planId) {
@@ -183,20 +108,6 @@ export function PricingClient({ slug }: PricingClientProps) {
         planId,
         redirectMode: "if_required",
         successUrl,
-      });
-
-      const attribution = readMarketingAttributionFromStorage();
-      const selection = getPlanSelectionMetadata(planId);
-
-      await signupPlanSelectedMutation.mutateAsync({
-        event: "signup_plan_selected",
-        billingPeriod: selection.billingPeriod,
-        landingPageH1Copy: attribution.landingPageH1Copy,
-        landingPageH1Variant: attribution.landingPageH1Variant,
-        selectedPlanId: planId,
-        selectedProduct: selection.selectedProduct,
-        signupMethod: attribution.signupMethod,
-        source: attribution.source,
       });
 
       if (result.paymentUrl) {

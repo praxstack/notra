@@ -49,8 +49,8 @@ export function Navbar() {
         <div className="relative z-30 flex h-full w-full min-w-[320px] items-stretch justify-center">
           <HatchPattern className="w-4 sm:w-6 md:w-8 lg:w-12" />
 
-          <div className="flex min-w-0 flex-1 items-center justify-between border-border border-r border-l bg-background/80 px-3 backdrop-blur-sm sm:px-4 md:px-5">
-            <div className="flex min-w-0 items-center justify-center">
+          <div className="relative flex min-w-0 flex-1 items-center justify-between border-border border-r border-l bg-background/80 px-3 backdrop-blur-sm sm:px-4 md:px-5">
+            <div className="z-10 flex min-w-0 items-center justify-center">
               <DropdownMenu
                 onOpenChange={(open) => {
                   if (!open) {
@@ -60,13 +60,23 @@ export function Navbar() {
                 open={logoMenuOpen}
               >
                 <DropdownMenuTrigger
-                  className="flex cursor-pointer items-center justify-start gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-primary"
                   nativeButton={false}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setLogoMenuOpen((prev) => !prev);
-                  }}
-                  render={<Link href="/" />}
+                  render={
+                    <Link
+                      className="flex cursor-pointer items-center justify-start gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-primary"
+                      href="/"
+                      onClick={(e) => {
+                        const event = e as React.MouseEvent & {
+                          preventBaseUIHandler?: () => void;
+                        };
+                        event.preventBaseUIHandler?.();
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setLogoMenuOpen((prev) => !prev);
+                      }}
+                    />
+                  }
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-transparent p-1 dark:bg-[#f3eeea]">
                     <NotraMark className="h-7 w-7 shrink-0" />
@@ -87,21 +97,21 @@ export function Navbar() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <div className="hidden items-start justify-start gap-2 pl-3 sm:flex sm:gap-3 sm:pl-4 md:gap-4 md:pl-5 lg:gap-4 lg:pl-5">
-                {MARKETING_NAV_LINKS.map((link) => (
-                  <Link
-                    className="flex items-center justify-start"
-                    href={link.href}
-                    key={link.href}
-                  >
-                    <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] transition-colors hover:text-foreground md:text-[13px]">
-                      {link.label}
-                    </div>
-                  </Link>
-                ))}
-              </div>
             </div>
-            <div className="hidden h-6 items-start justify-start gap-2 sm:flex sm:h-7 sm:gap-3 md:h-8">
+            <div className="pointer-events-none absolute inset-0 hidden items-center justify-center gap-2 sm:flex sm:gap-3 md:gap-4 lg:gap-4">
+              {MARKETING_NAV_LINKS.map((link) => (
+                <Link
+                  className="pointer-events-auto flex items-center justify-start"
+                  href={link.href}
+                  key={link.href}
+                >
+                  <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] transition-colors hover:text-foreground md:text-[13px]">
+                    {link.label}
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="z-10 hidden h-6 items-center justify-start gap-2 sm:flex sm:h-7 sm:gap-3 md:h-8">
               <ThemeToggle />
               <Link href="https://app.usenotra.com/login">
                 <Button

@@ -5,6 +5,11 @@ import {
   formatBlogDate,
   listNotraBlogPosts,
 } from "@/utils/blog";
+import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "@/utils/metadata";
 
 const title = "Notra Blog";
 const description = "Insights, guides, and stories from the Notra team.";
@@ -13,19 +18,23 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: {
-    canonical: "https://usenotra.com/blog",
+    canonical: `${SITE_URL}/blog`,
   },
   openGraph: {
     title,
     description,
-    url: "https://usenotra.com/blog",
+    url: `${SITE_URL}/blog`,
     type: "website",
     siteName: "Notra",
+    images: [DEFAULT_SOCIAL_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
+    images: [DEFAULT_SOCIAL_IMAGE.url],
+    site: TWITTER_HANDLE,
+    creator: TWITTER_HANDLE,
   },
 };
 

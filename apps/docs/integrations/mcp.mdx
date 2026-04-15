@@ -1,11 +1,11 @@
 ---
 title: "MCP Server"
-description: "Connect the Notra MCP server to AI tools using bearer token authentication."
+description: "Connect the Notra MCP server to AI tools using bearer token authentication, with tools for posts, brand identities, integrations, and schedules."
 ---
 
 Notra provides a hosted MCP server at `https://mcp.usenotra.com/mcp` so AI agents can work with your Notra workspace directly.
 
-With the MCP server connected, an AI agent can manage your brand identity, create content for you, and add new integrations without you having to wire everything up by hand.
+With the MCP server connected, an AI agent can manage your brand identity, create content for you, add or remove integrations, and manage scheduled generation without you having to wire everything up by hand.
 
 ## Authentication
 
@@ -109,6 +109,14 @@ Once installed, the Notra MCP server currently exposes these tools:
 
 - `notra_list_integrations`
 - `notra_create_github_integration`
+- `notra_delete_integration`
+
+**Schedules**
+
+- `notra_list_schedules`
+- `notra_create_schedule`
+- `notra_update_schedule`
+- `notra_delete_schedule`
 
 ## Composio
 

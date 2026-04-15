@@ -7,6 +7,11 @@ import { changelog } from "@/../.source/server";
 import { ChangelogPageHeader } from "@/components/changelog-page-header";
 import { ChangelogTimeline } from "@/components/changelog-timeline";
 import {
+  DEFAULT_SOCIAL_IMAGE,
+  SITE_URL,
+  TWITTER_HANDLE,
+} from "@/utils/metadata";
+import {
   getShowcaseCompany,
   getShowcaseEntrySlug,
   SHOWCASE_COMPANIES,
@@ -29,7 +34,7 @@ export async function generateMetadata({
 
   const title = { absolute: `${company.name} Changelog` };
   const description = `${company.description} See AI-generated changelogs powered by Notra.`;
-  const url = `https://usenotra.com/changelog/${name}`;
+  const url = `${SITE_URL}/changelog/${name}`;
 
   return {
     title,
@@ -41,11 +46,15 @@ export async function generateMetadata({
       url,
       type: "website",
       siteName: "Notra",
+      images: [DEFAULT_SOCIAL_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: title.absolute,
       description,
+      images: [DEFAULT_SOCIAL_IMAGE.url],
+      site: TWITTER_HANDLE,
+      creator: TWITTER_HANDLE,
     },
   };
 }

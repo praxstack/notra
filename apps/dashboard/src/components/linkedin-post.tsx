@@ -31,7 +31,7 @@ import type * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { LINKEDIN_TRUNCATION_LIMIT } from "@/constants/linkedin";
 import { cn } from "@/lib/utils";
-import type { TextSelection } from "@/types/chat";
+import type { TextSelection } from "@/schemas/content";
 
 interface LinkedInPostProps extends React.ComponentProps<"div"> {
   author: {

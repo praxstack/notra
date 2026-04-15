@@ -27,7 +27,7 @@ import type * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { TWITTER_CHAR_LIMIT } from "@/constants/twitter";
 import { cn } from "@/lib/utils";
-import type { TextSelection } from "@/types/chat";
+import type { TextSelection } from "@/schemas/content";
 import { formatTweetContent } from "@/utils/format-tweet-content";
 
 interface TwitterPostMenuItem {

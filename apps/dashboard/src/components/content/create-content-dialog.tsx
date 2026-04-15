@@ -60,6 +60,7 @@ import { cn } from "@notra/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-store";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
@@ -124,6 +125,8 @@ type Step = "configure" | "review";
 export function CreateContentDialog({
   organizationId,
 }: CreateContentDialogProps) {
+  const { slug } = useParams<{ slug: string }>();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [addRepoOpen, setAddRepoOpen] = useState(false);
   const [addRepoMode, setAddRepoMode] = useState<
@@ -837,7 +840,25 @@ export function CreateContentDialog({
                     )}
                   </form.Field>
 
-                  {brandVoices.length > 1 && (
+                  {brandVoices.length === 0 ? (
+                    <div className="space-y-2">
+                      <Label>Brand Identity</Label>
+                      <div className="flex items-center gap-2 rounded-md border border-dashed p-3">
+                        <span className="flex-1 text-muted-foreground text-xs">
+                          No brand identity set up.
+                        </span>
+                        <Button
+                          className="h-6 shrink-0 gap-1 rounded px-2 text-xs"
+                          onClick={() => router.push(`/${slug}/brand/identity`)}
+                          size="sm"
+                          type="button"
+                        >
+                          <HugeiconsIcon className="size-3" icon={Add01Icon} />
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
                     <form.Field name="brandVoiceId">
                       {(field) => (
                         <BrandVoiceCombobox
