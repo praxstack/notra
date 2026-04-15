@@ -42,6 +42,15 @@ import { INPUT_SOURCES } from "@/lib/integrations/catalog";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import type { ContextItem } from "@/types/chat";
 import type { GitHubRepository } from "@/types/integrations";
+import {
+  buildIntegrationReferenceElement,
+  INTEGRATION_REFERENCE_SELECTOR,
+  isIntegrationReferenceElement,
+  parseIntegrationReferenceElement,
+  parseReferenceValue,
+  serializeEditorWithReferences,
+  serializeFragmentWithReferences,
+} from "./integration-reference";
 
 const AVAILABLE_MODELS = [
   {
@@ -97,9 +106,6 @@ function ModelIcon({
 const THINKING_LEVELS = ["off", "low", "medium", "high"] as const;
 export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
-const MENTION_CHIP_CLASS =
-  "chat-mention-chip cursor-default select-none whitespace-nowrap rounded-md bg-primary/10 px-1.5 font-medium text-primary text-sm align-baseline ring-1 ring-primary/20";
-
 function contextItemsEqual(a: ContextItem, b: ContextItem): boolean {
   if (a.type !== b.type) {
     return false;
@@ -111,46 +117,6 @@ function contextItemsEqual(a: ContextItem, b: ContextItem): boolean {
     return a.integrationId === b.integrationId;
   }
   return false;
-}
-
-function buildChipElement(item: ContextItem): HTMLSpanElement {
-  const span = document.createElement("span");
-  span.contentEditable = "false";
-  span.className = MENTION_CHIP_CLASS;
-  if (item.type === "github-repo") {
-    span.dataset.mentionKind = "github";
-    span.dataset.owner = item.owner;
-    span.dataset.repo = item.repo;
-    span.dataset.integrationId = item.integrationId;
-    span.textContent = `@${item.owner}/${item.repo}`;
-  } else {
-    span.dataset.mentionKind = "linear";
-    span.dataset.integrationId = item.integrationId;
-    if (item.teamName) {
-      span.dataset.teamName = item.teamName;
-    }
-    span.textContent = `@${item.teamName ?? "Linear"}`;
-  }
-  return span;
-}
-
-function parseChipElement(el: HTMLElement): ContextItem | null {
-  const kind = el.dataset.mentionKind;
-  if (kind === "github") {
-    const { owner, repo, integrationId } = el.dataset;
-    if (!(owner && repo && integrationId)) {
-      return null;
-    }
-    return { type: "github-repo", owner, repo, integrationId };
-  }
-  if (kind === "linear") {
-    const { integrationId, teamName } = el.dataset;
-    if (!integrationId) {
-      return null;
-    }
-    return { type: "linear-team", integrationId, teamName };
-  }
-  return null;
 }
 
 interface ChatInputAdvancedProps {
@@ -170,7 +136,7 @@ interface ChatInputAdvancedProps {
 }
 
 const THINKING_LABELS: Record<ThinkingLevel, string> = {
-  off: "Think",
+  off: "None",
   low: "Low",
   medium: "Medium",
   high: "High",
@@ -339,10 +305,10 @@ export function ChatInputAdvanced({
       return;
     }
     const chips = Array.from(
-      editor.querySelectorAll<HTMLElement>("[data-mention-kind]")
+      editor.querySelectorAll<HTMLElement>(INTEGRATION_REFERENCE_SELECTOR)
     );
     const editorItems = chips
-      .map(parseChipElement)
+      .map(parseIntegrationReferenceElement)
       .filter((x): x is ContextItem => x !== null);
 
     const current = contextRef.current;
@@ -357,6 +323,33 @@ export function ChatInputAdvanced({
       }
     }
   }, [onAddContext, onRemoveContext]);
+
+  const insertChipAndSpace = useCallback(
+    (chip: HTMLSpanElement, replaceRange: Range) => {
+      const editor = editorRef.current;
+      if (!editor) {
+        return;
+      }
+      replaceRange.deleteContents();
+      replaceRange.insertNode(chip);
+      const space = document.createTextNode("\u00A0");
+      const afterChip = document.createRange();
+      afterChip.setStartAfter(chip);
+      afterChip.collapse(true);
+      afterChip.insertNode(space);
+
+      const cursor = document.createRange();
+      cursor.setStartAfter(space);
+      cursor.collapse(true);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(cursor);
+
+      setIsEmpty(readEditorText().trim().length === 0);
+      syncContextFromDOM();
+    },
+    [readEditorText, syncContextFromDOM]
+  );
 
   const handleInput = useCallback(() => {
     const editor = editorRef.current;
@@ -383,6 +376,7 @@ export function ChatInputAdvanced({
     if (range.startContainer.nodeType === Node.TEXT_NODE) {
       const nodeText = range.startContainer.textContent ?? "";
       const textBefore = nodeText.slice(0, range.startOffset);
+
       const atIndex = textBefore.lastIndexOf("@");
       if (atIndex !== -1) {
         const charBefore = atIndex > 0 ? textBefore[atIndex - 1] : " ";
@@ -418,33 +412,6 @@ export function ChatInputAdvanced({
     syncContextFromDOM();
   }, [readEditorText, syncContextFromDOM]);
 
-  const insertChipAndSpace = useCallback(
-    (chip: HTMLSpanElement, replaceRange: Range) => {
-      const editor = editorRef.current;
-      if (!editor) {
-        return;
-      }
-      replaceRange.deleteContents();
-      replaceRange.insertNode(chip);
-      const space = document.createTextNode("\u00A0");
-      const afterChip = document.createRange();
-      afterChip.setStartAfter(chip);
-      afterChip.collapse(true);
-      afterChip.insertNode(space);
-
-      const cursor = document.createRange();
-      cursor.setStartAfter(space);
-      cursor.collapse(true);
-      const sel = window.getSelection();
-      sel?.removeAllRanges();
-      sel?.addRange(cursor);
-
-      setIsEmpty(readEditorText().trim().length === 0);
-      syncContextFromDOM();
-    },
-    [readEditorText, syncContextFromDOM]
-  );
-
   const insertMention = useCallback(
     (item: MentionItem) => {
       const editor = editorRef.current;
@@ -479,7 +446,7 @@ export function ChatInputAdvanced({
       replaceRange.setStart(anchor.node, anchor.offset);
       replaceRange.setEnd(cursor.startContainer, cursor.startOffset);
 
-      const chip = buildChipElement(contextItem);
+      const chip = buildIntegrationReferenceElement(contextItem);
       insertChipAndSpace(chip, replaceRange);
 
       mentionAnchorRef.current = null;
@@ -512,7 +479,7 @@ export function ChatInputAdvanced({
         range.selectNodeContents(editor);
         range.collapse(false);
       }
-      const chip = buildChipElement(item);
+      const chip = buildIntegrationReferenceElement(item);
       insertChipAndSpace(chip, range);
     },
     [insertChipAndSpace]
@@ -523,10 +490,10 @@ export function ChatInputAdvanced({
       const editor = editorRef.current;
       if (editor) {
         const chips = Array.from(
-          editor.querySelectorAll<HTMLElement>("[data-mention-kind]")
+          editor.querySelectorAll<HTMLElement>(INTEGRATION_REFERENCE_SELECTOR)
         );
         for (const chip of chips) {
-          const parsed = parseChipElement(chip);
+          const parsed = parseIntegrationReferenceElement(chip);
           if (parsed && contextItemsEqual(parsed, item)) {
             const next = chip.nextSibling;
             chip.remove();
@@ -548,8 +515,12 @@ export function ChatInputAdvanced({
   );
 
   const handleSend = useCallback(() => {
-    const trimmed = readEditorText().trim();
-    if (!trimmed || isLoading) {
+    const editor = editorRef.current;
+    if (!editor || readEditorText().trim().length === 0 || isLoading) {
+      return;
+    }
+    const outbound = serializeEditorWithReferences(editor).trim();
+    if (!outbound) {
       return;
     }
     clearError();
@@ -568,11 +539,8 @@ export function ChatInputAdvanced({
       }
     }
 
-    onSend?.(trimmed);
-    const editor = editorRef.current;
-    if (editor) {
-      editor.innerHTML = "";
-    }
+    onSend?.(outbound);
+    editor.innerHTML = "";
     setIsEmpty(true);
     for (const item of contextRef.current) {
       onRemoveContext?.(item);
@@ -598,11 +566,94 @@ export function ChatInputAdvanced({
       }
       const range = sel.getRangeAt(0);
       range.deleteContents();
-      range.insertNode(document.createTextNode(text));
-      range.collapse(false);
+
+      const fragment = document.createDocumentFragment();
+      const segments = text.split(
+        /(@?integration\/(?:github\/[^/\s]+\/[^/\s]+\/[^/\s]+|linear\/[^/\s]+))/g
+      );
+
+      for (const segment of segments) {
+        if (!segment) {
+          continue;
+        }
+
+        const referenceItem = parseReferenceValue(segment);
+        if (referenceItem) {
+          fragment.append(buildIntegrationReferenceElement(referenceItem));
+          continue;
+        }
+
+        const lines = segment.split("\n");
+        lines.forEach((line, index) => {
+          if (line) {
+            fragment.append(document.createTextNode(line));
+          }
+          if (index < lines.length - 1) {
+            fragment.append(document.createElement("br"));
+          }
+        });
+      }
+
+      const lastNode = fragment.lastChild;
+      range.insertNode(fragment);
+
+      const after = document.createRange();
+      if (lastNode) {
+        after.setStartAfter(lastNode);
+      } else {
+        after.setStart(range.endContainer, range.endOffset);
+      }
+      after.collapse(true);
       sel.removeAllRanges();
-      sel.addRange(range);
+      sel.addRange(after);
       editorRef.current?.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    []
+  );
+
+  const handleCopy = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      const editor = editorRef.current;
+      const selection = window.getSelection();
+      if (!editor || !selection || selection.rangeCount === 0) {
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+      if (!editor.contains(range.commonAncestorContainer) || range.collapsed) {
+        return;
+      }
+
+      event.preventDefault();
+      const fragment = range.cloneContents();
+      const serialized = serializeFragmentWithReferences(fragment);
+      event.clipboardData.setData("text/plain", serialized);
+    },
+    []
+  );
+
+  const handleCut = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      const editor = editorRef.current;
+      const selection = window.getSelection();
+      if (!editor || !selection || selection.rangeCount === 0) {
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+      if (!editor.contains(range.commonAncestorContainer) || range.collapsed) {
+        return;
+      }
+
+      event.preventDefault();
+      const fragment = range.cloneContents();
+      const serialized = serializeFragmentWithReferences(fragment);
+      event.clipboardData.setData("text/plain", serialized);
+
+      range.deleteContents();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
     },
     []
   );
@@ -685,7 +736,7 @@ export function ChatInputAdvanced({
         ) {
           prev = prev.previousSibling;
         }
-        if (prev instanceof HTMLElement && prev.dataset.mentionKind) {
+        if (isIntegrationReferenceElement(prev)) {
           event.preventDefault();
           const nextOfChip = prev.nextSibling;
           prev.remove();
@@ -727,7 +778,7 @@ export function ChatInputAdvanced({
           className="rounded-[14px] border border-border bg-background shadow-sm"
           tabIndex={-1}
         >
-          <div className="p-0.5">
+          <div className="rounded-[13px] p-0.5">
             {usageLimitError && (
               <div className="mx-2 mt-2 mb-1 flex w-fit max-w-full flex-wrap items-center gap-1 rounded-md bg-destructive/10 px-2 py-1 text-destructive text-xs">
                 <span>{usageLimitError}</span>
@@ -741,14 +792,15 @@ export function ChatInputAdvanced({
                 )}
               </div>
             )}
-            <div className="relative flex flex-col bg-background">
-              <div className="flex w-full items-center">
+            <div className="relative flex flex-col rounded-t-[13px] bg-background">
+              <div className="flex w-full items-center rounded-t-[12px]">
                 <div className="relative flex flex-1 cursor-text transition-colors [--lh:1lh]">
+                  {/* biome-ignore lint/a11y/useSemanticElements: rich mention editor requires a contentEditable host instead of a native textarea. */}
                   <div
                     aria-disabled={isLoading || isUsageBlocked}
                     aria-label="Send a message"
                     aria-multiline="true"
-                    className="max-h-50 min-h-12 w-full overflow-y-auto whitespace-pre-wrap break-words py-2 pr-2 pl-3.5 text-foreground text-sm leading-6 caret-foreground outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50 data-[empty=true]:before:pointer-events-none data-[empty=true]:before:text-muted-foreground data-[empty=true]:before:content-[attr(data-placeholder)]"
+                    className="wrap-break-word max-h-50 min-h-12 w-full overflow-y-auto whitespace-pre-wrap rounded-t-[12px] px-3 py-2 text-foreground text-sm leading-6 caret-foreground outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50 data-[empty=true]:before:pointer-events-none data-[empty=true]:before:text-muted-foreground data-[empty=true]:before:content-[attr(data-placeholder)]"
                     contentEditable={!(isLoading || isUsageBlocked)}
                     data-empty={isEmpty ? "true" : "false"}
                     data-placeholder={
@@ -769,6 +821,8 @@ export function ChatInputAdvanced({
                         }
                       }, 150);
                     }}
+                    onCopy={handleCopy}
+                    onCut={handleCut}
                     onFocus={() => setIsFocused(true)}
                     onInput={handleInput}
                     onKeyDown={handleKeyDown}
@@ -776,6 +830,7 @@ export function ChatInputAdvanced({
                     ref={editorRef}
                     role="textbox"
                     suppressContentEditableWarning
+                    tabIndex={isLoading || isUsageBlocked ? -1 : 0}
                   />
                 </div>
               </div>

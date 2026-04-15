@@ -13,7 +13,7 @@ import {
   ReasoningTrigger,
 } from "@notra/ui/components/ai-elements/reasoning";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
@@ -28,6 +28,7 @@ import {
   ChatInputAdvanced,
   type ThinkingLevel,
 } from "@/components/chat/chat-input";
+import { renderTextWithIntegrationReferences } from "@/components/chat/integration-reference";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
 import type { ContextItem } from "@/types/chat";
@@ -78,6 +79,7 @@ export default function PageClient({
   const organizationId = organization?.id ?? "";
   const { data: session } = authClient.useSession();
   const { refetch: refetchCustomer } = useCustomer();
+  const queryClient = useQueryClient();
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
 
   const stableChatId = useMemo(
@@ -199,7 +201,10 @@ export default function PageClient({
   const handleFinish = useCallback(() => {
     setPendingMessageId(null);
     refetchCustomer();
-  }, [refetchCustomer]);
+    queryClient.invalidateQueries({
+      queryKey: ["chat-sessions", organizationId],
+    });
+  }, [organizationId, queryClient, refetchCustomer]);
 
   const {
     messages,
@@ -273,7 +278,8 @@ export default function PageClient({
 
   const handleSend = useCallback(
     async (text: string) => {
-      if (!initialChatId) {
+      const isFirstMessage = !initialChatId;
+      if (isFirstMessage) {
         window.history.replaceState(
           null,
           "",
@@ -281,8 +287,20 @@ export default function PageClient({
         );
       }
       await sendMessage({ text });
+      if (isFirstMessage) {
+        queryClient.invalidateQueries({
+          queryKey: ["chat-sessions", organizationId],
+        });
+      }
     },
-    [initialChatId, organizationSlug, sendMessage, stableChatId]
+    [
+      initialChatId,
+      organizationId,
+      organizationSlug,
+      queryClient,
+      sendMessage,
+      stableChatId,
+    ]
   );
 
   const messageCount = messages.length;
@@ -325,6 +343,22 @@ export default function PageClient({
       if (!text.trim()) {
         return null;
       }
+
+      const hasInlineReference =
+        text.includes("integration/github/") ||
+        text.includes("integration/linear/");
+
+      if (hasInlineReference) {
+        return (
+          <div
+            className="size-full whitespace-pre-wrap break-words"
+            key={`${messageId}-text-${index}`}
+          >
+            {renderTextWithIntegrationReferences(text)}
+          </div>
+        );
+      }
+
       return (
         <MessageResponse key={`${messageId}-text-${index}`}>
           {text}
