@@ -22,6 +22,7 @@ import { useCustomer } from "autumn-js/react";
 import { Loader2Icon } from "lucide-react";
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrailleLoader } from "@/components/braille-loader";
 import {
@@ -80,6 +81,7 @@ export default function PageClient({
   const { data: session } = authClient.useSession();
   const { refetch: refetchCustomer } = useCustomer();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
 
   const stableChatId = useMemo(
@@ -244,6 +246,19 @@ export default function PageClient({
     }
   }, [chatHistoryQuery.data, setMessages]);
 
+  useEffect(() => {
+    setPendingMessageId(null);
+    setChatError(null);
+
+    if (initialChatId) {
+      return;
+    }
+
+    setMessages([]);
+    setContext([]);
+    setHasCustomizedContext(false);
+  }, [initialChatId, setMessages]);
+
   const isLoadingHistory = chatHistoryQuery.isLoading && messages.length === 0;
   const isLoading = status === "streaming" || status === "submitted";
   const hasMessages = messages.length > 0;
@@ -279,15 +294,9 @@ export default function PageClient({
   const handleSend = useCallback(
     async (text: string) => {
       const isFirstMessage = !initialChatId;
-      if (isFirstMessage) {
-        window.history.replaceState(
-          null,
-          "",
-          `/${organizationSlug}/chat/${stableChatId}`
-        );
-      }
       await sendMessage({ text });
       if (isFirstMessage) {
+        router.replace(`/${organizationSlug}/chat/${stableChatId}`);
         queryClient.invalidateQueries({
           queryKey: ["chat-sessions", organizationId],
         });
@@ -298,6 +307,7 @@ export default function PageClient({
       organizationId,
       organizationSlug,
       queryClient,
+      router,
       sendMessage,
       stableChatId,
     ]

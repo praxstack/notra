@@ -12,7 +12,7 @@ async function Page({
 }) {
   const { slug, chatId } = await params;
 
-  return <PageClient chatId={chatId} organizationSlug={slug} />;
+  return <PageClient chatId={chatId} key={chatId} organizationSlug={slug} />;
 }
 
 export default Page;
