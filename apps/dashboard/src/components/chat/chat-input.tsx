@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  AiBrain01Icon,
-  AtIcon,
-  Cancel01Icon,
-} from "@hugeicons/core-free-icons";
+import { AiBrain01Icon, AtIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import {
@@ -30,8 +26,6 @@ import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linear } from "@notra/ui/components/ui/svgs/linear";
 import { Openai } from "@notra/ui/components/ui/svgs/openai";
 import { OpenaiDark } from "@notra/ui/components/ui/svgs/openaiDark";
-
-import { Textarea } from "@notra/ui/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -103,6 +97,62 @@ function ModelIcon({
 const THINKING_LEVELS = ["off", "low", "medium", "high"] as const;
 export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
+const MENTION_CHIP_CLASS =
+  "chat-mention-chip cursor-default select-none whitespace-nowrap rounded-md bg-primary/10 px-1.5 font-medium text-primary text-sm align-baseline ring-1 ring-primary/20";
+
+function contextItemsEqual(a: ContextItem, b: ContextItem): boolean {
+  if (a.type !== b.type) {
+    return false;
+  }
+  if (a.type === "github-repo" && b.type === "github-repo") {
+    return a.owner === b.owner && a.repo === b.repo;
+  }
+  if (a.type === "linear-team" && b.type === "linear-team") {
+    return a.integrationId === b.integrationId;
+  }
+  return false;
+}
+
+function buildChipElement(item: ContextItem): HTMLSpanElement {
+  const span = document.createElement("span");
+  span.contentEditable = "false";
+  span.className = MENTION_CHIP_CLASS;
+  if (item.type === "github-repo") {
+    span.dataset.mentionKind = "github";
+    span.dataset.owner = item.owner;
+    span.dataset.repo = item.repo;
+    span.dataset.integrationId = item.integrationId;
+    span.textContent = `@${item.owner}/${item.repo}`;
+  } else {
+    span.dataset.mentionKind = "linear";
+    span.dataset.integrationId = item.integrationId;
+    if (item.teamName) {
+      span.dataset.teamName = item.teamName;
+    }
+    span.textContent = `@${item.teamName ?? "Linear"}`;
+  }
+  return span;
+}
+
+function parseChipElement(el: HTMLElement): ContextItem | null {
+  const kind = el.dataset.mentionKind;
+  if (kind === "github") {
+    const { owner, repo, integrationId } = el.dataset;
+    if (!(owner && repo && integrationId)) {
+      return null;
+    }
+    return { type: "github-repo", owner, repo, integrationId };
+  }
+  if (kind === "linear") {
+    const { integrationId, teamName } = el.dataset;
+    if (!integrationId) {
+      return null;
+    }
+    return { type: "linear-team", integrationId, teamName };
+  }
+  return null;
+}
+
 interface ChatInputAdvancedProps {
   onSend?: (value: string) => void;
   isLoading?: boolean;
@@ -142,13 +192,15 @@ export function ChatInputAdvanced({
   onThinkingLevelChange,
 }: ChatInputAdvancedProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const [value, setValue] = useState("");
+  const [isEmpty, setIsEmpty] = useState(true);
   const [internalError, setInternalError] = useState<string | null>(null);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
-  const mentionStartRef = useRef<number | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const mentionAnchorRef = useRef<{ node: Node; offset: number } | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
   const mentionListRef = useRef<HTMLDivElement | null>(null);
+  const contextRef = useRef(context);
+  contextRef.current = context;
   const { check, data: customer } = useCustomer();
 
   const checkResult = useMemo(() => {
@@ -273,104 +325,238 @@ export function ChatInputAdvanced({
     return items;
   }, [mentionQuery, enabledRepos, enabledLinearIntegrations]);
 
-  const handleTextChange = useCallback(
-    (newValue: string, cursorPos?: number) => {
-      setValue(newValue);
+  const readEditorText = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return "";
+    }
+    return (editor.innerText ?? "").replace(/\u00A0/g, " ");
+  }, []);
 
-      const pos =
-        cursorPos ?? textareaRef.current?.selectionStart ?? newValue.length;
-      const textBeforeCursor = newValue.slice(0, pos);
-      const atIndex = textBeforeCursor.lastIndexOf("@");
+  const syncContextFromDOM = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    const chips = Array.from(
+      editor.querySelectorAll<HTMLElement>("[data-mention-kind]")
+    );
+    const editorItems = chips
+      .map(parseChipElement)
+      .filter((x): x is ContextItem => x !== null);
 
+    const current = contextRef.current;
+    for (const existing of current) {
+      if (!editorItems.some((e) => contextItemsEqual(e, existing))) {
+        onRemoveContext?.(existing);
+      }
+    }
+    for (const next of editorItems) {
+      if (!current.some((c) => contextItemsEqual(c, next))) {
+        onAddContext?.(next);
+      }
+    }
+  }, [onAddContext, onRemoveContext]);
+
+  const handleInput = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) {
+      return;
+    }
+    setIsEmpty(readEditorText().trim().length === 0);
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) {
+      setMentionQuery(null);
+      mentionAnchorRef.current = null;
+      syncContextFromDOM();
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.startContainer)) {
+      setMentionQuery(null);
+      mentionAnchorRef.current = null;
+      syncContextFromDOM();
+      return;
+    }
+
+    if (range.startContainer.nodeType === Node.TEXT_NODE) {
+      const nodeText = range.startContainer.textContent ?? "";
+      const textBefore = nodeText.slice(0, range.startOffset);
+      const atIndex = textBefore.lastIndexOf("@");
       if (atIndex !== -1) {
-        const charBefore = atIndex > 0 ? textBeforeCursor[atIndex - 1] : " ";
-        if (charBefore === " " || charBefore === "\n" || atIndex === 0) {
-          const query = textBeforeCursor.slice(atIndex + 1);
-          if (!query.includes(" ") && !query.includes("\n")) {
-            mentionStartRef.current = atIndex;
+        const charBefore = atIndex > 0 ? textBefore[atIndex - 1] : " ";
+        const isBoundary =
+          atIndex === 0 ||
+          charBefore === " " ||
+          charBefore === "\n" ||
+          charBefore === "\u00A0";
+        if (isBoundary) {
+          const query = textBefore.slice(atIndex + 1);
+          if (
+            !(
+              query.includes(" ") ||
+              query.includes("\n") ||
+              query.includes("\u00A0")
+            )
+          ) {
+            mentionAnchorRef.current = {
+              node: range.startContainer,
+              offset: atIndex,
+            };
             setMentionQuery(query);
             setMentionIndex(0);
+            syncContextFromDOM();
             return;
           }
         }
       }
+    }
 
-      mentionStartRef.current = null;
-      setMentionQuery(null);
+    mentionAnchorRef.current = null;
+    setMentionQuery(null);
+    syncContextFromDOM();
+  }, [readEditorText, syncContextFromDOM]);
+
+  const insertChipAndSpace = useCallback(
+    (chip: HTMLSpanElement, replaceRange: Range) => {
+      const editor = editorRef.current;
+      if (!editor) {
+        return;
+      }
+      replaceRange.deleteContents();
+      replaceRange.insertNode(chip);
+      const space = document.createTextNode("\u00A0");
+      const afterChip = document.createRange();
+      afterChip.setStartAfter(chip);
+      afterChip.collapse(true);
+      afterChip.insertNode(space);
+
+      const cursor = document.createRange();
+      cursor.setStartAfter(space);
+      cursor.collapse(true);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(cursor);
+
+      setIsEmpty(readEditorText().trim().length === 0);
+      syncContextFromDOM();
     },
-    []
+    [readEditorText, syncContextFromDOM]
   );
 
   const insertMention = useCallback(
     (item: MentionItem) => {
-      const start = mentionStartRef.current;
-      if (start === null) {
+      const editor = editorRef.current;
+      const anchor = mentionAnchorRef.current;
+      if (!editor || !anchor) {
+        return;
+      }
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        return;
+      }
+      const cursor = sel.getRangeAt(0);
+      if (!editor.contains(cursor.startContainer)) {
         return;
       }
 
-      const before = value.slice(0, start);
-      const textarea = textareaRef.current;
-      const cursorPos = textarea?.selectionStart ?? value.length;
-      const after = value.slice(cursorPos);
+      const contextItem: ContextItem =
+        item.kind === "github"
+          ? {
+              type: "github-repo",
+              owner: item.data.owner,
+              repo: item.data.repo,
+              integrationId: item.data.integrationId,
+            }
+          : {
+              type: "linear-team",
+              integrationId: item.data.integrationId,
+              teamName: item.data.teamName ?? undefined,
+            };
 
-      setValue(before + after);
+      const replaceRange = document.createRange();
+      replaceRange.setStart(anchor.node, anchor.offset);
+      replaceRange.setEnd(cursor.startContainer, cursor.startOffset);
+
+      const chip = buildChipElement(contextItem);
+      insertChipAndSpace(chip, replaceRange);
+
+      mentionAnchorRef.current = null;
       setMentionQuery(null);
-      mentionStartRef.current = null;
-
-      if (item.kind === "github" && !isRepoInContext(item.data)) {
-        onAddContext?.({
-          type: "github-repo",
-          owner: item.data.owner,
-          repo: item.data.repo,
-          integrationId: item.data.integrationId,
-        });
-      } else if (item.kind === "linear" && !isLinearInContext(item.data)) {
-        onAddContext?.({
-          type: "linear-team",
-          integrationId: item.data.integrationId,
-          teamName: item.data.teamName ?? undefined,
-        });
-      }
-
-      requestAnimationFrame(() => {
-        if (textarea) {
-          textarea.selectionStart = before.length;
-          textarea.selectionEnd = before.length;
-          textarea.focus();
-        }
-      });
+      editor.focus();
     },
-    [value, isRepoInContext, isLinearInContext, onAddContext]
+    [insertChipAndSpace]
   );
 
-  const resizeTextarea = useCallback(() => {
-    const element = textareaRef.current;
-    if (!element) {
-      return;
-    }
-    element.style.height = "0";
-    const maxHeightRem = 12.5;
-    const maxHeightPx =
-      maxHeightRem *
-      Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
-    element.style.height = `${Math.min(element.scrollHeight / Number.parseFloat(getComputedStyle(document.documentElement).fontSize), maxHeightRem)}rem`;
-    element.style.overflowY =
-      element.scrollHeight > maxHeightPx ? "auto" : "hidden";
-  }, []);
+  const insertChipAtCursor = useCallback(
+    (item: ContextItem) => {
+      const editor = editorRef.current;
+      if (!editor) {
+        return;
+      }
+      if (contextRef.current.some((c) => contextItemsEqual(c, item))) {
+        return;
+      }
+      editor.focus();
+      const sel = window.getSelection();
+      let range: Range;
+      if (
+        sel &&
+        sel.rangeCount > 0 &&
+        editor.contains(sel.getRangeAt(0).startContainer)
+      ) {
+        range = sel.getRangeAt(0);
+      } else {
+        range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+      }
+      const chip = buildChipElement(item);
+      insertChipAndSpace(chip, range);
+    },
+    [insertChipAndSpace]
+  );
 
-  const handleSend = useCallback(async () => {
-    const trimmed = value.trim();
+  const removeChipForItem = useCallback(
+    (item: ContextItem) => {
+      const editor = editorRef.current;
+      if (editor) {
+        const chips = Array.from(
+          editor.querySelectorAll<HTMLElement>("[data-mention-kind]")
+        );
+        for (const chip of chips) {
+          const parsed = parseChipElement(chip);
+          if (parsed && contextItemsEqual(parsed, item)) {
+            const next = chip.nextSibling;
+            chip.remove();
+            if (
+              next &&
+              next.nodeType === Node.TEXT_NODE &&
+              next.textContent === "\u00A0"
+            ) {
+              next.parentNode?.removeChild(next);
+            }
+            break;
+          }
+        }
+        setIsEmpty(readEditorText().trim().length === 0);
+      }
+      onRemoveContext?.(item);
+    },
+    [onRemoveContext, readEditorText]
+  );
+
+  const handleSend = useCallback(() => {
+    const trimmed = readEditorText().trim();
     if (!trimmed || isLoading) {
       return;
     }
-
     clearError();
-
     if (isUsageBlocked) {
       setInternalError(limitMessage);
       return;
     }
-
     if (customer) {
       const result = check({
         featureId: FEATURES.AI_CREDITS,
@@ -383,21 +569,46 @@ export function ChatInputAdvanced({
     }
 
     onSend?.(trimmed);
-    setValue("");
-    requestAnimationFrame(resizeTextarea);
+    const editor = editorRef.current;
+    if (editor) {
+      editor.innerHTML = "";
+    }
+    setIsEmpty(true);
+    for (const item of contextRef.current) {
+      onRemoveContext?.(item);
+    }
   }, [
     onSend,
-    resizeTextarea,
-    value,
+    readEditorText,
     isLoading,
     check,
     customer,
     isUsageBlocked,
     clearError,
+    onRemoveContext,
   ]);
 
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const text = event.clipboardData.getData("text/plain");
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(document.createTextNode(text));
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      editorRef.current?.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    []
+  );
+
   const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (mentionQuery !== null && filteredMentionItems.length > 0) {
         if (event.key === "ArrowDown") {
           event.preventDefault();
@@ -424,7 +635,7 @@ export function ChatInputAdvanced({
         if (event.key === "Escape") {
           event.preventDefault();
           setMentionQuery(null);
-          mentionStartRef.current = null;
+          mentionAnchorRef.current = null;
           return;
         }
       }
@@ -432,6 +643,63 @@ export function ChatInputAdvanced({
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         handleSend();
+        return;
+      }
+
+      if (event.key === "Enter" && event.shiftKey) {
+        event.preventDefault();
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) {
+          return;
+        }
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        const br = document.createElement("br");
+        range.insertNode(br);
+        const after = document.createRange();
+        after.setStartAfter(br);
+        after.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(after);
+        editorRef.current?.dispatchEvent(new Event("input", { bubbles: true }));
+        return;
+      }
+
+      if (event.key === "Backspace") {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || !sel.getRangeAt(0).collapsed) {
+          return;
+        }
+        const range = sel.getRangeAt(0);
+        const node = range.startContainer;
+        let prev: ChildNode | null = null;
+        if (node.nodeType === Node.TEXT_NODE && range.startOffset === 0) {
+          prev = node.previousSibling;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          prev = (node as Element).childNodes[range.startOffset - 1] ?? null;
+        }
+        if (
+          prev &&
+          prev.nodeType === Node.TEXT_NODE &&
+          prev.textContent === "\u00A0"
+        ) {
+          prev = prev.previousSibling;
+        }
+        if (prev instanceof HTMLElement && prev.dataset.mentionKind) {
+          event.preventDefault();
+          const nextOfChip = prev.nextSibling;
+          prev.remove();
+          if (
+            nextOfChip &&
+            nextOfChip.nodeType === Node.TEXT_NODE &&
+            nextOfChip.textContent === "\u00A0"
+          ) {
+            nextOfChip.parentNode?.removeChild(nextOfChip);
+          }
+          editorRef.current?.dispatchEvent(
+            new Event("input", { bubbles: true })
+          );
+        }
       }
     },
     [
@@ -448,7 +716,7 @@ export function ChatInputAdvanced({
 
   return (
     <Card
-      className="w-full gap-0 overflow-visible rounded-[14px] border-0 bg-background py-0 shadow-none transition-shadow duration-200 ease-out-expo"
+      className="w-full gap-0 overflow-visible rounded-[14px] border-0 bg-background py-0 shadow-none ring-0 transition-shadow duration-200 ease-out-expo"
       data-focused={isFocused ? "true" : "false"}
     >
       <CardHeader className="sr-only">
@@ -473,44 +741,21 @@ export function ChatInputAdvanced({
                 )}
               </div>
             )}
-            {context.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 px-3 pt-2.5 pb-0.5">
-                {context.map((item) => {
-                  const label =
-                    item.type === "github-repo"
-                      ? `${item.owner}/${item.repo}`
-                      : (item.teamName ?? "Linear");
-                  return (
-                    <div
-                      className="flex items-center gap-1.5 rounded-lg bg-muted px-2 py-1 text-foreground text-xs"
-                      key={`${item.type}-${item.integrationId}`}
-                    >
-                      {item.type === "github-repo" ? (
-                        <Github className="size-3.5 shrink-0" />
-                      ) : (
-                        <Linear className="size-3.5 shrink-0" />
-                      )}
-                      <span className="font-medium">{label}</span>
-                      <button
-                        aria-label={`Remove ${label} from context`}
-                        className="ml-0.5 cursor-pointer rounded p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                        onClick={() => onRemoveContext?.(item)}
-                        type="button"
-                      >
-                        <HugeiconsIcon className="size-3" icon={Cancel01Icon} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
             <div className="relative flex flex-col bg-background">
               <div className="flex w-full items-center">
                 <div className="relative flex flex-1 cursor-text transition-colors [--lh:1lh]">
-                  <Textarea
+                  <div
+                    aria-disabled={isLoading || isUsageBlocked}
                     aria-label="Send a message"
-                    className="max-h-50 min-h-12 w-full resize-none whitespace-pre-wrap rounded-none border-0 bg-transparent py-2 pr-2 pl-3.5 text-foreground text-sm leading-6 caret-foreground shadow-none outline-none ring-0 focus-visible:border-transparent focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={isLoading || isUsageBlocked}
+                    aria-multiline="true"
+                    className="max-h-50 min-h-12 w-full overflow-y-auto whitespace-pre-wrap break-words py-2 pr-2 pl-3.5 text-foreground text-sm leading-6 caret-foreground outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50 data-[empty=true]:before:pointer-events-none data-[empty=true]:before:text-muted-foreground data-[empty=true]:before:content-[attr(data-placeholder)]"
+                    contentEditable={!(isLoading || isUsageBlocked)}
+                    data-empty={isEmpty ? "true" : "false"}
+                    data-placeholder={
+                      isLoading
+                        ? "AI is working..."
+                        : "Send a message... (type @ to add context)"
+                    }
                     onBlur={() => {
                       setIsFocused(false);
                       setTimeout(() => {
@@ -520,27 +765,17 @@ export function ChatInputAdvanced({
                           )
                         ) {
                           setMentionQuery(null);
-                          mentionStartRef.current = null;
+                          mentionAnchorRef.current = null;
                         }
                       }, 150);
                     }}
-                    onChange={(event) =>
-                      handleTextChange(
-                        event.target.value,
-                        event.target.selectionStart
-                      )
-                    }
                     onFocus={() => setIsFocused(true)}
-                    onInput={resizeTextarea}
+                    onInput={handleInput}
                     onKeyDown={handleKeyDown}
-                    placeholder={
-                      isLoading
-                        ? "AI is working..."
-                        : "Send a message... (type @ to add context)"
-                    }
-                    ref={textareaRef}
-                    rows={1}
-                    value={value}
+                    onPaste={handlePaste}
+                    ref={editorRef}
+                    role="textbox"
+                    suppressContentEditableWarning
                   />
                 </div>
               </div>
@@ -640,7 +875,7 @@ export function ChatInputAdvanced({
                 {remainingChatCredits} chat messages left
               </div>
             )}
-            <CardFooter className="flex items-center gap-1.5 overflow-hidden p-2">
+            <CardFooter className="flex items-center gap-1.5 overflow-hidden rounded-b-[12px] border-t-0 bg-transparent p-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -776,20 +1011,16 @@ export function ChatInputAdvanced({
                                 <DropdownMenuItem
                                   key={repo.id}
                                   onClick={() => {
+                                    const item: ContextItem = {
+                                      type: "github-repo",
+                                      owner: repo.owner,
+                                      repo: repo.repo,
+                                      integrationId: repo.integrationId,
+                                    };
                                     if (inContext) {
-                                      onRemoveContext?.({
-                                        type: "github-repo",
-                                        owner: repo.owner,
-                                        repo: repo.repo,
-                                        integrationId: repo.integrationId,
-                                      });
+                                      removeChipForItem(item);
                                     } else {
-                                      onAddContext?.({
-                                        type: "github-repo",
-                                        owner: repo.owner,
-                                        repo: repo.repo,
-                                        integrationId: repo.integrationId,
-                                      });
+                                      insertChipAtCursor(item);
                                     }
                                   }}
                                 >
@@ -854,18 +1085,15 @@ export function ChatInputAdvanced({
                                 <DropdownMenuItem
                                   key={li.id}
                                   onClick={() => {
+                                    const item: ContextItem = {
+                                      type: "linear-team",
+                                      integrationId: li.integrationId,
+                                      teamName: li.teamName ?? undefined,
+                                    };
                                     if (inContext) {
-                                      onRemoveContext?.({
-                                        type: "linear-team",
-                                        integrationId: li.integrationId,
-                                        teamName: li.teamName ?? undefined,
-                                      });
+                                      removeChipForItem(item);
                                     } else {
-                                      onAddContext?.({
-                                        type: "linear-team",
-                                        integrationId: li.integrationId,
-                                        teamName: li.teamName ?? undefined,
-                                      });
+                                      insertChipAtCursor(item);
                                     }
                                   }}
                                 >
