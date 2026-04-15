@@ -28,6 +28,8 @@ import {
 import { ClaudeAiIcon } from "@notra/ui/components/ui/svgs/claudeAiIcon";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linear } from "@notra/ui/components/ui/svgs/linear";
+import { Openai } from "@notra/ui/components/ui/svgs/openai";
+import { OpenaiDark } from "@notra/ui/components/ui/svgs/openaiDark";
 
 import { Textarea } from "@notra/ui/components/ui/textarea";
 import {
@@ -53,20 +55,50 @@ const AVAILABLE_MODELS = [
     label: "Opus 4.6",
     description: "Most capable",
     pricing: "$5 input / $25 output per 1M",
+    provider: "anthropic",
   },
   {
     id: "anthropic/claude-sonnet-4-6",
     label: "Sonnet 4.6",
     description: "Balanced speed & quality",
     pricing: "$3 input / $15 output per 1M",
+    provider: "anthropic",
   },
   {
     id: "anthropic/claude-haiku-4-5",
     label: "Haiku 4.5",
     description: "Fast & lightweight",
     pricing: "$1 input / $5 output per 1M",
+    provider: "anthropic",
+  },
+  {
+    id: "openai/gpt-5.4",
+    label: "GPT-5.4",
+    description: "OpenAI flagship",
+    pricing: "$2.50 input / $15 output per 1M",
+    provider: "openai",
   },
 ] as const;
+
+type ModelProvider = (typeof AVAILABLE_MODELS)[number]["provider"];
+
+function ModelIcon({
+  provider,
+  className,
+}: {
+  provider: ModelProvider;
+  className?: string;
+}) {
+  if (provider === "openai") {
+    return (
+      <>
+        <Openai className={`${className ?? ""} block dark:hidden`} />
+        <OpenaiDark className={`${className ?? ""} hidden dark:block`} />
+      </>
+    );
+  }
+  return <ClaudeAiIcon className={className} />;
+}
 
 const THINKING_LEVELS = ["off", "low", "medium", "high"] as const;
 export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
@@ -657,7 +689,10 @@ export function ChatInputAdvanced({
                   }
                 >
                   <div className="flex items-center gap-1.5 text-xs">
-                    <ClaudeAiIcon className="size-3.5" />
+                    <ModelIcon
+                      className="size-3.5"
+                      provider={currentModel.provider}
+                    />
                     {currentModel.label}
                   </div>
                 </DropdownMenuTrigger>
@@ -670,6 +705,10 @@ export function ChatInputAdvanced({
                       key={m.id}
                       onClick={() => onModelChange?.(m.id)}
                     >
+                      <ModelIcon
+                        className="size-4 shrink-0"
+                        provider={m.provider}
+                      />
                       <div className="flex min-w-0 flex-col">
                         <span className="text-sm">{m.label}</span>
                         <span className="text-muted-foreground text-xs">
