@@ -3,11 +3,11 @@
 import { FlagsProvider, useFlag } from "@databuddy/sdk/react";
 import type { ReactNode } from "react";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { authClient } from "@/lib/auth/client";
 import {
   AI_CHAT_EXPERIMENT_FLAG_KEY,
   DATABUDDY_DASHBOARD_CLIENT_ID,
 } from "@/lib/databuddy-config";
-import { authClient } from "@/lib/auth/client";
 
 export function DatabuddyFlagsProvider({ children }: { children: ReactNode }) {
   const { activeOrganization } = useOrganizationsContext();
