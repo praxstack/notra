@@ -118,7 +118,9 @@ export async function orchestrateChat(
   const stream = streamText({
     model: modelWithMemory,
     system: systemPrompt,
-    messages: await convertToModelMessages(messages),
+    messages: await convertToModelMessages(messages, {
+      ignoreIncompleteToolCalls: true,
+    }),
     tools,
     stopWhen: stepCountIs(maxSteps),
     async onFinish({ totalUsage }) {
