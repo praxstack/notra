@@ -59,8 +59,8 @@ interface PageClientProps {
 }
 
 const TOOL_STATUS_LABELS: Record<string, string> = {
-  update_post: "Updating post...",
-  view_post: "Viewing post...",
+  updatePost: "Updating post...",
+  viewPost: "Viewing post...",
   getPullRequests: "Fetching pull requests...",
   getReleaseByTag: "Fetching release...",
   getCommitsByTimeframe: "Fetching commits...",
@@ -71,10 +71,22 @@ const TOOL_STATUS_LABELS: Record<string, string> = {
   getSkillByName: "Loading skill...",
 };
 
-const CREATE_TOOL_PREFIX = "tool-create_";
+const CREATE_TOOL_TYPES = {
+  "tool-createBlogPost": "blog_post",
+  "tool-createChangelog": "changelog",
+  "tool-createInvestorUpdate": "investor_update",
+  "tool-createLinkedInPost": "linkedin_post",
+  "tool-createTwitterPost": "twitter_post",
+} satisfies Record<string, ContentType>;
 
 function isCreateTool(type: string): boolean {
-  return type.startsWith(CREATE_TOOL_PREFIX);
+  return type in CREATE_TOOL_TYPES;
+}
+
+function getCreateToolContentType(
+  type: keyof typeof CREATE_TOOL_TYPES
+): ContentType {
+  return CREATE_TOOL_TYPES[type];
 }
 
 function StandaloneChatPageClient({
@@ -524,7 +536,9 @@ function StandaloneChatPageClient({
       const toolName = toolPart.type.replace("tool-", "");
 
       if (isCreateTool(toolPart.type)) {
-        const contentType = toolName.replace("create_", "") as ContentType;
+        const contentType = getCreateToolContentType(
+          toolPart.type as keyof typeof CREATE_TOOL_TYPES
+        );
         const title = toolPart.input?.title ?? "Untitled";
         const markdown = toolPart.input?.markdown ?? "";
 

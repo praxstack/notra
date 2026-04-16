@@ -21,6 +21,7 @@ import {
   createGetPostByIdTool,
   createUpdatePostTool,
   createViewPostTool,
+  getCreatePostToolName,
 } from "@notra/ai/tools/post";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
 import type {
@@ -60,18 +61,18 @@ export function buildStandaloneToolSet(
   const descriptions: string[] = [];
 
   for (const contentType of contentTypeSchema.options) {
-    tools[`create_${contentType}`] = createCreatePostTool(
+    tools[getCreatePostToolName(contentType)] = createCreatePostTool(
       { organizationId, contentType, needsApproval: true },
       postResult
     );
   }
 
-  tools.update_post = createUpdatePostTool(
+  tools.updatePost = createUpdatePostTool(
     { organizationId, contentType: "blog_post" },
     postResult
   );
 
-  tools.view_post = createViewPostTool({
+  tools.viewPost = createViewPostTool({
     organizationId,
     contentType: "blog_post",
   });
@@ -87,7 +88,7 @@ export function buildStandaloneToolSet(
   });
 
   descriptions.push(
-    "**Content Creation**: Create posts of any type (changelog, blog_post, twitter_post, linkedin_post, investor_update) using create_<type>, update_post, and view_post"
+    "**Content Creation**: Create posts using createChangelog, createBlogPost, createTwitterPost, createLinkedInPost, createInvestorUpdate, plus updatePost and viewPost"
   );
   descriptions.push(
     "**Organization Data**: Inspect brand identities, brand references, available integrations, and existing posts using listBrandIdentities, getBrandIdentity, getAvailableBrandReferences, getAvailableIntegrations, getAvailablePosts, and getPostById"

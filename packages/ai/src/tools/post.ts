@@ -26,6 +26,22 @@ import * as z from "zod";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 16);
 
+const CREATE_POST_TOOL_NAMES = {
+  changelog: "createChangelog",
+  blog_post: "createBlogPost",
+  twitter_post: "createTwitterPost",
+  linkedin_post: "createLinkedInPost",
+  investor_update: "createInvestorUpdate",
+} as const;
+
+export function getCreatePostToolName(contentType: string): string {
+  return (
+    CREATE_POST_TOOL_NAMES[
+      contentType as keyof typeof CREATE_POST_TOOL_NAMES
+    ] ?? "createPost"
+  );
+}
+
 const postSlugSchema = z
   .string()
   .trim()
@@ -41,11 +57,12 @@ export function createCreatePostTool(
   result: PostToolsResult
 ): Tool {
   const contentType = contentTypeSchema.parse(config.contentType);
+  const toolName = getCreatePostToolName(contentType);
 
   if (supportsPostSlug(contentType)) {
     return tool({
       description: toolDescription({
-        toolName: "create_post",
+        toolName,
         intro:
           "Creates a new post in the database with the generated content. The post type and source repositories are set automatically.",
         whenToUse:
@@ -113,7 +130,7 @@ export function createCreatePostTool(
 
   return tool({
     description: toolDescription({
-      toolName: "create_post",
+      toolName,
       intro:
         "Creates a new post in the database with the generated content. The post type and source repositories are set automatically.",
       whenToUse:
@@ -179,12 +196,12 @@ export function createUpdatePostTool(
   if (supportsPostSlug(config.contentType)) {
     return tool({
       description: toolDescription({
-        toolName: "update_post",
+        toolName: "updatePost",
         intro: "Updates an existing post's title and/or content.",
         whenToUse:
-          "When you need to revise a post that was already created via create_post.",
+          "When you need to revise a post that was already created via one of the create post tools.",
         usageNotes:
-          "Requires the postId returned from create_post. Provide only the fields you want to change.",
+          "Requires the postId returned from a create post tool. Provide only the fields you want to change.",
       }),
       inputSchema: z.object({
         postId: z.string().describe("The ID of the post to update"),
@@ -275,12 +292,12 @@ export function createUpdatePostTool(
 
   return tool({
     description: toolDescription({
-      toolName: "update_post",
+      toolName: "updatePost",
       intro: "Updates an existing post's title and/or content.",
       whenToUse:
-        "When you need to revise a post that was already created via create_post.",
+        "When you need to revise a post that was already created via one of the create post tools.",
       usageNotes:
-        "Requires the postId returned from create_post. Provide only the fields you want to change.",
+        "Requires the postId returned from a create post tool. Provide only the fields you want to change.",
     }),
     inputSchema: z.object({
       postId: z.string().describe("The ID of the post to update"),
@@ -387,7 +404,7 @@ export function createFailTool(result: PostToolsResult): Tool {
 export function createViewPostTool(config: PostToolsConfig): Tool {
   return tool({
     description: toolDescription({
-      toolName: "view_post",
+      toolName: "viewPost",
       intro: "Retrieves an existing post's content by ID.",
       whenToUse:
         "When you need to review a post that was already created before making updates.",
