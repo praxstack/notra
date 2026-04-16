@@ -32,6 +32,7 @@ import {
   type ThinkingLevel,
 } from "@/components/chat/chat-input";
 import { renderTextWithIntegrationReferences } from "@/components/chat/integration-reference";
+import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
 import type { ContextItem } from "@/types/chat";
@@ -77,7 +78,7 @@ function isCreateTool(type: string): boolean {
   return type.startsWith(CREATE_TOOL_PREFIX);
 }
 
-export default function PageClient({
+function StandaloneChatPageClient({
   organizationSlug,
   chatId: initialChatId,
 }: PageClientProps) {
@@ -797,4 +798,34 @@ export default function PageClient({
       </div>
     </div>
   );
+}
+
+export default function PageClient(props: PageClientProps) {
+  const aiChatExperiment = useAiChatExperiment();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!aiChatExperiment.loading && !aiChatExperiment.on) {
+      router.replace(`/${props.organizationSlug}`);
+    }
+  }, [
+    aiChatExperiment.loading,
+    aiChatExperiment.on,
+    props.organizationSlug,
+    router,
+  ]);
+
+  if (aiChatExperiment.loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-12">
+        <BrailleLoader />
+      </div>
+    );
+  }
+
+  if (!aiChatExperiment.on) {
+    return null;
+  }
+
+  return <StandaloneChatPageClient {...props} />;
 }

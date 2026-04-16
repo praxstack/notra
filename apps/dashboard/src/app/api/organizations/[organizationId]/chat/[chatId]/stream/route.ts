@@ -1,6 +1,7 @@
 import type { UIMessageChunk } from "ai";
 import { UI_MESSAGE_STREAM_HEADERS } from "ai";
 import type { NextRequest } from "next/server";
+import { isAiChatExperimentEnabled } from "@/lib/ai-chat-experiment";
 import { withOrganizationAuth } from "@/lib/auth/organization";
 import {
   getActiveChatStream,
@@ -22,6 +23,18 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   if (!auth.success) {
     return auth.response;
+  }
+
+  const aiChatEnabled = await isAiChatExperimentEnabled({
+    userId: auth.context.user.id,
+    email: auth.context.user.email,
+    organizationId,
+  });
+
+  if (!aiChatEnabled) {
+    return new Response("AI chat is not enabled for this organization", {
+      status: 403,
+    });
   }
 
   const activeStreamId = await getActiveChatStream(organizationId, chatId);

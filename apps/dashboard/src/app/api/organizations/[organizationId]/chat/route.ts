@@ -7,6 +7,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { FEATURES } from "@/constants/features";
+import { isAiChatExperimentEnabled } from "@/lib/ai-chat-experiment";
 import { withOrganizationAuth } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
 import {
@@ -74,6 +75,19 @@ export const POST = withEvlog(async function POST(
 
     if (!auth.success) {
       return auth.response;
+    }
+
+    const aiChatEnabled = await isAiChatExperimentEnabled({
+      userId: auth.context.user.id,
+      email: auth.context.user.email,
+      organizationId,
+    });
+
+    if (!aiChatEnabled) {
+      return NextResponse.json(
+        { error: "AI chat is not enabled for this organization" },
+        { status: 403 }
+      );
     }
 
     let useMarkup = false;
@@ -180,6 +194,8 @@ export const POST = withEvlog(async function POST(
         requestId,
         organizationId,
         chatId,
+        userId: auth.context.user.id,
+        userEmail: auth.context.user.email,
         context,
         useMarkup,
         model: parseResult.data.model,

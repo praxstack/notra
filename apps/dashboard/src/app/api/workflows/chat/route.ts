@@ -6,6 +6,7 @@ import type { UIMessageChunk } from "ai";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { FEATURES } from "@/constants/features";
+import { isAiChatExperimentEnabled } from "@/lib/ai-chat-experiment";
 import { autumn } from "@/lib/billing/autumn";
 import { calculateTokenCostCents } from "@/lib/billing/token-pricing";
 import {
@@ -32,6 +33,8 @@ const chatWorkflowPayloadSchema = z.object({
   requestId: z.string(),
   organizationId: z.string(),
   chatId: z.string(),
+  userId: z.string(),
+  userEmail: z.string().nullable().optional(),
   context: z.array(standaloneChatContextSchema),
   useMarkup: z.boolean(),
   model: z.string().optional(),
@@ -59,12 +62,25 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
     requestId,
     organizationId,
     chatId,
+    userId,
+    userEmail,
     context: standaloneContext,
     useMarkup,
     model,
     enableThinking,
     thinkingLevel,
   } = parseResult.data;
+
+  const aiChatEnabled = await isAiChatExperimentEnabled({
+    userId,
+    email: userEmail,
+    organizationId,
+  });
+
+  if (!aiChatEnabled) {
+    await context.cancel();
+    return;
+  }
 
   const messages = await context.run("load-chat-history", () =>
     loadChatHistory(organizationId, chatId)
@@ -88,6 +104,18 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
   );
 
   const channel = realtime?.channel(channelName);
+
+  if (!channel) {
+    console.error("[Chat Workflow] Realtime not configured for streaming", {
+      requestId,
+      organizationId,
+      chatId,
+      channelName,
+    });
+    await clearActiveChatStream(organizationId, chatId);
+    await context.cancel();
+    return;
+  }
 
   const abortController = new AbortController();
   let stopAbortPolling: (() => void) | null = null;
@@ -197,10 +225,10 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
       if (abortController.signal.aborted) {
         break;
       }
-      await channel?.emit("ai.chunk", chunk as UIMessageChunk);
+      await channel.emit("ai.chunk", chunk as UIMessageChunk);
     }
 
-    if (abortController.signal.aborted && channel) {
+    if (abortController.signal.aborted) {
       await channel.emit("ai.chunk", {
         type: "abort",
         reason: "user-stopped",
@@ -217,16 +245,14 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
 
     if (isAbort) {
       console.log("[Chat Workflow] Aborted by user:", { requestId, chatId });
-      if (channel) {
-        await channel.emit("ai.chunk", {
-          type: "abort",
-          reason: "user-stopped",
-        });
-        await channel.emit("ai.chunk", {
-          type: "finish",
-          finishReason: "stop",
-        });
-      }
+      await channel.emit("ai.chunk", {
+        type: "abort",
+        reason: "user-stopped",
+      });
+      await channel.emit("ai.chunk", {
+        type: "finish",
+        finishReason: "stop",
+      });
     } else {
       console.error("[Chat Workflow] Error:", {
         requestId,
