@@ -842,7 +842,7 @@ export function ChatInputAdvanced({
                     aria-disabled={isLoading || isUsageBlocked}
                     aria-label="Send a message"
                     aria-multiline="true"
-                    className="wrap-break-word max-h-50 min-h-12 w-full overflow-y-auto whitespace-pre-wrap rounded-t-[12px] px-3 py-2 text-foreground text-sm leading-6 caret-foreground outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50 data-[empty=true]:before:pointer-events-none data-[empty=true]:before:text-muted-foreground data-[empty=true]:before:content-[attr(data-placeholder)]"
+                    className="wrap-break-word relative max-h-50 min-h-12 w-full overflow-y-auto whitespace-pre-wrap rounded-t-[12px] px-3 py-2 text-foreground text-sm leading-6 caret-foreground outline-none aria-disabled:cursor-not-allowed aria-disabled:opacity-50 data-[empty=true]:before:pointer-events-none data-[empty=true]:before:absolute data-[empty=true]:before:top-2 data-[empty=true]:before:left-3 data-[empty=true]:before:text-muted-foreground data-[empty=true]:before:content-[attr(data-placeholder)]"
                     contentEditable={!(isLoading || isUsageBlocked)}
                     data-empty={isEmpty ? "true" : "false"}
                     data-placeholder={
