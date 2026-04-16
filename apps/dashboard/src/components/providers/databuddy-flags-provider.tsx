@@ -18,6 +18,9 @@ export function DatabuddyFlagsProvider({ children }: { children: ReactNode }) {
       clientId={DATABUDDY_DASHBOARD_CLIENT_ID}
       disabled={!DATABUDDY_DASHBOARD_CLIENT_ID}
       isPending={isPending}
+      skipStorage
+      cacheTtl={5 * 60 * 1000}
+      staleTime={5 * 60 * 1000}
       user={
         session?.user
           ? {

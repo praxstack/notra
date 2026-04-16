@@ -5,7 +5,11 @@ import {
 } from "@/lib/databuddy-config";
 
 const flagsManager = DATABUDDY_DASHBOARD_CLIENT_ID
-  ? createServerFlagsManager({ clientId: DATABUDDY_DASHBOARD_CLIENT_ID })
+  ? createServerFlagsManager({
+      clientId: DATABUDDY_DASHBOARD_CLIENT_ID,
+      cacheTtl: 5 * 60 * 1000,
+      staleTime: 5 * 60 * 1000,
+    })
   : null;
 
 interface AiChatExperimentContext {
