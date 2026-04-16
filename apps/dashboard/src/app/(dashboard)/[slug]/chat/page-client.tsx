@@ -1,6 +1,8 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { X } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { ContentType } from "@notra/ai/schemas/content";
 import {
   Message,
@@ -162,6 +164,7 @@ export default function PageClient({
               method: "GET",
               headers: init?.headers,
               credentials: init?.credentials,
+              signal: init?.signal,
             }
           );
         },
@@ -200,6 +203,8 @@ export default function PageClient({
     setPendingMessageId(null);
   }, []);
 
+  const [wasStoppedByUser, setWasStoppedByUser] = useState(false);
+
   const handleFinish = useCallback(() => {
     setPendingMessageId(null);
     refetchCustomer();
@@ -214,6 +219,7 @@ export default function PageClient({
     sendMessage,
     addToolApprovalResponse,
     status,
+    stop,
   } = useChat({
     id: stableChatId,
     resume: Boolean(initialChatId && pendingMessageId),
@@ -224,26 +230,55 @@ export default function PageClient({
     onError: handleChatError,
   });
 
+  const [isStopping, setIsStopping] = useState(false);
+
+  const handleStop = useCallback(async () => {
+    setIsStopping(true);
+    setWasStoppedByUser(true);
+    try {
+      if (organizationId && stableChatId) {
+        await fetch(
+          `/api/organizations/${organizationId}/chat/${encodeURIComponent(stableChatId)}/stop`,
+          { method: "POST" }
+        );
+      }
+    } catch (stopError) {
+      console.error("[Chat] Failed to notify server to stop:", stopError);
+    } finally {
+      stop();
+    }
+  }, [organizationId, stableChatId, stop]);
+
   const chatHistoryQuery = useQuery({
     queryKey: ["chat-history", organizationId, initialChatId],
     queryFn: async () => {
+      if (!initialChatId) {
+        return null;
+      }
       const res = await fetch(
-        `/api/organizations/${organizationId}/chat/${encodeURIComponent(initialChatId!)}`
+        `/api/organizations/${organizationId}/chat/${encodeURIComponent(initialChatId)}`
       );
       if (!res.ok) {
         return null;
       }
       const data = await res.json();
-      return data?.messages ?? null;
+      return {
+        messages: data?.messages ?? null,
+        lastResponseStopped: Boolean(data?.lastResponseStopped),
+      };
     },
     enabled: Boolean(initialChatId) && Boolean(organizationId),
     staleTime: 1000 * 60 * 5,
   });
 
   useEffect(() => {
-    if (chatHistoryQuery.data?.length) {
-      setMessages(chatHistoryQuery.data);
+    if (!chatHistoryQuery.data) {
+      return;
     }
+    if (chatHistoryQuery.data.messages?.length) {
+      setMessages(chatHistoryQuery.data.messages);
+    }
+    setWasStoppedByUser(Boolean(chatHistoryQuery.data.lastResponseStopped));
   }, [chatHistoryQuery.data, setMessages]);
 
   useEffect(() => {
@@ -254,6 +289,7 @@ export default function PageClient({
       return;
     }
 
+    setWasStoppedByUser(false);
     setMessages([]);
     setContext([]);
     setHasCustomizedContext(false);
@@ -263,17 +299,27 @@ export default function PageClient({
   const isLoading = status === "streaming" || status === "submitted";
   const hasMessages = messages.length > 0;
 
+  useEffect(() => {
+    if (!isLoading) {
+      setIsStopping(false);
+    }
+  }, [isLoading]);
+
   const handleAddContext = useCallback((item: ContextItem) => {
     setHasCustomizedContext(true);
     setContext((prev) => {
       const exists = prev.some((c) => {
-        if (c.type !== item.type) return false;
+        if (c.type !== item.type) {
+          return false;
+        }
         if (c.type === "github-repo" && item.type === "github-repo") {
           return c.owner === item.owner && c.repo === item.repo;
         }
         return c.integrationId === item.integrationId;
       });
-      if (exists) return prev;
+      if (exists) {
+        return prev;
+      }
       return [...prev, item];
     });
   }, []);
@@ -282,7 +328,9 @@ export default function PageClient({
     setHasCustomizedContext(true);
     setContext((prev) =>
       prev.filter((c) => {
-        if (c.type !== item.type) return true;
+        if (c.type !== item.type) {
+          return true;
+        }
         if (c.type === "github-repo" && item.type === "github-repo") {
           return !(c.owner === item.owner && c.repo === item.repo);
         }
@@ -294,6 +342,7 @@ export default function PageClient({
   const handleSend = useCallback(
     async (text: string) => {
       const isFirstMessage = !initialChatId;
+      setWasStoppedByUser(false);
       await sendMessage({ text });
       if (isFirstMessage) {
         router.replace(`/${organizationSlug}/chat/${stableChatId}`);
@@ -361,7 +410,7 @@ export default function PageClient({
       if (hasInlineReference) {
         return (
           <div
-            className="size-full whitespace-pre-wrap break-words"
+            className="wrap-break-word size-full whitespace-pre-wrap"
             key={`${messageId}-text-${index}`}
           >
             {renderTextWithIntegrationReferences(text)}
@@ -551,7 +600,7 @@ export default function PageClient({
               </div>
             </div>
             <div className="sticky bottom-0 z-10 px-4 pt-2 pb-4">
-              <div className="pointer-events-none absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-background to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-full h-8 bg-linear-to-t from-background to-transparent" />
               <div className="mx-auto w-full max-w-2xl">
                 <Skeleton className="h-24 w-full rounded-xl" />
               </div>
@@ -583,12 +632,14 @@ export default function PageClient({
               context={context}
               error={chatError}
               isLoading={isLoading}
+              isStopping={isStopping}
               model={selectedModel}
               onAddContext={handleAddContext}
               onClearError={handleClearError}
               onModelChange={setSelectedModel}
               onRemoveContext={handleRemoveContext}
               onSend={handleSend}
+              onStop={handleStop}
               onThinkingLevelChange={setThinkingLevel}
               organizationId={organizationId}
               organizationSlug={organizationSlug}
@@ -628,13 +679,19 @@ export default function PageClient({
                   </MessageContent>
                 </Message>
               ))}
+              {wasStoppedByUser && !isLoading && (
+                <div className="flex w-fit items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-destructive text-xs">
+                  <HugeiconsIcon className="size-3.5" icon={X} />
+                  <span>Response stopped by user</span>
+                </div>
+              )}
               {showThinkingIndicator && (
                 <Message from="assistant">
                   <MessageContent>
                     <div className="flex items-center gap-2">
                       <BrailleLoader className="text-sm" variant="shimmer" />
                       <span className="animate-pulse text-muted-foreground text-sm">
-                        Thinking
+                        {isStopping ? "Stopping" : "Thinking"}
                       </span>
                     </div>
                   </MessageContent>
@@ -643,18 +700,20 @@ export default function PageClient({
             </div>
           </div>
           <div className="sticky bottom-0 z-10 bg-background px-4 pb-4">
-            <div className="-inset-x-4 pointer-events-none absolute bottom-full h-12 bg-gradient-to-t from-background to-transparent" />
+            <div className="-inset-x-4 pointer-events-none absolute bottom-full h-12 bg-linear-to-t from-background to-transparent" />
             <div className="mx-auto w-full max-w-2xl">
               <ChatInputAdvanced
                 context={context}
                 error={chatError}
-                isLoading={false}
+                isLoading={isLoading}
+                isStopping={isStopping}
                 model={selectedModel}
                 onAddContext={handleAddContext}
                 onClearError={handleClearError}
                 onModelChange={setSelectedModel}
                 onRemoveContext={handleRemoveContext}
                 onSend={handleSend}
+                onStop={handleStop}
                 onThinkingLevelChange={setThinkingLevel}
                 organizationId={organizationId}
                 organizationSlug={organizationSlug}

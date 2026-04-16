@@ -15,6 +15,7 @@ export interface StandaloneChatInput {
   log?: AILogTarget;
   requestedModel?: string;
   enableThinking?: boolean;
+  abortSignal?: AbortSignal;
 }
 
 export interface StandaloneChatDeps {

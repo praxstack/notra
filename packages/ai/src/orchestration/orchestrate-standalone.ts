@@ -45,6 +45,7 @@ export async function orchestrateStandaloneChat(
     maxSteps = 5,
     log: inputLog,
     requestedModel,
+    abortSignal,
   } = input;
 
   const log = deps?.log ?? inputLog;
@@ -108,6 +109,14 @@ export async function orchestrateStandaloneChat(
     tools,
     stopWhen: stepCountIs(maxSteps),
     experimental_transform: smoothStream(),
+    abortSignal,
+    onAbort({ steps }) {
+      console.log("[Standalone Chat Stream Aborted]", {
+        organizationId,
+        model: routingDecision.model,
+        completedSteps: steps.length,
+      });
+    },
     onFinish({ totalUsage }) {
       deps?.onUsage?.(totalUsage, routingDecision.model);
     },

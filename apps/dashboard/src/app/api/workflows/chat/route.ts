@@ -10,6 +10,7 @@ import { autumn } from "@/lib/billing/autumn";
 import { calculateTokenCostCents } from "@/lib/billing/token-pricing";
 import {
   clearActiveChatStream,
+  clearChatAbortFlag,
   getChatStreamChannelName,
   loadChatHistory,
   replaceChatHistory,
@@ -23,6 +24,7 @@ import {
   getLinearIntegrationById,
   getLinearToolContextByIntegrationId,
 } from "@/lib/services/linear-integration";
+import { startChatAbortPolling } from "@/utils/chat-abort-polling.server";
 
 const chatWorkflowPayloadSchema = z.object({
   requestId: z.string(),
@@ -79,13 +81,23 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
 
   const channel = realtime?.channel(channelName);
 
+  const abortController = new AbortController();
+  let stopAbortPolling: (() => void) | null = null;
+
   try {
+    stopAbortPolling = startChatAbortPolling({
+      organizationId,
+      chatId,
+      streamId: latestMessage.id,
+      onAbort: () => abortController.abort(),
+    });
     const { stream, routingDecision } = await orchestrateStandaloneChat(
       {
         organizationId,
         messages,
         context: standaloneContext as StandaloneChatContextItem[],
         maxSteps: 5,
+        abortSignal: abortController.signal,
       },
       {
         integrationFetchers: {
@@ -167,27 +179,69 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
     });
 
     for await (const chunk of uiStream) {
+      if (abortController.signal.aborted) {
+        break;
+      }
       await channel?.emit("ai.chunk", chunk as UIMessageChunk);
     }
-  } catch (error) {
-    console.error("[Chat Workflow] Error:", {
-      requestId,
-      chatId,
-      error: error instanceof Error ? error.message : String(error),
-    });
 
-    if (channel) {
+    if (abortController.signal.aborted && channel) {
       await channel.emit("ai.chunk", {
-        type: "error",
-        errorText:
-          error instanceof Error
-            ? error.message
-            : "An error occurred while processing your request.",
+        type: "abort",
+        reason: "user-stopped",
       });
-      await channel.emit("ai.chunk", { type: "finish", finishReason: "error" });
+      await channel.emit("ai.chunk", {
+        type: "finish",
+        finishReason: "stop",
+      });
+    }
+  } catch (error) {
+    const isAbort =
+      abortController.signal.aborted ||
+      (error instanceof Error && error.name === "AbortError");
+
+    if (isAbort) {
+      console.log("[Chat Workflow] Aborted by user:", { requestId, chatId });
+      if (channel) {
+        await channel.emit("ai.chunk", {
+          type: "abort",
+          reason: "user-stopped",
+        });
+        await channel.emit("ai.chunk", {
+          type: "finish",
+          finishReason: "stop",
+        });
+      }
+    } else {
+      console.error("[Chat Workflow] Error:", {
+        requestId,
+        chatId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      if (channel) {
+        await channel.emit("ai.chunk", {
+          type: "error",
+          errorText:
+            error instanceof Error
+              ? error.message
+              : "An error occurred while processing your request.",
+        });
+        await channel.emit("ai.chunk", {
+          type: "finish",
+          finishReason: "error",
+        });
+      }
     }
 
     await clearActiveChatStream(organizationId, chatId);
-    throw error;
+    if (!isAbort) {
+      throw error;
+    }
+  } finally {
+    stopAbortPolling?.();
+    await clearChatAbortFlag(organizationId, chatId, latestMessage.id).catch(
+      () => undefined
+    );
   }
 });

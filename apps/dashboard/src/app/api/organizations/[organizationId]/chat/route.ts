@@ -15,6 +15,7 @@ import {
 } from "@/lib/billing/token-pricing";
 import {
   clearActiveChatStream,
+  clearLastResponseStopped,
   generateAndSetChatTitle,
   generateChatId,
   loadChatHistory,
@@ -144,6 +145,7 @@ export const POST = withEvlog(async function POST(
 
     await replaceChatHistory(organizationId, chatId, messages);
     await setActiveChatStream(organizationId, chatId, latestMessage.id);
+    await clearLastResponseStopped(organizationId, chatId);
 
     if (messages.length === 1 && latestMessage.role === "user") {
       const textPart = latestMessage.parts?.find(
@@ -168,6 +170,7 @@ export const POST = withEvlog(async function POST(
         log,
         model: parseResult.data.model,
         enableThinking: parseResult.data.enableThinking,
+        abortSignal: request.signal,
       });
     }
 
@@ -300,6 +303,7 @@ async function createDirectStandaloneChatResponse({
   log,
   model,
   enableThinking,
+  abortSignal,
 }: {
   organizationId: string;
   chatId: string;
@@ -310,6 +314,7 @@ async function createDirectStandaloneChatResponse({
   log: ReturnType<typeof useLogger>;
   model?: string;
   enableThinking?: boolean;
+  abortSignal?: AbortSignal;
 }) {
   const autumnClient = autumn;
 
@@ -322,6 +327,7 @@ async function createDirectStandaloneChatResponse({
       log,
       requestedModel: model,
       enableThinking,
+      abortSignal,
     },
     {
       integrationFetchers: {
