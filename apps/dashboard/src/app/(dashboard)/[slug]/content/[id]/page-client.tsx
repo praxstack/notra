@@ -30,15 +30,13 @@ import { getContentTypeLabel } from "@/components/content/content-card";
 import type { EditorRefHandle } from "@/components/content/editor/plugins/editor-ref-plugin";
 import { ContentEditorSwitch } from "@/components/content/editors";
 import { RecommendationsSection } from "@/components/content/recommendations-section";
+import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { LINKEDIN_BRAND_PRIMARY } from "@/constants/linkedin";
 import { TWITTER_BRAND_COLOR } from "@/constants/twitter";
 import { dashboardOrpc } from "@/lib/orpc/query";
-import {
-  type ContextItem,
-  sourceMetadataSchema,
-  type TextSelection,
-} from "@/schemas/content";
+import { sourceMetadataSchema } from "@/schemas/content";
+import type { ContextItem, TextSelection } from "@/types/chat";
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import { getBrandFaviconUrl } from "@/utils/brand";
 import { formatSnakeCaseLabel } from "@/utils/format";
@@ -358,30 +356,27 @@ export default function PageClient({
 
   const handleAddContext = useCallback((item: ContextItem) => {
     setContext((prev) => {
-      if (
-        prev.some(
-          (c) =>
-            c.type === item.type &&
-            c.owner === item.owner &&
-            c.repo === item.repo
-        )
-      ) {
-        return prev;
-      }
+      const exists = prev.some((c) => {
+        if (c.type !== item.type) return false;
+        if (c.type === "github-repo" && item.type === "github-repo") {
+          return c.owner === item.owner && c.repo === item.repo;
+        }
+        return c.integrationId === item.integrationId;
+      });
+      if (exists) return prev;
       return [...prev, item];
     });
   }, []);
 
   const handleRemoveContext = useCallback((item: ContextItem) => {
     setContext((prev) =>
-      prev.filter(
-        (c) =>
-          !(
-            c.type === item.type &&
-            c.owner === item.owner &&
-            c.repo === item.repo
-          )
-      )
+      prev.filter((c) => {
+        if (c.type !== item.type) return true;
+        if (c.type === "github-repo" && item.type === "github-repo") {
+          return !(c.owner === item.owner && c.repo === item.repo);
+        }
+        return c.integrationId !== item.integrationId;
+      })
     );
   }, []);
 
@@ -409,6 +404,7 @@ export default function PageClient({
   const selectionRef = useRef(selection);
   const contextRef = useRef(context);
   const contentTypeRef = useRef(data?.content?.contentType);
+  const aiChatExperiment = useAiChatExperiment();
   currentMarkdownRef.current = currentMarkdown;
   selectionRef.current = selection;
   contextRef.current = context;
@@ -844,25 +840,27 @@ export default function PageClient({
         <div className="h-24" />
       </div>
 
-      <div
-        className={`fixed right-0 bottom-0 left-0 mx-auto w-full max-w-2xl px-4 pb-4 md:w-auto ${sidebarState === "collapsed" ? "md:left-14" : "md:left-64"}`}
-      >
-        <ChatInput
-          completionMessage={completionMessage}
-          context={context}
-          error={chatError}
-          isLoading={status === "streaming" || status === "submitted"}
-          onAddContext={handleAddContext}
-          onClearError={() => setChatError(null)}
-          onClearSelection={clearSelection}
-          onRemoveContext={handleRemoveContext}
-          onSend={handleAiEdit}
-          organizationId={organizationId}
-          organizationSlug={organizationSlug}
-          selection={selection}
-          statusText={currentToolStatus}
-        />
-      </div>
+      {aiChatExperiment.on && (
+        <div
+          className={`fixed right-0 bottom-0 left-0 mx-auto w-full max-w-2xl px-4 pb-4 md:w-auto ${sidebarState === "collapsed" ? "md:left-14" : "md:left-64"}`}
+        >
+          <ChatInput
+            completionMessage={completionMessage}
+            context={context}
+            error={chatError}
+            isLoading={status === "streaming" || status === "submitted"}
+            onAddContext={handleAddContext}
+            onClearError={() => setChatError(null)}
+            onClearSelection={clearSelection}
+            onRemoveContext={handleRemoveContext}
+            onSend={handleAiEdit}
+            organizationId={organizationId}
+            organizationSlug={organizationSlug}
+            selection={selection}
+            statusText={currentToolStatus}
+          />
+        </div>
+      )}
     </div>
   );
 }

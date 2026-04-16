@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForDev: false,
     useCache: true,
     optimizePackageImports: ["@hugeicons/core-free-icons", "lucide-react"],
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
   turbopack: {
     root: path.resolve(__dirname, "../.."),

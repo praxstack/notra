@@ -1,0 +1,2 @@
+export const CHAT_ABORT_FLAG_TTL_SECONDS = 300;
+export const CHAT_ABORT_POLL_INTERVAL_MS = 500;

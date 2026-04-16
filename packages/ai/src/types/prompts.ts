@@ -34,6 +34,18 @@ export interface ContentEditorChatPromptParams {
   hasLinearEnabled?: boolean;
 }
 
+export interface StandaloneChatPromptParams {
+  repoContext?: Array<{
+    integrationId: string;
+  }>;
+  linearContext?: Array<{
+    integrationId: string;
+  }>;
+  toolDescriptions?: string[];
+  hasGitHubEnabled: boolean;
+  hasLinearEnabled: boolean;
+}
+
 export interface GithubWebhookMemoryPromptParams {
   eventType: "release" | "push";
   repository: string;

@@ -14,23 +14,10 @@ import { authClient } from "@/lib/auth/client";
 import { useActiveGenerations } from "@/lib/hooks/use-active-generations";
 import { useTodayPosts } from "@/lib/hooks/use-posts";
 import type { PostStatus } from "@/schemas/content";
+import { getGreeting } from "@/utils/dashboard-greeting";
 
 interface PageClientProps {
   organizationSlug: string;
-}
-
-function getGreeting(now: Date): string {
-  const hour = now.getHours();
-
-  if (hour < 12) {
-    return "Good morning";
-  }
-
-  if (hour < 18) {
-    return "Good afternoon";
-  }
-
-  return "Good evening";
 }
 
 function getPreview(markdown: string): string {
