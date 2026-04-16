@@ -9,6 +9,7 @@ import {
   QueryClientProvider,
 } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { RealtimeProvider } from "@upstash/realtime/client";
 import { AutumnProvider } from "autumn-js/react";
 import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
@@ -51,7 +52,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <TooltipProvider>
           <AutumnProvider includeCredentials>
             <NuqsAdapter>
-              {children}
+              <RealtimeProvider
+                api={{ url: "/api/realtime", withCredentials: true }}
+                maxReconnectAttempts={5}
+              >
+                {children}
+              </RealtimeProvider>
               {databuddyClientID && (
                 <Databuddy
                   clientId={

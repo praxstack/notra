@@ -1,0 +1,189 @@
+import type {
+  AvailableGitHubIntegration,
+  OrganizationToolConfig,
+} from "@notra/ai/types/organization";
+import { toolDescription } from "@notra/ai/utils/description";
+import {
+  isAvailableGitHubIntegration,
+  isAvailableLinearIntegration,
+  serializeAvailableGitHubIntegration,
+  serializeAvailableLinearIntegration,
+  serializeBrandIdentity,
+  toAvailableGitHubIntegration,
+} from "@notra/ai/utils/organization";
+import { db } from "@notra/db/drizzle";
+import {
+  brandSettings,
+  githubIntegrations,
+  linearIntegrations,
+} from "@notra/db/schema";
+import { type Tool, tool } from "ai";
+import { and, desc, eq } from "drizzle-orm";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
+import * as z from "zod";
+import { getAICachedTools } from "./tool-cache";
+
+export function createListBrandIdentitiesTool(
+  config: OrganizationToolConfig
+): Tool {
+  const cached = getAICachedTools({
+    organizationId: config.organizationId,
+    namespace: "organization",
+  });
+
+  return cached(
+    tool({
+      description: toolDescription({
+        toolName: "listBrandIdentities",
+        intro:
+          "Lists the organization's brand identities, including which one is the default.",
+        whenToUse:
+          "Use when the user asks what brand identities exist, which one is default, or which profile should be used.",
+        usageNotes:
+          "Returns a summary for each brand identity with id, name, default status, website, company name, tone, and language.",
+      }),
+      inputSchema: z.object({}),
+      execute: async () => {
+        const identities = await db.query.brandSettings.findMany({
+          where: eq(brandSettings.organizationId, config.organizationId),
+          orderBy: [
+            desc(brandSettings.isDefault),
+            desc(brandSettings.createdAt),
+          ],
+        });
+
+        return {
+          brandIdentities: identities.map((identity) =>
+            serializeBrandIdentity(identity)
+          ),
+          count: identities.length,
+        };
+      },
+    }),
+    {
+      ttl: 5 * 60 * 1000,
+      keyGenerator: () => "list_brand_identities",
+    }
+  );
+}
+
+export function createGetBrandIdentityTool(
+  config: OrganizationToolConfig
+): Tool {
+  const cached = getAICachedTools({
+    organizationId: config.organizationId,
+    namespace: "organization",
+  });
+
+  return cached(
+    tool({
+      description: toolDescription({
+        toolName: "getBrandIdentity",
+        intro:
+          "Gets one brand identity by id, or the default brand identity if requested.",
+        whenToUse:
+          "Use after listing brand identities or when the user asks for details about one specific brand identity.",
+        usageNotes:
+          'Pass a brandIdentityId from listBrandIdentities, or pass "default" to fetch the default brand identity.',
+      }),
+      inputSchema: z.object({
+        brandIdentityId: z
+          .string()
+          .min(1)
+          .describe(
+            'The brand identity id, or "default" for the default brand identity.'
+          ),
+      }),
+      execute: async ({ brandIdentityId }) => {
+        const identity =
+          brandIdentityId === "default"
+            ? await db.query.brandSettings.findFirst({
+                where: eq(brandSettings.organizationId, config.organizationId),
+                orderBy: [
+                  desc(brandSettings.isDefault),
+                  desc(brandSettings.createdAt),
+                ],
+              })
+            : await db.query.brandSettings.findFirst({
+                where: and(
+                  eq(brandSettings.organizationId, config.organizationId),
+                  eq(brandSettings.id, brandIdentityId)
+                ),
+              });
+
+        return {
+          brandIdentity: identity ? serializeBrandIdentity(identity) : null,
+          found: Boolean(identity),
+        };
+      },
+    }),
+    {
+      ttl: 5 * 60 * 1000,
+      keyGenerator: (params) => {
+        const { brandIdentityId } = params as { brandIdentityId: string };
+        return `get_brand_identity:${brandIdentityId}`;
+      },
+    }
+  );
+}
+
+export function createGetAvailableIntegrationsTool(
+  config: OrganizationToolConfig
+): Tool {
+  const cached = getAICachedTools({
+    organizationId: config.organizationId,
+    namespace: "organization",
+  });
+
+  return cached(
+    tool({
+      description: toolDescription({
+        toolName: "getAvailableIntegrations",
+        intro:
+          "Lists the organization's available integrations, including only enabled integrations and enabled repositories.",
+        whenToUse:
+          "Use when the user asks what integrations are connected, whether GitHub or Linear is available, or which repositories are enabled.",
+        usageNotes:
+          "Returns only enabled GitHub and Linear integrations. GitHub results include only enabled repositories.",
+      }),
+      inputSchema: z.object({}),
+      execute: async () => {
+        const [github, linear] = await Promise.all([
+          db.query.githubIntegrations.findMany({
+            where: eq(githubIntegrations.organizationId, config.organizationId),
+            orderBy: [desc(githubIntegrations.createdAt)],
+          }),
+          db.query.linearIntegrations.findMany({
+            where: eq(linearIntegrations.organizationId, config.organizationId),
+            orderBy: [desc(linearIntegrations.createdAt)],
+          }),
+        ]);
+
+        const availableGithub: AvailableGitHubIntegration[] = github
+          .filter(isAvailableGitHubIntegration)
+          .map(toAvailableGitHubIntegration)
+          .filter(
+            (integration): integration is AvailableGitHubIntegration =>
+              integration !== null
+          );
+        const availableLinear = linear.filter(isAvailableLinearIntegration);
+
+        return {
+          integrations: {
+            github: availableGithub.map(serializeAvailableGitHubIntegration),
+            linear: availableLinear.map(serializeAvailableLinearIntegration),
+          },
+          counts: {
+            github: availableGithub.length,
+            linear: availableLinear.length,
+            total: availableGithub.length + availableLinear.length,
+          },
+        };
+      },
+    }),
+    {
+      ttl: 5 * 60 * 1000,
+      keyGenerator: () => "get_available_integrations",
+    }
+  );
+}

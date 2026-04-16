@@ -9,7 +9,11 @@ import type {
   WorkflowDelay,
 } from "@/types/triggers/qstash";
 import type { TriggerSourceConfig } from "@/types/triggers/triggers";
-import { getConfiguredAppUrl, requireConfiguredAppUrl } from "@/utils/url";
+import {
+  getConfiguredAppUrl,
+  getConfiguredWorkflowUrl,
+  requireConfiguredAppUrl,
+} from "@/utils/url";
 
 function getQstashToken() {
   const token = process.env.QSTASH_TOKEN;
@@ -24,7 +28,7 @@ export function getAppUrl() {
 }
 
 export function getBaseUrl() {
-  return getConfiguredAppUrl();
+  return getConfiguredWorkflowUrl() ?? getConfiguredAppUrl();
 }
 
 function getQStashClient() {

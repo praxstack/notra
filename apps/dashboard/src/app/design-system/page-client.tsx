@@ -216,6 +216,7 @@ import {
 } from "@notra/ui/components/ui/tooltip";
 import { useState } from "react";
 import { toast } from "sonner";
+import { BrailleLoader } from "@/components/braille-loader";
 import ChatInput from "@/components/chat-input";
 import { ThemeToggle } from "@/components/dashboard/theme-toggle";
 
@@ -1522,6 +1523,39 @@ export default function DesignSystemClientPage() {
               </OnboardingChecklistItems>
             </OnboardingChecklistContent>
           </OnboardingChecklist>
+        </div>
+      </section>
+
+      <section className="space-y-6">
+        <SectionHeader
+          description="Braille animation for AI thinking state — spells ⠠⠝⠕⠞⠗⠁ (notra)."
+          title="Braille Loader"
+        />
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          <div className="space-y-2 p-4">
+            <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              Wave
+            </p>
+            <BrailleLoader className="text-lg" variant="wave" />
+          </div>
+          <div className="space-y-2 p-4">
+            <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              Typewriter
+            </p>
+            <BrailleLoader className="text-lg" variant="typewriter" />
+          </div>
+          <div className="space-y-2 p-4">
+            <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              Shimmer
+            </p>
+            <BrailleLoader className="text-lg" variant="shimmer" />
+          </div>
+          <div className="space-y-2 p-4">
+            <p className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+              Pulse
+            </p>
+            <BrailleLoader className="text-lg" variant="pulse" />
+          </div>
         </div>
       </section>
 

@@ -4,6 +4,16 @@ export function normalizeUrl(url: string): string {
   return url.replace(TRAILING_SLASHES_REGEX, "");
 }
 
+export function getConfiguredWorkflowUrl(): string | undefined {
+  const url = process.env.WORKFLOW_BASE_URL;
+
+  if (!url) {
+    return undefined;
+  }
+
+  return normalizeUrl(url);
+}
+
 export function getConfiguredAppUrl(): string | undefined {
   const url =
     process.env.NEXT_PUBLIC_APP_URL ||

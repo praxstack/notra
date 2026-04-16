@@ -13,7 +13,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@ai-sdk/react": "^3.0.51",
+    "@ai-sdk/react": "^3.0.160",
     "@aws-sdk/client-s3": "^3.990.0",
     "@aws-sdk/s3-request-presigner": "^3.990.0",
     "@calcom/embed-react": "^1.5.3",
@@ -52,10 +52,11 @@
     "@unkey/api": "^2.3.0",
     "@upstash/qstash": "2.9.0-rc",
     "@upstash/ratelimit": "^2.0.8",
+    "@upstash/realtime": "^1.0.3",
     "@upstash/redis": "^1.35.8",
     "@upstash/workflow": "^1.1.0",
     "@vercel/analytics": "^1.6.1",
-    "ai": "^6.0.116",
+    "ai": "^6.0.158",
     "autumn-js": "^1.2.7",
     "axios": "^1.13.6",
     "better-auth": "^1.5.5",

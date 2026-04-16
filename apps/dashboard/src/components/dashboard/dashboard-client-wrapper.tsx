@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@notra/ui/components/ui/sidebar";
 import { SubscriptionGate } from "@/components/billing/subscription-gate";
 import { DashboardSidebar } from "@/components/dashboard/app-sidebar";
 import { SiteHeader } from "@/components/dashboard/header";
+import { DatabuddyFlagsProvider } from "@/components/providers/databuddy-flags-provider";
 import {
   type InitialActiveOrganization,
   OrganizationsProvider,
@@ -26,18 +27,20 @@ export function DashboardClientWrapper({
     <OrganizationsProvider
       initialActiveOrganization={initialActiveOrganization}
     >
-      <SidebarProvider
-        className="h-svh overflow-hidden overscroll-none"
-        defaultOpen={initialSidebarOpen}
-      >
-        <DashboardSidebar variant="inset" />
-        <SidebarInset className="h-svh min-w-0 overflow-hidden">
-          <SiteHeader />
-          <div className="@container/main flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain">
-            <SubscriptionGate>{children}</SubscriptionGate>
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+      <DatabuddyFlagsProvider>
+        <SidebarProvider
+          className="h-svh overflow-hidden overscroll-none"
+          defaultOpen={initialSidebarOpen}
+        >
+          <DashboardSidebar variant="inset" />
+          <SidebarInset className="h-svh min-w-0 overflow-hidden">
+            <SiteHeader />
+            <div className="@container/main flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain">
+              <SubscriptionGate>{children}</SubscriptionGate>
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+      </DatabuddyFlagsProvider>
       {modal}
     </OrganizationsProvider>
   );

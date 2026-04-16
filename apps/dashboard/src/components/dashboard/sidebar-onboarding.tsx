@@ -11,6 +11,7 @@ import {
 } from "@notra/ui/components/ui/onboarding-checklist";
 import { Progress } from "@notra/ui/components/ui/progress";
 import { SidebarGroup } from "@notra/ui/components/ui/sidebar";
+import { useCustomer } from "autumn-js/react";
 import { useCallback, useEffect, useState } from "react";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { useOnboardingStatus } from "@/lib/hooks/use-onboarding";
@@ -23,6 +24,9 @@ export function SidebarOnboarding() {
   const slug = activeOrganization?.slug ?? "";
 
   const { data } = useOnboardingStatus(orgId);
+  const { data: customer } = useCustomer({
+    expand: ["subscriptions.plan"],
+  });
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -37,7 +41,15 @@ export function SidebarOnboarding() {
     });
   }, []);
 
+  const hasActiveSubscription = customer?.subscriptions.some(
+    (subscription) => !subscription.addOn && subscription.status === "active"
+  );
+
   if (!data || data.onboardingCompleted || data.onboardingDismissed) {
+    return null;
+  }
+
+  if (customer && !hasActiveSubscription) {
     return null;
   }
 

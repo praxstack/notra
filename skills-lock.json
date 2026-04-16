@@ -10,6 +10,11 @@
       "source": "vercel/turborepo",
       "sourceType": "github",
       "computedHash": "d7be04aa62c17a202bf9f1b4584283b0b77a94dc84dfd7c9dbc5f2725a17a070"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "43ca6c197f8ec13055079da7053232d477068b03ca443f9ac1bc819b95cdd432"
     }
   }
 }

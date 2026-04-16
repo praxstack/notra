@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  AtIcon,
-  Cancel01Icon,
-  TextSelectionIcon,
-} from "@hugeicons/core-free-icons";
+import { AtIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert, AlertDescription } from "@notra/ui/components/ui/alert";
 import { Button } from "@notra/ui/components/ui/button";
@@ -41,28 +37,41 @@ import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { ChatInputContextRow } from "@/components/chat/chat-input-context-row";
 import { FEATURES } from "@/constants/features";
 import { ALL_INTEGRATIONS } from "@/lib/integrations/catalog";
 import { dashboardOrpc } from "@/lib/orpc/query";
-import type { ContextItem, TextSelection } from "@/schemas/content";
-import type { GitHubRepository } from "@/types/integrations";
+import type {
+  ChatInputProps,
+  EnabledRepo,
+} from "@/types/components/chat-input";
+import {
+  CHAT_INPUT_LIMIT_MESSAGE,
+  toGithubContextItem,
+} from "@/utils/chat-input";
 
-interface ChatInputProps {
-  onSend?: (value: string) => void;
-  isLoading?: boolean;
-  statusText?: string;
-  completionMessage?: string | null;
-  selection?: TextSelection | null;
-  onClearSelection?: () => void;
-  organizationSlug?: string;
-  organizationId?: string;
-  context?: ContextItem[];
-  onAddContext?: (item: ContextItem) => void;
-  onRemoveContext?: (item: ContextItem) => void;
-  value?: string;
-  onValueChange?: (value: string) => void;
-  error?: string | null;
-  onClearError?: () => void;
+function GitHubMenuItem({
+  repo,
+  inContext,
+  onToggle,
+}: {
+  repo: EnabledRepo;
+  inContext: boolean;
+  onToggle: (repo: EnabledRepo, inContext: boolean) => void;
+}) {
+  return (
+    <DropdownMenuItem onClick={() => onToggle(repo, inContext)}>
+      <Github className="size-4" />
+      <span className="truncate">
+        {repo.owner}/{repo.repo}
+      </span>
+      {inContext && (
+        <span className="ml-auto text-emerald-600 text-xs dark:text-emerald-400">
+          Added
+        </span>
+      )}
+    </DropdownMenuItem>
+  );
 }
 
 const ChatInput = ({
@@ -106,9 +115,10 @@ const ChatInput = ({
     remainingChatCredits > 0 &&
     remainingChatCredits <= 10;
   const isUsageBlocked = checkResult ? checkResult.allowed === false : false;
-  const limitMessage = "No chat credits left.";
   const usageLimitError =
-    externalError ?? internalError ?? (isUsageBlocked ? limitMessage : null);
+    externalError ??
+    internalError ??
+    (isUsageBlocked ? CHAT_INPUT_LIMIT_MESSAGE : null);
   const clearError = useCallback(() => {
     setInternalError(null);
     onClearError?.();
@@ -116,9 +126,17 @@ const ChatInput = ({
 
   const isControlled = controlledValue !== undefined;
   const value = isControlled ? controlledValue : internalValue;
-  const setValue = isControlled
-    ? (onValueChange ?? (() => {}))
-    : setInternalValue;
+  const setValue = useCallback(
+    (nextValue: string) => {
+      if (isControlled) {
+        onValueChange?.(nextValue);
+        return;
+      }
+
+      setInternalValue(nextValue);
+    },
+    [isControlled, onValueChange]
+  );
 
   const { data: integrationsData } = useQuery(
     dashboardOrpc.integrations.list.queryOptions({
@@ -129,7 +147,7 @@ const ChatInput = ({
 
   // Get all enabled repos from all integrations (memoized, single iteration)
   const enabledRepos = useMemo(() => {
-    const result: Array<GitHubRepository & { integrationId: string }> = [];
+    const result: EnabledRepo[] = [];
     for (const integration of integrationsData?.integrations ?? []) {
       for (const repo of integration.repositories) {
         if (repo.enabled) {
@@ -141,7 +159,7 @@ const ChatInput = ({
   }, [integrationsData?.integrations]);
 
   const isRepoInContext = useCallback(
-    (repo: GitHubRepository & { integrationId: string }) =>
+    (repo: EnabledRepo) =>
       context.some(
         (c) =>
           c.type === "github-repo" &&
@@ -165,6 +183,20 @@ const ChatInput = ({
       element.scrollHeight > maxHeightPx ? "auto" : "hidden";
   }, []);
 
+  const toggleRepoContext = useCallback(
+    (repo: EnabledRepo, inContext: boolean) => {
+      const item = toGithubContextItem(repo);
+
+      if (inContext) {
+        onRemoveContext?.(item);
+        return;
+      }
+
+      onAddContext?.(item);
+    },
+    [onAddContext, onRemoveContext]
+  );
+
   // Resize textarea when controlled value changes
   useEffect(() => {
     if (isControlled) {
@@ -181,7 +213,7 @@ const ChatInput = ({
     clearError();
 
     if (isUsageBlocked) {
-      setInternalError(limitMessage);
+      setInternalError(CHAT_INPUT_LIMIT_MESSAGE);
       return;
     }
 
@@ -194,7 +226,7 @@ const ChatInput = ({
 
       // Only block if we explicitly got allowed: false (not if check failed)
       if (checkResult?.allowed === false) {
-        setInternalError(limitMessage);
+        setInternalError(CHAT_INPUT_LIMIT_MESSAGE);
         return;
       }
     }
@@ -273,72 +305,12 @@ const ChatInput = ({
                 </AlertDescription>
               </Alert>
             )}
-            {(context.length > 0 || selection) && (
-              <div className="flex items-center gap-2 overflow-x-auto px-3 pt-2 pb-1">
-                {context.map((item, index) => (
-                  <div
-                    className="flex shrink-0 items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-foreground text-xs"
-                    key={`${item.type}-${item.owner}-${item.repo}-${index}`}
-                  >
-                    <Github className="size-3.5" />
-                    <span className="font-medium">
-                      {item.owner}/{item.repo}
-                    </span>
-                    <button
-                      aria-label={`Remove ${item.owner}/${item.repo} from context`}
-                      className="ml-0.5 cursor-pointer rounded p-0.5 transition-colors hover:bg-accent"
-                      onClick={() => onRemoveContext?.(item)}
-                      type="button"
-                    >
-                      <HugeiconsIcon className="size-3" icon={Cancel01Icon} />
-                    </button>
-                  </div>
-                ))}
-                {selection && (
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <div className="flex shrink-0 items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-foreground text-xs" />
-                      }
-                    >
-                      <HugeiconsIcon
-                        className="size-3.5 text-muted-foreground"
-                        icon={TextSelectionIcon}
-                      />
-                      <span className="font-medium">
-                        L{selection.startLine}:{selection.startChar} → L
-                        {selection.endLine}:{selection.endChar}
-                      </span>
-                      <button
-                        aria-label="Remove selection"
-                        className="ml-0.5 cursor-pointer rounded p-0.5 transition-colors hover:bg-accent"
-                        onClick={onClearSelection}
-                        type="button"
-                      >
-                        <HugeiconsIcon className="size-3" icon={Cancel01Icon} />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <div className="space-y-1">
-                        <p className="font-medium">Selected Text</p>
-                        <p className="text-xs opacity-70">
-                          From line {selection.startLine}, character{" "}
-                          {selection.startChar} to line {selection.endLine},
-                          character {selection.endChar}
-                        </p>
-                        <p className="line-clamp-3 whitespace-pre-wrap break-all text-xs opacity-80">
-                          "
-                          {selection.text.length > 150
-                            ? `${selection.text.slice(0, 150)}...`
-                            : selection.text}
-                          "
-                        </p>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </div>
-            )}
+            <ChatInputContextRow
+              context={context}
+              onClearSelection={onClearSelection}
+              onRemoveContext={onRemoveContext}
+              selection={selection}
+            />
             <div className="flex flex-col bg-background">
               <div className="flex w-full items-center">
                 <div className="relative flex flex-1 cursor-text transition-colors [--lh:1lh]">
@@ -406,7 +378,6 @@ const ChatInput = ({
                       const isGitHub = integration.id === "github";
                       const isAvailable = integration.available;
 
-                      // GitHub with repos - show submenu
                       if (isGitHub && isAvailable && enabledRepos.length > 0) {
                         return (
                           <DropdownMenuSub key={integration.id}>
@@ -430,36 +401,12 @@ const ChatInput = ({
                               {enabledRepos.map((repo) => {
                                 const inContext = isRepoInContext(repo);
                                 return (
-                                  <DropdownMenuItem
+                                  <GitHubMenuItem
+                                    inContext={inContext}
                                     key={repo.id}
-                                    onClick={() => {
-                                      if (inContext) {
-                                        onRemoveContext?.({
-                                          type: "github-repo",
-                                          owner: repo.owner,
-                                          repo: repo.repo,
-                                          integrationId: repo.integrationId,
-                                        });
-                                      } else {
-                                        onAddContext?.({
-                                          type: "github-repo",
-                                          owner: repo.owner,
-                                          repo: repo.repo,
-                                          integrationId: repo.integrationId,
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    <Github className="size-4" />
-                                    <span className="truncate">
-                                      {repo.owner}/{repo.repo}
-                                    </span>
-                                    {inContext && (
-                                      <span className="ml-auto text-emerald-600 text-xs dark:text-emerald-400">
-                                        Added
-                                      </span>
-                                    )}
-                                  </DropdownMenuItem>
+                                    onToggle={toggleRepoContext}
+                                    repo={repo}
+                                  />
                                 );
                               })}
                               {organizationSlug && (
@@ -481,7 +428,6 @@ const ChatInput = ({
                         );
                       }
 
-                      // GitHub available but no repos
                       if (isGitHub && isAvailable && organizationSlug) {
                         return (
                           <DropdownMenuItem
@@ -505,7 +451,6 @@ const ChatInput = ({
                         );
                       }
 
-                      // Not available integrations
                       return (
                         <DropdownMenuItem
                           className="opacity-60"
