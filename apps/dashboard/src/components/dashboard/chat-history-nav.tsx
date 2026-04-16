@@ -13,6 +13,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 
 interface ChatSessionSummary {
@@ -25,6 +26,7 @@ interface ChatSessionSummary {
 export function ChatHistoryNav() {
   const { activeOrganization } = useOrganizationsContext();
   const pathname = usePathname();
+  const aiChatExperiment = useAiChatExperiment();
 
   const slug = activeOrganization?.slug;
   const organizationId = activeOrganization?.id;
@@ -43,11 +45,11 @@ export function ChatHistoryNav() {
       };
       return data.sessions ?? [];
     },
-    enabled: Boolean(organizationId),
+    enabled: Boolean(organizationId) && aiChatExperiment.on,
     refetchOnWindowFocus: true,
   });
 
-  if (!slug) {
+  if (!slug || !aiChatExperiment.on) {
     return null;
   }
 

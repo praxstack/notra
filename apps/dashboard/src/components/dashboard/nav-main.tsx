@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { memo } from "react";
+import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 
 type NavMainCategory = "none" | "workspace" | "automation" | "manage";
@@ -168,16 +169,20 @@ const categories = Object.keys(categoryLabels) as Exclude<
 export function NavMain() {
   const { activeOrganization } = useOrganizationsContext();
   const pathname = usePathname();
+  const aiChatExperiment = useAiChatExperiment();
 
   if (!activeOrganization?.slug) {
     return null;
   }
 
   const slug = activeOrganization.slug;
+  const rootItems = itemsByCategory.none.filter(
+    (item) => item.link !== "/chat" || aiChatExperiment.on
+  );
 
   return (
     <>
-      <NavGroup items={itemsByCategory.none} pathname={pathname} slug={slug} />
+      <NavGroup items={rootItems} pathname={pathname} slug={slug} />
       {categories.map((category) => (
         <NavGroup
           items={itemsByCategory[category]}
