@@ -7,7 +7,7 @@ const CHAT_PREFERENCES_STORAGE_VERSION = "v1";
 export const CHAT_PREFERENCES_STORAGE_KEY = `notra_chat_preferences:${CHAT_PREFERENCES_STORAGE_VERSION}`;
 
 const modelSchema = z.enum([
-  "anthropic/claude-opus-4-6",
+  "anthropic/claude-opus-4-7",
   "anthropic/claude-sonnet-4-6",
   "anthropic/claude-haiku-4-5",
   "openai/gpt-5.4",

@@ -54,8 +54,8 @@ import {
 
 const AVAILABLE_MODELS = [
   {
-    id: "anthropic/claude-opus-4-6",
-    label: "Opus 4.6",
+    id: "anthropic/claude-opus-4-7",
+    label: "Opus 4.7",
     description: "Deepest reasoning",
     pricing: "$5 input / $25 output per 1M",
     provider: "anthropic",
