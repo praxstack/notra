@@ -1,6 +1,6 @@
 "use client";
 
-import { AiBrain01Icon, AtIcon } from "@hugeicons/core-free-icons";
+import { AiBrain01Icon, AtIcon, StopIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import {
@@ -106,6 +106,44 @@ function ModelIcon({
 const THINKING_LEVELS = ["off", "low", "medium", "high"] as const;
 export type ThinkingLevel = (typeof THINKING_LEVELS)[number];
 
+function SubmitButtonContent({
+  isLoading,
+  isStopping,
+}: {
+  isLoading: boolean;
+  isStopping: boolean;
+}) {
+  if (isLoading && isStopping) {
+    return <Loader2Icon className="size-4 animate-spin" />;
+  }
+  if (isLoading) {
+    return (
+      <>
+        <HugeiconsIcon className="size-3.5" icon={StopIcon} />
+        <div className="px-0.5 text-sm leading-0">Stop</div>
+      </>
+    );
+  }
+  return (
+    <>
+      <div className="px-0.5 text-sm leading-0">Send</div>
+      <div className="hidden h-4 items-center rounded border border-border bg-background px-1 text-[10px] text-muted-foreground shadow-xs sm:inline-flex">
+        ↵
+      </div>
+    </>
+  );
+}
+
+function getSubmitTooltipText(isLoading: boolean, isStopping: boolean): string {
+  if (isLoading && isStopping) {
+    return "Stopping...";
+  }
+  if (isLoading) {
+    return "Stop generating";
+  }
+  return "Enter to send. Shift+Enter for a new line.";
+}
+
 function contextItemsEqual(a: ContextItem, b: ContextItem): boolean {
   if (a.type !== b.type) {
     return false;
@@ -121,7 +159,9 @@ function contextItemsEqual(a: ContextItem, b: ContextItem): boolean {
 
 interface ChatInputAdvancedProps {
   onSend?: (value: string) => void;
+  onStop?: () => void;
   isLoading?: boolean;
+  isStopping?: boolean;
   organizationSlug?: string;
   organizationId?: string;
   context?: ContextItem[];
@@ -144,7 +184,9 @@ const THINKING_LABELS: Record<ThinkingLevel, string> = {
 
 export function ChatInputAdvanced({
   onSend,
+  onStop,
   isLoading = false,
+  isStopping = false,
   organizationSlug,
   organizationId,
   context = [],
@@ -1248,8 +1290,10 @@ export function ChatInputAdvanced({
                   render={
                     <Button
                       className="group/button ml-auto h-7 shrink-0 rounded-lg bg-muted px-1.5 transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={isLoading || isUsageBlocked}
-                      onClick={handleSend}
+                      disabled={
+                        isLoading ? !onStop || isStopping : isUsageBlocked
+                      }
+                      onClick={isLoading ? onStop : handleSend}
                       size="sm"
                       tabIndex={0}
                       type="button"
@@ -1258,22 +1302,14 @@ export function ChatInputAdvanced({
                   }
                 >
                   <div className="flex items-center gap-1 text-foreground text-sm">
-                    {isLoading ? (
-                      <Loader2Icon className="size-4 animate-spin" />
-                    ) : (
-                      <>
-                        <div className="px-0.5 text-sm leading-0">Send</div>
-                        <div className="hidden h-4 items-center rounded border border-border bg-background px-1 text-[10px] text-muted-foreground shadow-xs sm:inline-flex">
-                          ↵
-                        </div>
-                      </>
-                    )}
+                    <SubmitButtonContent
+                      isLoading={isLoading}
+                      isStopping={isStopping}
+                    />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {isLoading
-                    ? "AI is thinking..."
-                    : "Enter to send. Shift+Enter for a new line."}
+                  {getSubmitTooltipText(isLoading, isStopping)}
                 </TooltipContent>
               </Tooltip>
             </CardFooter>

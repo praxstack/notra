@@ -2,6 +2,7 @@ import { gateway } from "@notra/ai/gateway";
 import type { UIMessage } from "ai";
 import { generateText } from "ai";
 import { nanoid } from "nanoid";
+import { CHAT_ABORT_FLAG_TTL_SECONDS } from "@/constants/chat";
 import { redis } from "./redis";
 
 function historyKey(organizationId: string, chatId: string) {
@@ -10,6 +11,18 @@ function historyKey(organizationId: string, chatId: string) {
 
 function activeStreamKey(organizationId: string, chatId: string) {
   return `chat:stream:${organizationId}:${chatId}`;
+}
+
+function abortFlagKey(
+  organizationId: string,
+  chatId: string,
+  streamId: string
+) {
+  return `chat:abort:${organizationId}:${chatId}:${streamId}`;
+}
+
+function lastStoppedKey(organizationId: string, chatId: string) {
+  return `chat:lastStopped:${organizationId}:${chatId}`;
 }
 
 function sessionsKey(organizationId: string) {
@@ -174,6 +187,63 @@ export async function clearActiveChatStream(
 ) {
   if (!redis) return;
   await redis.del(activeStreamKey(organizationId, chatId));
+}
+
+export async function setChatAbortFlag(
+  organizationId: string,
+  chatId: string,
+  streamId: string
+) {
+  if (!redis) return;
+  await redis.set(abortFlagKey(organizationId, chatId, streamId), "1", {
+    ex: CHAT_ABORT_FLAG_TTL_SECONDS,
+  });
+}
+
+export async function isChatAborted(
+  organizationId: string,
+  chatId: string,
+  streamId: string
+): Promise<boolean> {
+  if (!redis) return false;
+  const value = await redis.get<string>(
+    abortFlagKey(organizationId, chatId, streamId)
+  );
+  return value === "1";
+}
+
+export async function clearChatAbortFlag(
+  organizationId: string,
+  chatId: string,
+  streamId: string
+) {
+  if (!redis) return;
+  await redis.del(abortFlagKey(organizationId, chatId, streamId));
+}
+
+export async function setLastResponseStopped(
+  organizationId: string,
+  chatId: string
+) {
+  if (!redis) return;
+  await redis.set(lastStoppedKey(organizationId, chatId), "1");
+}
+
+export async function getLastResponseStopped(
+  organizationId: string,
+  chatId: string
+): Promise<boolean> {
+  if (!redis) return false;
+  const value = await redis.get<string>(lastStoppedKey(organizationId, chatId));
+  return value === "1";
+}
+
+export async function clearLastResponseStopped(
+  organizationId: string,
+  chatId: string
+) {
+  if (!redis) return;
+  await redis.del(lastStoppedKey(organizationId, chatId));
 }
 
 async function saveSessionMetadata(

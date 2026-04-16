@@ -1,12 +1,13 @@
 import { Cancel01Icon, TextSelectionIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Github } from "@notra/ui/components/ui/svgs/github";
+import { Linear } from "@notra/ui/components/ui/svgs/linear";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@notra/ui/components/ui/tooltip";
-import type { ContextItem, TextSelection } from "@/schemas/content";
+import type { ContextItem, TextSelection } from "@/types/chat";
 import { getSelectionPreview } from "@/utils/chat-input";
 
 function ContextBadge({
@@ -16,11 +17,18 @@ function ContextBadge({
   item: ContextItem;
   onRemove?: (item: ContextItem) => void;
 }) {
-  const label = `${item.owner}/${item.repo}`;
+  const label =
+    item.type === "github-repo"
+      ? `${item.owner}/${item.repo}`
+      : item.teamName || "Linear";
 
   return (
     <div className="flex shrink-0 items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-foreground text-xs">
-      <Github className="size-3.5" />
+      {item.type === "github-repo" ? (
+        <Github className="size-3.5" />
+      ) : (
+        <Linear className="size-3.5" />
+      )}
       <span className="font-medium">{label}</span>
       <button
         aria-label={`Remove ${label} from context`}
