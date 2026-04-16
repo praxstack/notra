@@ -8,7 +8,12 @@ import type {
   PostToolsConfig,
   PostToolsResult,
 } from "@notra/ai/types/post-tools";
+import type { PostToolConfig } from "@notra/ai/types/posts";
 import { toolDescription } from "@notra/ai/utils/description";
+import {
+  serializeAvailablePost,
+  serializePostDetail,
+} from "@notra/ai/utils/posts";
 import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
 import { db } from "@notra/db/drizzle";
 import { posts } from "@notra/db/schema";
@@ -412,6 +417,81 @@ export function createViewPostTool(config: PostToolsConfig): Tool {
         contentType: post.contentType,
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString(),
+      };
+    },
+  });
+}
+
+export function createGetAvailablePostsTool(config: PostToolConfig): Tool {
+  return tool({
+    description: toolDescription({
+      toolName: "getAvailablePosts",
+      intro: "Lists recent posts for the organization.",
+      whenToUse:
+        "Use when the user asks what posts already exist, which drafts are available, or what has been published recently.",
+      usageNotes:
+        "You can optionally filter by content type or status, and control how many recent posts are returned.",
+    }),
+    inputSchema: z.object({
+      limit: z.number().int().min(1).max(50).optional().default(10),
+      contentType: z.string().optional(),
+      status: z.enum(["draft", "published"]).optional(),
+    }),
+    execute: async ({ limit, contentType, status }) => {
+      const postList = await db.query.posts.findMany({
+        where: (table, operators) => {
+          const filters = [eq(table.organizationId, config.organizationId)];
+
+          if (contentType) {
+            filters.push(eq(table.contentType, contentType));
+          }
+
+          if (status) {
+            filters.push(eq(table.status, status));
+          }
+
+          return operators.and(...filters);
+        },
+        orderBy: (table, operators) => [operators.desc(table.createdAt)],
+        limit,
+      });
+
+      return {
+        posts: postList.map(serializeAvailablePost),
+        count: postList.length,
+      };
+    },
+  });
+}
+
+export function createGetPostByIdTool(config: PostToolConfig): Tool {
+  return tool({
+    description: toolDescription({
+      toolName: "getPostById",
+      intro: "Gets one existing post by ID.",
+      whenToUse:
+        "Use when the user asks for details or content of a specific existing post.",
+      usageNotes:
+        "Pass a post id from getAvailablePosts or from prior context. Returns markdown and post metadata.",
+    }),
+    inputSchema: z.object({
+      postId: z.string().describe("The ID of the post to fetch"),
+    }),
+    execute: async ({ postId }) => {
+      const post = await db.query.posts.findFirst({
+        where: and(
+          eq(posts.id, postId),
+          eq(posts.organizationId, config.organizationId)
+        ),
+      });
+
+      if (!post) {
+        return { post: null, found: false };
+      }
+
+      return {
+        post: serializePostDetail(post),
+        found: true,
       };
     },
   });

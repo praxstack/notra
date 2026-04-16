@@ -140,7 +140,17 @@ export type GetLinearIntegrationById = (
   integrationId: string
 ) => Promise<LinearIntegrationData | null>;
 
+export type ListGitHubIntegrationsByOrganization = (
+  organizationId: string
+) => Promise<GitHubIntegrationData[]>;
+
+export type ListLinearIntegrationsByOrganization = (
+  organizationId: string
+) => Promise<LinearIntegrationData[]>;
+
 export interface IntegrationFetchers {
   getGitHubIntegrationById?: GetGitHubIntegrationById;
   getLinearIntegrationById?: GetLinearIntegrationById;
+  listGitHubIntegrationsByOrganization?: ListGitHubIntegrationsByOrganization;
+  listLinearIntegrationsByOrganization?: ListLinearIntegrationsByOrganization;
 }

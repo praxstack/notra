@@ -1,4 +1,6 @@
 import { toolDescription } from "@notra/ai/utils/description";
+import type { BrandReferencesConfig } from "@notra/ai/types/brand-references";
+import { serializeBrandReference } from "@notra/ai/utils/brand-references";
 import { db } from "@notra/db/drizzle";
 import {
   getBrandReferenceIdFromSearchResult,
@@ -9,14 +11,6 @@ import { sql } from "drizzle-orm";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
 import * as z from "zod";
 import { getAICachedTools } from "./tool-cache";
-
-type AgentType = "twitter" | "linkedin" | "blog" | "changelog";
-
-interface BrandReferencesConfig {
-  organizationId: string;
-  voiceId?: string;
-  agentType?: AgentType;
-}
 
 type BrandReferenceRecord = Awaited<
   ReturnType<typeof db.query.brandReferences.findMany>
@@ -194,6 +188,74 @@ export function createSearchBrandReferencesTool(
       keyGenerator: (params) => {
         const { query, limit } = params as { query: string; limit: number };
         return `search_brand_references:org=${config.organizationId}:voice=${config.voiceId ?? "default"}:agent=${config.agentType ?? "all"}:limit=${limit}:query=${query}`;
+      },
+    }
+  );
+}
+
+export function createGetAvailableBrandReferencesTool(config: {
+  organizationId: string;
+}): Tool {
+  const cached = getAICachedTools({
+    organizationId: config.organizationId,
+    namespace: "brand",
+  });
+
+  return cached(
+    tool({
+      description: toolDescription({
+        toolName: "getAvailableBrandReferences",
+        intro:
+          "Lists brand references for a brand identity, defaulting to the organization's default brand identity.",
+        whenToUse:
+          "Use when the user asks for brand writing examples, tone references, or the source material behind a brand identity.",
+        usageNotes:
+          "Pass an optional brandIdentityId, or omit it to use the default brand identity. You can also limit the number of returned references.",
+      }),
+      inputSchema: z.object({
+        brandIdentityId: z
+          .string()
+          .optional()
+          .describe(
+            "Optional brand identity id. Defaults to the default brand identity."
+          ),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(50)
+          .optional()
+          .default(10)
+          .describe("Maximum number of references to return."),
+      }),
+      execute: async ({ brandIdentityId, limit }) => {
+        const { settingsId, references } = await getFilteredReferences({
+          organizationId: config.organizationId,
+          voiceId: brandIdentityId,
+        });
+
+        if (!settingsId) {
+          return { brandIdentityId: null, references: [], count: 0 };
+        }
+
+        const limitedReferences = references.slice(0, limit);
+
+        return {
+          brandIdentityId: settingsId,
+          references: limitedReferences.map(serializeBrandReference),
+          count: limitedReferences.length,
+          total: references.length,
+        };
+      },
+    }),
+    {
+      ttl: 5 * 60 * 1000,
+      keyGenerator: (params) => {
+        const { brandIdentityId, limit } = params as {
+          brandIdentityId?: string;
+          limit: number;
+        };
+        return `get_available_brand_references:org=${config.organizationId}:voice=${brandIdentityId ?? "default"}:limit=${limit}`;
       },
     }
   );

@@ -9,8 +9,16 @@ import {
   createGetLinearIssuesTool,
   createGetLinearProjectsTool,
 } from "@notra/ai/tools/linear";
+import { createGetAvailableBrandReferencesTool } from "@notra/ai/tools/brand-references";
+import {
+  createGetBrandIdentityTool,
+  createGetAvailableIntegrationsTool,
+  createListBrandIdentitiesTool,
+} from "@notra/ai/tools/organization";
 import {
   createCreatePostTool,
+  createGetAvailablePostsTool,
+  createGetPostByIdTool,
   createUpdatePostTool,
   createViewPostTool,
 } from "@notra/ai/tools/post";
@@ -67,9 +75,22 @@ export function buildStandaloneToolSet(
     organizationId,
     contentType: "blog_post",
   });
+  tools.getAvailablePosts = createGetAvailablePostsTool({ organizationId });
+  tools.getPostById = createGetPostByIdTool({ organizationId });
+  tools.listBrandIdentities = createListBrandIdentitiesTool({ organizationId });
+  tools.getBrandIdentity = createGetBrandIdentityTool({ organizationId });
+  tools.getAvailableIntegrations = createGetAvailableIntegrationsTool({
+    organizationId,
+  });
+  tools.getAvailableBrandReferences = createGetAvailableBrandReferencesTool({
+    organizationId,
+  });
 
   descriptions.push(
     "**Content Creation**: Create posts of any type (changelog, blog_post, twitter_post, linkedin_post, investor_update) using create_<type>, update_post, and view_post"
+  );
+  descriptions.push(
+    "**Organization Data**: Inspect brand identities, brand references, available integrations, and existing posts using listBrandIdentities, getBrandIdentity, getAvailableBrandReferences, getAvailableIntegrations, getAvailablePosts, and getPostById"
   );
 
   tools.listAvailableSkills = listAvailableSkills();
