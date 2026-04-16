@@ -126,8 +126,8 @@ export async function orchestrateStandaloneChat(
         completedSteps: steps.length,
       });
     },
-    onFinish({ totalUsage }) {
-      deps?.onUsage?.(totalUsage, routingDecision.model);
+    async onFinish({ totalUsage }) {
+      await deps?.onUsage?.(totalUsage, routingDecision.model);
     },
     onError({ error }) {
       console.error("[Standalone Chat Stream Error]", {

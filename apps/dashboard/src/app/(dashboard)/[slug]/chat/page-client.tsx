@@ -20,7 +20,6 @@ import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
 } from "ai";
-import { useCustomer } from "autumn-js/react";
 import { Loader2Icon } from "lucide-react";
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
@@ -90,7 +89,6 @@ function StandaloneChatPageClient({
       : orgFromList;
   const organizationId = organization?.id ?? "";
   const { data: session } = authClient.useSession();
-  const { refetch: refetchCustomer } = useCustomer();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
@@ -218,11 +216,11 @@ function StandaloneChatPageClient({
 
   const handleFinish = useCallback(() => {
     setPendingMessageId(null);
-    refetchCustomer();
+    queryClient.invalidateQueries({ queryKey: ["autumn", "customer"] });
     queryClient.invalidateQueries({
       queryKey: ["chat-sessions", organizationId],
     });
-  }, [organizationId, queryClient, refetchCustomer]);
+  }, [organizationId, queryClient]);
 
   const {
     messages,

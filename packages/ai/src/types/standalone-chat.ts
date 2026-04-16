@@ -23,7 +23,10 @@ export interface StandaloneChatDeps {
   integrationFetchers?: IntegrationFetchers;
   resolveContext?: ResolveIntegrationContext;
   resolveLinearContext?: ResolveLinearIntegrationContext;
-  onUsage?: (usage: LanguageModelUsage, modelId: string) => void;
+  onUsage?: (
+    usage: LanguageModelUsage,
+    modelId: string
+  ) => void | Promise<void>;
   log?: AILogTarget;
 }
 

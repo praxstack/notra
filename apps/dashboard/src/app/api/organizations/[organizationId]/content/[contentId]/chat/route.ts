@@ -148,7 +148,7 @@ export const POST = withEvlog(async function POST(
         },
         resolveContext: getGitHubToolRepositoryContextByIntegrationId,
         resolveLinearContext: getLinearToolContextByIntegrationId,
-        onUsage(usage, modelId) {
+        async onUsage(usage, modelId) {
           if (!autumnClient) {
             return;
           }
@@ -165,8 +165,8 @@ export const POST = withEvlog(async function POST(
             useMarkup
           );
 
-          autumnClient
-            .track({
+          try {
+            await autumnClient.track({
               customerId: organizationId,
               featureId: FEATURES.AI_CREDITS,
               value: costCents,
@@ -183,14 +183,14 @@ export const POST = withEvlog(async function POST(
                 total_tokens: usage.totalTokens ?? 0,
                 cost_cents: costCents,
               },
-            })
-            .catch((trackError) => {
-              console.error("[Autumn] Track error after chat completion:", {
-                requestId,
-                customerId: organizationId,
-                error: trackError,
-              });
             });
+          } catch (trackError) {
+            console.error("[Autumn] Track error after chat completion:", {
+              requestId,
+              customerId: organizationId,
+              error: trackError,
+            });
+          }
         },
         log,
       }

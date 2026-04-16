@@ -149,7 +149,7 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
         },
         resolveContext: getGitHubToolRepositoryContextByIntegrationId,
         resolveLinearContext: getLinearToolContextByIntegrationId,
-        onUsage(usage, modelId) {
+        async onUsage(usage, modelId) {
           if (!autumn) {
             return;
           }
@@ -166,8 +166,8 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
             useMarkup
           );
 
-          autumn
-            .track({
+          try {
+            await autumn.track({
               customerId: organizationId,
               featureId: FEATURES.AI_CREDITS,
               value: costCents,
@@ -183,14 +183,14 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
                 total_tokens: usage.totalTokens ?? 0,
                 cost_cents: costCents,
               },
-            })
-            .catch((trackError) => {
-              console.error("[Autumn] Track error after standalone chat:", {
-                requestId,
-                customerId: organizationId,
-                error: trackError,
-              });
             });
+          } catch (trackError) {
+            console.error("[Autumn] Track error after standalone chat:", {
+              requestId,
+              customerId: organizationId,
+              error: trackError,
+            });
+          }
         },
       }
     );

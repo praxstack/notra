@@ -20,7 +20,6 @@ import {
 } from "@notra/ui/components/ui/tooltip";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
-import { useCustomer } from "autumn-js/react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import remend from "remend";
@@ -105,7 +104,6 @@ export default function PageClient({
   const { state: sidebarState } = useSidebar();
   const queryClient = useQueryClient();
   const { data, isPending, error } = useContent(organizationId, contentId);
-  const { refetch: refetchCustomer } = useCustomer();
   const { data: brandResponse } = useQuery(
     dashboardOrpc.brand.voices.list.queryOptions({
       input: { organizationId },
@@ -424,7 +422,7 @@ export default function PageClient({
     }),
     onFinish: () => {
       clearSelection();
-      refetchCustomer();
+      queryClient.invalidateQueries({ queryKey: ["autumn", "customer"] });
     },
     onError: (err) => {
       console.error("Error editing content:", err);
