@@ -3,3 +3,7 @@ export interface PostSummary {
   title: string;
   recommendations: string | null;
 }
+
+export interface PostToolConfig {
+  organizationId: string;
+}

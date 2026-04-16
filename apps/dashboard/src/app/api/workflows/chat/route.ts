@@ -18,10 +18,12 @@ import {
 import { realtime } from "@/lib/realtime";
 import {
   getGitHubIntegrationById,
+  getGitHubIntegrationsByOrganization,
   getGitHubToolRepositoryContextByIntegrationId,
 } from "@/lib/services/github-integration";
 import {
   getLinearIntegrationById,
+  getLinearIntegrationsByOrganization,
   getLinearToolContextByIntegrationId,
 } from "@/lib/services/linear-integration";
 import { startChatAbortPolling } from "@/utils/chat-abort-polling.server";
@@ -112,6 +114,10 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
         integrationFetchers: {
           getGitHubIntegrationById,
           getLinearIntegrationById,
+          listGitHubIntegrationsByOrganization:
+            getGitHubIntegrationsByOrganization,
+          listLinearIntegrationsByOrganization:
+            getLinearIntegrationsByOrganization,
         },
         resolveContext: getGitHubToolRepositoryContextByIntegrationId,
         resolveLinearContext: getLinearToolContextByIntegrationId,

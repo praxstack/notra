@@ -196,7 +196,31 @@ async function validateStandaloneIntegrations(
   contextItems: StandaloneChatContextItem[],
   fetchers?: IntegrationFetchers
 ): Promise<ValidatedIntegration[]> {
-  if (!contextItems.length || !fetchers) {
+  if (!fetchers) {
+    return [];
+  }
+
+  const githubFromOrganization =
+    fetchers.listGitHubIntegrationsByOrganization !== undefined
+      ? await getEnabledGitHubIntegrations(
+          organizationId,
+          fetchers.listGitHubIntegrationsByOrganization
+        )
+      : [];
+
+  const linearFromOrganization =
+    fetchers.listLinearIntegrationsByOrganization !== undefined
+      ? await getEnabledLinearIntegrations(
+          organizationId,
+          fetchers.listLinearIntegrationsByOrganization
+        )
+      : [];
+
+  if (githubFromOrganization.length > 0 || linearFromOrganization.length > 0) {
+    return [...githubFromOrganization, ...linearFromOrganization];
+  }
+
+  if (!contextItems.length) {
     return [];
   }
 
@@ -302,6 +326,74 @@ async function validateStandaloneIntegrations(
   }
 
   return validatedIntegrations;
+}
+
+async function getEnabledGitHubIntegrations(
+  organizationId: string,
+  listGitHubIntegrationsByOrganization: NonNullable<
+    IntegrationFetchers["listGitHubIntegrationsByOrganization"]
+  >
+): Promise<ValidatedIntegration[]> {
+  try {
+    const integrations =
+      await listGitHubIntegrationsByOrganization(organizationId);
+
+    return integrations
+      .filter((integration) => integration.enabled)
+      .map((integration) => ({
+        id: integration.id,
+        type: "github" as const,
+        enabled: integration.enabled,
+        displayName: integration.displayName,
+        organizationId: integration.organizationId,
+        repositories: integration.repositories
+          .filter((repository) => repository.enabled)
+          .map((repository) => ({
+            id: repository.id,
+            owner: repository.owner,
+            repo: repository.repo,
+            defaultBranch: repository.defaultBranch ?? null,
+            enabled: repository.enabled,
+          })),
+      }))
+      .filter((integration) => integration.repositories.length > 0);
+  } catch (error) {
+    console.error(
+      `[Standalone Chat] Error listing GitHub integrations for org ${organizationId}:`,
+      error
+    );
+    return [];
+  }
+}
+
+async function getEnabledLinearIntegrations(
+  organizationId: string,
+  listLinearIntegrationsByOrganization: NonNullable<
+    IntegrationFetchers["listLinearIntegrationsByOrganization"]
+  >
+): Promise<ValidatedIntegration[]> {
+  try {
+    const integrations =
+      await listLinearIntegrationsByOrganization(organizationId);
+
+    return integrations
+      .filter((integration) => integration.enabled)
+      .map((integration) => ({
+        id: integration.id,
+        type: "linear" as const,
+        enabled: integration.enabled,
+        displayName: integration.displayName,
+        organizationId: integration.organizationId,
+        linearTeamId: integration.linearTeamId,
+        linearTeamName: integration.linearTeamName,
+      }));
+  } catch (error) {
+    console.error(
+      `[Standalone Chat] Error listing Linear integrations for org ${organizationId}:`,
+      error
+    );
+    return [];
+  }
 }
 
 function getLastUserMessage(messages: UIMessage[]): string {

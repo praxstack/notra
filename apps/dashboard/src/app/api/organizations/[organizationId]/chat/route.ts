@@ -339,6 +339,10 @@ async function createDirectStandaloneChatResponse({
       integrationFetchers: {
         getGitHubIntegrationById,
         getLinearIntegrationById,
+        listGitHubIntegrationsByOrganization:
+          getGitHubIntegrationsByOrganization,
+        listLinearIntegrationsByOrganization:
+          getLinearIntegrationsByOrganization,
       },
       resolveContext: getGitHubToolRepositoryContextByIntegrationId,
       resolveLinearContext: getLinearToolContextByIntegrationId,
