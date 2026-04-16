@@ -1,8 +1,8 @@
-import { toolDescription } from "@notra/ai/utils/description";
 import type {
   AvailableGitHubIntegration,
   OrganizationToolConfig,
 } from "@notra/ai/types/organization";
+import { toolDescription } from "@notra/ai/utils/description";
 import {
   isAvailableGitHubIntegration,
   isAvailableLinearIntegration,

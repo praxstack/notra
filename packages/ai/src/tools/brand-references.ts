@@ -1,6 +1,6 @@
-import { toolDescription } from "@notra/ai/utils/description";
 import type { BrandReferencesConfig } from "@notra/ai/types/brand-references";
 import { serializeBrandReference } from "@notra/ai/utils/brand-references";
+import { toolDescription } from "@notra/ai/utils/description";
 import { db } from "@notra/db/drizzle";
 import {
   getBrandReferenceIdFromSearchResult,

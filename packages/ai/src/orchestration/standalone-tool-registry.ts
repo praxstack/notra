@@ -1,4 +1,5 @@
 import { contentTypeSchema } from "@notra/ai/schemas/content";
+import { createGetAvailableBrandReferencesTool } from "@notra/ai/tools/brand-references";
 import {
   createGetCommitsByTimeframeTool,
   createGetPullRequestsTool,
@@ -9,10 +10,9 @@ import {
   createGetLinearIssuesTool,
   createGetLinearProjectsTool,
 } from "@notra/ai/tools/linear";
-import { createGetAvailableBrandReferencesTool } from "@notra/ai/tools/brand-references";
 import {
-  createGetBrandIdentityTool,
   createGetAvailableIntegrationsTool,
+  createGetBrandIdentityTool,
   createListBrandIdentitiesTool,
 } from "@notra/ai/tools/organization";
 import {
