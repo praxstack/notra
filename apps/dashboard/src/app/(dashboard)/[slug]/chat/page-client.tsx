@@ -35,6 +35,14 @@ import { renderTextWithIntegrationReferences } from "@/components/chat/integrati
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
 import type { ContextItem } from "@/types/chat";
+import {
+  CHAT_PREFERENCES_STORAGE_KEY,
+  DEFAULT_CHAT_PREFERENCES,
+  parseStoredChatModel,
+  parseStoredThinkingLevel,
+  readStoredChatPreferences,
+  writeStoredChatPreferences,
+} from "@/utils/chat-preferences";
 import { formatLongDate, getGreeting } from "@/utils/dashboard-greeting";
 
 const ContentPreviewCard = dynamic(
@@ -95,9 +103,11 @@ export default function PageClient({
   const [hasCustomizedContext, setHasCustomizedContext] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState(
-    "anthropic/claude-sonnet-4-6"
+    DEFAULT_CHAT_PREFERENCES.model
   );
-  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>("medium");
+  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>(
+    DEFAULT_CHAT_PREFERENCES.thinkingLevel
+  );
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const contextRef = useRef(context);
@@ -231,6 +241,68 @@ export default function PageClient({
   });
 
   const [isStopping, setIsStopping] = useState(false);
+
+  const handleModelChange = useCallback((model: string) => {
+    const nextModel = parseStoredChatModel(model);
+    if (!nextModel) {
+      return;
+    }
+
+    setSelectedModel(nextModel);
+  }, []);
+
+  const handleThinkingLevelChange = useCallback((level: ThinkingLevel) => {
+    const nextThinkingLevel = parseStoredThinkingLevel(level);
+    if (!nextThinkingLevel) {
+      return;
+    }
+
+    setThinkingLevel(nextThinkingLevel);
+  }, []);
+
+  useEffect(() => {
+    function syncChatPreferencesFromStorage() {
+      const storedPreferences = readStoredChatPreferences();
+      if (!storedPreferences) {
+        return;
+      }
+
+      setSelectedModel(storedPreferences.model);
+      setThinkingLevel(storedPreferences.thinkingLevel);
+    }
+
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== CHAT_PREFERENCES_STORAGE_KEY) {
+        return;
+      }
+
+      syncChatPreferencesFromStorage();
+    }
+
+    syncChatPreferencesFromStorage();
+    window.addEventListener("focus", syncChatPreferencesFromStorage);
+    window.addEventListener("storage", handleStorage);
+    document.addEventListener(
+      "visibilitychange",
+      syncChatPreferencesFromStorage
+    );
+
+    return () => {
+      window.removeEventListener("focus", syncChatPreferencesFromStorage);
+      window.removeEventListener("storage", handleStorage);
+      document.removeEventListener(
+        "visibilitychange",
+        syncChatPreferencesFromStorage
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    writeStoredChatPreferences({
+      model: selectedModel,
+      thinkingLevel,
+    });
+  }, [selectedModel, thinkingLevel]);
 
   const handleStop = useCallback(async () => {
     setIsStopping(true);
@@ -636,11 +708,11 @@ export default function PageClient({
               model={selectedModel}
               onAddContext={handleAddContext}
               onClearError={handleClearError}
-              onModelChange={setSelectedModel}
+              onModelChange={handleModelChange}
               onRemoveContext={handleRemoveContext}
               onSend={handleSend}
               onStop={handleStop}
-              onThinkingLevelChange={setThinkingLevel}
+              onThinkingLevelChange={handleThinkingLevelChange}
               organizationId={organizationId}
               organizationSlug={organizationSlug}
               thinkingLevel={thinkingLevel}
@@ -710,11 +782,11 @@ export default function PageClient({
                 model={selectedModel}
                 onAddContext={handleAddContext}
                 onClearError={handleClearError}
-                onModelChange={setSelectedModel}
+                onModelChange={handleModelChange}
                 onRemoveContext={handleRemoveContext}
                 onSend={handleSend}
                 onStop={handleStop}
-                onThinkingLevelChange={setThinkingLevel}
+                onThinkingLevelChange={handleThinkingLevelChange}
                 organizationId={organizationId}
                 organizationSlug={organizationSlug}
                 thinkingLevel={thinkingLevel}

@@ -1,4 +1,4 @@
-import type { ContextItem, TextSelection } from "@/schemas/content";
+import type { ContextItem, TextSelection } from "@/types/chat";
 import type { GitHubRepository } from "@/types/integrations";
 
 export interface ChatInputProps {

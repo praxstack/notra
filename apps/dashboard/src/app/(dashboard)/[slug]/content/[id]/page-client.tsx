@@ -34,11 +34,8 @@ import { useOrganizationsContext } from "@/components/providers/organization-pro
 import { LINKEDIN_BRAND_PRIMARY } from "@/constants/linkedin";
 import { TWITTER_BRAND_COLOR } from "@/constants/twitter";
 import { dashboardOrpc } from "@/lib/orpc/query";
-import {
-  type ContextItem,
-  sourceMetadataSchema,
-  type TextSelection,
-} from "@/schemas/content";
+import { sourceMetadataSchema } from "@/schemas/content";
+import type { ContextItem, TextSelection } from "@/types/chat";
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import { getBrandFaviconUrl } from "@/utils/brand";
 import { formatSnakeCaseLabel } from "@/utils/format";
