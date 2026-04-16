@@ -108,10 +108,10 @@ export function ChatInputContextRow({
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto px-3 pt-2 pb-1">
-      {context.map((item, index) => (
+      {context.map((item) => (
         <ContextBadge
           item={item}
-          key={`${item.type}-${item.integrationId}-${index}`}
+          key={`${item.type}-${item.integrationId}`}
           onRemove={onRemoveContext}
         />
       ))}

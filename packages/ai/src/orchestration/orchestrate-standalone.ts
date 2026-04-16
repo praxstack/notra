@@ -45,6 +45,8 @@ export async function orchestrateStandaloneChat(
     maxSteps = 5,
     log: inputLog,
     requestedModel,
+    enableThinking = true,
+    thinkingLevel = "medium",
     abortSignal,
   } = input;
 
@@ -102,6 +104,12 @@ export async function orchestrateStandaloneChat(
     hasLinearEnabled: hasLinear,
   });
 
+  const providerOptions = getThinkingProviderOptions(
+    routingDecision.model,
+    enableThinking,
+    thinkingLevel
+  );
+
   const stream = streamText({
     model: modelWithMemory,
     system: systemPrompt,
@@ -109,6 +117,7 @@ export async function orchestrateStandaloneChat(
     tools,
     stopWhen: stepCountIs(maxSteps),
     experimental_transform: smoothStream(),
+    providerOptions,
     abortSignal,
     onAbort({ steps }) {
       console.log("[Standalone Chat Stream Aborted]", {
@@ -130,6 +139,56 @@ export async function orchestrateStandaloneChat(
   });
 
   return { stream, routingDecision };
+}
+
+type StreamProviderOptions = NonNullable<
+  Parameters<typeof streamText>[0]["providerOptions"]
+>;
+
+function getThinkingProviderOptions(
+  modelId: string,
+  enableThinking: boolean,
+  thinkingLevel: "off" | "low" | "medium" | "high"
+): StreamProviderOptions | undefined {
+  if (!enableThinking || thinkingLevel === "off") {
+    return undefined;
+  }
+
+  if (modelId.startsWith("anthropic/")) {
+    return {
+      anthropic: {
+        thinking: {
+          type: "enabled" as const,
+          budgetTokens: getAnthropicThinkingBudget(thinkingLevel),
+        },
+      },
+    } as StreamProviderOptions;
+  }
+
+  if (modelId.startsWith("openai/")) {
+    return {
+      openai: {
+        reasoningEffort: thinkingLevel,
+      },
+    } as StreamProviderOptions;
+  }
+
+  return undefined;
+}
+
+function getAnthropicThinkingBudget(
+  thinkingLevel: "off" | "low" | "medium" | "high"
+): number {
+  switch (thinkingLevel) {
+    case "low":
+      return 1024;
+    case "high":
+      return 8192;
+    case "medium":
+      return 4096;
+    default:
+      return 0;
+  }
 }
 
 async function validateStandaloneIntegrations(

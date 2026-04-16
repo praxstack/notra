@@ -81,8 +81,8 @@ export async function saveChatMessages(
       member: JSON.stringify(messages[i]),
     });
   }
-  await saveSessionMetadata(organizationId, chatId, messages, now);
   await pipeline.exec();
+  await saveSessionMetadata(organizationId, chatId, messages, now);
 }
 
 export async function replaceChatHistory(
@@ -321,14 +321,6 @@ export async function generateAndSetChatTitle(
       maxOutputTokens: 30,
     });
 
-    console.log("[Chat Title] AI response:", {
-      organizationId,
-      chatId,
-      userMessage,
-      fallbackTitle,
-      rawText: text,
-    });
-
     const aiTitle = text.replace(/^["']|["']$/g, "").trim();
     const title = aiTitle || fallbackTitle;
 
@@ -344,13 +336,6 @@ export async function generateAndSetChatTitle(
     if (!parsed) {
       return;
     }
-
-    console.log("[Chat Title] Persisting title:", {
-      organizationId,
-      chatId,
-      aiTitle,
-      persistedTitle: title,
-    });
 
     await redis.set(metaKey, { ...parsed, title });
   } catch (err) {

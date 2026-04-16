@@ -32,6 +32,9 @@ const chatWorkflowPayloadSchema = z.object({
   chatId: z.string(),
   context: z.array(standaloneChatContextSchema),
   useMarkup: z.boolean(),
+  model: z.string().optional(),
+  enableThinking: z.boolean().optional(),
+  thinkingLevel: z.enum(["off", "low", "medium", "high"]).optional(),
 });
 
 type ChatWorkflowPayload = z.infer<typeof chatWorkflowPayloadSchema>;
@@ -56,6 +59,9 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
     chatId,
     context: standaloneContext,
     useMarkup,
+    model,
+    enableThinking,
+    thinkingLevel,
   } = parseResult.data;
 
   const messages = await context.run("load-chat-history", () =>
@@ -98,6 +104,9 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
         context: standaloneContext as StandaloneChatContextItem[],
         maxSteps: 5,
         abortSignal: abortController.signal,
+        requestedModel: model,
+        enableThinking,
+        thinkingLevel,
       },
       {
         integrationFetchers: {
@@ -161,7 +170,7 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
     const uiStream = stream.toUIMessageStream({
       originalMessages: messages,
       generateMessageId: nanoid,
-      sendReasoning: true,
+      sendReasoning: enableThinking !== false,
       onFinish: async ({ messages: responseMessages }) => {
         try {
           await replaceChatHistory(organizationId, chatId, responseMessages);

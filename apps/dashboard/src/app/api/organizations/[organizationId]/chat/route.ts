@@ -182,6 +182,9 @@ export const POST = withEvlog(async function POST(
         chatId,
         context,
         useMarkup,
+        model: parseResult.data.model,
+        enableThinking: parseResult.data.enableThinking,
+        thinkingLevel: parseResult.data.thinkingLevel,
       },
     });
 
@@ -303,6 +306,7 @@ async function createDirectStandaloneChatResponse({
   log,
   model,
   enableThinking,
+  thinkingLevel,
   abortSignal,
 }: {
   organizationId: string;
@@ -314,6 +318,7 @@ async function createDirectStandaloneChatResponse({
   log: ReturnType<typeof useLogger>;
   model?: string;
   enableThinking?: boolean;
+  thinkingLevel?: "off" | "low" | "medium" | "high";
   abortSignal?: AbortSignal;
 }) {
   const autumnClient = autumn;
@@ -327,6 +332,7 @@ async function createDirectStandaloneChatResponse({
       log,
       requestedModel: model,
       enableThinking,
+      thinkingLevel,
       abortSignal,
     },
     {
