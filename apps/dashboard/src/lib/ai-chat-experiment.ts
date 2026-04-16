@@ -4,14 +4,6 @@ import {
   DATABUDDY_DASHBOARD_CLIENT_ID,
 } from "@/lib/databuddy-config";
 
-const flagsManager = DATABUDDY_DASHBOARD_CLIENT_ID
-  ? createServerFlagsManager({
-      clientId: DATABUDDY_DASHBOARD_CLIENT_ID,
-      cacheTtl: 5 * 60 * 1000,
-      staleTime: 5 * 60 * 1000,
-    })
-  : null;
-
 interface AiChatExperimentContext {
   userId?: string;
   email?: string | null;
@@ -23,19 +15,26 @@ export async function isAiChatExperimentEnabled({
   email,
   organizationId,
 }: AiChatExperimentContext): Promise<boolean> {
-  if (!flagsManager) {
+  if (!DATABUDDY_DASHBOARD_CLIENT_ID) {
     return false;
   }
 
   try {
-    const result = await flagsManager.getFlag(AI_CHAT_EXPERIMENT_FLAG_KEY, {
-      userId,
-      email: email ?? undefined,
-      organizationId,
-      properties: organizationId ? { organizationId } : undefined,
+    const flagsManager = createServerFlagsManager({
+      clientId: DATABUDDY_DASHBOARD_CLIENT_ID,
+      cacheTtl: 5 * 60 * 1000,
+      staleTime: 5 * 60 * 1000,
+      user: {
+        userId,
+        email: email ?? undefined,
+        organizationId,
+        properties: organizationId ? { organizationId } : undefined,
+      },
     });
 
-    return result.enabled;
+    const result = await flagsManager.getFlag(AI_CHAT_EXPERIMENT_FLAG_KEY);
+
+    return result.enabled || result.value === true;
   } catch (error) {
     console.error("[Databuddy] Failed to evaluate AI chat experiment", {
       error: error instanceof Error ? error.message : String(error),
