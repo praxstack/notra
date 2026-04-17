@@ -1,6 +1,11 @@
 "use client";
 
-import { AiBrain01Icon, AtIcon, StopIcon } from "@hugeicons/core-free-icons";
+import {
+  AiBrain01Icon,
+  ArrowRight01Icon,
+  AtIcon,
+  StopIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import {
@@ -1248,6 +1253,11 @@ export function ChatInputAdvanced({
                           <span className="ml-auto text-muted-foreground text-xs">
                             Setup
                           </span>
+                          <HugeiconsIcon
+                            className="size-4 text-muted-foreground"
+                            icon={ArrowRight01Icon}
+                            strokeWidth={2}
+                          />
                         </DropdownMenuItem>
                       );
                     }
@@ -1267,6 +1277,11 @@ export function ChatInputAdvanced({
                         <span className="ml-auto text-muted-foreground text-xs">
                           Soon
                         </span>
+                        <HugeiconsIcon
+                          className="size-4 text-muted-foreground"
+                          icon={ArrowRight01Icon}
+                          strokeWidth={2}
+                        />
                       </DropdownMenuItem>
                     );
                   })}
