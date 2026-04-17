@@ -20,11 +20,11 @@ import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithApprovalResponses,
 } from "ai";
-import { Loader2Icon } from "lucide-react";
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChatToolBlock } from "@/components/ai/chat-tool-block";
 import { BrailleLoader } from "@/components/braille-loader";
 import {
   ChatInputAdvanced,
@@ -150,25 +150,6 @@ interface PageClientProps {
   organizationSlug: string;
   chatId?: string;
 }
-
-const TOOL_STATUS_LABELS: Record<string, string> = {
-  updatePost: "Updating post...",
-  viewPost: "Viewing post...",
-  getAvailablePosts: "Loading posts...",
-  getPostById: "Loading post...",
-  listBrandIdentities: "Loading brand identities...",
-  getBrandIdentity: "Loading brand identity...",
-  getAvailableIntegrations: "Checking integrations...",
-  getAvailableBrandReferences: "Loading brand references...",
-  getPullRequests: "Fetching pull requests...",
-  getReleaseByTag: "Fetching release...",
-  getCommitsByTimeframe: "Fetching commits...",
-  getLinearIssues: "Fetching Linear issues...",
-  getLinearProjects: "Fetching Linear projects...",
-  getLinearCycles: "Fetching Linear cycles...",
-  listAvailableSkills: "Checking skills...",
-  getSkillByName: "Loading skill...",
-};
 
 const CREATE_TOOL_TYPES = {
   "tool-createBlogPost": "blog_post",
@@ -770,30 +751,13 @@ function StandaloneChatPageClient({
       ) {
         return (
           <ChatToolBlock
+            input={toolPart.input}
             key={toolPart.toolCallId}
-          >
-            <Loader2Icon className="size-3 animate-spin" />
-            <span>
-              {TOOL_STATUS_LABELS[toolName] ?? `Running ${toolName}...`}
-            </span>
-          </div>
+            output={toolPart.output}
+            state={toolPart.state}
+            toolName={toolName}
+          />
         );
-      }
-
-      if (toolPart.state === "output-available") {
-        const output = toolPart.output;
-        if (output && typeof output === "object") {
-          const label =
-            TOOL_STATUS_LABELS[toolName]?.replace("...", "") ?? toolName;
-          return (
-            <div
-              className="text-muted-foreground text-xs"
-              key={toolPart.toolCallId}
-            >
-              {label} completed
-            </div>
-          );
-        }
       }
 
       return null;
@@ -971,14 +935,6 @@ export default function PageClient(props: PageClientProps) {
     props.organizationSlug,
     router,
   ]);
-
-  if (aiChatExperiment.loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center py-12">
-        <BrailleLoader />
-      </div>
-    );
-  }
 
   if (!aiChatExperiment.on) {
     return null;
