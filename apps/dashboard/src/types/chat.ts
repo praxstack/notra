@@ -2,7 +2,7 @@ import type {
   ContextItem as OrchestrationContextItem,
   TextSelection as OrchestrationTextSelection,
 } from "@notra/ai/types/orchestration";
-import type { UIMessage } from "ai";
+import type { LanguageModelUsage, UIMessage } from "ai";
 import type { z } from "zod";
 import type {
   chatMessageMetadataSchema,
@@ -29,3 +29,17 @@ export type ChatWorkflowPayload = z.infer<typeof chatWorkflowPayloadSchema>;
 export type ChatTransportRequestInput = z.infer<
   typeof chatTransportRequestInputSchema
 >;
+
+export interface ChatUsageSnapshot {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+}
+
+export interface BuildChatFinishMetadataInput {
+  streamStartedAt: number;
+  firstChunkAt: number | null;
+  finishedAt: number;
+  partUsage: LanguageModelUsage | undefined;
+  usageSnapshot: ChatUsageSnapshot;
+}

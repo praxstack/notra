@@ -1,5 +1,41 @@
 import { CHAT_TITLE_MAX_LENGTH } from "@/constants/chat";
-import type { ChatSessionSummary } from "@/types/chat";
+import type {
+  BuildChatFinishMetadataInput,
+  ChatMessageMetadata,
+  ChatSessionSummary,
+} from "@/types/chat";
+
+export function buildChatFinishMetadata({
+  streamStartedAt,
+  firstChunkAt,
+  finishedAt,
+  partUsage,
+  usageSnapshot,
+}: BuildChatFinishMetadataInput): ChatMessageMetadata {
+  const ttftMs =
+    firstChunkAt !== null ? firstChunkAt - streamStartedAt : undefined;
+  const generationDurationMs =
+    firstChunkAt !== null ? finishedAt - firstChunkAt : undefined;
+  const inputTokens = partUsage?.inputTokens ?? usageSnapshot.inputTokens;
+  const outputTokens = partUsage?.outputTokens ?? usageSnapshot.outputTokens;
+  const totalTokens = partUsage?.totalTokens ?? usageSnapshot.totalTokens;
+  const tokensPerSecond =
+    generationDurationMs &&
+    generationDurationMs > 0 &&
+    outputTokens &&
+    outputTokens > 0
+      ? (outputTokens / generationDurationMs) * 1000
+      : undefined;
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+    ttftMs,
+    generationDurationMs,
+    tokensPerSecond,
+  };
+}
 
 export function normalizeChatTitle(title: string) {
   return title.replace(/\s+/g, " ").trim().slice(0, CHAT_TITLE_MAX_LENGTH);

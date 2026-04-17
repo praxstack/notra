@@ -40,6 +40,8 @@ import {
 } from "@/lib/services/linear-integration";
 import { getBaseUrl } from "@/lib/triggers/qstash";
 import { standaloneChatRequestSchema } from "@/schemas/chat";
+import type { ChatUsageSnapshot } from "@/types/chat";
+import { buildChatFinishMetadata } from "@/utils/chat";
 import { startChatAbortPolling } from "@/utils/chat-abort-polling.server";
 
 interface RouteContext {
@@ -376,11 +378,7 @@ async function createDirectStandaloneChatResponse({
 
   const streamStartedAt = Date.now();
   let firstChunkAt: number | null = null;
-  const usageSnapshot: {
-    inputTokens?: number;
-    outputTokens?: number;
-    totalTokens?: number;
-  } = {};
+  const usageSnapshot: ChatUsageSnapshot = {};
 
   try {
     const { stream, routingDecision } = await orchestrateStandaloneChat(
@@ -477,25 +475,13 @@ async function createDirectStandaloneChatResponse({
         }
 
         if (part.type === "finish") {
-          const finishedAt = Date.now();
-          const ttftMs =
-            firstChunkAt !== null ? firstChunkAt - streamStartedAt : undefined;
-          const generationDurationMs =
-            firstChunkAt !== null ? finishedAt - firstChunkAt : undefined;
-          const outputTokens = usageSnapshot.outputTokens ?? 0;
-          const tokensPerSecond =
-            generationDurationMs && generationDurationMs > 0 && outputTokens > 0
-              ? (outputTokens / generationDurationMs) * 1000
-              : undefined;
-
-          return {
-            inputTokens: usageSnapshot.inputTokens,
-            outputTokens: usageSnapshot.outputTokens,
-            totalTokens: usageSnapshot.totalTokens,
-            ttftMs,
-            generationDurationMs,
-            tokensPerSecond,
-          };
+          return buildChatFinishMetadata({
+            streamStartedAt,
+            firstChunkAt,
+            finishedAt: Date.now(),
+            partUsage: part.totalUsage,
+            usageSnapshot,
+          });
         }
 
         return;

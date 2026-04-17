@@ -26,7 +26,8 @@ import {
   getLinearToolContextByIntegrationId,
 } from "@/lib/services/linear-integration";
 import { chatWorkflowPayloadSchema } from "@/schemas/chat";
-import type { ChatWorkflowPayload } from "@/types/chat";
+import type { ChatUsageSnapshot, ChatWorkflowPayload } from "@/types/chat";
+import { buildChatFinishMetadata } from "@/utils/chat";
 import { startChatAbortPolling } from "@/utils/chat-abort-polling.server";
 
 export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
@@ -106,11 +107,7 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
   let stopAbortPolling: (() => void) | null = null;
   const streamStartedAt = Date.now();
   const timing: { firstChunkAt: number | null } = { firstChunkAt: null };
-  const usageSnapshot: {
-    inputTokens?: number;
-    outputTokens?: number;
-    totalTokens?: number;
-  } = {};
+  const usageSnapshot: ChatUsageSnapshot = {};
 
   try {
     stopAbortPolling = startChatAbortPolling({
@@ -216,29 +213,13 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
         }
 
         if (part.type === "finish") {
-          const finishedAt = Date.now();
-          const ttftMs =
-            timing.firstChunkAt !== null
-              ? timing.firstChunkAt - streamStartedAt
-              : undefined;
-          const generationDurationMs =
-            timing.firstChunkAt !== null
-              ? finishedAt - timing.firstChunkAt
-              : undefined;
-          const outputTokens = usageSnapshot.outputTokens ?? 0;
-          const tokensPerSecond =
-            generationDurationMs && generationDurationMs > 0 && outputTokens > 0
-              ? (outputTokens / generationDurationMs) * 1000
-              : undefined;
-
-          return {
-            inputTokens: usageSnapshot.inputTokens,
-            outputTokens: usageSnapshot.outputTokens,
-            totalTokens: usageSnapshot.totalTokens,
-            ttftMs,
-            generationDurationMs,
-            tokensPerSecond,
-          };
+          return buildChatFinishMetadata({
+            streamStartedAt,
+            firstChunkAt: timing.firstChunkAt,
+            finishedAt: Date.now(),
+            partUsage: part.totalUsage,
+            usageSnapshot,
+          });
         }
 
         return;
