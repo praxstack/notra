@@ -36,6 +36,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
+import { useHidePersonalData } from "@/lib/hooks/use-privacy-preferences";
 import { cn } from "@/lib/utils";
 
 export function NavUser() {
@@ -55,6 +56,7 @@ export function NavUser() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const { activeOrganization } = useOrganizationsContext();
+  const { hidePersonalData } = useHidePersonalData();
 
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
@@ -146,8 +148,22 @@ export function NavUser() {
                 {!isCollapsed && (
                   <>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-medium">{user.name}</span>
-                      <span className="truncate text-muted-background text-xs">
+                      <span
+                        className={cn(
+                          "truncate font-medium transition-[filter] duration-200",
+                          hidePersonalData &&
+                            "select-none blur-[5px] hover:blur-0"
+                        )}
+                      >
+                        {user.name}
+                      </span>
+                      <span
+                        className={cn(
+                          "truncate text-muted-background text-xs transition-[filter] duration-200",
+                          hidePersonalData &&
+                            "select-none blur-[5px] hover:blur-0"
+                        )}
+                      >
                         {user.email}
                       </span>
                     </div>
@@ -180,10 +196,22 @@ export function NavUser() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium text-foreground">
+                    <span
+                      className={cn(
+                        "truncate font-medium text-foreground transition-[filter] duration-200",
+                        hidePersonalData &&
+                          "select-none blur-[5px] hover:blur-0"
+                      )}
+                    >
                       {user.name}
                     </span>
-                    <span className="truncate text-muted-foreground text-xs">
+                    <span
+                      className={cn(
+                        "truncate text-muted-foreground text-xs transition-[filter] duration-200",
+                        hidePersonalData &&
+                          "select-none blur-[5px] hover:blur-0"
+                      )}
+                    >
                       {user.email}
                     </span>
                   </div>
