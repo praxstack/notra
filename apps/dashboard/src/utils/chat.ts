@@ -41,6 +41,25 @@ export function normalizeChatTitle(title: string) {
   return title.replace(/\s+/g, " ").trim().slice(0, CHAT_TITLE_MAX_LENGTH);
 }
 
+export function formatChatIdFallback(chatId: string) {
+  if (chatId.length <= 10) {
+    return chatId;
+  }
+  return `${chatId.slice(0, 6)}…${chatId.slice(-3)}`;
+}
+
+export function chatSessionsQueryKey(organizationId: string | undefined) {
+  return ["chat-sessions", organizationId] as const;
+}
+
+export function chatSessionPath(organizationId: string, chatId: string) {
+  return `/api/organizations/${organizationId}/chat/${chatId}`;
+}
+
+export function chatSessionsPath(organizationId: string) {
+  return `/api/organizations/${organizationId}/chat/sessions`;
+}
+
 export function sortChatSessions(sessions: ChatSessionSummary[]) {
   return [...sessions].sort((left, right) => {
     const leftPinnedAt = left.pinnedAt ? Date.parse(left.pinnedAt) : Number.NaN;

@@ -40,28 +40,26 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@notra/ui/components/ui/sidebar";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { CHAT_TITLE_MAX_LENGTH } from "@/constants/chat";
-import { cn } from "@/lib/utils";
 import {
-  chatSessionResponseSchema,
-  chatSessionsListResponseSchema,
-} from "@/schemas/chat";
+  useChatSessionMutations,
+  useChatSessions,
+} from "@/lib/hooks/use-chat-sessions";
+import { cn } from "@/lib/utils";
 import type { ChatSessionSummary } from "@/types/chat";
-import { normalizeChatTitle, sortChatSessions } from "@/utils/chat";
+import { normalizeChatTitle } from "@/utils/chat";
 
 export function ChatHistoryNav() {
   const { activeOrganization } = useOrganizationsContext();
   const pathname = usePathname();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const aiChatExperiment = useAiChatExperiment();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
@@ -71,33 +69,12 @@ export function ChatHistoryNav() {
     useState<ChatSessionSummary | null>(null);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const editInputRef = useRef<HTMLInputElement | null>(null);
-  const renameInFlightRef = useRef<string | null>(null);
   const pendingNavigationRef = useRef<number | null>(null);
 
   const slug = activeOrganization?.slug;
-  const organizationId = activeOrganization?.id;
-  const chatSessionsQueryKey = useMemo(
-    () => ["chat-sessions", organizationId] as const,
-    [organizationId]
-  );
 
-  const { data: sessions = [] } = useQuery({
-    queryKey: chatSessionsQueryKey,
-    queryFn: async () => {
-      const response = await fetch(
-        `/api/organizations/${organizationId}/chat/sessions`
-      );
-      if (!response.ok) {
-        return [];
-      }
-      const parsed = chatSessionsListResponseSchema.safeParse(
-        await response.json()
-      );
-      return parsed.success ? (parsed.data.sessions ?? []) : [];
-    },
-    enabled: Boolean(organizationId) && aiChatExperiment.on,
-    refetchOnWindowFocus: true,
-  });
+  const { sessions } = useChatSessions({ enabled: aiChatExperiment.on });
+  const { renameChat, togglePinned, deleteChat } = useChatSessionMutations();
 
   const currentChatId = pathname.split("/").filter(Boolean)[2];
   const pinnedSessions = sessions.filter((session) =>
@@ -123,24 +100,7 @@ export function ChatHistoryNav() {
     []
   );
 
-  function replaceSessionInCache(
-    chatId: string,
-    updater: (session: ChatSessionSummary) => ChatSessionSummary
-  ) {
-    queryClient.setQueryData<ChatSessionSummary[]>(
-      chatSessionsQueryKey,
-      (current = []) =>
-        sortChatSessions(
-          current.map((item) => (item.chatId === chatId ? updater(item) : item))
-        )
-    );
-  }
-
   async function submitRename(session: ChatSessionSummary) {
-    if (!organizationId) {
-      return;
-    }
-
     const nextTitle = normalizeChatTitle(draftTitle);
 
     if (!nextTitle) {
@@ -155,95 +115,37 @@ export function ChatHistoryNav() {
       return;
     }
 
-    if (renameInFlightRef.current === session.chatId) {
-      return;
-    }
-
-    renameInFlightRef.current = session.chatId;
     setRenamingChatId(session.chatId);
-    const previousSessions =
-      queryClient.getQueryData<ChatSessionSummary[]>(chatSessionsQueryKey) ??
-      [];
-
-    replaceSessionInCache(session.chatId, (item) => ({
-      ...item,
-      title: nextTitle,
-    }));
     setEditingChatId(null);
-
-    try {
-      const response = await fetch(
-        `/api/organizations/${organizationId}/chat/${session.chatId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: nextTitle }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to rename chat");
-      }
-
-      const parsed = chatSessionResponseSchema.safeParse(await response.json());
-      if (parsed.success && parsed.data.session) {
-        const updated = parsed.data.session;
-        replaceSessionInCache(session.chatId, () => updated);
-      }
-    } catch {
-      queryClient.setQueryData(chatSessionsQueryKey, previousSessions);
+    const ok = await renameChat(session.chatId, nextTitle);
+    if (!ok) {
       setDraftTitle(session.title);
       setEditingChatId(session.chatId);
-      toast.error("Failed to rename chat");
-    } finally {
-      renameInFlightRef.current = null;
-      setRenamingChatId(null);
     }
+    setRenamingChatId(null);
   }
 
   async function handleDelete() {
-    if (!organizationId || !deleteCandidate) {
+    if (!deleteCandidate) {
       return;
     }
 
-    setDeletingChatId(deleteCandidate.chatId);
+    const candidate = deleteCandidate;
+    setDeletingChatId(candidate.chatId);
+    const ok = await deleteChat(candidate.chatId);
+    setDeletingChatId(null);
 
-    try {
-      const response = await fetch(
-        `/api/organizations/${organizationId}/chat/${deleteCandidate.chatId}`,
-        { method: "DELETE" }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to delete chat");
-      }
-
-      queryClient.setQueryData<ChatSessionSummary[]>(
-        chatSessionsQueryKey,
-        (current = []) =>
-          current.filter((item) => item.chatId !== deleteCandidate.chatId)
-      );
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: chatSessionsQueryKey }),
-        queryClient.invalidateQueries({
-          queryKey: ["chat-history", organizationId, deleteCandidate.chatId],
-        }),
-      ]);
-
-      if (deleteCandidate.chatId === currentChatId) {
-        router.replace(`/${slug}/chat`);
-      }
-
-      toast.success("Chat deleted");
-      setDeleteCandidate(null);
-      setEditingChatId((current) =>
-        current === deleteCandidate.chatId ? null : current
-      );
-    } catch {
-      toast.error("Failed to delete chat");
-    } finally {
-      setDeletingChatId(null);
+    if (!ok) {
+      return;
     }
+
+    if (candidate.chatId === currentChatId) {
+      router.replace(`/${slug}/chat`);
+    }
+    setDeleteCandidate(null);
+    setEditingChatId((current) =>
+      current === candidate.chatId ? null : current
+    );
   }
 
   function startEditing(session: ChatSessionSummary) {
@@ -285,48 +187,13 @@ export function ChatHistoryNav() {
     }, 200);
   }
 
-  async function togglePinned(session: ChatSessionSummary) {
-    if (!organizationId || pinningChatId === session.chatId) {
+  async function handleTogglePinned(session: ChatSessionSummary) {
+    if (pinningChatId === session.chatId) {
       return;
     }
-
-    const nextPinned = !session.pinnedAt;
     setPinningChatId(session.chatId);
-    const previousSessions =
-      queryClient.getQueryData<ChatSessionSummary[]>(chatSessionsQueryKey) ??
-      [];
-    const nextPinnedAt = nextPinned ? new Date().toISOString() : null;
-
-    replaceSessionInCache(session.chatId, (item) => ({
-      ...item,
-      pinnedAt: nextPinnedAt,
-    }));
-
-    try {
-      const response = await fetch(
-        `/api/organizations/${organizationId}/chat/${session.chatId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pinned: nextPinned }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update pin state");
-      }
-
-      const parsed = chatSessionResponseSchema.safeParse(await response.json());
-      if (parsed.success && parsed.data.session) {
-        const updated = parsed.data.session;
-        replaceSessionInCache(session.chatId, () => updated);
-      }
-    } catch {
-      queryClient.setQueryData(chatSessionsQueryKey, previousSessions);
-      toast.error("Failed to update chat pin");
-    } finally {
-      setPinningChatId(null);
-    }
+    await togglePinned(session);
+    setPinningChatId(null);
   }
 
   function renderSessions(label: string, items: ChatSessionSummary[]) {
@@ -420,7 +287,7 @@ export function ChatHistoryNav() {
                           sideOffset={6}
                         >
                           <DropdownMenuItem
-                            onClick={() => togglePinned(session)}
+                            onClick={() => handleTogglePinned(session)}
                           >
                             <HugeiconsIcon
                               icon={session.pinnedAt ? PinOffIcon : PinIcon}
@@ -446,7 +313,9 @@ export function ChatHistoryNav() {
                   </ContextMenuTrigger>
 
                   <ContextMenuContent>
-                    <ContextMenuItem onClick={() => togglePinned(session)}>
+                    <ContextMenuItem
+                      onClick={() => handleTogglePinned(session)}
+                    >
                       <HugeiconsIcon
                         icon={session.pinnedAt ? PinOffIcon : PinIcon}
                       />
