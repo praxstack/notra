@@ -91,6 +91,7 @@ export function ProfileSection({
         }
 
         toast.success("Profile updated successfully");
+        await onSessionRefetch?.();
       } catch {
         toast.error("Failed to update profile");
       } finally {
