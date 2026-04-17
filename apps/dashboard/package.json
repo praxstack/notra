@@ -56,7 +56,7 @@
     "@upstash/redis": "^1.35.8",
     "@upstash/workflow": "^1.1.0",
     "@vercel/analytics": "^1.6.1",
-    "ai": "^6.0.158",
+    "ai": "^6.0.168",
     "autumn-js": "^1.2.7",
     "axios": "^1.13.6",
     "better-auth": "^1.5.5",
