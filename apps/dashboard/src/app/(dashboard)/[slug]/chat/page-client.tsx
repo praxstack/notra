@@ -154,6 +154,12 @@ interface PageClientProps {
 const TOOL_STATUS_LABELS: Record<string, string> = {
   updatePost: "Updating post...",
   viewPost: "Viewing post...",
+  getAvailablePosts: "Loading posts...",
+  getPostById: "Loading post...",
+  listBrandIdentities: "Loading brand identities...",
+  getBrandIdentity: "Loading brand identity...",
+  getAvailableIntegrations: "Checking integrations...",
+  getAvailableBrandReferences: "Loading brand references...",
   getPullRequests: "Fetching pull requests...",
   getReleaseByTag: "Fetching release...",
   getCommitsByTimeframe: "Fetching commits...",
