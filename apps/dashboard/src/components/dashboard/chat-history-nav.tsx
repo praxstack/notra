@@ -3,6 +3,7 @@
 import {
   Add01Icon,
   Delete02Icon,
+  MoreHorizontalIcon,
   PencilEdit02Icon,
   PinIcon,
   PinOffIcon,
@@ -24,13 +25,18 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@notra/ui/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@notra/ui/components/ui/dropdown-menu";
 import { Input } from "@notra/ui/components/ui/input";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@notra/ui/components/ui/sidebar";
@@ -341,13 +347,12 @@ export function ChatHistoryNav() {
 
               return (
                 <ContextMenu key={session.chatId}>
-                  <ContextMenuTrigger
-                    render={
-                      <SidebarMenuItem className="[&[data-popup-open]_[data-slot=sidebar-menu-action]]:translate-x-0 [&[data-popup-open]_[data-slot=sidebar-menu-action]]:opacity-100" />
-                    }
-                  >
+                  <ContextMenuTrigger render={<SidebarMenuItem />}>
                     <SidebarMenuButton
-                      className={cn(isBusy && "opacity-70")}
+                      className={cn(
+                        "cursor-pointer pr-8",
+                        isBusy && "opacity-70"
+                      )}
                       isActive={session.chatId === currentChatId}
                       render={
                         isEditing ? (
@@ -396,22 +401,47 @@ export function ChatHistoryNav() {
                     />
 
                     {!isEditing && (
-                      <SidebarMenuAction
-                        aria-label={
-                          session.pinnedAt ? "Unpin chat" : "Pin chat"
-                        }
-                        className="translate-x-1 opacity-0 transition-[opacity,transform] duration-150 ease-out"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          togglePinned(session);
-                        }}
-                        showOnHover
-                      >
-                        <HugeiconsIcon
-                          icon={session.pinnedAt ? PinOffIcon : PinIcon}
-                        />
-                      </SidebarMenuAction>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          aria-label="Chat options"
+                          className="-translate-y-1/2 absolute top-1/2 right-1.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground opacity-0 outline-hidden ring-sidebar-ring transition-opacity duration-150 ease-out hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[popup-open]:bg-sidebar-accent data-[popup-open]:text-foreground data-[popup-open]:opacity-100 [&>svg]:size-4 [&>svg]:shrink-0"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                          }}
+                        >
+                          <HugeiconsIcon icon={MoreHorizontalIcon} />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="start"
+                          className="w-44"
+                          showBackdrop={false}
+                          side="right"
+                          sideOffset={6}
+                        >
+                          <DropdownMenuItem
+                            onClick={() => togglePinned(session)}
+                          >
+                            <HugeiconsIcon
+                              icon={session.pinnedAt ? PinOffIcon : PinIcon}
+                            />
+                            {session.pinnedAt ? "Unpin" : "Pin"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => startEditing(session)}
+                          >
+                            <HugeiconsIcon icon={PencilEdit02Icon} />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeleteCandidate(session)}
+                            variant="destructive"
+                          >
+                            <HugeiconsIcon icon={Delete02Icon} />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </ContextMenuTrigger>
 
@@ -454,6 +484,7 @@ export function ChatHistoryNav() {
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
+                className="cursor-pointer"
                 render={
                   <Link href={`/${slug}/chat`}>
                     <HugeiconsIcon icon={Add01Icon} />
