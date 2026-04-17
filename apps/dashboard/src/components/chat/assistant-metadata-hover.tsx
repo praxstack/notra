@@ -117,7 +117,7 @@ export function AssistantMetadataHover({
     items.push(
       <div className="flex items-center gap-1" key="ttft">
         <HugeiconsIcon className="size-3" icon={Clock01Icon} />
-        <span>Time-to-First: {formatDuration(metadata.ttftMs)}</span>
+        <span>Time to First Token: {formatDuration(metadata.ttftMs)}</span>
       </div>
     );
   }
