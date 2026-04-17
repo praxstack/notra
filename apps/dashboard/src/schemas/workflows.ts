@@ -5,7 +5,8 @@ import {
   onDemandContentTypeSchema,
   selectedItemsSchema,
 } from "@notra/content-generation/schemas";
-import { z } from "zod";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
+import * as z from "zod";
 import { triggerOutputConfigSchema } from "./integrations";
 
 export const generateChangelogBodySchema = z.object({

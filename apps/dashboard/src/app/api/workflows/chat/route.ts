@@ -1,10 +1,8 @@
 import { orchestrateStandaloneChat } from "@notra/ai/orchestration/orchestrate-standalone";
-import { standaloneChatContextSchema } from "@notra/ai/schemas/standalone-chat";
 import type { StandaloneChatContextItem } from "@notra/ai/types/standalone-chat";
 import { serve } from "@upstash/workflow/nextjs";
 import type { UIMessageChunk } from "ai";
 import { nanoid } from "nanoid";
-import { z } from "zod";
 import { FEATURES } from "@/constants/features";
 import { isAiChatExperimentEnabled } from "@/lib/ai-chat-experiment";
 import { autumn } from "@/lib/billing/autumn";
@@ -27,22 +25,9 @@ import {
   getLinearIntegrationsByOrganization,
   getLinearToolContextByIntegrationId,
 } from "@/lib/services/linear-integration";
+import { chatWorkflowPayloadSchema } from "@/schemas/chat";
+import type { ChatWorkflowPayload } from "@/types/chat";
 import { startChatAbortPolling } from "@/utils/chat-abort-polling.server";
-
-const chatWorkflowPayloadSchema = z.object({
-  requestId: z.string(),
-  organizationId: z.string(),
-  chatId: z.string(),
-  userId: z.string(),
-  userEmail: z.string().nullable().optional(),
-  context: z.array(standaloneChatContextSchema),
-  useMarkup: z.boolean(),
-  model: z.string().optional(),
-  enableThinking: z.boolean().optional(),
-  thinkingLevel: z.enum(["off", "low", "medium", "high"]).optional(),
-});
-
-type ChatWorkflowPayload = z.infer<typeof chatWorkflowPayloadSchema>;
 
 export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
   const parseResult = chatWorkflowPayloadSchema.safeParse(
@@ -91,7 +76,7 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
     return;
   }
 
-  const latestMessage = messages[messages.length - 1];
+  const latestMessage = messages.at(-1);
   if (!latestMessage?.id) {
     await context.cancel();
     return;

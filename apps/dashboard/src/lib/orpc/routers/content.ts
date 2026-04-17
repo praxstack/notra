@@ -19,7 +19,8 @@ import {
   or,
 } from "drizzle-orm";
 import { marked } from "marked";
-import { z } from "zod";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
+import * as z from "zod";
 import {
   GITHUB_API_MAX_PAGES,
   GITHUB_API_MAX_RESULTS,

@@ -1,11 +1,11 @@
 import { orchestrateStandaloneChat } from "@notra/ai/orchestration/orchestrate-standalone";
 import type { StandaloneChatContextItem } from "@notra/ai/schemas/standalone-chat";
-import { standaloneChatContextSchema } from "@notra/ai/schemas/standalone-chat";
+import type { UIMessage } from "ai";
+import { isTextUIPart } from "ai";
 import type { CheckResponse } from "autumn-js";
 import { nanoid } from "nanoid";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { FEATURES } from "@/constants/features";
 import { isAiChatExperimentEnabled } from "@/lib/ai-chat-experiment";
 import { withOrganizationAuth } from "@/lib/auth/organization";
@@ -16,9 +16,11 @@ import {
 } from "@/lib/billing/token-pricing";
 import {
   clearActiveChatStream,
+  clearChatAbortFlag,
   clearLastResponseStopped,
   generateAndSetChatTitle,
   generateChatId,
+  isChatDeleted,
   loadChatHistory,
   replaceChatHistory,
   setActiveChatStream,
@@ -37,15 +39,8 @@ import {
   getLinearToolContextByIntegrationId,
 } from "@/lib/services/linear-integration";
 import { getBaseUrl } from "@/lib/triggers/qstash";
-
-const triggerStandaloneChatSchema = z.object({
-  chatId: z.string().optional(),
-  messages: z.array(z.any()),
-  context: z.array(standaloneChatContextSchema).optional(),
-  model: z.string().optional(),
-  enableThinking: z.boolean().optional(),
-  thinkingLevel: z.enum(["off", "low", "medium", "high"]).optional(),
-});
+import { standaloneChatRequestSchema } from "@/schemas/chat";
+import { startChatAbortPolling } from "@/utils/chat-abort-polling.server";
 
 interface RouteContext {
   params: Promise<{ organizationId: string }>;
@@ -125,7 +120,7 @@ export const POST = withEvlog(async function POST(
     }
 
     const body = await request.json();
-    const parseResult = triggerStandaloneChatSchema.safeParse(body);
+    const parseResult = standaloneChatRequestSchema.safeParse(body);
 
     if (!parseResult.success) {
       return NextResponse.json(
@@ -149,7 +144,7 @@ export const POST = withEvlog(async function POST(
       );
     }
 
-    const latestMessage = messages[messages.length - 1];
+    const latestMessage = messages.at(-1);
     if (!latestMessage?.id) {
       return NextResponse.json(
         { error: "Latest message must include an id" },
@@ -157,14 +152,19 @@ export const POST = withEvlog(async function POST(
       );
     }
 
+    if (
+      parseResult.data.chatId &&
+      (await isChatDeleted(organizationId, chatId))
+    ) {
+      return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+    }
+
     await replaceChatHistory(organizationId, chatId, messages);
     await setActiveChatStream(organizationId, chatId, latestMessage.id);
     await clearLastResponseStopped(organizationId, chatId);
 
     if (messages.length === 1 && latestMessage.role === "user") {
-      const textPart = latestMessage.parts?.find(
-        (p: { type: string }) => p.type === "text"
-      );
+      const textPart = latestMessage.parts?.find(isTextUIPart);
       const userText = textPart?.text?.trim();
       if (userText) {
         await generateAndSetChatTitle(organizationId, chatId, userText);
@@ -327,7 +327,7 @@ async function createDirectStandaloneChatResponse({
 }: {
   organizationId: string;
   chatId: string;
-  messages: unknown[];
+  messages: UIMessage[];
   context: StandaloneChatContextItem[];
   useMarkup: boolean;
   requestId: string;
@@ -338,97 +338,144 @@ async function createDirectStandaloneChatResponse({
   abortSignal?: AbortSignal;
 }) {
   const autumnClient = autumn;
+  const streamId = messages.at(-1)?.id;
 
-  const { stream } = await orchestrateStandaloneChat(
-    {
-      organizationId,
-      messages: messages as never,
-      context,
-      maxSteps: 5,
-      log,
-      requestedModel: model,
-      enableThinking,
-      thinkingLevel,
-      abortSignal,
-    },
-    {
-      integrationFetchers: {
-        getGitHubIntegrationById,
-        getLinearIntegrationById,
-        listGitHubIntegrationsByOrganization:
-          getGitHubIntegrationsByOrganization,
-        listLinearIntegrationsByOrganization:
-          getLinearIntegrationsByOrganization,
-      },
-      resolveContext: getGitHubToolRepositoryContextByIntegrationId,
-      resolveLinearContext: getLinearToolContextByIntegrationId,
-      async onUsage(usage, modelId) {
-        if (!autumnClient) {
-          return;
-        }
+  if (!streamId) {
+    throw new Error("Latest message must include an id");
+  }
 
-        const costCents = calculateTokenCostCents(
-          {
-            inputTokens: usage.inputTokens ?? 0,
-            outputTokens: usage.outputTokens ?? 0,
-            totalTokens: usage.totalTokens ?? 0,
-            cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? 0,
-            cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens ?? 0,
-          },
-          modelId,
-          useMarkup
-        );
-
-        try {
-          await autumnClient.track({
-            customerId: organizationId,
-            featureId: FEATURES.AI_CREDITS,
-            value: costCents,
-            properties: {
-              source: "standalone_chat",
-              model: modelId,
-              input_tokens: usage.inputTokens ?? 0,
-              output_tokens: usage.outputTokens ?? 0,
-              cache_read_tokens: usage.inputTokenDetails?.cacheReadTokens ?? 0,
-              cache_write_tokens:
-                usage.inputTokenDetails?.cacheWriteTokens ?? 0,
-              total_tokens: usage.totalTokens ?? 0,
-              cost_cents: costCents,
-            },
-          });
-        } catch (trackError) {
-          console.error("[Autumn] Track error after standalone chat:", {
-            requestId,
-            customerId: organizationId,
-            error: trackError,
-          });
-        }
-      },
-      log,
-    }
-  );
-
-  return stream.toUIMessageStreamResponse({
-    originalMessages: messages as never,
-    generateMessageId: nanoid,
-    sendReasoning: enableThinking !== false,
-    headers: { "X-Chat-Id": chatId },
-    onFinish: async ({ messages: responseMessages }) => {
-      try {
-        await replaceChatHistory(organizationId, chatId, responseMessages);
-      } finally {
-        await clearActiveChatStream(organizationId, chatId);
-      }
-    },
-    onError: (error) => {
-      console.error("[Standalone Chat] Direct stream error:", {
-        requestId,
-        error,
-      });
-      if (error instanceof Error) {
-        return error.message;
-      }
-      return "An error occurred while processing your request.";
-    },
+  const redisAbortController = new AbortController();
+  const stopAbortPolling = startChatAbortPolling({
+    organizationId,
+    chatId,
+    streamId,
+    onAbort: () => redisAbortController.abort(),
   });
+
+  const onRequestAbort = () => redisAbortController.abort();
+  abortSignal?.addEventListener("abort", onRequestAbort, { once: true });
+
+  const combinedAbortSignal = abortSignal
+    ? AbortSignal.any([abortSignal, redisAbortController.signal])
+    : redisAbortController.signal;
+
+  let cleanedUp = false;
+  const cleanup = async () => {
+    if (cleanedUp) {
+      return;
+    }
+    cleanedUp = true;
+    stopAbortPolling();
+    abortSignal?.removeEventListener("abort", onRequestAbort);
+    await Promise.allSettled([
+      clearChatAbortFlag(organizationId, chatId, streamId),
+      clearActiveChatStream(organizationId, chatId),
+    ]);
+  };
+
+  try {
+    const { stream } = await orchestrateStandaloneChat(
+      {
+        organizationId,
+        messages: messages as never,
+        context,
+        maxSteps: 5,
+        log,
+        requestedModel: model,
+        enableThinking,
+        thinkingLevel,
+        abortSignal: combinedAbortSignal,
+      },
+      {
+        integrationFetchers: {
+          getGitHubIntegrationById,
+          getLinearIntegrationById,
+          listGitHubIntegrationsByOrganization:
+            getGitHubIntegrationsByOrganization,
+          listLinearIntegrationsByOrganization:
+            getLinearIntegrationsByOrganization,
+        },
+        resolveContext: getGitHubToolRepositoryContextByIntegrationId,
+        resolveLinearContext: getLinearToolContextByIntegrationId,
+        async onUsage(usage, modelId) {
+          if (!autumnClient) {
+            return;
+          }
+
+          const costCents = calculateTokenCostCents(
+            {
+              inputTokens: usage.inputTokens ?? 0,
+              outputTokens: usage.outputTokens ?? 0,
+              totalTokens: usage.totalTokens ?? 0,
+              cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? 0,
+              cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+            },
+            modelId,
+            useMarkup
+          );
+
+          try {
+            await autumnClient.track({
+              customerId: organizationId,
+              featureId: FEATURES.AI_CREDITS,
+              value: costCents,
+              properties: {
+                source: "standalone_chat",
+                model: modelId,
+                input_tokens: usage.inputTokens ?? 0,
+                output_tokens: usage.outputTokens ?? 0,
+                cache_read_tokens:
+                  usage.inputTokenDetails?.cacheReadTokens ?? 0,
+                cache_write_tokens:
+                  usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+                total_tokens: usage.totalTokens ?? 0,
+                cost_cents: costCents,
+              },
+            });
+          } catch (trackError) {
+            console.error("[Autumn] Track error after standalone chat:", {
+              requestId,
+              customerId: organizationId,
+              error: trackError,
+            });
+          }
+        },
+        log,
+      }
+    );
+
+    return stream.toUIMessageStreamResponse({
+      originalMessages: messages as never,
+      generateMessageId: nanoid,
+      sendReasoning: enableThinking !== false,
+      headers: { "X-Chat-Id": chatId },
+      onFinish: async ({ messages: responseMessages }) => {
+        try {
+          await replaceChatHistory(organizationId, chatId, responseMessages);
+        } finally {
+          await cleanup();
+        }
+      },
+      onError: (error) => {
+        cleanup().catch(() => undefined);
+        console.error("[Standalone Chat] Direct stream error:", {
+          requestId,
+          error,
+        });
+        if (
+          combinedAbortSignal.aborted ||
+          (error instanceof Error && error.name === "AbortError")
+        ) {
+          return "Generation stopped.";
+        }
+        if (error instanceof Error) {
+          return error.message;
+        }
+        return "An error occurred while processing your request.";
+      },
+    });
+  } catch (error) {
+    await cleanup();
+    throw error;
+  }
 }
