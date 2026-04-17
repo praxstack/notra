@@ -198,7 +198,6 @@ function StandaloneChatPageClient({
   const organizationId = organization?.id ?? "";
   const { data: session } = authClient.useSession();
   const queryClient = useQueryClient();
-  const router = useRouter();
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -535,9 +534,11 @@ function StandaloneChatPageClient({
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+  const hasUpdatedUrlRef = useRef(false);
+
   const handleSend = useCallback(
     async (text: string) => {
-      const isFirstMessage = !initialChatId;
+      const isFirstMessage = !initialChatId && !hasUpdatedUrlRef.current;
       setWasStoppedByUser(false);
       for (const message of messagesRef.current) {
         if (message.role !== "assistant") {
@@ -557,9 +558,16 @@ function StandaloneChatPageClient({
           });
         }
       }
+      if (isFirstMessage) {
+        hasUpdatedUrlRef.current = true;
+        window.history.replaceState(
+          null,
+          "",
+          `/${organizationSlug}/chat/${stableChatId}`
+        );
+      }
       await sendMessage({ text });
       if (isFirstMessage) {
-        router.replace(`/${organizationSlug}/chat/${stableChatId}`);
         queryClient.invalidateQueries({
           queryKey: ["chat-sessions", organizationId],
         });
@@ -571,7 +579,6 @@ function StandaloneChatPageClient({
       organizationId,
       organizationSlug,
       queryClient,
-      router,
       sendMessage,
       stableChatId,
     ]
