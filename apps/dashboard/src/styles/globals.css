@@ -323,3 +323,32 @@
     transform: translateX(100%);
   }
 }
+
+@keyframes chat-input-slide-down {
+  from {
+    transform: translateY(calc(-50dvh + 50% + 1.5rem));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.chat-input-slide-down {
+  animation: chat-input-slide-down 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes chat-messages-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-messages-fade-in {
+  animation: chat-messages-fade-in 360ms ease-out both;
+  animation-delay: 120ms;
+}

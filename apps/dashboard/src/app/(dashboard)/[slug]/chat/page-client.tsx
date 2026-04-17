@@ -36,6 +36,7 @@ import { renderTextWithIntegrationReferences } from "@/components/chat/integrati
 import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
+import { cn } from "@/lib/utils";
 import {
   chatErrorPayloadSchema,
   chatTransportRequestInputSchema,
@@ -498,6 +499,30 @@ function StandaloneChatPageClient({
   const isLoading = status === "streaming" || status === "submitted";
   const hasMessages = messages.length > 0;
 
+  const [isFirstMessageTransition, setIsFirstMessageTransition] =
+    useState(false);
+  const firstMessageTransitionTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  const triggerFirstMessageTransition = useCallback(() => {
+    if (firstMessageTransitionTimerRef.current) {
+      clearTimeout(firstMessageTransitionTimerRef.current);
+    }
+    setIsFirstMessageTransition(true);
+    firstMessageTransitionTimerRef.current = setTimeout(() => {
+      setIsFirstMessageTransition(false);
+      firstMessageTransitionTimerRef.current = null;
+    }, 600);
+  }, []);
+  useEffect(
+    () => () => {
+      if (firstMessageTransitionTimerRef.current) {
+        clearTimeout(firstMessageTransitionTimerRef.current);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!isLoading) {
       setIsStopping(false);
@@ -546,6 +571,9 @@ function StandaloneChatPageClient({
   const handleSend = useCallback(
     async (text: string) => {
       const isFirstMessage = !initialChatId && !hasUpdatedUrlRef.current;
+      if (messagesRef.current.length === 0) {
+        triggerFirstMessageTransition();
+      }
       setWasStoppedByUser(false);
       for (const message of messagesRef.current) {
         if (message.role !== "assistant") {
@@ -588,6 +616,7 @@ function StandaloneChatPageClient({
       queryClient,
       sendMessage,
       stableChatId,
+      triggerFirstMessageTransition,
     ]
   );
 
@@ -924,7 +953,12 @@ function StandaloneChatPageClient({
       <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
         <div className="relative flex min-h-full flex-col">
           <div className="flex flex-1 flex-col px-4 pt-6 pb-28">
-            <div className="mx-auto mt-auto flex w-full max-w-2xl flex-col gap-4">
+            <div
+              className={cn(
+                "mx-auto mt-auto flex w-full max-w-2xl flex-col gap-4",
+                isFirstMessageTransition && "chat-messages-fade-in"
+              )}
+            >
               {visibleMessages.map((message) => (
                 <Message from={message.role} key={message.id}>
                   <MessageContent>
@@ -957,7 +991,12 @@ function StandaloneChatPageClient({
               )}
             </div>
           </div>
-          <div className="sticky bottom-0 z-10 bg-background px-4 pb-4">
+          <div
+            className={cn(
+              "sticky bottom-0 z-10 bg-background px-4 pb-4",
+              isFirstMessageTransition && "chat-input-slide-down"
+            )}
+          >
             <div className="-inset-x-4 pointer-events-none absolute bottom-full h-12 bg-linear-to-t from-background to-transparent" />
             <div className="mx-auto w-full max-w-2xl">
               <ChatInputAdvanced
