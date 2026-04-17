@@ -876,6 +876,10 @@ function StandaloneChatPageClient({
         )));
   const thinkingIndicatorLabel =
     lastMessage?.role === "user" ? "Getting Started" : "Thinking";
+  const visibleMessages =
+    showThinkingIndicator && lastMessage?.role === "assistant"
+      ? messages.slice(0, -1)
+      : messages;
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
@@ -883,7 +887,7 @@ function StandaloneChatPageClient({
         <div className="relative flex min-h-full flex-col">
           <div className="flex flex-1 flex-col px-4 pt-6 pb-28">
             <div className="mx-auto mt-auto flex w-full max-w-2xl flex-col gap-4">
-              {messages.map((message) => (
+              {visibleMessages.map((message) => (
                 <Message from={message.role} key={message.id}>
                   <MessageContent>
                     {message.parts.map((part, index) =>
