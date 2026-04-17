@@ -6,7 +6,8 @@ import {
   organizations,
 } from "@notra/db/schema";
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
+import * as z from "zod";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { authorizedProcedure } from "@/lib/orpc/base";
 import { organizationIdSchema } from "@/schemas/auth/organization";

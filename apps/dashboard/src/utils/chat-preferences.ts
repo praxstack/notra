@@ -1,26 +1,15 @@
 "use client";
 
-import { z } from "zod";
+import {
+  chatModelSchema,
+  storedChatPreferencesSchema,
+  thinkingLevelSchema,
+} from "@/schemas/chat";
+import type { StoredChatPreferences } from "@/types/chat";
 
 const CHAT_PREFERENCES_STORAGE_VERSION = "v1";
 
 export const CHAT_PREFERENCES_STORAGE_KEY = `notra_chat_preferences:${CHAT_PREFERENCES_STORAGE_VERSION}`;
-
-const modelSchema = z.enum([
-  "anthropic/claude-opus-4-7",
-  "anthropic/claude-sonnet-4-6",
-  "anthropic/claude-haiku-4-5",
-  "openai/gpt-5.4",
-]);
-
-const thinkingLevelSchema = z.enum(["off", "low", "medium", "high"]);
-
-const chatPreferencesSchema = z.object({
-  model: modelSchema,
-  thinkingLevel: thinkingLevelSchema,
-});
-
-export type StoredChatPreferences = z.infer<typeof chatPreferencesSchema>;
 
 export const DEFAULT_CHAT_PREFERENCES: StoredChatPreferences = {
   model: "anthropic/claude-sonnet-4-6",
@@ -42,7 +31,7 @@ function clearStoredChatPreferences(): void {
 export function parseStoredChatModel(
   value: string
 ): StoredChatPreferences["model"] | null {
-  const result = modelSchema.safeParse(value);
+  const result = chatModelSchema.safeParse(value);
   return result.success ? result.data : null;
 }
 
@@ -64,7 +53,7 @@ export function readStoredChatPreferences(): StoredChatPreferences | null {
       return null;
     }
 
-    const result = chatPreferencesSchema.safeParse(JSON.parse(raw));
+    const result = storedChatPreferencesSchema.safeParse(JSON.parse(raw));
     if (!result.success) {
       clearStoredChatPreferences();
       return null;

@@ -15,6 +15,10 @@ export async function isAiChatExperimentEnabled({
   email,
   organizationId,
 }: AiChatExperimentContext): Promise<boolean> {
+  if (process.env.NODE_ENV === "development") {
+    return true;
+  }
+
   if (!DATABUDDY_DASHBOARD_CLIENT_ID) {
     return false;
   }

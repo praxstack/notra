@@ -2,7 +2,8 @@
 
 import { useFlag } from "@databuddy/sdk/react";
 import { useEffect, useState } from "react";
-import { z } from "zod";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
+import * as z from "zod";
 
 const STORAGE_PREFIX = "notra_ff_";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24;

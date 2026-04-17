@@ -1,5 +1,6 @@
 import { createOctokit } from "@notra/ai/utils/octokit";
-import { z } from "zod";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
+import * as z from "zod";
 import { authorizedProcedure } from "@/lib/orpc/base";
 import { badRequest, internalServerError } from "@/lib/orpc/utils/errors";
 
