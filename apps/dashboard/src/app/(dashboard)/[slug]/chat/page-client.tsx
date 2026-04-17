@@ -765,11 +765,11 @@ function StandaloneChatPageClient({
 
       if (
         toolPart.state === "input-streaming" ||
-        toolPart.state === "input-available"
+        toolPart.state === "input-available" ||
+        toolPart.state === "output-available"
       ) {
         return (
-          <div
-            className="flex items-center gap-1.5 text-muted-foreground text-xs"
+          <ChatToolBlock
             key={toolPart.toolCallId}
           >
             <Loader2Icon className="size-3 animate-spin" />
