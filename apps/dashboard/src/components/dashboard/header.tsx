@@ -17,6 +17,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId } from "react";
 import { CreditBalanceButton } from "@/components/billing/credit-balance-button";
+import { ChatTopbarTitle } from "@/components/dashboard/chat-topbar-title";
 
 const NON_ORG_PATHS: string[] = [];
 
@@ -46,6 +47,11 @@ export function SiteHeader() {
 
   const isNonOrgPath = NON_ORG_PATHS.some((path) => pathname.startsWith(path));
   const breadcrumbSegments = isNonOrgPath ? segments : segments.slice(1);
+  const isChatDetail =
+    !isNonOrgPath &&
+    breadcrumbSegments[0] === "chat" &&
+    breadcrumbSegments.length >= 2;
+  const chatDetailId = isChatDetail ? breadcrumbSegments[1] : null;
 
   const breadcrumbs = breadcrumbSegments.flatMap((segment, index) => {
     const href = isNonOrgPath
@@ -57,7 +63,12 @@ export function SiteHeader() {
       config?.label ??
       segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     const isClickable = config?.href !== null;
+    const isChatDetailLast = isChatDetail && isLast && chatDetailId;
     const content = (() => {
+      if (isChatDetailLast) {
+        return <ChatTopbarTitle chatId={chatDetailId} />;
+      }
+
       if (isClickable) {
         return <BreadcrumbLink render={<Link href={href}>{label}</Link>} />;
       }
@@ -71,7 +82,9 @@ export function SiteHeader() {
 
     const item = (
       <BreadcrumbItem
-        className={isClickable ? "hover:underline" : undefined}
+        className={
+          isClickable && !isChatDetailLast ? "hover:underline" : undefined
+        }
         key={`${id}-item-${segment}`}
       >
         {content}
