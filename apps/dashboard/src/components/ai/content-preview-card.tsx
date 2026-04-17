@@ -122,10 +122,8 @@ export function ContentPreviewCard({
 
   const isSocialMedia =
     contentType === "linkedin_post" || contentType === "twitter_post";
-  const defaultOpen = state === "pending";
-
   return (
-    <Collapsible defaultOpen={defaultOpen}>
+    <Collapsible defaultOpen={state === "pending"} key={state}>
       <div className="ml-px max-w-sm">
         <div className="rounded-lg border border-border bg-muted/80">
           <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 [&[data-panel-open]>svg]:rotate-90">

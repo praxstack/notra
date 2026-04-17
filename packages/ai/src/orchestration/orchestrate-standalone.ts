@@ -21,18 +21,18 @@ import {
   smoothStream,
   stepCountIs,
   streamText,
-  type UIMessage,
 } from "ai";
 import {
   hasEnabledGitHubIntegration,
   hasEnabledLinearIntegration,
 } from "./integration-validator";
-import { routeAndSelectModel } from "./router";
 import {
   buildStandaloneToolSet,
   getLinearContextFromIntegrations,
   getRepoContextFromIntegrations,
 } from "./standalone-tool-registry";
+
+const DEFAULT_STANDALONE_CHAT_MODEL = "anthropic/claude-sonnet-4-6";
 
 export async function orchestrateStandaloneChat(
   input: StandaloneChatInput,
@@ -60,17 +60,15 @@ export async function orchestrateStandaloneChat(
 
   const hasGitHub = hasEnabledGitHubIntegration(validatedIntegrations);
   const hasLinear = hasEnabledLinearIntegration(validatedIntegrations);
-  const hasDataSources = hasGitHub || hasLinear;
-
-  const lastUserMessage = getLastUserMessage(messages);
-  const routingDecision = requestedModel
-    ? {
-        model: requestedModel,
-        complexity: "complex" as const,
-        requiresTools: true,
-        reasoning: "User selected model explicitly",
-      }
-    : await routeAndSelectModel(lastUserMessage, hasDataSources, log);
+  const selectedModel = requestedModel ?? DEFAULT_STANDALONE_CHAT_MODEL;
+  const routingDecision = {
+    model: selectedModel,
+    complexity: "complex" as const,
+    requiresTools: true,
+    reasoning: requestedModel
+      ? "User selected model explicitly"
+      : `Using standalone chat default model: ${DEFAULT_STANDALONE_CHAT_MODEL}`,
+  };
 
   const modelWithMemory = createModel(
     organizationId,
@@ -396,24 +394,4 @@ async function getEnabledLinearIntegrations(
     );
     return [];
   }
-}
-
-function getLastUserMessage(messages: UIMessage[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (!message) {
-      continue;
-    }
-    if (message.role === "user") {
-      const parts = message.parts;
-      if (Array.isArray(parts)) {
-        for (const part of parts) {
-          if (part.type === "text") {
-            return part.text;
-          }
-        }
-      }
-    }
-  }
-  return "";
 }
