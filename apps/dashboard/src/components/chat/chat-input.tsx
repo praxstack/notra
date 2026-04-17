@@ -1291,7 +1291,9 @@ export function ChatInputAdvanced({
                     <Button
                       className="group/button ml-auto h-7 shrink-0 rounded-lg bg-muted px-1.5 transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={
-                        isLoading ? !onStop || isStopping : isUsageBlocked
+                        isLoading
+                          ? !onStop || isStopping
+                          : isUsageBlocked || isEmpty
                       }
                       onClick={isLoading ? onStop : handleSend}
                       size="sm"
