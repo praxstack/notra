@@ -9,9 +9,8 @@ import {
   NoteIcon,
   Notification03Icon,
   PlugIcon,
-  Settings01Icon,
 } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -25,15 +24,7 @@ import { usePathname } from "next/navigation";
 import { memo } from "react";
 import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
-
-type NavMainCategory = "none" | "workspace" | "automation" | "manage";
-
-interface NavMainItem {
-  link: string;
-  icon: IconSvgElement;
-  label: string;
-  category: NavMainCategory;
-}
+import type { NavMainCategory, NavMainItem } from "@/types/components/nav";
 
 const categoryLabels: Record<Exclude<NavMainCategory, "none">, string> = {
   workspace: "Workspace",
@@ -94,12 +85,6 @@ const navMainItems: NavMainItem[] = [
     link: "/logs",
     icon: AnalyticsUpIcon,
     label: "Logs",
-    category: "manage",
-  },
-  {
-    link: "/settings/account",
-    icon: Settings01Icon,
-    label: "Settings",
     category: "manage",
   },
 ];

@@ -17,6 +17,7 @@ import type * as React from "react";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { ChatHistoryNav } from "./chat-history-nav";
 import { NavMain } from "./nav-main";
+import { NavSecondary } from "./nav-secondary";
 import { NavSettings } from "./nav-settings";
 import { NavUser } from "./nav-user";
 import { OrgSelector } from "./org-selector";
@@ -134,6 +135,7 @@ export function DashboardSidebar({
                 <SidebarTrialExpired />
                 <SidebarOnboarding />
                 <SidebarUpgrade />
+                <NavSecondary />
               </div>
             </motion.div>
           )}
