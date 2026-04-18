@@ -23,7 +23,7 @@ import {
 } from "ai";
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatToolBlock } from "@/components/ai/chat-tool-block";
 import { BrailleLoader } from "@/components/braille-loader";
@@ -202,10 +202,8 @@ function StandaloneChatPageClient({
   const [pendingMessageId, setPendingMessageId] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  const stableChatId = useMemo(
-    () => initialChatId || nanoid(16),
-    [initialChatId]
-  );
+  const [generatedChatId, setGeneratedChatId] = useState(() => nanoid(16));
+  const stableChatId = initialChatId ?? generatedChatId;
 
   const [context, setContext] = useState<ContextItem[]>([]);
   const [hasCustomizedContext, setHasCustomizedContext] = useState(false);
@@ -567,6 +565,25 @@ function StandaloneChatPageClient({
   messagesRef.current = messages;
 
   const hasUpdatedUrlRef = useRef(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (initialChatId) {
+      return;
+    }
+    if (pathname !== `/${organizationSlug}/chat`) {
+      return;
+    }
+
+    hasUpdatedUrlRef.current = false;
+    setMessages([]);
+    setContext([]);
+    setHasCustomizedContext(false);
+    setWasStoppedByUser(false);
+    setPendingMessageId(null);
+    setChatError(null);
+    setGeneratedChatId(nanoid(16));
+  }, [pathname, organizationSlug, initialChatId, setMessages]);
 
   const handleSend = useCallback(
     async (text: string) => {
