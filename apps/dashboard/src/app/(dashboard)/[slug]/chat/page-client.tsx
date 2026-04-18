@@ -678,36 +678,6 @@ function StandaloneChatPageClient({
     [organization?.name, organization?.logo]
   );
 
-  const activeReasoningPartKey = useMemo(() => {
-    if (!isLoading) {
-      return null;
-    }
-
-    for (
-      let messageIndex = messages.length - 1;
-      messageIndex >= 0;
-      messageIndex--
-    ) {
-      const message = messages[messageIndex];
-      if (!message || message.role !== "assistant") {
-        continue;
-      }
-
-      for (
-        let partIndex = message.parts.length - 1;
-        partIndex >= 0;
-        partIndex--
-      ) {
-        const part = message.parts[partIndex];
-        if (part?.type === "reasoning") {
-          return `${message.id}-reasoning-${partIndex}`;
-        }
-      }
-    }
-
-    return null;
-  }, [isLoading, messages]);
-
   function renderPart(
     part: { type: string; [key: string]: unknown },
     messageId: string,
@@ -747,9 +717,10 @@ function StandaloneChatPageClient({
         return null;
       }
       const reasoningKey = `${messageId}-reasoning-${index}`;
+      const reasoningState = part.state as "streaming" | "done" | undefined;
       return (
         <ChatReasoningBlock
-          isStreaming={activeReasoningPartKey === reasoningKey}
+          isStreaming={isLoading && reasoningState === "streaming"}
           key={reasoningKey}
         >
           {text}
