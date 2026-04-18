@@ -59,21 +59,21 @@ import {
 
 const AVAILABLE_MODELS = [
   {
-    id: "anthropic/claude-opus-4-7",
+    id: "anthropic/claude-opus-4.7",
     label: "Opus 4.7",
     description: "Deepest reasoning",
     pricing: "$5 input / $25 output per 1M",
     provider: "anthropic",
   },
   {
-    id: "anthropic/claude-sonnet-4-6",
+    id: "anthropic/claude-sonnet-4.6",
     label: "Sonnet 4.6",
     description: "Best everyday default",
     pricing: "$3 input / $15 output per 1M",
     provider: "anthropic",
   },
   {
-    id: "anthropic/claude-haiku-4-5",
+    id: "anthropic/claude-haiku-4.5",
     label: "Haiku 4.5",
     description: "Fastest responses",
     pricing: "$1 input / $5 output per 1M",
@@ -199,7 +199,7 @@ export function ChatInputAdvanced({
   onRemoveContext,
   error: externalError,
   onClearError,
-  model = "anthropic/claude-sonnet-4-6",
+  model = "anthropic/claude-sonnet-4.6",
   onModelChange,
   thinkingLevel = "medium",
   onThinkingLevelChange,

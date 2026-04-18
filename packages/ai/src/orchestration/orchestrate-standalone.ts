@@ -32,7 +32,7 @@ import {
   getRepoContextFromIntegrations,
 } from "./standalone-tool-registry";
 
-const DEFAULT_STANDALONE_CHAT_MODEL = "anthropic/claude-sonnet-4-6";
+const DEFAULT_STANDALONE_CHAT_MODEL = "anthropic/claude-sonnet-4.6";
 
 export async function orchestrateStandaloneChat(
   input: StandaloneChatInput,

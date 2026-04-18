@@ -5,9 +5,9 @@ import * as z from "zod";
 import { CHAT_TITLE_MAX_LENGTH } from "@/constants/chat";
 
 export const chatModelSchema = z.enum([
-  "anthropic/claude-opus-4-7",
-  "anthropic/claude-sonnet-4-6",
-  "anthropic/claude-haiku-4-5",
+  "anthropic/claude-opus-4.7",
+  "anthropic/claude-sonnet-4.6",
+  "anthropic/claude-haiku-4.5",
   "openai/gpt-5.4",
 ]);
 

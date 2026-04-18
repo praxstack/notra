@@ -12,7 +12,7 @@ const CHAT_PREFERENCES_STORAGE_VERSION = "v1";
 export const CHAT_PREFERENCES_STORAGE_KEY = `notra_chat_preferences:${CHAT_PREFERENCES_STORAGE_VERSION}`;
 
 export const DEFAULT_CHAT_PREFERENCES: StoredChatPreferences = {
-  model: "anthropic/claude-sonnet-4-6",
+  model: "anthropic/claude-sonnet-4.6",
   thinkingLevel: "medium",
 };
 
