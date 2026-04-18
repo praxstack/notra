@@ -165,14 +165,23 @@ function getThinkingProviderOptions(
   }
 
   if (modelId.startsWith("anthropic/")) {
+    if (usesAdaptiveThinking(modelId)) {
+      return {
+        anthropic: {
+          thinking: { type: "adaptive" },
+          output_config: { effort: thinkingLevel },
+        },
+      } satisfies StreamProviderOptions;
+    }
+
     return {
       anthropic: {
         thinking: {
-          type: "enabled" as const,
+          type: "enabled",
           budgetTokens: getAnthropicThinkingBudget(thinkingLevel),
         },
       },
-    } as StreamProviderOptions;
+    } satisfies StreamProviderOptions;
   }
 
   if (modelId.startsWith("openai/")) {
@@ -180,10 +189,14 @@ function getThinkingProviderOptions(
       openai: {
         reasoningEffort: thinkingLevel,
       },
-    } as StreamProviderOptions;
+    } satisfies StreamProviderOptions;
   }
 
   return undefined;
+}
+
+function usesAdaptiveThinking(modelId: string): boolean {
+  return modelId === "anthropic/claude-opus-4.7";
 }
 
 function getAnthropicThinkingBudget(
