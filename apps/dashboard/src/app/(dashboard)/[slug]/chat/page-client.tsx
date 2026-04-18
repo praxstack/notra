@@ -387,6 +387,10 @@ function StandaloneChatPageClient({
   }, []);
 
   useEffect(() => {
+    if (initialChatId) {
+      return;
+    }
+
     function syncChatPreferencesFromStorage() {
       const storedPreferences = readStoredChatPreferences();
       if (!storedPreferences) {
@@ -421,14 +425,18 @@ function StandaloneChatPageClient({
         syncChatPreferencesFromStorage
       );
     };
-  }, []);
+  }, [initialChatId]);
 
   useEffect(() => {
+    if (initialChatId) {
+      return;
+    }
+
     writeStoredChatPreferences({
       model: selectedModel,
       thinkingLevel,
     });
-  }, [selectedModel, thinkingLevel]);
+  }, [initialChatId, selectedModel, thinkingLevel]);
 
   const handleStop = useCallback(async () => {
     setIsStopping(true);
@@ -447,7 +455,11 @@ function StandaloneChatPageClient({
     }
   }, [organizationId, stableChatId, stop]);
 
-  const chatHistoryQuery = useQuery({
+  const chatHistoryQuery = useQuery<{
+    messages: ChatUIMessage[] | null;
+    lastResponseStopped: boolean;
+    activeStreamId: string | null;
+  } | null>({
     queryKey: ["chat-history", organizationId, initialChatId],
     queryFn: async () => {
       if (!initialChatId) {
@@ -475,8 +487,41 @@ function StandaloneChatPageClient({
     if (!chatHistoryQuery.data) {
       return;
     }
-    if (chatHistoryQuery.data.messages?.length) {
-      setMessages(chatHistoryQuery.data.messages);
+    const historyMessages = chatHistoryQuery.data.messages;
+    if (historyMessages?.length) {
+      setMessages(historyMessages);
+
+      let modelRestored = false;
+      let thinkingLevelRestored = false;
+
+      for (let index = historyMessages.length - 1; index >= 0; index -= 1) {
+        if (modelRestored && thinkingLevelRestored) {
+          break;
+        }
+
+        const metadata = historyMessages[index]?.metadata;
+        if (!metadata) {
+          continue;
+        }
+
+        if (!modelRestored && metadata.model) {
+          const parsedModel = parseStoredChatModel(metadata.model);
+          if (parsedModel) {
+            setSelectedModel(parsedModel);
+            modelRestored = true;
+          }
+        }
+
+        if (!thinkingLevelRestored && metadata.thinkingLevel) {
+          const parsedThinkingLevel = parseStoredThinkingLevel(
+            metadata.thinkingLevel
+          );
+          if (parsedThinkingLevel) {
+            setThinkingLevel(parsedThinkingLevel);
+            thinkingLevelRestored = true;
+          }
+        }
+      }
     }
     setWasStoppedByUser(Boolean(chatHistoryQuery.data.lastResponseStopped));
     if (chatHistoryQuery.data.activeStreamId) {
