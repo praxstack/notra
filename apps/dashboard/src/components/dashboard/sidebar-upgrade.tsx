@@ -49,7 +49,7 @@ export function SidebarUpgrade() {
   const buttonLabel = loading
     ? "Loading..."
     : showBasicTrial
-      ? "Start 3 day free trial"
+      ? "Start 7 day free trial"
       : isBasic
         ? "Upgrade to Pro"
         : "Upgrade";
@@ -57,7 +57,7 @@ export function SidebarUpgrade() {
   const heading = isBasic ? "Upgrade to Pro" : "Get Started";
   const description = isBasic
     ? "Get more team seats, unlimited integrations, and higher usage limits."
-    : "Start your 3 day free trial and unlock AI-powered workflows.";
+    : "Start your 7 day free trial and unlock AI-powered workflows.";
 
   if (
     process.env.NEXT_PUBLIC_SHOW_UPGRADE_BUTTON !== "true" ||
