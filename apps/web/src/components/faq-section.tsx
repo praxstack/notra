@@ -43,12 +43,12 @@ const faqData: FAQItem[] = [
   {
     question: "Is there a free tier?",
     answer:
-      "There is no permanent free tier. When you sign up, an automatic Basic trial is applied for 3 days at no cost so you can explore Notra before committing to a paid plan.",
+      "There is no permanent free tier. When you sign up, an automatic Basic trial is applied for 7 days at no cost so you can explore Notra before committing to a paid plan.",
   },
   {
     question: "How do I get started?",
     answer:
-      "Sign up, connect your GitHub, and Notra starts generating content within minutes. Your 3-day Basic trial begins automatically.",
+      "Sign up, connect your GitHub, and Notra starts generating content within minutes. Your 7-day Basic trial begins automatically.",
   },
 ];
 

@@ -34,12 +34,12 @@ const FAQ_ITEMS = [
   {
     question: "Is there a free tier?",
     answer:
-      "There is no permanent free tier. When you sign up, an automatic Basic trial is applied for 3 days at no cost so you can explore Notra before committing to a paid plan.",
+      "There is no permanent free tier. When you sign up, an automatic Basic trial is applied for 7 days at no cost so you can explore Notra before committing to a paid plan.",
   },
   {
     question: "How do I get started?",
     answer:
-      "Sign up, connect your GitHub, and Notra starts generating content within minutes. Your 3-day Basic trial begins automatically.",
+      "Sign up, connect your GitHub, and Notra starts generating content within minutes. Your 7-day Basic trial begins automatically.",
   },
 ] as const;
 
@@ -157,7 +157,7 @@ export function buildPricingMarkdown() {
     "",
     "Choose the right Notra plan for your team.",
     "",
-    "Start with a 3-day free trial. Upgrade when you need more integrations, posts, or team seats.",
+    "Start with a 7-day free trial. Upgrade when you need more integrations, posts, or team seats.",
     "",
     planSections,
     "## Feature Comparison",
@@ -200,7 +200,7 @@ export function buildLandingMarkdown() {
     ]),
     markdownSection("Pricing", [
       "Pick the plan that fits your team.",
-      "Start with a 3-day free trial. Upgrade when you need more integrations, posts, or team seats.",
+      "Start with a 7-day free trial. Upgrade when you need more integrations, posts, or team seats.",
       "",
       "See the dedicated pricing page: [Pricing](https://usenotra.com/pricing.md)",
     ]),

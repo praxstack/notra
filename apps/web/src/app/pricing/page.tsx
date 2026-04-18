@@ -48,7 +48,7 @@ export default function PricingPage() {
             </h1>
 
             <div className="self-stretch text-center font-normal font-sans text-base text-muted-foreground leading-7">
-              Start with a 3-day free trial. Upgrade when you
+              Start with a 7-day free trial. Upgrade when you
               <br />
               need more integrations, posts, or team seats.
             </div>
