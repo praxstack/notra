@@ -41,7 +41,7 @@ export function useChatSessions({
       return parsed.success ? (parsed.data.sessions ?? []) : [];
     },
     enabled: Boolean(organizationId) && enabled,
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60,
   });
 
   return {

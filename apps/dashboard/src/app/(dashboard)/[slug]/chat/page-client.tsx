@@ -24,7 +24,14 @@ import {
 import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ChatToolBlock } from "@/components/ai/chat-tool-block";
 import { BrailleLoader } from "@/components/braille-loader";
 import { AssistantMetadataHover } from "@/components/chat/assistant-metadata-hover";
@@ -464,7 +471,7 @@ function StandaloneChatPageClient({
     staleTime: 1000 * 60 * 5,
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!chatHistoryQuery.data) {
       return;
     }
@@ -493,7 +500,11 @@ function StandaloneChatPageClient({
     setHasCustomizedContext(false);
   }, [initialChatId, setMessages]);
 
-  const isLoadingHistory = chatHistoryQuery.isLoading && messages.length === 0;
+  const pendingHistoryMessages = chatHistoryQuery.data?.messages?.length ?? 0;
+  const isLoadingHistory =
+    Boolean(initialChatId) &&
+    messages.length === 0 &&
+    (chatHistoryQuery.isLoading || pendingHistoryMessages > 0);
   const isLoading = status === "streaming" || status === "submitted";
   const hasMessages = messages.length > 0;
 
