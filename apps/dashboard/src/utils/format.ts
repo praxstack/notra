@@ -59,6 +59,14 @@ export function formatRelativeTime(date: Date, now = Date.now()): string {
   return "Saved over an hour ago";
 }
 
+export function truncateSnippet(text: string, max: number): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= max) {
+    return normalized;
+  }
+  return `${normalized.slice(0, max - 1)}…`;
+}
+
 export function truncateText(value: string, maxLength: number): string {
   if (maxLength <= 0) {
     return "";

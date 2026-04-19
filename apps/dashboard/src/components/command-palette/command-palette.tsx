@@ -4,10 +4,17 @@ import {
   ArrowDown01Icon,
   ArrowRight01Icon,
   ArrowUp01Icon,
+  CorporateIcon,
+  Github01Icon,
+  LinkSquare02Icon,
   Loading03Icon,
   Message01Icon,
+  NoteIcon,
+  PlugIcon,
+  QuotesIcon,
   SearchIcon,
   SparklesIcon,
+  UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -18,23 +25,33 @@ import {
   DialogTitle,
 } from "@notra/ui/components/ui/dialog";
 import { cn } from "@notra/ui/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 import { Command as CommandPrimitive } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { dashboardOrpc } from "@/lib/orpc/query";
+import type {
+  AiResult,
+  CommandSection,
+  EntityHit,
+} from "@/types/components/command-palette";
+import { truncateSnippet } from "@/utils/format";
 import { useCommandPalette } from "./command-palette-context";
-import {
-  COMMAND_ROUTES,
-  COMMAND_SECTIONS,
-  type CommandSection,
-} from "./registry";
-
-type AiResult =
-  | { action: "navigate"; path: string; reason: string }
-  | { action: "chat"; path: null; reason: string };
+import { COMMAND_ROUTES, COMMAND_SECTIONS } from "./registry";
 
 const APPLE_PLATFORM_PATTERN = /Mac|iPhone|iPad|iPod/i;
+const SEARCH_DEBOUNCE_MS = 150;
+const SEARCH_MIN_LENGTH = 2;
+const REFERENCE_SNIPPET_MAX = 80;
+
+const REFERENCE_TYPE_LABEL: Record<string, string> = {
+  twitter_post: "Twitter",
+  linkedin_post: "LinkedIn",
+  blog_post: "Blog",
+  custom: "Custom",
+};
 const BRAILLE_FRAMES = [
   "⠋",
   "⠙",
@@ -103,6 +120,150 @@ export function CommandPalette() {
   const abortRef = useRef<AbortController | null>(null);
 
   const slug = activeOrganization?.slug ?? "";
+  const organizationId = activeOrganization?.id ?? "";
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const trimmed = query.trim();
+    const id = window.setTimeout(() => {
+      setDebouncedQuery(trimmed);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
+  }, [query]);
+
+  const searchEnabled =
+    debouncedQuery.length >= SEARCH_MIN_LENGTH &&
+    organizationId.length > 0 &&
+    open &&
+    aiState.status === "idle";
+
+  const searchResults = useQuery({
+    ...dashboardOrpc.search.global.queryOptions({
+      input: { organizationId, query: debouncedQuery },
+    }),
+    enabled: searchEnabled,
+    staleTime: 15_000,
+  });
+
+  const entityHits = useMemo<EntityHit[]>(() => {
+    const data = searchResults.data;
+    if (!(data && slug)) {
+      return [];
+    }
+    const hits: EntityHit[] = [];
+    for (const post of data.posts) {
+      hits.push({
+        key: `post:${post.id}`,
+        label: post.title,
+        sublabel: post.status === "published" ? "Published" : "Draft",
+        icon: NoteIcon,
+        path: `/${slug}/content/${post.id}`,
+        keywords: ["post", "content", post.slug ?? "", debouncedQuery],
+      });
+    }
+    for (const voice of data.voices) {
+      hits.push({
+        key: `voice:${voice.id}`,
+        label: voice.name,
+        sublabel: voice.companyName ?? "Brand voice",
+        icon: CorporateIcon,
+        path: `/${slug}/brand/identity`,
+        keywords: ["brand", "voice", "identity", debouncedQuery],
+      });
+    }
+    for (const reference of data.references) {
+      const typeLabel = REFERENCE_TYPE_LABEL[reference.type] ?? "Reference";
+      hits.push({
+        key: `reference:${reference.id}`,
+        label: truncateSnippet(reference.content, REFERENCE_SNIPPET_MAX),
+        sublabel: reference.note
+          ? `${typeLabel} · ${truncateSnippet(reference.note, 40)}`
+          : typeLabel,
+        icon: QuotesIcon,
+        path: `/${slug}/brand/identity`,
+        keywords: [
+          "reference",
+          "brand",
+          typeLabel.toLowerCase(),
+          debouncedQuery,
+        ],
+      });
+    }
+    for (const integration of data.githubIntegrations) {
+      const repoLabel =
+        integration.owner && integration.repo
+          ? `${integration.owner}/${integration.repo}`
+          : undefined;
+      hits.push({
+        key: `github:${integration.id}`,
+        label: integration.displayName,
+        sublabel: repoLabel ? `GitHub · ${repoLabel}` : "GitHub",
+        icon: Github01Icon,
+        path: `/${slug}/integrations/github/${integration.id}`,
+        keywords: ["github", "integration", repoLabel ?? "", debouncedQuery],
+      });
+    }
+    for (const integration of data.linearIntegrations) {
+      const sub = [
+        integration.linearOrganizationName,
+        integration.linearTeamName,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      hits.push({
+        key: `linear:${integration.id}`,
+        label: integration.displayName,
+        sublabel: sub ? `Linear · ${sub}` : "Linear",
+        icon: LinkSquare02Icon,
+        path: `/${slug}/integrations/linear/${integration.id}`,
+        keywords: ["linear", "integration", debouncedQuery],
+      });
+    }
+    for (const account of data.socialAccounts) {
+      hits.push({
+        key: `social:${account.id}`,
+        label: account.displayName,
+        sublabel: `${account.provider} · @${account.username}`,
+        icon: UserCircleIcon,
+        path: `/${slug}/integrations`,
+        keywords: [
+          "social",
+          "account",
+          account.provider,
+          account.username,
+          debouncedQuery,
+        ],
+      });
+    }
+    return hits;
+  }, [searchResults.data, slug, debouncedQuery]);
+
+  const entityHitsBySection = useMemo(() => {
+    const groups = {
+      Posts: [] as EntityHit[],
+      "Brand voices": [] as EntityHit[],
+      References: [] as EntityHit[],
+      Integrations: [] as EntityHit[],
+    };
+    for (const hit of entityHits) {
+      if (hit.key.startsWith("post:")) {
+        groups.Posts.push(hit);
+      } else if (hit.key.startsWith("voice:")) {
+        groups["Brand voices"].push(hit);
+      } else if (hit.key.startsWith("reference:")) {
+        groups.References.push(hit);
+      } else {
+        groups.Integrations.push(hit);
+      }
+    }
+    return groups;
+  }, [entityHits]);
+  const entitySectionOrder: Array<keyof typeof entityHitsBySection> = [
+    "Posts",
+    "Brand voices",
+    "References",
+    "Integrations",
+  ];
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -399,6 +560,50 @@ export function CommandPalette() {
                           strokeWidth={2}
                         />
                         <span className="flex-1 truncate">{item.label}</span>
+                        <HugeiconsIcon
+                          className="size-3 text-muted-foreground opacity-0 transition-opacity group-data-[selected=true]/item:opacity-60"
+                          icon={ArrowRight01Icon}
+                          strokeWidth={2}
+                        />
+                      </CommandPrimitive.Item>
+                    ))}
+                  </CommandPrimitive.Group>
+                );
+              })}
+
+              {entitySectionOrder.map((section) => {
+                const items = entityHitsBySection[section];
+                if (!items || items.length === 0) {
+                  return null;
+                }
+                return (
+                  <CommandPrimitive.Group
+                    className="px-1 pb-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-[10.5px] [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider"
+                    heading={section}
+                    key={section}
+                  >
+                    {items.map((hit) => (
+                      <CommandPrimitive.Item
+                        className={cn(
+                          "group/item relative flex cursor-default select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors",
+                          "data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+                        )}
+                        key={hit.key}
+                        keywords={hit.keywords}
+                        onSelect={() => navigate(hit.path)}
+                        value={`${hit.key}__${hit.label}`}
+                      >
+                        <HugeiconsIcon
+                          className="size-4 shrink-0 text-muted-foreground transition-colors group-data-[selected=true]/item:text-foreground"
+                          icon={hit.icon}
+                          strokeWidth={2}
+                        />
+                        <span className="flex-1 truncate">{hit.label}</span>
+                        {hit.sublabel ? (
+                          <span className="max-w-[40%] truncate text-[11px] text-muted-foreground">
+                            {hit.sublabel}
+                          </span>
+                        ) : null}
                         <HugeiconsIcon
                           className="size-3 text-muted-foreground opacity-0 transition-opacity group-data-[selected=true]/item:opacity-60"
                           icon={ArrowRight01Icon}

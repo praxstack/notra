@@ -14,23 +14,12 @@ import {
   UserGroupIcon,
   Wallet01Icon,
 } from "@hugeicons/core-free-icons";
-import type { IconSvgElement } from "@hugeicons/react";
+import type {
+  CommandRoute,
+  CommandSection,
+} from "@/types/components/command-palette";
 
-export type CommandSection =
-  | "Navigation"
-  | "Workspace"
-  | "Automation"
-  | "Manage"
-  | "Settings";
-
-export interface CommandRoute {
-  id: string;
-  label: string;
-  keywords: string[];
-  icon: IconSvgElement;
-  section: CommandSection;
-  path: (slug: string) => string;
-}
+export type { CommandRoute, CommandSection };
 
 export const COMMAND_ROUTES: CommandRoute[] = [
   {
