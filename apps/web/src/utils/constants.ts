@@ -17,7 +17,7 @@ export const PRICING_PLANS = {
     description: "For solo devs and small teams getting started.",
     pricing: { monthly: 20, annually: 200 },
     cta: {
-      label: "Start 3 day free trial",
+      label: "Start 7 day free trial",
       href: "https://app.usenotra.com/signup",
     },
     features: [

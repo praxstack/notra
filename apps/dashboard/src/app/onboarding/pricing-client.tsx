@@ -164,7 +164,7 @@ export function PricingClient({ slug }: PricingClientProps) {
       ) : (
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <TitleCard
-            action={<Badge variant="outline">3-day free trial</Badge>}
+            action={<Badge variant="outline">7-day free trial</Badge>}
             className="transition-all hover:ring-2 hover:ring-muted-foreground/20"
             heading="Basic"
           >
@@ -191,7 +191,7 @@ export function PricingClient({ slug }: PricingClientProps) {
               >
                 {loading === basicPlan?.id
                   ? "Loading..."
-                  : "Start 3-day free trial"}
+                  : "Start 7-day free trial"}
               </Button>
 
               <ul className="space-y-2.5 pt-2">

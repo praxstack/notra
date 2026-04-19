@@ -36,10 +36,17 @@ export interface ChatUsageSnapshot {
   totalTokens?: number;
 }
 
+export interface ChatInputHandle {
+  setText: (text: string) => void;
+  focus: () => void;
+}
+
 export interface BuildChatFinishMetadataInput {
   streamStartedAt: number;
   firstChunkAt: number | null;
   finishedAt: number;
   partUsage: LanguageModelUsage | undefined;
   usageSnapshot: ChatUsageSnapshot;
+  model?: ChatModel | string;
+  thinkingLevel?: ThinkingLevel;
 }

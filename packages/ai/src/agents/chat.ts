@@ -3,6 +3,7 @@ import { routeMessage, selectModel } from "@notra/ai/orchestration/router";
 import { createMarkdownTools } from "@notra/ai/tools/edit-markdown";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
 import type { ChatAgentContext } from "@notra/ai/types/agents";
+import { addAnthropicPromptCaching } from "@notra/ai/utils/prompt-caching";
 import { stepCountIs, ToolLoopAgent } from "ai";
 
 export async function createChatAgent(
@@ -35,6 +36,9 @@ export async function createChatAgent(
 
   return new ToolLoopAgent({
     model: modelWithMemory,
+    prepareStep: ({ messages }) => ({
+      messages: addAnthropicPromptCaching(messages, model),
+    }),
     tools: {
       getMarkdown,
       editMarkdown,

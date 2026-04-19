@@ -40,12 +40,20 @@ import { useQuery } from "@tanstack/react-query";
 import { useCustomer } from "autumn-js/react";
 import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Ref,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { FEATURES } from "@/constants/features";
 import { INPUT_SOURCES } from "@/lib/integrations/catalog";
 import { dashboardOrpc } from "@/lib/orpc/query";
-import type { ContextItem } from "@/types/chat";
+import type { ChatInputHandle, ContextItem } from "@/types/chat";
 import type { GitHubRepository } from "@/types/integrations";
 import {
   buildIntegrationReferenceElement,
@@ -59,21 +67,21 @@ import {
 
 const AVAILABLE_MODELS = [
   {
-    id: "anthropic/claude-opus-4-7",
+    id: "anthropic/claude-opus-4.7",
     label: "Opus 4.7",
     description: "Deepest reasoning",
     pricing: "$5 input / $25 output per 1M",
     provider: "anthropic",
   },
   {
-    id: "anthropic/claude-sonnet-4-6",
+    id: "anthropic/claude-sonnet-4.6",
     label: "Sonnet 4.6",
     description: "Best everyday default",
     pricing: "$3 input / $15 output per 1M",
     provider: "anthropic",
   },
   {
-    id: "anthropic/claude-haiku-4-5",
+    id: "anthropic/claude-haiku-4.5",
     label: "Haiku 4.5",
     description: "Fastest responses",
     pricing: "$1 input / $5 output per 1M",
@@ -179,6 +187,7 @@ interface ChatInputAdvancedProps {
   onModelChange?: (model: string) => void;
   thinkingLevel?: ThinkingLevel;
   onThinkingLevelChange?: (level: ThinkingLevel) => void;
+  ref?: Ref<ChatInputHandle>;
 }
 
 const THINKING_LABELS: Record<ThinkingLevel, string> = {
@@ -201,10 +210,11 @@ export function ChatInputAdvanced({
   onRemoveContext,
   error: externalError,
   onClearError,
-  model = "anthropic/claude-sonnet-4-6",
+  model = "anthropic/claude-sonnet-4.6",
   onModelChange,
   thinkingLevel = "medium",
   onThinkingLevelChange,
+  ref,
 }: ChatInputAdvancedProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -348,6 +358,31 @@ export function ChatInputAdvanced({
     }
     return (editor.innerText ?? "").replace(/\u00A0/g, " ");
   }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      setText: (text: string) => {
+        const editor = editorRef.current;
+        if (!editor) {
+          return;
+        }
+        editor.textContent = text;
+        setIsEmpty(text.trim().length === 0);
+        editor.focus();
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      },
+      focus: () => {
+        editorRef.current?.focus();
+      },
+    }),
+    []
+  );
 
   const syncContextFromDOM = useCallback(() => {
     const editor = editorRef.current;

@@ -246,6 +246,8 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
             finishedAt: Date.now(),
             partUsage: part.totalUsage,
             usageSnapshot,
+            model: routingDecision.model,
+            thinkingLevel: enableThinking === false ? "off" : thinkingLevel,
           });
         }
 

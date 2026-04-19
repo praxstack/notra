@@ -1,7 +1,6 @@
 import { CHAT_TITLE_MAX_LENGTH } from "@/constants/chat";
 import type {
   BuildChatFinishMetadataInput,
-  ChatMessageMetadata,
   ChatSessionSummary,
 } from "@/types/chat";
 
@@ -11,7 +10,9 @@ export function buildChatFinishMetadata({
   finishedAt,
   partUsage,
   usageSnapshot,
-}: BuildChatFinishMetadataInput): ChatMessageMetadata {
+  model,
+  thinkingLevel,
+}: BuildChatFinishMetadataInput) {
   const ttftMs =
     firstChunkAt !== null ? firstChunkAt - streamStartedAt : undefined;
   const generationDurationMs =
@@ -28,6 +29,8 @@ export function buildChatFinishMetadata({
       : undefined;
 
   return {
+    model,
+    thinkingLevel,
     inputTokens,
     outputTokens,
     totalTokens,

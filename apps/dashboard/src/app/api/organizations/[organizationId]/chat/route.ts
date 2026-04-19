@@ -380,14 +380,17 @@ async function createDirectStandaloneChatResponse({
   let firstChunkAt: number | null = null;
   const usageSnapshot: ChatUsageSnapshot = {};
 
-  try {
+  const responseReady = createDeferred<Response>();
+  const streamDone = createDeferred<void>();
+
+  const runStream = async (streamLog: ReturnType<typeof useLogger>) => {
     const { stream, routingDecision } = await orchestrateStandaloneChat(
       {
         organizationId,
         messages: messages as never,
         context,
         maxSteps: 5,
-        log,
+        log: streamLog,
         requestedModel: model,
         enableThinking,
         thinkingLevel,
@@ -456,7 +459,7 @@ async function createDirectStandaloneChatResponse({
             });
           }
         },
-        log,
+        log: streamLog,
       }
     );
 
@@ -481,6 +484,8 @@ async function createDirectStandaloneChatResponse({
             finishedAt: Date.now(),
             partUsage: part.totalUsage,
             usageSnapshot,
+            model: routingDecision.model,
+            thinkingLevel: enableThinking === false ? "off" : thinkingLevel,
           });
         }
 
@@ -491,10 +496,12 @@ async function createDirectStandaloneChatResponse({
           await replaceChatHistory(organizationId, chatId, responseMessages);
         } finally {
           await cleanup();
+          streamDone.resolve();
         }
       },
       onError: (error) => {
         cleanup().catch(() => undefined);
+        streamDone.resolve();
         console.error("[Standalone Chat] Direct stream error:", {
           requestId,
           error,
@@ -511,8 +518,43 @@ async function createDirectStandaloneChatResponse({
         return "An error occurred while processing your request.";
       },
     });
+  };
+
+  if (log.fork) {
+    log.fork("standalone_chat_stream", async () => {
+      try {
+        // biome-ignore lint/correctness/useHookAtTopLevel: useLogger is an async-context accessor, not a React hook
+        const response = await runStream(useLogger());
+        responseReady.resolve(response);
+        await streamDone.promise;
+      } catch (error) {
+        responseReady.reject(error);
+        streamDone.resolve();
+        await cleanup();
+        throw error;
+      }
+    });
+    return responseReady.promise;
+  }
+
+  try {
+    return await runStream(log);
   } catch (error) {
     await cleanup();
     throw error;
   }
+}
+
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+  reject: (reason?: unknown) => void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }

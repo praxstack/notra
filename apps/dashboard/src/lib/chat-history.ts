@@ -1,7 +1,6 @@
 import { gateway } from "@notra/ai/gateway";
 import type { UIMessage } from "ai";
 import { generateText } from "ai";
-import { nanoid } from "nanoid";
 import {
   CHAT_ABORT_FLAG_TTL_SECONDS,
   CHAT_DELETION_TOMBSTONE_TTL_SECONDS,
@@ -59,7 +58,7 @@ export function getChatStreamChannelName(
 }
 
 export function generateChatId() {
-  return nanoid(16);
+  return crypto.randomUUID();
 }
 
 const CHAT_SESSION_WRITE_MAX_ATTEMPTS = 3;

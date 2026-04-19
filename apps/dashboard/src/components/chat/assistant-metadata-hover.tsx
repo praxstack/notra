@@ -14,9 +14,9 @@ import type {
 } from "@/types/chat";
 
 const MODEL_LABELS = {
-  "anthropic/claude-opus-4-7": "Claude Opus 4.7",
-  "anthropic/claude-sonnet-4-6": "Claude Sonnet 4.6",
-  "anthropic/claude-haiku-4-5": "Claude Haiku 4.5",
+  "anthropic/claude-opus-4.7": "Claude Opus 4.7",
+  "anthropic/claude-sonnet-4.6": "Claude Sonnet 4.6",
+  "anthropic/claude-haiku-4.5": "Claude Haiku 4.5",
   "openai/gpt-5.4": "GPT-5.4",
 } satisfies Record<ChatModel, string>;
 
