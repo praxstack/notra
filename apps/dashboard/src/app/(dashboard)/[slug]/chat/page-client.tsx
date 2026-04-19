@@ -23,6 +23,7 @@ import {
 } from "ai";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
+import { parseAsString, useQueryState } from "nuqs";
 import {
   useCallback,
   useEffect,
@@ -173,7 +174,6 @@ function ChatReasoningBlock({
 interface PageClientProps {
   organizationSlug: string;
   chatId?: string;
-  initialQuery?: string;
 }
 
 const CREATE_TOOL_TYPES = {
@@ -197,8 +197,11 @@ function getCreateToolContentType(
 function StandaloneChatPageClient({
   organizationSlug,
   chatId: initialChatId,
-  initialQuery,
 }: PageClientProps) {
+  const [initialQuery, setInitialQuery] = useQueryState(
+    "q",
+    parseAsString.withOptions({ history: "replace" })
+  );
   const { getOrganization, activeOrganization } = useOrganizationsContext();
   const orgFromList = getOrganization(organizationSlug);
   const organization =
@@ -702,6 +705,36 @@ function StandaloneChatPageClient({
     ]
   );
 
+  const autoSubmittedRef = useRef(false);
+  useEffect(() => {
+    if (autoSubmittedRef.current) {
+      return;
+    }
+    if (initialChatId) {
+      return;
+    }
+    const trimmedInitialQuery = initialQuery?.trim();
+    if (!trimmedInitialQuery) {
+      return;
+    }
+    if (!organizationId) {
+      return;
+    }
+    if (messagesRef.current.length > 0) {
+      return;
+    }
+
+    autoSubmittedRef.current = true;
+    void setInitialQuery(null);
+    void handleSend(trimmedInitialQuery);
+  }, [
+    handleSend,
+    initialChatId,
+    initialQuery,
+    organizationId,
+    setInitialQuery,
+  ]);
+
   const messageCount = messages.length;
   const lastPartCount = messages.at(-1)?.parts?.length ?? 0;
   const hasScrolledRef = useRef(false);
@@ -978,7 +1011,7 @@ function StandaloneChatPageClient({
             <ChatInputAdvanced
               context={context}
               error={chatError}
-              initialValue={initialQuery}
+              initialValue={initialQuery ?? undefined}
               isLoading={isLoading}
               isStopping={isStopping}
               model={selectedModel}
@@ -1077,7 +1110,7 @@ function StandaloneChatPageClient({
               <ChatInputAdvanced
                 context={context}
                 error={chatError}
-                initialValue={initialQuery}
+                initialValue={initialQuery ?? undefined}
                 isLoading={isLoading}
                 isStopping={isStopping}
                 model={selectedModel}

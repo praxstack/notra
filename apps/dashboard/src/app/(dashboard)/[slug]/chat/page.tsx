@@ -5,22 +5,10 @@ export const metadata: Metadata = {
   title: "Chat",
 };
 
-async function Page(props: {
-  params: Promise<{ slug: string }>;
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { params, searchParams } = props;
-  const { slug } = await params;
-  const { q } = await searchParams;
-  const initialQuery = typeof q === "string" ? q : undefined;
+async function Page(props: { params: Promise<{ slug: string }> }) {
+  const { slug } = await props.params;
 
-  return (
-    <PageClient
-      initialQuery={initialQuery}
-      key={initialQuery ?? "new-chat"}
-      organizationSlug={slug}
-    />
-  );
+  return <PageClient organizationSlug={slug} />;
 }
 
 export default Page;

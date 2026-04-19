@@ -256,15 +256,11 @@ export function CommandPalette() {
           shouldFilter={aiState.status === "idle"}
         >
           <div className="flex h-12 items-center gap-2.5 border-border/60 border-b px-4">
-            {isLoading ? (
-              <BrailleSpinner className="size-4 shrink-0 text-center text-[15px] text-foreground leading-none" />
-            ) : (
-              <HugeiconsIcon
-                className="size-4 shrink-0 text-muted-foreground"
-                icon={SearchIcon}
-                strokeWidth={2}
-              />
-            )}
+            <HugeiconsIcon
+              className="size-4 shrink-0 text-muted-foreground"
+              icon={SearchIcon}
+              strokeWidth={2}
+            />
             <CommandPrimitive.Input
               className={cn(
                 "flex-1 bg-transparent text-foreground text-sm outline-none",
