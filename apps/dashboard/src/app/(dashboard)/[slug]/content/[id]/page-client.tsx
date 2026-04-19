@@ -118,6 +118,7 @@ export default function PageClient({
   const [selection, setSelection] = useState<TextSelection | null>(null);
   const [editorKey, setEditorKey] = useState(0);
   const [context, setContext] = useState<ContextItem[]>([]);
+  const [chatInputValue, setChatInputValue] = useState("");
 
   const saveToastIdRef = useRef<string | number | null>(null);
   const editorRef = useRef<EditorRefHandle | null>(null);
@@ -551,314 +552,334 @@ export default function PageClient({
     [sendMessage]
   );
 
+  const chatInputSection = aiChatExperiment.on && (
+    <div
+      className={`fixed right-0 bottom-0 left-0 mx-auto w-full max-w-2xl px-4 pb-4 md:w-auto ${sidebarState === "collapsed" ? "md:left-14" : "md:left-64"}`}
+    >
+      <ChatInput
+        completionMessage={completionMessage}
+        context={context}
+        error={chatError}
+        isLoading={status === "streaming" || status === "submitted"}
+        onAddContext={handleAddContext}
+        onClearError={() => setChatError(null)}
+        onClearSelection={clearSelection}
+        onRemoveContext={handleRemoveContext}
+        onSend={handleAiEdit}
+        onValueChange={setChatInputValue}
+        organizationId={organizationId}
+        organizationSlug={organizationSlug}
+        selection={selection}
+        statusText={currentToolStatus}
+        value={chatInputValue}
+      />
+    </div>
+  );
+
   if (isPending) {
-    return <ContentDetailSkeleton />;
+    return (
+      <>
+        <ContentDetailSkeleton />
+        {chatInputSection}
+      </>
+    );
   }
 
   if (error || !data?.content) {
     return (
-      <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
-        <div className="mx-auto w-full max-w-5xl space-y-6 px-4 lg:px-6">
-          <div className="rounded-xl border border-dashed p-12 text-center">
-            <h3 className="font-medium text-lg">Content not found</h3>
-            <p className="text-muted-foreground text-sm">
-              This content may have been deleted or you don't have access to it.
-            </p>
-            <Link
-              className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              href={`/${organizationSlug}/content`}
-            >
-              <Button className="mt-4" tabIndex={-1} variant="outline">
-                Back to Content
-              </Button>
-            </Link>
+      <>
+        <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="mx-auto w-full max-w-5xl space-y-6 px-4 lg:px-6">
+            <div className="rounded-xl border border-dashed p-12 text-center">
+              <h3 className="font-medium text-lg">Content not found</h3>
+              <p className="text-muted-foreground text-sm">
+                This content may have been deleted or you don't have access to
+                it.
+              </p>
+              <Link
+                className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                href={`/${organizationSlug}/content`}
+              >
+                <Button className="mt-4" tabIndex={-1} variant="outline">
+                  Back to Content
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
-      </div>
+        {chatInputSection}
+      </>
     );
   }
 
   const content = data.content;
 
   return (
-    <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 lg:px-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <Link
-            className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            href={`/${organizationSlug}/content`}
-          >
-            <Button size="sm" tabIndex={-1} variant="ghost">
-              <svg
-                className="mr-2 size-4"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <title>Back arrow</title>
-                <path d="M19 12H5" />
-                <path d="m12 19-7-7 7-7" />
-              </svg>
-              Back to Content
-            </Button>
-          </Link>
-          <div className="flex flex-1 flex-col gap-1">
-            <div className="flex items-center gap-3">
-              <time
-                className="text-muted-foreground text-sm"
-                dateTime={content.date}
-              >
-                {formatDate(new Date(content.date))}
-              </time>
-              <Badge className="capitalize" variant="secondary">
-                {getContentTypeLabel(content.contentType)}
-              </Badge>
-              <Badge
-                className="capitalize"
-                variant={content.status === "published" ? "default" : "outline"}
-              >
-                {content.status}
-              </Badge>
-            </div>
-            {content.sourceMetadata &&
-              (() => {
-                const parsed = sourceMetadataSchema.safeParse(
-                  content.sourceMetadata
-                );
-                if (!parsed.success || !parsed.data) {
-                  return null;
-                }
-                const meta = parsed.data;
-                const repoLabel = formatRepos(meta.repositories);
-                const needsTooltip = meta.repositories.length > 1;
-                return (
-                  <p className="text-muted-foreground text-xs">
-                    <span className="capitalize">
-                      {formatTriggerType(meta.triggerSourceType)}
-                    </span>
-                    {" \u00B7 "}
-                    {needsTooltip ? (
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <span className="cursor-help underline decoration-dotted underline-offset-2">
-                              {repoLabel}
-                            </span>
-                          }
-                        />
-                        <TooltipContent>
-                          <ul>
-                            {meta.repositories.map((r) => (
-                              <li key={`${r.owner}/${r.repo}`}>
-                                {r.owner}/{r.repo}
-                              </li>
-                            ))}
-                          </ul>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      repoLabel
-                    )}
-                    {" \u00B7 "}
-                    <span className="capitalize">
-                      {formatLookbackWindow(meta.lookbackWindow)}
-                    </span>{" "}
-                    (
-                    {formatDateRange(
-                      meta.lookbackRange.start,
-                      meta.lookbackRange.end
-                    )}
-                    )
-                    {meta.brandVoiceName &&
-                      (() => {
-                        const voice = meta.brandVoiceId
-                          ? brandResponse?.voices.find(
-                              (v) => v.id === meta.brandVoiceId
-                            )
-                          : brandResponse?.voices.find(
-                              (v) => v.name === meta.brandVoiceName
-                            );
-                        return (
-                          <>
-                            {" \u00B7 "}
-                            {voice ? (
-                              <Tooltip>
-                                <TooltipTrigger
-                                  render={
-                                    <span className="cursor-help underline decoration-dotted underline-offset-2">
-                                      {meta.brandVoiceName}
-                                    </span>
-                                  }
-                                />
-                                <TooltipContent
-                                  className="flex items-start gap-3"
-                                  side="top"
-                                >
-                                  <Avatar
-                                    className="mt-0.5 size-8 shrink-0 rounded-full after:rounded-full"
-                                    size="sm"
-                                  >
-                                    <AvatarImage
-                                      src={getBrandFaviconUrl(voice.websiteUrl)}
-                                    />
-                                    <AvatarFallback className="text-xs">
-                                      {voice.name.slice(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="space-y-0.5">
-                                    <p className="font-medium">{voice.name}</p>
-                                    {voice.toneProfile && (
-                                      <p>Tone: {voice.toneProfile}</p>
-                                    )}
-                                    {voice.language && (
-                                      <p>Language: {voice.language}</p>
-                                    )}
-                                    {voice.companyName && (
-                                      <p>Company: {voice.companyName}</p>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              meta.brandVoiceName
-                            )}
-                          </>
-                        );
-                      })()}
-                  </p>
-                );
-              })()}
-          </div>
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <Button
-              disabled={isTogglingStatus}
-              onClick={handleToggleStatus}
-              size="sm"
-              variant={content.status === "draft" ? "default" : "outline"}
+    <>
+      <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
+        <div className="mx-auto w-full max-w-5xl space-y-6 px-4 lg:px-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              href={`/${organizationSlug}/content`}
             >
-              <HugeiconsIcon
-                className="size-4"
-                icon={content.status === "published" ? TextIcon : SentIcon}
-              />
-              {isTogglingStatus
-                ? "Updating..."
-                : content.status === "published"
-                  ? "Move to draft"
-                  : "Publish"}
-            </Button>
-            {content.contentType === "linkedin_post" && (
+              <Button size="sm" tabIndex={-1} variant="ghost">
+                <svg
+                  className="mr-2 size-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <title>Back arrow</title>
+                  <path d="M19 12H5" />
+                  <path d="m12 19-7-7 7-7" />
+                </svg>
+                Back to Content
+              </Button>
+            </Link>
+            <div className="flex flex-1 flex-col gap-1">
+              <div className="flex items-center gap-3">
+                <time
+                  className="text-muted-foreground text-sm"
+                  dateTime={content.date}
+                >
+                  {formatDate(new Date(content.date))}
+                </time>
+                <Badge className="capitalize" variant="secondary">
+                  {getContentTypeLabel(content.contentType)}
+                </Badge>
+                <Badge
+                  className="capitalize"
+                  variant={
+                    content.status === "published" ? "default" : "outline"
+                  }
+                >
+                  {content.status}
+                </Badge>
+              </div>
+              {content.sourceMetadata &&
+                (() => {
+                  const parsed = sourceMetadataSchema.safeParse(
+                    content.sourceMetadata
+                  );
+                  if (!parsed.success || !parsed.data) {
+                    return null;
+                  }
+                  const meta = parsed.data;
+                  const repoLabel = formatRepos(meta.repositories);
+                  const needsTooltip = meta.repositories.length > 1;
+                  return (
+                    <p className="text-muted-foreground text-xs">
+                      <span className="capitalize">
+                        {formatTriggerType(meta.triggerSourceType)}
+                      </span>
+                      {" \u00B7 "}
+                      {needsTooltip ? (
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <span className="cursor-help underline decoration-dotted underline-offset-2">
+                                {repoLabel}
+                              </span>
+                            }
+                          />
+                          <TooltipContent>
+                            <ul>
+                              {meta.repositories.map((r) => (
+                                <li key={`${r.owner}/${r.repo}`}>
+                                  {r.owner}/{r.repo}
+                                </li>
+                              ))}
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        repoLabel
+                      )}
+                      {" \u00B7 "}
+                      <span className="capitalize">
+                        {formatLookbackWindow(meta.lookbackWindow)}
+                      </span>{" "}
+                      (
+                      {formatDateRange(
+                        meta.lookbackRange.start,
+                        meta.lookbackRange.end
+                      )}
+                      )
+                      {meta.brandVoiceName &&
+                        (() => {
+                          const voice = meta.brandVoiceId
+                            ? brandResponse?.voices.find(
+                                (v) => v.id === meta.brandVoiceId
+                              )
+                            : brandResponse?.voices.find(
+                                (v) => v.name === meta.brandVoiceName
+                              );
+                          return (
+                            <>
+                              {" \u00B7 "}
+                              {voice ? (
+                                <Tooltip>
+                                  <TooltipTrigger
+                                    render={
+                                      <span className="cursor-help underline decoration-dotted underline-offset-2">
+                                        {meta.brandVoiceName}
+                                      </span>
+                                    }
+                                  />
+                                  <TooltipContent
+                                    className="flex items-start gap-3"
+                                    side="top"
+                                  >
+                                    <Avatar
+                                      className="mt-0.5 size-8 shrink-0 rounded-full after:rounded-full"
+                                      size="sm"
+                                    >
+                                      <AvatarImage
+                                        src={getBrandFaviconUrl(
+                                          voice.websiteUrl
+                                        )}
+                                      />
+                                      <AvatarFallback className="text-xs">
+                                        {voice.name.slice(0, 2).toUpperCase()}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="space-y-0.5">
+                                      <p className="font-medium">
+                                        {voice.name}
+                                      </p>
+                                      {voice.toneProfile && (
+                                        <p>Tone: {voice.toneProfile}</p>
+                                      )}
+                                      {voice.language && (
+                                        <p>Language: {voice.language}</p>
+                                      )}
+                                      {voice.companyName && (
+                                        <p>Company: {voice.companyName}</p>
+                                      )}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                meta.brandVoiceName
+                              )}
+                            </>
+                          );
+                        })()}
+                    </p>
+                  );
+                })()}
+            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <Button
-                className="text-white hover:opacity-90"
-                nativeButton={false}
-                render={
-                  <a
-                    href={createLinkedInPostUrl(currentMarkdown)}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <Linkedin className="size-4" />
-                    Post to LinkedIn
-                  </a>
-                }
+                disabled={isTogglingStatus}
+                onClick={handleToggleStatus}
                 size="sm"
-                style={{ backgroundColor: LINKEDIN_BRAND_PRIMARY }}
-              />
-            )}
-            {content.contentType === "twitter_post" && (
-              <Button
-                className="text-white hover:opacity-90"
-                nativeButton={false}
-                render={
-                  <a
-                    href={createTwitterPostUrl(currentMarkdown)}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    <XTwitter className="size-4" />
-                    Post to X
-                  </a>
-                }
-                size="sm"
-                style={{ backgroundColor: TWITTER_BRAND_COLOR }}
-              />
-            )}
+                variant={content.status === "draft" ? "default" : "outline"}
+              >
+                <HugeiconsIcon
+                  className="size-4"
+                  icon={content.status === "published" ? TextIcon : SentIcon}
+                />
+                {isTogglingStatus
+                  ? "Updating..."
+                  : content.status === "published"
+                    ? "Move to draft"
+                    : "Publish"}
+              </Button>
+              {content.contentType === "linkedin_post" && (
+                <Button
+                  className="text-white hover:opacity-90"
+                  nativeButton={false}
+                  render={
+                    <a
+                      href={createLinkedInPostUrl(currentMarkdown)}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <Linkedin className="size-4" />
+                      Post to LinkedIn
+                    </a>
+                  }
+                  size="sm"
+                  style={{ backgroundColor: LINKEDIN_BRAND_PRIMARY }}
+                />
+              )}
+              {content.contentType === "twitter_post" && (
+                <Button
+                  className="text-white hover:opacity-90"
+                  nativeButton={false}
+                  render={
+                    <a
+                      href={createTwitterPostUrl(currentMarkdown)}
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <XTwitter className="size-4" />
+                      Post to X
+                    </a>
+                  }
+                  size="sm"
+                  style={{ backgroundColor: TWITTER_BRAND_COLOR }}
+                />
+              )}
+            </div>
           </div>
-        </div>
 
-        <ContentEditorSwitch
-          actions={{
-            setEditedMarkdown: (markdown) => {
-              setEditedMarkdown(markdown);
-              if (markdown !== null) {
-                editedMarkdownRef.current = markdown;
-              }
-            },
-            setOriginalMarkdown,
-            setEditingTitle,
-            setEditingSlug,
-            onEditorChange: handleEditorChange,
-            onSelectionChange: handleSelectionChange,
-          }}
-          content={{
-            id: content.id,
-            title: content.title,
-            slug: content.slug,
-            markdown: content.markdown,
-            contentType: content.contentType,
-            date: content.date,
-            sourceMetadata: content.sourceMetadata,
-          }}
-          contentType={content.contentType}
-          editorKey={editorKey}
-          editorRef={editorRef}
-          organization={{
-            name: activeOrganization?.name ?? "Your Organization",
-            logo: activeOrganization?.logo ?? null,
-          }}
-          state={{
-            editedMarkdown,
-            originalMarkdown,
-            editingTitle,
-            serverTitle,
-            editingSlug,
-            serverSlug,
-            hasChanges,
-            hasMarkdownChanges,
-            hasTitleChanges,
-            hasSlugChanges,
-          }}
-        />
-
-        <RecommendationsSection value={content.recommendations} />
-
-        <div className="h-24" />
-      </div>
-
-      {aiChatExperiment.on && (
-        <div
-          className={`fixed right-0 bottom-0 left-0 mx-auto w-full max-w-2xl px-4 pb-4 md:w-auto ${sidebarState === "collapsed" ? "md:left-14" : "md:left-64"}`}
-        >
-          <ChatInput
-            completionMessage={completionMessage}
-            context={context}
-            error={chatError}
-            isLoading={status === "streaming" || status === "submitted"}
-            onAddContext={handleAddContext}
-            onClearError={() => setChatError(null)}
-            onClearSelection={clearSelection}
-            onRemoveContext={handleRemoveContext}
-            onSend={handleAiEdit}
-            organizationId={organizationId}
-            organizationSlug={organizationSlug}
-            selection={selection}
-            statusText={currentToolStatus}
+          <ContentEditorSwitch
+            actions={{
+              setEditedMarkdown: (markdown) => {
+                setEditedMarkdown(markdown);
+                if (markdown !== null) {
+                  editedMarkdownRef.current = markdown;
+                }
+              },
+              setOriginalMarkdown,
+              setEditingTitle,
+              setEditingSlug,
+              onEditorChange: handleEditorChange,
+              onSelectionChange: handleSelectionChange,
+            }}
+            content={{
+              id: content.id,
+              title: content.title,
+              slug: content.slug,
+              markdown: content.markdown,
+              contentType: content.contentType,
+              date: content.date,
+              sourceMetadata: content.sourceMetadata,
+            }}
+            contentType={content.contentType}
+            editorKey={editorKey}
+            editorRef={editorRef}
+            organization={{
+              name: activeOrganization?.name ?? "Your Organization",
+              logo: activeOrganization?.logo ?? null,
+            }}
+            state={{
+              editedMarkdown,
+              originalMarkdown,
+              editingTitle,
+              serverTitle,
+              editingSlug,
+              serverSlug,
+              hasChanges,
+              hasMarkdownChanges,
+              hasTitleChanges,
+              hasSlugChanges,
+            }}
           />
+
+          <RecommendationsSection value={content.recommendations} />
+
+          <div className="h-24" />
         </div>
-      )}
-    </div>
+      </div>
+      {chatInputSection}
+    </>
   );
 }

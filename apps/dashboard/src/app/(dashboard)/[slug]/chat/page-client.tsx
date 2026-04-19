@@ -928,10 +928,26 @@ function StandaloneChatPageClient({
                 </div>
               </div>
             </div>
-            <div className="sticky bottom-0 z-10 px-4 pt-2 pb-4">
-              <div className="pointer-events-none absolute inset-x-0 bottom-full h-8 bg-linear-to-t from-background to-transparent" />
+            <div className="sticky bottom-0 z-10 bg-background px-4 pb-4">
+              <div className="-inset-x-4 pointer-events-none absolute bottom-full h-12 bg-linear-to-t from-background to-transparent" />
               <div className="mx-auto w-full max-w-2xl">
-                <Skeleton className="h-24 w-full rounded-xl" />
+                <ChatInputAdvanced
+                  context={context}
+                  error={chatError}
+                  isLoading={isLoading}
+                  isStopping={isStopping}
+                  model={selectedModel}
+                  onAddContext={handleAddContext}
+                  onClearError={handleClearError}
+                  onModelChange={handleModelChange}
+                  onRemoveContext={handleRemoveContext}
+                  onSend={handleSend}
+                  onStop={handleStop}
+                  onThinkingLevelChange={handleThinkingLevelChange}
+                  organizationId={organizationId}
+                  organizationSlug={organizationSlug}
+                  thinkingLevel={thinkingLevel}
+                />
               </div>
             </div>
           </div>
