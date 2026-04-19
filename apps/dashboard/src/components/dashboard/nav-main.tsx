@@ -11,6 +11,7 @@ import {
   PlugIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { Badge } from "@notra/ui/components/ui/badge";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -44,6 +45,7 @@ const navMainItems: NavMainItem[] = [
     icon: Message01Icon,
     label: "Chat",
     category: "none",
+    badge: "Beta",
   },
   {
     link: "/content",
@@ -133,6 +135,14 @@ const NavGroup = memo(function NavGroup({
                     <Link href={href}>
                       <HugeiconsIcon icon={item.icon} />
                       <span>{item.label}</span>
+                      {item.badge && (
+                        <Badge
+                          className="ml-auto h-[1.125rem] px-[0.375rem] text-[0.625rem]"
+                          variant="secondary"
+                        >
+                          {item.badge}
+                        </Badge>
+                      )}
                     </Link>
                   }
                   tooltip={item.label}

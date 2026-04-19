@@ -10,4 +10,5 @@ export interface NavItem {
 
 export interface NavMainItem extends NavItem {
   category: NavMainCategory;
+  badge?: string;
 }
