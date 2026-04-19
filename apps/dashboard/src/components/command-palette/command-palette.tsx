@@ -307,6 +307,7 @@ export function CommandPalette() {
                 "max-h-[24rem] scroll-py-2 overflow-y-auto overscroll-contain p-1.5",
                 isLoading && "hidden"
               )}
+            >
               <CommandPrimitive.Empty className="px-3 py-10">
                 <div className="mx-auto flex max-w-sm flex-col items-center gap-4 text-center">
                   <div className="flex size-10 items-center justify-center rounded-full border border-border border-dashed bg-muted/40">
