@@ -4,7 +4,6 @@ import type {
   LinearToolContext,
   LinearToolsAccessConfig,
 } from "@notra/ai/types/tools";
-import { toolDescription } from "@notra/ai/utils/description";
 import { createLinearClient } from "@notra/ai/utils/linear";
 import { type Tool, tool } from "ai";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
@@ -61,15 +60,8 @@ export function createGetLinearIssuesTool(
 
   return cached(
     tool({
-      description: toolDescription({
-        toolName: "get_linear_issues",
-        intro:
-          "Gets issues from a Linear team within a specific timeframe, including title, description, state, priority, assignee, and labels.",
-        whenToUse:
-          "When the user asks about Linear issues, wants to see what was worked on, needs issue details for changelogs, or wants to understand recent development activity from Linear.",
-        usageNotes:
-          "Requires integrationId. Supports filtering by timeframe via since/until ISO timestamps. Returns paginated results with cursor-based pagination.",
-      }),
+      description:
+        "Get Linear issues for a team (title, state, priority, assignee, labels). Supports since/until ISO timestamps and cursor pagination.",
       inputSchema: z.object({
         integrationId: z
           .string()
@@ -202,15 +194,8 @@ export function createGetLinearProjectsTool(
 
   return cached(
     tool({
-      description: toolDescription({
-        toolName: "get_linear_projects",
-        intro:
-          "Gets projects from a Linear workspace or team, including name, description, state, progress, and timeline.",
-        whenToUse:
-          "When the user asks about Linear projects, wants to understand project progress, or needs project context for content generation.",
-        usageNotes:
-          "Requires integrationId. Returns active and completed projects with progress data.",
-      }),
+      description:
+        "Get Linear projects (name, description, state, progress, timeline). Set includeCompleted to include finished projects.",
       inputSchema: z.object({
         integrationId: z
           .string()
@@ -294,15 +279,8 @@ export function createGetLinearCyclesTool(
 
   return cached(
     tool({
-      description: toolDescription({
-        toolName: "get_linear_cycles",
-        intro:
-          "Gets current and recent cycles from a Linear team, including progress, issue counts, and timeline.",
-        whenToUse:
-          "When the user asks about Linear cycles or sprints, wants to see cycle progress, or needs sprint context for content generation.",
-        usageNotes:
-          "Requires integrationId. Returns the most recent cycles including the current active one.",
-      }),
+      description:
+        "Get recent Linear cycles for a team (name, progress, timeline). Returns the most recent cycles including the active one.",
       inputSchema: z.object({
         integrationId: z
           .string()

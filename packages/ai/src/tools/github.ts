@@ -9,7 +9,6 @@ import type {
   GitHubToolRepositoryContext,
   GitHubToolsAccessConfig,
 } from "@notra/ai/types/tools";
-import { toolDescription } from "@notra/ai/utils/description";
 import { createOctokit } from "@notra/ai/utils/octokit";
 import { type Tool, tool } from "ai";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
@@ -258,15 +257,8 @@ export function createGetPullRequestsTool(
 
   return cached(
     tool({
-      description: toolDescription({
-        toolName: "get_pull_requests",
-        intro:
-          "Gets the full details of a specific pull request from a GitHub repository including title, description, status, author, reviewers, and merge info.",
-        whenToUse:
-          "When user asks about a specific PR, wants to see PR details, needs to check PR status, or references a pull request by number.",
-        usageNotes: `Requires integrationId and PR number.
-Returns comprehensive PR data including diff stats, labels, and review state.`,
-      }),
+      description:
+        "Get full details of a GitHub pull request (title, body, status, reviewers, diff stats, labels). Requires integrationId and pull_number.",
       inputSchema: z.object({
         integrationId: z
           .string()
@@ -382,15 +374,8 @@ export function createGetReleaseByTagTool(
 
   return cached(
     tool({
-      description: toolDescription({
-        toolName: "get_release_by_tag",
-        intro:
-          "Gets release details from a GitHub repository by tag name including release notes, assets, and publish date.",
-        whenToUse:
-          "When user asks about a specific release version, wants changelog or release notes, or needs to find release assets and downloads.",
-        usageNotes: `Use 'latest' as the tag if the user wants the most recent release and doesn't specify a version.
-Returns release body (changelog), assets list, author, and timestamps.`,
-      }),
+      description:
+        "Get a GitHub release by tag name (release notes, assets, timestamps). Use 'latest' if no version is specified.",
       inputSchema: z.object({
         integrationId: z
           .string()
@@ -523,15 +508,8 @@ export function createGetCommitsByTimeframeTool(
 
   return cached(
     tool({
-      description: toolDescription({
-        toolName: "get_commits_by_timeframe",
-        intro:
-          "Gets one paginated batch of commits from a repository within a specific timeframe. Returns commit details plus pagination metadata.",
-        whenToUse:
-          "When user asks about recent commits, wants to see what changed in the last week/month, or needs commit history for a time period.",
-        usageNotes: `Use the timeframe requested in the prompt or user request.
-Use this for activity summaries, changelog generation, or understanding recent changes.`,
-      }),
+      description:
+        "Get paginated GitHub commits within a timeframe. Prefer since/until ISO timestamps over the days fallback.",
       inputSchema: z.object({
         integrationId: z
           .string()

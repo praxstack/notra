@@ -161,9 +161,11 @@ export const POST = withEvlog(async function POST(
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
 
-    await replaceChatHistory(organizationId, chatId, messages);
-    await setActiveChatStream(organizationId, chatId, latestMessage.id);
-    await clearLastResponseStopped(organizationId, chatId);
+    await Promise.all([
+      replaceChatHistory(organizationId, chatId, messages),
+      setActiveChatStream(organizationId, chatId, latestMessage.id),
+      clearLastResponseStopped(organizationId, chatId),
+    ]);
 
     if (messages.length === 1 && latestMessage.role === "user") {
       const textPart = latestMessage.parts?.find(isTextUIPart);

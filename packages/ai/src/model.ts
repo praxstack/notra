@@ -4,8 +4,13 @@ import {
   wrapModelWithObservability,
 } from "@notra/ai/observability";
 import type { GatewayArgs, GatewayResult } from "@notra/ai/types/gateway";
-import type { CreateModelOptions } from "@notra/ai/types/model";
+import type { SupermemoryOptions } from "@notra/ai/types/model";
 import { withSupermemory } from "@supermemory/tools/ai-sdk";
+
+export interface CreateModelOptions {
+  supermemory?: Omit<SupermemoryOptions, "mode" | "addMemory">;
+  disableMemory?: boolean;
+}
 
 export function createModel(
   organizationId: string | undefined,
@@ -15,16 +20,12 @@ export function createModel(
 ): GatewayResult {
   const base = gateway(modelId);
 
-  if (!organizationId) {
+  if (!organizationId || options?.disableMemory) {
     return wrapModelWithObservability(base, log);
   }
 
   const supermemoryApiKey = process.env.SUPERMEMORY_API_KEY?.trim();
   if (!supermemoryApiKey) {
-    return wrapModelWithObservability(base, log);
-  }
-
-  if (options?.enabled === false) {
     return wrapModelWithObservability(base, log);
   }
 

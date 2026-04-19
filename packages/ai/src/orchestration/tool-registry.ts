@@ -26,12 +26,17 @@ import type { Tool } from "ai";
 export interface BuildToolSetDeps {
   resolveContext?: ResolveIntegrationContext;
   resolveLinearContext?: ResolveLinearIntegrationContext;
+  skipTools?: boolean;
 }
 
 export function buildToolSet(
   params: BuildToolSetParams,
   deps?: BuildToolSetDeps
 ): ToolSet {
+  if (deps?.skipTools) {
+    return { tools: {}, descriptions: [] };
+  }
+
   const {
     organizationId,
     currentMarkdown,
