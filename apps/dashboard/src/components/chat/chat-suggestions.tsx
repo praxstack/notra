@@ -3,11 +3,10 @@
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { motion, useReducedMotion } from "motion/react";
-
-interface Suggestion {
-  title: string;
-  prompt: string;
-}
+import type {
+  ChatSuggestionsProps,
+  Suggestion,
+} from "@/types/components/chat-suggestions";
 
 const SUGGESTIONS: Suggestion[] = [
   {
@@ -31,11 +30,6 @@ const SUGGESTIONS: Suggestion[] = [
       "Help me write a LinkedIn post. Ask me about the topic and audience before drafting.",
   },
 ];
-
-interface ChatSuggestionsProps {
-  onSelect: (prompt: string) => void;
-  disabled?: boolean;
-}
 
 export function ChatSuggestions({ onSelect, disabled }: ChatSuggestionsProps) {
   const shouldReduceMotion = useReducedMotion();

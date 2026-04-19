@@ -725,8 +725,8 @@ function StandaloneChatPageClient({
     }
 
     autoSubmittedRef.current = true;
-    void setInitialQuery(null);
-    void handleSend(trimmedInitialQuery);
+    setInitialQuery(null);
+    handleSend(trimmedInitialQuery);
   }, [
     handleSend,
     initialChatId,
