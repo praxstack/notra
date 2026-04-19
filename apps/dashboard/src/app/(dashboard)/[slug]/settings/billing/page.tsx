@@ -485,7 +485,7 @@ export default function BillingPage() {
                                       >
                                         {feature.overageText}
                                       </TooltipTrigger>
-                                      <TooltipContent className="max-w-[14rem]">
+                                      <TooltipContent className="max-w-56">
                                         {feature.overageTooltip}
                                       </TooltipContent>
                                     </Tooltip>
@@ -565,7 +565,7 @@ export default function BillingPage() {
                                       >
                                         {feature.overageText}
                                       </TooltipTrigger>
-                                      <TooltipContent className="max-w-[14rem]">
+                                      <TooltipContent className="max-w-56">
                                         {feature.overageTooltip}
                                       </TooltipContent>
                                     </Tooltip>
