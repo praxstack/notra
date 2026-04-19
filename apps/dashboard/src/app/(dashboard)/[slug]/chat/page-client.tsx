@@ -23,6 +23,7 @@ import {
 } from "ai";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
+import type { CSSProperties } from "react";
 import {
   useCallback,
   useEffect,
@@ -39,7 +40,15 @@ import {
   type ThinkingLevel,
 } from "@/components/chat/chat-input";
 import { ChatSuggestions } from "@/components/chat/chat-suggestions";
-import { renderTextWithIntegrationReferences } from "@/components/chat/integration-reference";
+import {
+  getReferenceDisplay,
+  parseReferenceValue,
+  renderTextWithIntegrationReferences,
+} from "@/components/chat/integration-reference";
+import {
+  UserMessageActions,
+  UserMessageEditor,
+} from "@/components/chat/user-message-actions";
 import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
@@ -223,6 +232,10 @@ function StandaloneChatPageClient({
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>(
     DEFAULT_CHAT_PREFERENCES.thinkingLevel
   );
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [messageBranches, setMessageBranches] = useState<
+    Record<string, { tails: ChatUIMessage[][]; active: number }>
+  >({});
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
 
@@ -627,6 +640,154 @@ function StandaloneChatPageClient({
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+  const extractUserMessageText = useCallback((message: ChatUIMessage) => {
+    let text = "";
+    for (const part of message.parts) {
+      if (part.type === "text") {
+        text += part.text;
+      }
+    }
+    return text;
+  }, []);
+
+  const toDisplayText = useCallback((serialized: string) => {
+    return serialized.replace(
+      /@?integration\/(?:github\/[^/\s]+\/[^/\s]+\/[^/\s]+|linear\/[^/\s]+)/g,
+      (match) => {
+        const item = parseReferenceValue(match);
+        return item ? getReferenceDisplay(item) : match;
+      }
+    );
+  }, []);
+
+  const runWithViewTransition = useCallback((update: () => void) => {
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => unknown;
+    };
+    if (typeof doc.startViewTransition === "function") {
+      doc.startViewTransition(update);
+      return;
+    }
+    update();
+  }, []);
+
+  const handleStartEditMessage = useCallback(
+    (messageId: string) => {
+      runWithViewTransition(() => setEditingMessageId(messageId));
+    },
+    [runWithViewTransition]
+  );
+
+  const handleCancelEditMessage = useCallback(() => {
+    runWithViewTransition(() => setEditingMessageId(null));
+  }, [runWithViewTransition]);
+
+  const resendFromUserMessage = useCallback(
+    async (userMessageId: string, text: string, modelOverride?: string) => {
+      const current = messagesRef.current;
+      const index = current.findIndex((m) => m.id === userMessageId);
+      if (index === -1) {
+        return;
+      }
+
+      const currentTail = current.slice(index);
+      const truncated = current.slice(0, index + 1);
+
+      setMessageBranches((prev) => {
+        const existing = prev[userMessageId];
+        if (!existing) {
+          return {
+            ...prev,
+            [userMessageId]: { tails: [currentTail, []], active: 1 },
+          };
+        }
+        const tails = [...existing.tails];
+        tails[existing.active] = currentTail;
+        tails.push([]);
+        return {
+          ...prev,
+          [userMessageId]: { tails, active: tails.length - 1 },
+        };
+      });
+
+      if (modelOverride) {
+        const parsed = parseStoredChatModel(modelOverride);
+        if (parsed) {
+          selectedModelRef.current = parsed;
+          setSelectedModel(parsed);
+        }
+      }
+
+      setMessages(truncated);
+      setWasStoppedByUser(false);
+      setChatError(null);
+      await sendMessage({ text, messageId: userMessageId });
+    },
+    [sendMessage, setMessages]
+  );
+
+  const handleEditMessage = useCallback(
+    async (userMessageId: string, newText: string) => {
+      setEditingMessageId(null);
+      await resendFromUserMessage(userMessageId, newText);
+    },
+    [resendFromUserMessage]
+  );
+
+  const handleRetryMessage = useCallback(
+    async (userMessageId: string, modelOverride?: string) => {
+      const current = messagesRef.current;
+      const message = current.find((m) => m.id === userMessageId);
+      if (!message) {
+        return;
+      }
+      const text = extractUserMessageText(message);
+      if (!text.trim()) {
+        return;
+      }
+      await resendFromUserMessage(userMessageId, text, modelOverride);
+    },
+    [extractUserMessageText, resendFromUserMessage]
+  );
+
+  const [branchSwitchSignal, setBranchSwitchSignal] = useState<{
+    userMessageId: string;
+    tick: number;
+  } | null>(null);
+
+  const handleSwitchBranch = useCallback(
+    (userMessageId: string, direction: "prev" | "next") => {
+      const existing = messageBranches[userMessageId];
+      if (!existing || existing.tails.length <= 1) {
+        return;
+      }
+      const current = messagesRef.current;
+      const index = current.findIndex((m) => m.id === userMessageId);
+      if (index === -1) {
+        return;
+      }
+      const before = current.slice(0, index);
+      const currentTail = current.slice(index);
+
+      const tails = [...existing.tails];
+      tails[existing.active] = currentTail;
+      const total = tails.length;
+      const active =
+        direction === "next"
+          ? (existing.active + 1) % total
+          : (existing.active - 1 + total) % total;
+
+      setMessageBranches((prev) => ({
+        ...prev,
+        [userMessageId]: { tails, active },
+      }));
+      setMessages([...before, ...(tails[active] ?? [])]);
+
+      setBranchSwitchSignal({ userMessageId, tick: Date.now() });
+    },
+    [messageBranches, setMessages]
+  );
+
   const hasUpdatedUrlRef = useRef(false);
   const pathname = usePathname();
 
@@ -1015,18 +1176,90 @@ function StandaloneChatPageClient({
                 isFirstMessageTransition && "chat-messages-fade-in"
               )}
             >
-              {visibleMessages.map((message) => (
-                <Message from={message.role} key={message.id}>
-                  <MessageContent>
-                    {message.parts.map((part, index) =>
-                      renderPart(part, message.id, index)
-                    )}
-                  </MessageContent>
-                  {message.role === "assistant" && (
-                    <AssistantMetadataHover metadata={message.metadata} />
-                  )}
-                </Message>
-              ))}
+              {(() => {
+                const branchPointIndex = branchSwitchSignal
+                  ? visibleMessages.findIndex(
+                      (m) => m.id === branchSwitchSignal.userMessageId
+                    )
+                  : -1;
+                return visibleMessages.map((message, messageIndex) => {
+                  const isUser = message.role === "user";
+                  const isEditing = isUser && editingMessageId === message.id;
+                  const branches = isUser
+                    ? messageBranches[message.id]
+                    : undefined;
+                  const branchTotal = branches?.tails.length ?? 0;
+                  const branchIdx = branches?.active ?? 0;
+                  const isDownstreamOfBranchSwitch =
+                    branchPointIndex !== -1 && messageIndex > branchPointIndex;
+                  const branchFadeKey = isDownstreamOfBranchSwitch
+                    ? `${message.id}-${branchSwitchSignal?.tick}`
+                    : message.id;
+                  return (
+                    <Message
+                      className={cn(
+                        isDownstreamOfBranchSwitch && "chat-branch-fade-in"
+                      )}
+                      from={message.role}
+                      key={branchFadeKey}
+                    >
+                      {isEditing ? (
+                        <UserMessageEditor
+                          initialText={toDisplayText(
+                            extractUserMessageText(message)
+                          )}
+                          onCancel={handleCancelEditMessage}
+                          onSubmit={(text) =>
+                            handleEditMessage(message.id, text)
+                          }
+                          viewTransitionName={
+                            isUser ? `msg-edit-${message.id}` : undefined
+                          }
+                        />
+                      ) : (
+                        <MessageContent
+                          style={
+                            isUser
+                              ? ({
+                                  viewTransitionName: `msg-edit-${message.id}`,
+                                } as CSSProperties)
+                              : undefined
+                          }
+                        >
+                          {message.parts.map((part, index) =>
+                            renderPart(part, message.id, index)
+                          )}
+                        </MessageContent>
+                      )}
+                      {isUser && !isEditing && (
+                        <UserMessageActions
+                          branchIndex={branchTotal > 1 ? branchIdx : undefined}
+                          branchTotal={
+                            branchTotal > 1 ? branchTotal : undefined
+                          }
+                          canInteract={!isLoading}
+                          messageText={toDisplayText(
+                            extractUserMessageText(message)
+                          )}
+                          onEdit={() => handleStartEditMessage(message.id)}
+                          onNextBranch={() =>
+                            handleSwitchBranch(message.id, "next")
+                          }
+                          onPreviousBranch={() =>
+                            handleSwitchBranch(message.id, "prev")
+                          }
+                          onRetry={(model) =>
+                            handleRetryMessage(message.id, model)
+                          }
+                        />
+                      )}
+                      {message.role === "assistant" && (
+                        <AssistantMetadataHover metadata={message.metadata} />
+                      )}
+                    </Message>
+                  );
+                });
+              })()}
               {wasStoppedByUser && !isLoading && (
                 <div className="flex w-fit items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-destructive text-xs">
                   <HugeiconsIcon className="size-3.5" icon={X} />

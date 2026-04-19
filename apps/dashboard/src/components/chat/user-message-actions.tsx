@@ -1,0 +1,280 @@
+"use client";
+
+import {
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  CheckmarkCircle02Icon,
+  Copy01Icon,
+  Edit02Icon,
+  ReloadIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Button } from "@notra/ui/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@notra/ui/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@notra/ui/components/ui/tooltip";
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AVAILABLE_MODELS, ModelIcon } from "@/components/chat/chat-input";
+
+interface UserMessageActionsProps {
+  messageText: string;
+  canInteract: boolean;
+  onEdit: () => void;
+  onRetry: (model?: string) => void;
+  branchIndex?: number;
+  branchTotal?: number;
+  onPreviousBranch?: () => void;
+  onNextBranch?: () => void;
+}
+
+export function UserMessageActions({
+  messageText,
+  canInteract,
+  onEdit,
+  onRetry,
+  branchIndex,
+  branchTotal,
+  onPreviousBranch,
+  onNextBranch,
+}: UserMessageActionsProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(messageText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // no-op
+    }
+  }, [messageText]);
+
+  const hasBranches =
+    typeof branchIndex === "number" &&
+    typeof branchTotal === "number" &&
+    branchTotal > 1;
+
+  return (
+    <div className="mt-1 ml-auto flex items-center text-muted-foreground opacity-0 transition-opacity duration-150 focus-within:opacity-100 group-hover:opacity-100">
+      {hasBranches && (
+        <div className="flex items-center text-xs tabular-nums">
+          <Button
+            aria-label="Previous version"
+            className="size-7"
+            disabled={!canInteract}
+            onClick={onPreviousBranch}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={14} />
+          </Button>
+          <span className="px-0.5 text-[11px]">
+            {(branchIndex ?? 0) + 1}/{branchTotal}
+          </span>
+          <Button
+            aria-label="Next version"
+            className="size-7"
+            disabled={!canInteract}
+            onClick={onNextBranch}
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+          >
+            <HugeiconsIcon icon={ArrowRight01Icon} size={14} />
+          </Button>
+        </div>
+      )}
+
+      <div className="flex items-center">
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <DropdownMenuTrigger
+                  disabled={!canInteract}
+                  render={
+                    <Button
+                      aria-label="Retry"
+                      className="size-7"
+                      size="icon-sm"
+                      type="button"
+                      variant="ghost"
+                    />
+                  }
+                />
+              }
+            >
+              <HugeiconsIcon icon={ReloadIcon} size={14} />
+            </TooltipTrigger>
+            <TooltipContent>Retry</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuItem onClick={() => onRetry()}>
+              <HugeiconsIcon icon={ReloadIcon} size={14} />
+              <span className="text-sm">Retry with same</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>Model</DropdownMenuLabel>
+            </DropdownMenuGroup>
+            {AVAILABLE_MODELS.map((m) => (
+              <DropdownMenuItem key={m.id} onClick={() => onRetry(m.id)}>
+                <ModelIcon className="size-4 shrink-0" provider={m.provider} />
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-sm">{m.label}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {m.description}
+                  </span>
+                  <span className="text-[0.625rem] text-muted-foreground/70">
+                    {m.pricing}
+                  </span>
+                </div>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-label="Edit message"
+                className="size-7"
+                disabled={!canInteract}
+                onClick={onEdit}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              />
+            }
+          >
+            <HugeiconsIcon icon={Edit02Icon} size={14} />
+          </TooltipTrigger>
+          <TooltipContent>Edit</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-label="Copy message"
+                className="size-7"
+                onClick={handleCopy}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              />
+            }
+          >
+            <HugeiconsIcon
+              icon={copied ? CheckmarkCircle02Icon : Copy01Icon}
+              size={14}
+            />
+          </TooltipTrigger>
+          <TooltipContent>{copied ? "Copied" : "Copy"}</TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
+
+interface UserMessageEditorProps {
+  initialText: string;
+  onCancel: () => void;
+  onSubmit: (text: string) => void;
+  viewTransitionName?: string;
+}
+
+export function UserMessageEditor({
+  initialText,
+  onCancel,
+  onSubmit,
+  viewTransitionName,
+}: UserMessageEditorProps) {
+  const [value, setValue] = useState(initialText);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure when value changes (scrollHeight is read from the DOM).
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) {
+      return;
+    }
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) {
+      return;
+    }
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, []);
+
+  const handleSubmit = () => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    onSubmit(trimmed);
+  };
+
+  return (
+    <div
+      className="ml-auto flex w-full flex-col gap-2 rounded-lg bg-secondary px-4 py-3"
+      style={
+        viewTransitionName
+          ? ({ viewTransitionName } as CSSProperties)
+          : undefined
+      }
+    >
+      <textarea
+        className="wrap-break-word max-h-80 min-h-6 w-full resize-none bg-transparent text-foreground text-sm leading-6 outline-none placeholder:text-muted-foreground"
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        placeholder="Edit your message..."
+        ref={textareaRef}
+        rows={1}
+        value={value}
+      />
+      <div className="flex items-center justify-end gap-2">
+        <Button onClick={onCancel} size="sm" type="button" variant="ghost">
+          Cancel
+        </Button>
+        <Button
+          disabled={value.trim().length === 0}
+          onClick={handleSubmit}
+          size="sm"
+          type="button"
+        >
+          Send
+        </Button>
+      </div>
+    </div>
+  );
+}
