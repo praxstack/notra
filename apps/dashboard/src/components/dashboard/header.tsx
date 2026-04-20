@@ -14,8 +14,8 @@ import { Separator } from "@notra/ui/components/ui/separator";
 import { SidebarTrigger } from "@notra/ui/components/ui/sidebar";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useId } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useId, useRef } from "react";
 import { CreditBalanceButton } from "@/components/billing/credit-balance-button";
 import { ChatTopbarTitle } from "@/components/dashboard/chat-topbar-title";
 
@@ -28,8 +28,26 @@ const SEGMENT_CONFIG: Record<string, { label?: string; href?: null }> = {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const id = useId();
   const segments = pathname.split("/").filter(Boolean);
+  const slug = segments[0];
+  const isInSettings = segments[1] === "settings";
+  const preSettingsPathRef = useRef<string | null>(null);
+
+  useHotkey("Mod+,", (event) => {
+    event.preventDefault();
+    if (isInSettings) {
+      router.push(preSettingsPathRef.current ?? `/${slug}`);
+      preSettingsPathRef.current = null;
+      return;
+    }
+    if (!slug) {
+      return;
+    }
+    preSettingsPathRef.current = pathname;
+    router.push(`/${slug}/settings/account`);
+  });
 
   useEffect(() => {
     (async () => {

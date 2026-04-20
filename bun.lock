@@ -2071,7 +2071,7 @@
 
     "eventsource-parser": ["eventsource-parser@3.0.6", "", {}, "sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg=="],
 
-    "evlog": ["evlog@2.10.0", "", { "peerDependencies": { "@nestjs/common": ">=11.1.17", "@nuxt/kit": "^4.4.2", "ai": ">=6.0.137", "elysia": ">=1.4.28", "express": ">=5.2.1", "fastify": ">=5.8.4", "h3": "^1.15.10", "hono": "", "next": ">=16.2.1", "nitro": "^3.0.260311-beta", "nitropack": "^2.13.2", "ofetch": "^1.5.1", "react": ">=19.2.4", "react-router": ">=7.13.2", "vite": "^7.0.0 || ^8.0.0" }, "optionalPeers": ["@nestjs/common", "@nuxt/kit", "ai", "elysia", "express", "fastify", "h3", "hono", "next", "nitro", "nitropack", "ofetch", "react", "react-router", "vite"] }, "sha512-jvCXGeoH6p8oVljfXYq0FI7OeO572bPeKV4KM8utSrC1q8z5FAK+4kLbOOECnl09Yy9JGCAJyif9B3LNrUmPfA=="],
+    "evlog": ["evlog@2.13.0", "", { "peerDependencies": { "@nestjs/common": ">=11.1.18", "@nuxt/kit": "^4.4.2", "@tanstack/start-client-core": "^1.167.9", "ai": ">=6.0.154", "better-auth": ">=1.2.0", "elysia": ">=1.4.28", "express": ">=5.2.1", "fastify": ">=5.8.4", "h3": "^1.15.11", "hono": "", "next": ">=16.2.3", "nitro": "^3.0.260311-beta", "nitropack": "^2.13.3", "ofetch": "^1.5.1", "react": ">=19.2.5", "react-router": ">=7.14.0", "vite": "^7.0.0 || ^8.0.0" }, "optionalPeers": ["@nestjs/common", "@nuxt/kit", "@tanstack/start-client-core", "ai", "better-auth", "elysia", "express", "fastify", "h3", "hono", "next", "nitro", "nitropack", "ofetch", "react", "react-router", "vite"] }, "sha512-/tpm+MgS7p00O5400b+t7thKgeNBRPj56InQF1+XUloAuZIKtTN1NQlbQq3B+KvnYoBk+Md985sB7HAcJgd0uQ=="],
 
     "execa": ["execa@9.6.1", "", { "dependencies": { "@sindresorhus/merge-streams": "^4.0.0", "cross-spawn": "^7.0.6", "figures": "^6.1.0", "get-stream": "^9.0.0", "human-signals": "^8.0.1", "is-plain-obj": "^4.1.0", "is-stream": "^4.0.1", "npm-run-path": "^6.0.0", "pretty-ms": "^9.2.0", "signal-exit": "^4.1.0", "strip-final-newline": "^4.0.0", "yoctocolors": "^2.1.1" } }, "sha512-9Be3ZoN4LmYR90tUoVu2te2BsbzHfhJyfEiAVfz7N5/zv+jduIfLrV2xdQXOHbaD6KgpGdO9PRPM1Y4Q9QkPkA=="],
 
@@ -3866,8 +3866,6 @@
     "d3-sankey/d3-shape": ["d3-shape@1.3.7", "", { "dependencies": { "d3-path": "1" } }, "sha512-EUkvKjqPFUAZyOlhY5gzCxCeI0Aep04LwIRpsZ/mLFelJiUfnK56jo5JMDSE7yyP2kLSb6LtF+S5chMk7uqPqw=="],
 
     "dashboard/@types/node": ["@types/node@20.19.37", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-8kzdPJ3FsNsVIurqBs7oodNnCEVbni9yUEkaHbgptDACOPW04jimGagZ51E6+lXUwJjgnBw+hyko/lkFWCldqw=="],
-
-    "dashboard/evlog": ["evlog@2.13.0", "", { "peerDependencies": { "@nestjs/common": ">=11.1.18", "@nuxt/kit": "^4.4.2", "@tanstack/start-client-core": "^1.167.9", "ai": ">=6.0.154", "better-auth": ">=1.2.0", "elysia": ">=1.4.28", "express": ">=5.2.1", "fastify": ">=5.8.4", "h3": "^1.15.11", "hono": "", "next": ">=16.2.3", "nitro": "^3.0.260311-beta", "nitropack": "^2.13.3", "ofetch": "^1.5.1", "react": ">=19.2.5", "react-router": ">=7.14.0", "vite": "^7.0.0 || ^8.0.0" }, "optionalPeers": ["@nestjs/common", "@nuxt/kit", "@tanstack/start-client-core", "ai", "better-auth", "elysia", "express", "fastify", "h3", "hono", "next", "nitro", "nitropack", "ofetch", "react", "react-router", "vite"] }, "sha512-/tpm+MgS7p00O5400b+t7thKgeNBRPj56InQF1+XUloAuZIKtTN1NQlbQq3B+KvnYoBk+Md985sB7HAcJgd0uQ=="],
 
     "decompress-response/mimic-response": ["mimic-response@3.1.0", "", {}, "sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ=="],
 
