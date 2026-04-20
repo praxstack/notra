@@ -14,8 +14,8 @@ import { Separator } from "@notra/ui/components/ui/separator";
 import { SidebarTrigger } from "@notra/ui/components/ui/sidebar";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useId } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useId, useRef } from "react";
 import { CreditBalanceButton } from "@/components/billing/credit-balance-button";
 import { ChatTopbarTitle } from "@/components/dashboard/chat-topbar-title";
 
@@ -28,8 +28,48 @@ const SEGMENT_CONFIG: Record<string, { label?: string; href?: null }> = {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const id = useId();
   const segments = pathname.split("/").filter(Boolean);
+  const slug = segments[0];
+  const isInSettings = segments[1] === "settings";
+  const preSettingsPathsRef = useRef<Record<string, string>>({});
+  const activeSettingsShortcutSlugRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const activeSlug = activeSettingsShortcutSlugRef.current;
+    if (!activeSlug) {
+      return;
+    }
+
+    if (activeSlug !== slug || !isInSettings) {
+      delete preSettingsPathsRef.current[activeSlug];
+      activeSettingsShortcutSlugRef.current = null;
+    }
+  }, [isInSettings, slug]);
+
+  useHotkey("Mod+,", (event) => {
+    event.preventDefault();
+    if (!slug) {
+      return;
+    }
+
+    if (isInSettings) {
+      const returnPath =
+        activeSettingsShortcutSlugRef.current === slug
+          ? preSettingsPathsRef.current[slug]
+          : null;
+
+      delete preSettingsPathsRef.current[slug];
+      activeSettingsShortcutSlugRef.current = null;
+      router.push(returnPath ?? `/${slug}`);
+      return;
+    }
+
+    preSettingsPathsRef.current[slug] = pathname;
+    activeSettingsShortcutSlugRef.current = slug;
+    router.push(`/${slug}/settings/account`);
+  });
 
   useEffect(() => {
     (async () => {
