@@ -33,19 +33,41 @@ export function SiteHeader() {
   const segments = pathname.split("/").filter(Boolean);
   const slug = segments[0];
   const isInSettings = segments[1] === "settings";
-  const preSettingsPathRef = useRef<string | null>(null);
+  const preSettingsPathsRef = useRef<Record<string, string>>({});
+  const activeSettingsShortcutSlugRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const activeSlug = activeSettingsShortcutSlugRef.current;
+    if (!activeSlug) {
+      return;
+    }
+
+    if (activeSlug !== slug || !isInSettings) {
+      delete preSettingsPathsRef.current[activeSlug];
+      activeSettingsShortcutSlugRef.current = null;
+    }
+  }, [isInSettings, slug]);
 
   useHotkey("Mod+,", (event) => {
     event.preventDefault();
-    if (isInSettings) {
-      router.push(preSettingsPathRef.current ?? `/${slug}`);
-      preSettingsPathRef.current = null;
-      return;
-    }
     if (!slug) {
       return;
     }
-    preSettingsPathRef.current = pathname;
+
+    if (isInSettings) {
+      const returnPath =
+        activeSettingsShortcutSlugRef.current === slug
+          ? preSettingsPathsRef.current[slug]
+          : null;
+
+      delete preSettingsPathsRef.current[slug];
+      activeSettingsShortcutSlugRef.current = null;
+      router.push(returnPath ?? `/${slug}`);
+      return;
+    }
+
+    preSettingsPathsRef.current[slug] = pathname;
+    activeSettingsShortcutSlugRef.current = slug;
     router.push(`/${slug}/settings/account`);
   });
 
