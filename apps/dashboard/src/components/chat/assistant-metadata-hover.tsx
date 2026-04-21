@@ -19,6 +19,7 @@ import type {
 } from "@/types/chat";
 
 const MODEL_LABELS = {
+  auto: "Auto",
   "anthropic/claude-opus-4.7": "Claude Opus 4.7",
   "anthropic/claude-sonnet-4.6": "Claude Sonnet 4.6",
   "anthropic/claude-haiku-4.5": "Claude Haiku 4.5",
@@ -26,6 +27,7 @@ const MODEL_LABELS = {
 } satisfies Record<ChatModel, string>;
 
 const MODEL_CONTEXT_WINDOWS = {
+  auto: 1_000_000,
   "anthropic/claude-opus-4.7": 1_000_000,
   "anthropic/claude-sonnet-4.6": 1_000_000,
   "anthropic/claude-haiku-4.5": 200_000,

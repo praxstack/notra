@@ -8,6 +8,10 @@ Determine if tools are needed:
 - Tools REQUIRED: Any editing, fetching data from connected sources, accessing skills
 - Tools NOT required: Answering questions, explaining concepts, conversation
 
+Determine if the task is reasoning-heavy:
+- reasoningHeavy=true: Deep analysis, long-form writing, multi-source research, architectural decisions, nuanced critique, comparative synthesis
+- reasoningHeavy=false: Everyday chat, quick edits, factual lookups, straightforward content generation
+
 Examples:
 - "Hi!" → simple, no tools
 - "What can you help me with?" → simple, no tools

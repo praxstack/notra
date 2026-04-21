@@ -11,7 +11,9 @@ export function buildChatFinishMetadata({
   partUsage,
   usageSnapshot,
   model,
+  requestedModel,
   thinkingLevel,
+  requestedThinkingLevel,
 }: BuildChatFinishMetadataInput) {
   const ttftMs =
     firstChunkAt !== null ? firstChunkAt - streamStartedAt : undefined;
@@ -30,7 +32,9 @@ export function buildChatFinishMetadata({
 
   return {
     model,
+    requestedModel,
     thinkingLevel,
+    requestedThinkingLevel,
     inputTokens,
     outputTokens,
     totalTokens,

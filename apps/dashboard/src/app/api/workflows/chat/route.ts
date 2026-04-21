@@ -233,10 +233,17 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
       generateMessageId: nanoid,
       sendReasoning: enableThinking !== false,
       messageMetadata: ({ part }) => {
+        const effectiveThinkingLevel =
+          enableThinking === false
+            ? "off"
+            : (routingDecision.thinkingLevel ?? thinkingLevel);
+
         if (part.type === "start") {
           return {
             model: routingDecision.model,
-            thinkingLevel: enableThinking === false ? "off" : thinkingLevel,
+            requestedModel: model ?? "auto",
+            thinkingLevel: effectiveThinkingLevel,
+            requestedThinkingLevel: thinkingLevel,
             createdAt: streamStartedAt,
           };
         }
@@ -249,7 +256,9 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
             partUsage: part.totalUsage,
             usageSnapshot,
             model: routingDecision.model,
-            thinkingLevel: enableThinking === false ? "off" : thinkingLevel,
+            requestedModel: model ?? "auto",
+            thinkingLevel: effectiveThinkingLevel,
+            requestedThinkingLevel: thinkingLevel,
           });
         }
 

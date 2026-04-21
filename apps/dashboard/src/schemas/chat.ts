@@ -5,6 +5,7 @@ import * as z from "zod";
 import { CHAT_TITLE_MAX_LENGTH } from "@/constants/chat";
 
 export const chatModelSchema = z.enum([
+  "auto",
   "anthropic/claude-opus-4.7",
   "anthropic/claude-sonnet-4.6",
   "anthropic/claude-haiku-4.5",
@@ -15,7 +16,9 @@ export const thinkingLevelSchema = z.enum(["off", "low", "medium", "high"]);
 
 export const chatMessageMetadataSchema = z.object({
   model: chatModelSchema.optional(),
+  requestedModel: chatModelSchema.optional(),
   thinkingLevel: thinkingLevelSchema.optional(),
+  requestedThinkingLevel: thinkingLevelSchema.optional(),
   inputTokens: z.number().int().nonnegative().optional(),
   outputTokens: z.number().int().nonnegative().optional(),
   totalTokens: z.number().int().nonnegative().optional(),

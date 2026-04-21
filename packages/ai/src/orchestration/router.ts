@@ -6,6 +6,7 @@ import {
 import { ROUTING_PROMPT } from "@notra/ai/prompts/router";
 import { routingDecisionSchema } from "@notra/ai/schemas/orchestration";
 import type {
+  AutoSelection,
   RoutingDecision,
   RoutingResult,
 } from "@notra/ai/types/orchestration";
@@ -15,6 +16,12 @@ const MODELS = {
   router: "openai/gpt-oss-120b",
   simple: "openai/gpt-5.1-instant",
   complex: "anthropic/claude-haiku-4.5",
+} as const;
+
+const AUTO_POOL = {
+  trivial: "anthropic/claude-haiku-4.5",
+  everyday: "anthropic/claude-sonnet-4.6",
+  deep: "anthropic/claude-opus-4.7",
 } as const;
 
 const TRIVIAL_MESSAGE_PATTERNS = [
@@ -45,8 +52,22 @@ function matchTrivialFastPath(
   return {
     complexity: "simple",
     requiresTools: false,
+    reasoningHeavy: false,
     reasoning: "Trivial greeting/acknowledgement — skipped router call",
   };
+}
+
+export function selectAutoModel(decision: RoutingDecision): AutoSelection {
+  if (decision.complexity === "simple" && !decision.requiresTools) {
+    return { model: AUTO_POOL.trivial, thinkingLevel: "off" };
+  }
+  if (decision.reasoningHeavy) {
+    return { model: AUTO_POOL.deep, thinkingLevel: "high" };
+  }
+  if (decision.complexity === "complex") {
+    return { model: AUTO_POOL.everyday, thinkingLevel: "medium" };
+  }
+  return { model: AUTO_POOL.everyday, thinkingLevel: "low" };
 }
 
 export async function routeMessage(

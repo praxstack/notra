@@ -567,21 +567,32 @@ function StandaloneChatPageClient({
           continue;
         }
 
-        if (!modelRestored && metadata.model) {
-          const parsedModel = parseStoredChatModel(metadata.model);
-          if (parsedModel) {
-            setSelectedModel(parsedModel);
-            modelRestored = true;
+        if (!modelRestored) {
+          const modelToRestore = metadata.requestedModel ?? metadata.model;
+          if (modelToRestore) {
+            const parsedModel = parseStoredChatModel(modelToRestore);
+            if (parsedModel) {
+              setSelectedModel(parsedModel);
+              modelRestored = true;
+            }
           }
         }
 
-        if (!thinkingLevelRestored && metadata.thinkingLevel) {
-          const parsedThinkingLevel = parseStoredThinkingLevel(
-            metadata.thinkingLevel
-          );
-          if (parsedThinkingLevel) {
-            setThinkingLevel(parsedThinkingLevel);
-            thinkingLevelRestored = true;
+        if (!thinkingLevelRestored) {
+          const thinkingLevelToRestore =
+            metadata.requestedThinkingLevel ??
+            (metadata.requestedModel && metadata.requestedModel !== "auto"
+              ? metadata.thinkingLevel
+              : undefined);
+
+          if (thinkingLevelToRestore) {
+            const parsedThinkingLevel = parseStoredThinkingLevel(
+              thinkingLevelToRestore
+            );
+            if (parsedThinkingLevel) {
+              setThinkingLevel(parsedThinkingLevel);
+              thinkingLevelRestored = true;
+            }
           }
         }
       }

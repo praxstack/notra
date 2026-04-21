@@ -63,7 +63,15 @@ export type ContextItem = GitHubContextItem | LinearContextItem;
 export interface RoutingDecision {
   complexity: "simple" | "complex";
   requiresTools: boolean;
+  reasoningHeavy: boolean;
   reasoning: string;
+}
+
+export type AutoThinkingLevel = "off" | "low" | "medium" | "high";
+
+export interface AutoSelection {
+  model: string;
+  thinkingLevel: AutoThinkingLevel;
 }
 
 export interface RoutingResult {
@@ -71,6 +79,7 @@ export interface RoutingResult {
   complexity: "simple" | "complex";
   requiresTools: boolean;
   reasoning: string;
+  thinkingLevel?: AutoThinkingLevel;
 }
 
 export interface ToolSet {

@@ -6,6 +6,7 @@ import {
   createViewPostTool,
 } from "@notra/ai/tools/post";
 import type {
+  AutoThinkingLevel,
   IntegrationFetchers,
   ValidatedIntegration,
 } from "@notra/ai/types/orchestration";
@@ -28,14 +29,13 @@ import {
   hasEnabledGitHubIntegration,
   hasEnabledLinearIntegration,
 } from "./integration-validator";
-import { isTrivialMessage } from "./router";
+import { isTrivialMessage, routeMessage, selectAutoModel } from "./router";
 import {
   buildStandaloneToolSet,
   getLinearContextFromIntegrations,
   getRepoContextFromIntegrations,
 } from "./standalone-tool-registry";
 
-const DEFAULT_STANDALONE_CHAT_MODEL = "anthropic/claude-sonnet-4.6";
 const TRIVIAL_HISTORY_LIMIT = 6;
 const MINIMAL_STANDALONE_PROMPT =
   "You are Notra, an AI assistant for content teams. Reply briefly and warmly. If the user asks what you can do, mention: creating and editing posts (changelogs, blog posts, Twitter, LinkedIn, investor updates), viewing brand identities, and reviewing GitHub/Linear activity. Do not call tools on this turn.";
@@ -70,30 +70,56 @@ export async function orchestrateStandaloneChat(
 
   const lastUserMessage = getLastUserMessage(messages);
   const isTrivial = isTrivialMessage(lastUserMessage);
+  const isAuto = requestedModel === undefined || requestedModel === "auto";
 
-  const selectedModel = requestedModel ?? DEFAULT_STANDALONE_CHAT_MODEL;
+  let selectedModel: string;
+  let autoThinkingLevel: AutoThinkingLevel | undefined;
+  let decisionReasoning: string;
+  let decisionComplexity: "simple" | "complex" = isTrivial
+    ? "simple"
+    : "complex";
+  let decisionRequiresTools = !isTrivial;
+
+  if (isAuto) {
+    const decision = await routeMessage(
+      lastUserMessage,
+      hasGitHub || hasLinear,
+      log
+    );
+    const auto = selectAutoModel(decision);
+    selectedModel = auto.model;
+    autoThinkingLevel = auto.thinkingLevel;
+    decisionComplexity = decision.complexity;
+    decisionRequiresTools = decision.requiresTools;
+    decisionReasoning = `auto → ${auto.model}: ${decision.reasoning}`;
+  } else {
+    selectedModel = requestedModel;
+    decisionReasoning = isTrivial
+      ? "Trivial greeting/acknowledgement — minimal prompt, no tools, no thinking"
+      : "User selected model explicitly";
+  }
 
   const routingDecision = {
     model: selectedModel,
-    complexity: (isTrivial ? "simple" : "complex") as "simple" | "complex",
-    requiresTools: !isTrivial,
-    reasoning: requestedModel
-      ? "User selected model explicitly"
-      : isTrivial
-        ? "Trivial greeting/acknowledgement — minimal prompt, no tools, no thinking"
-        : `Using standalone chat default model: ${DEFAULT_STANDALONE_CHAT_MODEL}`,
+    complexity: decisionComplexity,
+    requiresTools: decisionRequiresTools,
+    reasoning: decisionReasoning,
+    thinkingLevel: autoThinkingLevel,
   };
+
+  const isSimpleNoTools =
+    routingDecision.complexity === "simple" && !routingDecision.requiresTools;
 
   const modelWithMemory = createModel(
     organizationId,
     routingDecision.model,
-    { disableMemory: isTrivial },
+    { disableMemory: isSimpleNoTools },
     log
   );
 
   const postResult: PostToolsResult = {};
 
-  const { tools, descriptions } = isTrivial
+  const { tools, descriptions } = isSimpleNoTools
     ? { tools: {}, descriptions: [] as string[] }
     : buildStandaloneToolSet(
         {
@@ -110,7 +136,7 @@ export async function orchestrateStandaloneChat(
   const repoContext = getRepoContextFromIntegrations(validatedIntegrations);
   const linearContext = getLinearContextFromIntegrations(validatedIntegrations);
 
-  const systemPrompt = isTrivial
+  const systemPrompt = isSimpleNoTools
     ? MINIMAL_STANDALONE_PROMPT
     : getStandaloneChatPrompt({
         repoContext,
@@ -121,15 +147,21 @@ export async function orchestrateStandaloneChat(
         timezone,
       });
 
-  const providerOptions = isTrivial
+  const effectiveThinkingLevel = autoThinkingLevel ?? thinkingLevel;
+  const effectiveEnableThinking =
+    enableThinking && (autoThinkingLevel ? autoThinkingLevel !== "off" : true);
+
+  const providerOptions = isSimpleNoTools
     ? undefined
     : getThinkingProviderOptions(
         routingDecision.model,
-        enableThinking,
-        thinkingLevel
+        effectiveEnableThinking,
+        effectiveThinkingLevel
       );
 
-  const messagesForModel = isTrivial ? trimTrivialHistory(messages) : messages;
+  const messagesForModel = isSimpleNoTools
+    ? trimTrivialHistory(messages)
+    : messages;
 
   let firstChunkFired = false;
   const stream = streamText({
@@ -139,7 +171,7 @@ export async function orchestrateStandaloneChat(
       ignoreIncompleteToolCalls: true,
     }),
     tools,
-    stopWhen: stepCountIs(isTrivial ? 1 : maxSteps),
+    stopWhen: stepCountIs(isSimpleNoTools ? 1 : maxSteps),
     experimental_transform: smoothStream(),
     providerOptions,
     prepareStep: ({ messages: stepMessages }) => ({
