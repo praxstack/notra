@@ -67,7 +67,7 @@ import {
   serializeFragmentWithReferences,
 } from "./integration-reference";
 
-const AVAILABLE_MODELS = [
+export const AVAILABLE_MODELS = [
   {
     id: "anthropic/claude-opus-4.7",
     label: "Opus 4.7",
@@ -106,9 +106,9 @@ const AVAILABLE_MODELS = [
   },
 ] as const;
 
-type ModelProvider = (typeof AVAILABLE_MODELS)[number]["provider"];
+export type ModelProvider = (typeof AVAILABLE_MODELS)[number]["provider"];
 
-function ModelIcon({
+export function ModelIcon({
   provider,
   className,
 }: {
