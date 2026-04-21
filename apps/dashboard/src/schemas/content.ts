@@ -108,6 +108,7 @@ export const chatRequestSchema = z.object({
   contentType: z.string().optional(),
   selection: textSelectionSchema.optional(),
   context: z.array(contextItemSchema).optional(),
+  timezone: z.string().min(1).max(100).optional(),
 });
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;

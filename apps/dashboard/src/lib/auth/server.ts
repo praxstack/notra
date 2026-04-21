@@ -121,7 +121,7 @@ const socialProviders = buildSocialProviders();
 
 const authSecret = process.env.BETTER_AUTH_SECRET;
 if (!authSecret) {
-  console.warn("[ENV]: BETTER_AUTH_SECRET is not defined");
+  throw new Error("BETTER_AUTH_SECRET must be defined");
 }
 
 async function getActiveOrganizationId(
@@ -187,7 +187,7 @@ async function getActiveOrganizationId(
 }
 
 export const auth = betterAuth({
-  secret: authSecret ?? "development-secret",
+  secret: authSecret,
   database: drizzleAdapter(db, {
     provider: "pg",
     usePlural: true,

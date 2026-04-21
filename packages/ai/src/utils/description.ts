@@ -8,7 +8,6 @@ export const toolDescription = (input: ToolDescription) => {
     ? dedent(input.whenNotToUse)
     : undefined;
   const usageNotes = input.usageNotes ? dedent(input.usageNotes) : undefined;
-  const toolName = input.toolName;
 
   const parts: string[] = [];
 
@@ -16,14 +15,14 @@ export const toolDescription = (input: ToolDescription) => {
     parts.push(intro);
   }
   if (whenToUse) {
-    parts.push(`**When to use the ${toolName} tool**\n${whenToUse}`);
+    parts.push(`Use when: ${whenToUse}`);
   }
   if (whenNotToUse) {
-    parts.push(`**When NOT to use the ${toolName} tool**\n${whenNotToUse}`);
+    parts.push(`Do not use when: ${whenNotToUse}`);
   }
   if (usageNotes) {
-    parts.push(`**Usage notes**\n${usageNotes}`);
+    parts.push(`Notes: ${usageNotes}`);
   }
 
-  return parts.join("\n\n");
+  return parts.join("\n");
 };

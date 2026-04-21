@@ -1,4 +1,5 @@
 import type { ContentEditorChatPromptParams } from "@notra/ai/types/prompts";
+import { formatCurrentDate } from "@notra/ai/utils/current-date";
 import dedent from "dedent";
 
 export function getContentEditorChatPrompt(
@@ -12,6 +13,7 @@ export function getContentEditorChatPrompt(
     toolDescriptions,
     hasGitHubEnabled,
     hasLinearEnabled,
+    timezone,
   } = params;
 
   const selectionContext = selection
@@ -42,8 +44,14 @@ export function getContentEditorChatPrompt(
       ? `\n\n## Linear Integration\nSource of truth identifiers for Linear context:\n${linearContext.map((c) => `- integrationId: ${c.integrationId}`).join("\n")}\n\nWhen working with Linear data, call Linear tools (getLinearIssues, getLinearProjects, getLinearCycles) using integrationId.`
       : "";
 
+  const { formatted: currentDate, timezone: resolvedTimezone } =
+    formatCurrentDate(timezone);
+
   return dedent`
     You are a content editor assistant. Help users edit their markdown documents.
+
+    ## Current Date
+    Today is ${currentDate} (${resolvedTimezone}). Use this when users reference relative dates like "today", "yesterday", "this week", or "last month".
 
     ## Workflow
     1. If the user asks for edits, ALWAYS call getMarkdown first

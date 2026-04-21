@@ -46,6 +46,7 @@ export function useChatSessions({
 
   return {
     sessions: query.data ?? [],
+    isLoading: query.isPending && query.fetchStatus !== "idle",
     organizationId,
     queryKey,
   };

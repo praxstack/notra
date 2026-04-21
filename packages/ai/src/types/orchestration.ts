@@ -95,6 +95,7 @@ export interface OrchestrateInput {
   context?: ContextItem[];
   maxSteps?: number;
   log?: AILogTarget;
+  timezone?: string;
 }
 
 export interface OrchestrateResult {

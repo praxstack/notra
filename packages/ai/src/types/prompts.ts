@@ -32,6 +32,7 @@ export interface ContentEditorChatPromptParams {
   toolDescriptions?: string[];
   hasGitHubEnabled?: boolean;
   hasLinearEnabled?: boolean;
+  timezone?: string;
 }
 
 export interface StandaloneChatPromptParams {
@@ -44,6 +45,7 @@ export interface StandaloneChatPromptParams {
   toolDescriptions?: string[];
   hasGitHubEnabled: boolean;
   hasLinearEnabled: boolean;
+  timezone?: string;
 }
 
 export interface GithubWebhookMemoryPromptParams {

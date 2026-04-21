@@ -1,4 +1,5 @@
 import type { StandaloneChatPromptParams } from "@notra/ai/types/prompts";
+import { formatCurrentDate } from "@notra/ai/utils/current-date";
 import dedent from "dedent";
 
 export function getStandaloneChatPrompt(params: StandaloneChatPromptParams) {
@@ -8,6 +9,7 @@ export function getStandaloneChatPrompt(params: StandaloneChatPromptParams) {
     toolDescriptions,
     hasGitHubEnabled,
     hasLinearEnabled,
+    timezone,
   } = params;
 
   const capabilitiesSection = toolDescriptions?.length
@@ -24,8 +26,14 @@ export function getStandaloneChatPrompt(params: StandaloneChatPromptParams) {
       ? `\n\n## Linear Integration\nSource of truth identifiers for Linear context:\n${linearContext.map((c) => `- integrationId: ${c.integrationId}`).join("\n")}\n\nWhen working with Linear data, call Linear tools (getLinearIssues, getLinearProjects, getLinearCycles) using integrationId.`
       : "";
 
+  const { formatted: currentDate, timezone: resolvedTimezone } =
+    formatCurrentDate(timezone);
+
   return dedent`
     You are Notra, an AI assistant for content teams. You help users create, edit, and manage content posts, and gather information about brand identities, integrations, GitHub, and Linear.
+
+    ## Current Date
+    Today is ${currentDate} (${resolvedTimezone}). Use this when users reference relative dates like "today", "yesterday", "this week", or "last month".
 
     ## Workflow
     - When asked to create content, use the matching create tool for the requested format: createChangelog, createBlogPost, createTwitterPost, createLinkedInPost, or createInvestorUpdate.

@@ -9,6 +9,7 @@ export const chatModelSchema = z.enum([
   "anthropic/claude-sonnet-4.6",
   "anthropic/claude-haiku-4.5",
   "openai/gpt-5.4",
+  "moonshotai/kimi-k2.6",
 ]);
 
 export const thinkingLevelSchema = z.enum(["off", "low", "medium", "high"]);
@@ -44,6 +45,7 @@ export const standaloneChatRequestSchema = z.object({
   model: chatModelSchema.optional(),
   enableThinking: z.boolean().optional(),
   thinkingLevel: thinkingLevelSchema.optional(),
+  timezone: z.string().min(1).max(100).optional(),
 });
 
 export const updateChatSessionSchema = z
@@ -71,6 +73,7 @@ export const chatWorkflowPayloadSchema = z.object({
   model: chatModelSchema.optional(),
   enableThinking: z.boolean().optional(),
   thinkingLevel: thinkingLevelSchema.optional(),
+  timezone: z.string().min(1).max(100).optional(),
 });
 
 export const chatTransportRequestBodySchema = z.object({

@@ -419,6 +419,7 @@ export default function PageClient({
         contentType: contentTypeRef.current,
         selection: selectionRef.current ?? undefined,
         context: contextRef.current,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }),
     }),
     onFinish: () => {

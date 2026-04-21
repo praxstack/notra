@@ -21,6 +21,8 @@ import {
   isToolUIPart,
   lastAssistantMessageIsCompleteWithApprovalResponses,
 } from "ai";
+import { AnimatePresence, motion } from "motion/react";
+import { nanoid } from "nanoid";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
@@ -39,8 +41,17 @@ import {
   ChatInputAdvanced,
   type ThinkingLevel,
 } from "@/components/chat/chat-input";
+import { ChatQueue, type QueuedMessage } from "@/components/chat/chat-queue";
 import { ChatSuggestions } from "@/components/chat/chat-suggestions";
-import { renderTextWithIntegrationReferences } from "@/components/chat/integration-reference";
+import {
+  getReferenceDisplay,
+  parseReferenceValue,
+  renderTextWithIntegrationReferences,
+} from "@/components/chat/integration-reference";
+import {
+  UserMessageActions,
+  UserMessageEditor,
+} from "@/components/chat/user-message-actions";
 import { useAiChatExperiment } from "@/components/providers/databuddy-flags-provider";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
@@ -194,6 +205,28 @@ function getCreateToolContentType(
   return CREATE_TOOL_TYPES[type];
 }
 
+function hasPendingApproval(messages: readonly ChatUIMessage[]): boolean {
+  for (const message of messages) {
+    if (message.role !== "assistant") {
+      continue;
+    }
+    for (const part of message.parts) {
+      if (isToolUIPart(part) && part.state === "approval-requested") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function isTerminalToolState(state: string): boolean {
+  return (
+    state === "output-available" ||
+    state === "output-error" ||
+    state === "output-denied"
+  );
+}
+
 function StandaloneChatPageClient({
   organizationSlug,
   chatId: initialChatId,
@@ -222,12 +255,17 @@ function StandaloneChatPageClient({
   const [context, setContext] = useState<ContextItem[]>([]);
   const [hasCustomizedContext, setHasCustomizedContext] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [queuedMessages, setQueuedMessages] = useState<QueuedMessage[]>([]);
   const [selectedModel, setSelectedModel] = useState(
     DEFAULT_CHAT_PREFERENCES.model
   );
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>(
     DEFAULT_CHAT_PREFERENCES.thinkingLevel
   );
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [messageBranches, setMessageBranches] = useState<
+    Record<string, { tails: ChatUIMessage[][]; active: number }>
+  >({});
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
 
@@ -260,6 +298,7 @@ function StandaloneChatPageClient({
             model: selectedModelRef.current,
             enableThinking: thinkingLevelRef.current !== "off",
             thinkingLevel: thinkingLevelRef.current,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           },
         }),
         prepareReconnectToStreamRequest: ({ id }) => ({
@@ -348,6 +387,12 @@ function StandaloneChatPageClient({
   }, []);
 
   const [wasStoppedByUser, setWasStoppedByUser] = useState(false);
+  const wasStoppedByUserRef = useRef(wasStoppedByUser);
+  wasStoppedByUserRef.current = wasStoppedByUser;
+
+  const drainQueueRef = useRef<() => void>(() => {
+    // Populated after dispatchMessage is defined below.
+  });
 
   const handleFinish = useCallback(() => {
     setPendingMessageId(null);
@@ -355,6 +400,8 @@ function StandaloneChatPageClient({
     queryClient.invalidateQueries({
       queryKey: ["chat-sessions", organizationId],
     });
+    isDrainingRef.current = false;
+    drainQueueRef.current();
   }, [organizationId, queryClient]);
 
   const {
@@ -450,9 +497,7 @@ function StandaloneChatPageClient({
     });
   }, [initialChatId, selectedModel, thinkingLevel]);
 
-  const handleStop = useCallback(async () => {
-    setIsStopping(true);
-    setWasStoppedByUser(true);
+  const stopActiveResponse = useCallback(async () => {
     try {
       if (organizationId && stableChatId) {
         await fetch(
@@ -466,6 +511,12 @@ function StandaloneChatPageClient({
       stop();
     }
   }, [organizationId, stableChatId, stop]);
+
+  const handleStop = useCallback(async () => {
+    setIsStopping(true);
+    setWasStoppedByUser(true);
+    await stopActiveResponse();
+  }, [stopActiveResponse]);
 
   const chatHistoryQuery = useQuery<{
     messages: ChatUIMessage[] | null;
@@ -546,6 +597,7 @@ function StandaloneChatPageClient({
   useEffect(() => {
     setPendingMessageId(null);
     setChatError(null);
+    setQueuedMessages([]);
 
     if (initialChatId) {
       return;
@@ -556,6 +608,56 @@ function StandaloneChatPageClient({
     setContext([]);
     setHasCustomizedContext(false);
   }, [initialChatId, setMessages]);
+
+  const queueStorageKey = `chat-queue:${stableChatId}`;
+  const loadedQueueKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (loadedQueueKeyRef.current === queueStorageKey) {
+      return;
+    }
+    loadedQueueKeyRef.current = queueStorageKey;
+    try {
+      const raw = window.localStorage.getItem(queueStorageKey);
+      if (!raw) {
+        setQueuedMessages([]);
+        return;
+      }
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        setQueuedMessages([]);
+        return;
+      }
+      const restored = parsed.filter(
+        (m): m is QueuedMessage =>
+          typeof m === "object" &&
+          m !== null &&
+          typeof (m as { id?: unknown }).id === "string" &&
+          typeof (m as { text?: unknown }).text === "string"
+      );
+      setQueuedMessages(restored);
+    } catch {
+      setQueuedMessages([]);
+    }
+  }, [queueStorageKey]);
+
+  useEffect(() => {
+    if (loadedQueueKeyRef.current !== queueStorageKey) {
+      return;
+    }
+    try {
+      if (queuedMessages.length === 0) {
+        window.localStorage.removeItem(queueStorageKey);
+      } else {
+        window.localStorage.setItem(
+          queueStorageKey,
+          JSON.stringify(queuedMessages)
+        );
+      }
+    } catch {
+      // noop
+    }
+  }, [queueStorageKey, queuedMessages]);
 
   const pendingHistoryMessages = chatHistoryQuery.data?.messages?.length ?? 0;
   const isLoadingHistory =
@@ -632,6 +734,140 @@ function StandaloneChatPageClient({
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+  const extractUserMessageText = useCallback((message: ChatUIMessage) => {
+    let text = "";
+    for (const part of message.parts) {
+      if (part.type === "text") {
+        text += part.text;
+      }
+    }
+    return text;
+  }, []);
+
+  const toDisplayText = useCallback((serialized: string) => {
+    return serialized.replace(
+      /@?integration\/(?:github\/[^/\s]+\/[^/\s]+\/[^/\s]+|linear\/[^/\s]+)/g,
+      (match) => {
+        const item = parseReferenceValue(match);
+        return item ? getReferenceDisplay(item) : match;
+      }
+    );
+  }, []);
+
+  const handleStartEditMessage = useCallback((messageId: string) => {
+    setEditingMessageId(messageId);
+  }, []);
+
+  const handleCancelEditMessage = useCallback(() => {
+    setEditingMessageId(null);
+  }, []);
+
+  const resendFromUserMessage = useCallback(
+    async (userMessageId: string, text: string, modelOverride?: string) => {
+      const current = messagesRef.current;
+      const index = current.findIndex((m) => m.id === userMessageId);
+      if (index === -1) {
+        return;
+      }
+
+      const currentTail = current.slice(index);
+      const truncated = current.slice(0, index + 1);
+
+      setMessageBranches((prev) => {
+        const existing = prev[userMessageId];
+        if (!existing) {
+          return {
+            ...prev,
+            [userMessageId]: { tails: [currentTail, []], active: 1 },
+          };
+        }
+        const tails = [...existing.tails];
+        tails[existing.active] = currentTail;
+        tails.push([]);
+        return {
+          ...prev,
+          [userMessageId]: { tails, active: tails.length - 1 },
+        };
+      });
+
+      if (modelOverride) {
+        const parsed = parseStoredChatModel(modelOverride);
+        if (parsed) {
+          selectedModelRef.current = parsed;
+          setSelectedModel(parsed);
+        }
+      }
+
+      setMessages(truncated);
+      setWasStoppedByUser(false);
+      setChatError(null);
+      await sendMessage({ text, messageId: userMessageId });
+    },
+    [sendMessage, setMessages]
+  );
+
+  const handleEditMessage = useCallback(
+    async (userMessageId: string, newText: string) => {
+      setEditingMessageId(null);
+      await resendFromUserMessage(userMessageId, newText);
+    },
+    [resendFromUserMessage]
+  );
+
+  const handleRetryMessage = useCallback(
+    async (userMessageId: string, modelOverride?: string) => {
+      const current = messagesRef.current;
+      const message = current.find((m) => m.id === userMessageId);
+      if (!message) {
+        return;
+      }
+      const text = extractUserMessageText(message);
+      if (!text.trim()) {
+        return;
+      }
+      await resendFromUserMessage(userMessageId, text, modelOverride);
+    },
+    [extractUserMessageText, resendFromUserMessage]
+  );
+
+  const [branchSwitchSignal, setBranchSwitchSignal] = useState<{
+    userMessageId: string;
+    tick: number;
+  } | null>(null);
+
+  const handleSwitchBranch = useCallback(
+    (userMessageId: string, direction: "prev" | "next") => {
+      const existing = messageBranches[userMessageId];
+      if (!existing || existing.tails.length <= 1) {
+        return;
+      }
+      const current = messagesRef.current;
+      const index = current.findIndex((m) => m.id === userMessageId);
+      if (index === -1) {
+        return;
+      }
+      const before = current.slice(0, index);
+      const currentTail = current.slice(index);
+
+      const tails = [...existing.tails];
+      tails[existing.active] = currentTail;
+      const total = tails.length;
+      const active =
+        direction === "next"
+          ? (existing.active + 1) % total
+          : (existing.active - 1 + total) % total;
+
+      setMessageBranches((prev) => ({
+        ...prev,
+        [userMessageId]: { tails, active },
+      }));
+      setMessages([...before, ...(tails[active] ?? [])]);
+
+      setBranchSwitchSignal({ userMessageId, tick: Date.now() });
+    },
+    [messageBranches, setMessages]
+  );
+
   const hasUpdatedUrlRef = useRef(false);
   const pathname = usePathname();
 
@@ -653,7 +889,7 @@ function StandaloneChatPageClient({
     setGeneratedChatId(crypto.randomUUID());
   }, [pathname, organizationSlug, initialChatId, setMessages]);
 
-  const handleSend = useCallback(
+  const dispatchMessage = useCallback(
     async (text: string) => {
       const isFirstMessage = !initialChatId && !hasUpdatedUrlRef.current;
       if (messagesRef.current.length === 0) {
@@ -679,7 +915,6 @@ function StandaloneChatPageClient({
         }
       }
       if (isFirstMessage) {
-        hasUpdatedUrlRef.current = true;
         window.history.replaceState(
           null,
           "",
@@ -703,6 +938,17 @@ function StandaloneChatPageClient({
       stableChatId,
       triggerFirstMessageTransition,
     ]
+  );
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (isLoading) {
+        setQueuedMessages((prev) => [...prev, { id: nanoid(10), text }]);
+        return;
+      }
+      await dispatchMessage(text);
+    },
+    [dispatchMessage, isLoading]
   );
 
   const autoSubmittedRef = useRef(false);
@@ -733,6 +979,127 @@ function StandaloneChatPageClient({
     initialQuery,
     organizationId,
     setInitialQuery,
+  ]);
+
+  const handleRemoveQueued = useCallback((id: string) => {
+    setQueuedMessages((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
+  const handleEditQueued = useCallback((message: QueuedMessage) => {
+    setQueuedMessages((prev) => prev.filter((m) => m.id !== message.id));
+    chatInputRef.current?.setText(message.text);
+  }, []);
+
+  const handleUpdateQueued = useCallback((id: string, text: string) => {
+    setQueuedMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, text } : m))
+    );
+  }, []);
+
+  const queuedMessagesRef = useRef(queuedMessages);
+  queuedMessagesRef.current = queuedMessages;
+
+  const isDrainingRef = useRef(false);
+  const seenToolOutputsRef = useRef<Set<string>>(new Set());
+  const prevIsLoadingRef = useRef(false);
+
+  drainQueueRef.current = () => {
+    if (isDrainingRef.current) {
+      return;
+    }
+    if (wasStoppedByUserRef.current) {
+      return;
+    }
+    if (hasPendingApproval(messagesRef.current)) {
+      return;
+    }
+    const queue = queuedMessagesRef.current;
+    const next = queue[0];
+    if (!next) {
+      return;
+    }
+
+    isDrainingRef.current = true;
+    setQueuedMessages(queue.slice(1));
+    dispatchMessage(next.text).catch((error) => {
+      console.error("[Chat] Failed to drain queued message:", error);
+      isDrainingRef.current = false;
+      setQueuedMessages((prev) => [next, ...prev]);
+    });
+  };
+
+  useEffect(() => {
+    if (isLoading && !prevIsLoadingRef.current) {
+      const snapshot = new Set<string>();
+      for (const message of messagesRef.current) {
+        if (message.role !== "assistant") {
+          continue;
+        }
+        for (const part of message.parts) {
+          if (isToolUIPart(part) && isTerminalToolState(part.state)) {
+            snapshot.add(part.toolCallId);
+          }
+        }
+      }
+      seenToolOutputsRef.current = snapshot;
+      isDrainingRef.current = false;
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      return;
+    }
+    if (isDrainingRef.current) {
+      return;
+    }
+    if (wasStoppedByUser) {
+      return;
+    }
+    if (queuedMessages.length === 0) {
+      return;
+    }
+    if (hasPendingApproval(messages)) {
+      return;
+    }
+
+    let hasNewToolOutput = false;
+    for (const message of messages) {
+      if (message.role !== "assistant") {
+        continue;
+      }
+      for (const part of message.parts) {
+        if (
+          isToolUIPart(part) &&
+          isTerminalToolState(part.state) &&
+          !seenToolOutputsRef.current.has(part.toolCallId)
+        ) {
+          seenToolOutputsRef.current.add(part.toolCallId);
+          hasNewToolOutput = true;
+        }
+      }
+    }
+
+    if (!hasNewToolOutput) {
+      return;
+    }
+
+    isDrainingRef.current = true;
+
+    stopActiveResponse().catch((error) => {
+      console.error(
+        "[Chat] Failed to stop active response for queue drain:",
+        error
+      );
+      isDrainingRef.current = false;
+    });
+  }, [
+    isLoading,
+    messages,
+    queuedMessages.length,
+    wasStoppedByUser,
+    stopActiveResponse,
   ]);
 
   const messageCount = messages.length;
@@ -1022,8 +1389,10 @@ function StandaloneChatPageClient({
               onSend={handleSend}
               onStop={handleStop}
               onThinkingLevelChange={handleThinkingLevelChange}
+              onUpdateQueued={handleUpdateQueued}
               organizationId={organizationId}
               organizationSlug={organizationSlug}
+              queuedMessages={queuedMessages}
               ref={chatInputRef}
               thinkingLevel={thinkingLevel}
             />
@@ -1067,18 +1436,131 @@ function StandaloneChatPageClient({
                 isFirstMessageTransition && "chat-messages-fade-in"
               )}
             >
-              {visibleMessages.map((message) => (
-                <Message from={message.role} key={message.id}>
-                  <MessageContent>
-                    {message.parts.map((part, index) =>
-                      renderPart(part, message.id, index)
-                    )}
-                  </MessageContent>
-                  {message.role === "assistant" && (
-                    <AssistantMetadataHover metadata={message.metadata} />
-                  )}
-                </Message>
-              ))}
+              {(() => {
+                const branchPointIndex = branchSwitchSignal
+                  ? visibleMessages.findIndex(
+                      (m) => m.id === branchSwitchSignal.userMessageId
+                    )
+                  : -1;
+                return visibleMessages.map((message, messageIndex) => {
+                  const isUser = message.role === "user";
+                  const isEditing = isUser && editingMessageId === message.id;
+                  const branches = isUser
+                    ? messageBranches[message.id]
+                    : undefined;
+                  const branchTotal = branches?.tails.length ?? 0;
+                  const branchIdx = branches?.active ?? 0;
+                  const isDownstreamOfBranchSwitch =
+                    branchPointIndex !== -1 && messageIndex > branchPointIndex;
+                  const branchFadeKey = isDownstreamOfBranchSwitch
+                    ? `${message.id}-${branchSwitchSignal?.tick}`
+                    : message.id;
+                  return (
+                    <Message
+                      className={cn(
+                        isDownstreamOfBranchSwitch && "chat-branch-fade-in"
+                      )}
+                      from={message.role}
+                      key={branchFadeKey}
+                    >
+                      {isUser ? (
+                        <AnimatePresence initial={false} mode="wait">
+                          {isEditing ? (
+                            <motion.div
+                              animate={{
+                                opacity: 1,
+                                filter: "blur(0px)",
+                                y: 0,
+                              }}
+                              className="ml-auto w-full"
+                              exit={{
+                                opacity: 0,
+                                filter: "blur(4px)",
+                                y: -2,
+                              }}
+                              initial={{
+                                opacity: 0,
+                                filter: "blur(4px)",
+                                y: 4,
+                              }}
+                              key="editor"
+                              transition={{ duration: 0.2, ease: "easeOut" }}
+                            >
+                              <UserMessageEditor
+                                initialText={toDisplayText(
+                                  extractUserMessageText(message)
+                                )}
+                                onCancel={handleCancelEditMessage}
+                                onSubmit={(text) =>
+                                  handleEditMessage(message.id, text)
+                                }
+                              />
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              animate={{
+                                opacity: 1,
+                                filter: "blur(0px)",
+                                y: 0,
+                              }}
+                              className="ml-auto flex w-fit max-w-full"
+                              exit={{
+                                opacity: 0,
+                                filter: "blur(4px)",
+                                y: -2,
+                              }}
+                              initial={{
+                                opacity: 0,
+                                filter: "blur(4px)",
+                                y: 4,
+                              }}
+                              key="content"
+                              transition={{ duration: 0.2, ease: "easeOut" }}
+                            >
+                              <MessageContent>
+                                {message.parts.map((part, index) =>
+                                  renderPart(part, message.id, index)
+                                )}
+                              </MessageContent>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      ) : (
+                        <MessageContent>
+                          {message.parts.map((part, index) =>
+                            renderPart(part, message.id, index)
+                          )}
+                        </MessageContent>
+                      )}
+                      {isUser && !isEditing && (
+                        <UserMessageActions
+                          branchIndex={branchTotal > 1 ? branchIdx : undefined}
+                          branchTotal={
+                            branchTotal > 1 ? branchTotal : undefined
+                          }
+                          canInteract={!isLoading}
+                          messageText={toDisplayText(
+                            extractUserMessageText(message)
+                          )}
+                          onEdit={() => handleStartEditMessage(message.id)}
+                          onNextBranch={() =>
+                            handleSwitchBranch(message.id, "next")
+                          }
+                          onPreviousBranch={() =>
+                            handleSwitchBranch(message.id, "prev")
+                          }
+                          onRetry={(model) =>
+                            handleRetryMessage(message.id, model)
+                          }
+                        />
+                      )}
+                      {message.role === "assistant" && (
+                        <AssistantMetadataHover metadata={message.metadata} />
+                      )}
+                    </Message>
+                  );
+                });
+              })()}
               {wasStoppedByUser && !isLoading && (
                 <div className="flex w-fit items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-destructive text-xs">
                   <HugeiconsIcon className="size-3.5" icon={X} />
@@ -1107,7 +1589,13 @@ function StandaloneChatPageClient({
           >
             <div className="-inset-x-4 pointer-events-none absolute bottom-full h-12 bg-linear-to-t from-background to-transparent" />
             <div className="mx-auto w-full max-w-2xl">
+              <ChatQueue
+                messages={queuedMessages}
+                onEdit={handleEditQueued}
+                onRemove={handleRemoveQueued}
+              />
               <ChatInputAdvanced
+                connectedTop={queuedMessages.length > 0}
                 context={context}
                 error={chatError}
                 initialValue={initialQuery ?? undefined}
@@ -1121,8 +1609,11 @@ function StandaloneChatPageClient({
                 onSend={handleSend}
                 onStop={handleStop}
                 onThinkingLevelChange={handleThinkingLevelChange}
+                onUpdateQueued={handleUpdateQueued}
                 organizationId={organizationId}
                 organizationSlug={organizationSlug}
+                queuedMessages={queuedMessages}
+                ref={chatInputRef}
                 thinkingLevel={thinkingLevel}
               />
             </div>

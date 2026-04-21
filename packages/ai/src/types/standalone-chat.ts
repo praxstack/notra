@@ -17,6 +17,7 @@ export interface StandaloneChatInput {
   enableThinking?: boolean;
   thinkingLevel?: "off" | "low" | "medium" | "high";
   abortSignal?: AbortSignal;
+  timezone?: string;
 }
 
 export interface StandaloneChatDeps {

@@ -135,7 +135,7 @@ function OrgSelectorTrigger({
         <SidebarMenuButton
           className={cn(
             "cursor-pointer data-popup-open:bg-sidebar-accent/90 data-popup-open:text-sidebar-accent-foreground data-popup-open:ring-1 data-popup-open:ring-sidebar-border/70",
-            isCollapsed ? "size-10 min-w-0 justify-center p-1" : ""
+            isCollapsed ? "min-w-0 justify-center" : ""
           )}
           disabled={isSwitching}
           size="lg"
@@ -144,7 +144,7 @@ function OrgSelectorTrigger({
           <Avatar
             className={cn(
               "size-8 rounded-lg after:rounded-lg",
-              isCollapsed ? "size-6.5" : ""
+              isCollapsed ? "size-6" : ""
             )}
           >
             <AvatarImage

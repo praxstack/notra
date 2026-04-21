@@ -80,7 +80,7 @@ export function DashboardSidebar({
             >
               <SidebarMenu>
                 <SidebarMenuButton
-                  className="border border-transparent transition-colors duration-200 hover:bg-sidebar-accent"
+                  className="[&>*]:group-data-[collapsible=icon]:-translate-x-px transition-colors duration-200 hover:bg-sidebar-accent"
                   render={
                     <Link href={`/${slug}`}>
                       <HugeiconsIcon icon={ArrowLeft01Icon} />

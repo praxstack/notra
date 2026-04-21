@@ -125,8 +125,14 @@ export const POST = withEvlog(async function POST(
       );
     }
 
-    const { messages, currentMarkdown, contentType, selection, context } =
-      parseResult.data;
+    const {
+      messages,
+      currentMarkdown,
+      contentType,
+      selection,
+      context,
+      timezone,
+    } = parseResult.data;
 
     const autumnClient = autumn;
 
@@ -140,6 +146,7 @@ export const POST = withEvlog(async function POST(
         context,
         maxSteps: 5,
         log,
+        timezone,
       },
       {
         integrationFetchers: {

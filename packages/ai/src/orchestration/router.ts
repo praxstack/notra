@@ -17,13 +17,50 @@ const MODELS = {
   complex: "anthropic/claude-haiku-4.5",
 } as const;
 
+const TRIVIAL_MESSAGE_PATTERNS = [
+  /^(hi|hello|hey|yo|sup|hallo|moin|servus)\b[\s!.?]*$/i,
+  /^(thanks?|thank you|thx|danke|ty)\b[\s!.?]*$/i,
+  /^(ok(ay)?|cool|nice|got it|alles klar)\b[\s!.?]*$/i,
+  /^(bye|cya|tschüss|ciao)\b[\s!.?]*$/i,
+];
+
+export function isTrivialMessage(userMessage: string): boolean {
+  const trimmed = userMessage.trim();
+  if (!trimmed || trimmed.length > 40) {
+    return false;
+  }
+  return TRIVIAL_MESSAGE_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+function matchTrivialFastPath(
+  userMessage: string,
+  hasIntegrationContext: boolean
+): RoutingDecision | undefined {
+  if (hasIntegrationContext) {
+    return undefined;
+  }
+  if (!isTrivialMessage(userMessage)) {
+    return undefined;
+  }
+  return {
+    complexity: "simple",
+    requiresTools: false,
+    reasoning: "Trivial greeting/acknowledgement — skipped router call",
+  };
+}
+
 export async function routeMessage(
   userMessage: string,
-  hasGitHubContext: boolean,
+  hasIntegrationContext: boolean,
   log?: AILogTarget
 ): Promise<RoutingDecision> {
-  const contextHint = hasGitHubContext
-    ? "\n\nNote: The user has added GitHub repository context, suggesting they may want to work with GitHub data."
+  const fastPath = matchTrivialFastPath(userMessage, hasIntegrationContext);
+  if (fastPath) {
+    return fastPath;
+  }
+
+  const contextHint = hasIntegrationContext
+    ? "\n\nNote: The user has connected integration context (for example GitHub or Linear), so they may want help using external project data."
     : "";
 
   const routerModel = wrapModelWithObservability(gateway(MODELS.router), log);
@@ -49,10 +86,10 @@ export function selectModel(decision: RoutingDecision): string {
 
 export async function routeAndSelectModel(
   userMessage: string,
-  hasGitHubContext: boolean,
+  hasIntegrationContext: boolean,
   log?: AILogTarget
 ): Promise<RoutingResult> {
-  const decision = await routeMessage(userMessage, hasGitHubContext, log);
+  const decision = await routeMessage(userMessage, hasIntegrationContext, log);
   const model = selectModel(decision);
 
   return {
