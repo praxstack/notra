@@ -54,6 +54,10 @@ import { FEATURES } from "@/constants/features";
 import { INPUT_SOURCES } from "@/lib/integrations/catalog";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import type { ChatInputHandle, ContextItem } from "@/types/chat";
+import type {
+  ChatModelOption,
+  ChatModelProvider,
+} from "@/types/components/chat-input";
 import type { GitHubRepository } from "@/types/integrations";
 import type { QueuedMessage } from "./chat-queue";
 import {
@@ -66,7 +70,7 @@ import {
   serializeFragmentWithReferences,
 } from "./integration-reference";
 
-export const AVAILABLE_MODELS = [
+export const AVAILABLE_MODELS: readonly ChatModelOption[] = [
   {
     id: "anthropic/claude-opus-4.7",
     label: "Opus 4.7",
@@ -97,7 +101,7 @@ export const AVAILABLE_MODELS = [
   },
 ] as const;
 
-export type ModelProvider = (typeof AVAILABLE_MODELS)[number]["provider"];
+export type ModelProvider = ChatModelProvider;
 
 export function ModelIcon({
   provider,
@@ -1068,7 +1072,7 @@ export function ChatInputAdvanced({
   );
 
   const currentModel =
-    AVAILABLE_MODELS.find((m) => m.id === model) ?? AVAILABLE_MODELS[0];
+    AVAILABLE_MODELS.find((m) => m.id === model) ?? AVAILABLE_MODELS[0]!;
 
   return (
     <Card
@@ -1291,7 +1295,7 @@ export function ChatInputAdvanced({
                       provider={currentModel.provider}
                     />
                     {currentModel.label}
-                    {"beta" in currentModel && currentModel.beta && (
+                    {currentModel.beta && (
                       <span className="rounded-sm bg-primary/10 px-1 py-px font-medium text-[0.625rem] text-primary uppercase leading-none tracking-wide">
                         Beta
                       </span>
@@ -1314,7 +1318,7 @@ export function ChatInputAdvanced({
                       <div className="flex min-w-0 flex-col">
                         <span className="flex items-center gap-1.5 text-sm">
                           {m.label}
-                          {"beta" in m && m.beta && (
+                          {m.beta && (
                             <span className="rounded-sm bg-primary/10 px-1 py-px font-medium text-[0.625rem] text-primary uppercase leading-none tracking-wide">
                               Beta
                             </span>

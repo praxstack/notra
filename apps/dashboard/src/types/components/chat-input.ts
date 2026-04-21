@@ -1,5 +1,16 @@
-import type { ContextItem, TextSelection } from "@/types/chat";
+import type { ChatModel, ContextItem, TextSelection } from "@/types/chat";
 import type { GitHubRepository } from "@/types/integrations";
+
+export type ChatModelProvider = "anthropic" | "openai";
+
+export interface ChatModelOption {
+  id: ChatModel;
+  label: string;
+  description: string;
+  pricing: string;
+  provider: ChatModelProvider;
+  beta?: boolean;
+}
 
 export interface ChatInputProps {
   onSend?: (value: string) => void;
