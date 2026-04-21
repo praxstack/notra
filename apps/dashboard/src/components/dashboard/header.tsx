@@ -150,7 +150,7 @@ export function SiteHeader() {
   });
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-dashed transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+    <header className="relative flex h-12 shrink-0 items-center gap-2 border-b border-dashed transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
@@ -160,19 +160,21 @@ export function SiteHeader() {
         <Breadcrumb>
           <BreadcrumbList>{breadcrumbs}</BreadcrumbList>
         </Breadcrumb>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="-translate-x-1/2 pointer-events-none absolute left-1/2 hidden w-full max-w-md px-4 sm:block">
           <Button
-            className="hidden h-8 items-center gap-2 border-dashed pr-1.5 pl-2 text-muted-foreground hover:text-foreground sm:flex"
+            className="pointer-events-auto flex h-8 w-full items-center gap-2 border-dashed pr-1.5 pl-2 text-muted-foreground hover:text-foreground"
             onClick={() => setCommandPaletteOpen(true)}
             size="sm"
             variant="outline"
           >
             <HugeiconsIcon icon={SearchIcon} size={14} strokeWidth={2} />
             <span className="text-xs">Search</span>
-            <kbd className="pointer-events-none ml-2 select-none rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+            <kbd className="pointer-events-none ml-auto select-none rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
               ⌘K
             </kbd>
           </Button>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
           <CreditBalanceButton />
           <Button
             className="gap-1.5"
