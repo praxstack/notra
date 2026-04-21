@@ -27,6 +27,12 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     cacheReadPerMillionTokens: 0.05,
     cacheWritePerMillionTokens: 0,
   },
+  "moonshotai/kimi-k2.6": {
+    inputPerMillionTokens: 0.95,
+    outputPerMillionTokens: 4.0,
+    cacheReadPerMillionTokens: 0.15,
+    cacheWritePerMillionTokens: 0,
+  },
 };
 
 const DEFAULT_PRICING: ModelPricing = {

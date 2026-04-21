@@ -29,6 +29,7 @@ import {
 import { ClaudeAiIcon } from "@notra/ui/components/ui/svgs/claudeAiIcon";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linear } from "@notra/ui/components/ui/svgs/linear";
+import { Moonshot } from "@notra/ui/components/ui/svgs/moonshot";
 import { Openai } from "@notra/ui/components/ui/svgs/openai";
 import { OpenaiDark } from "@notra/ui/components/ui/svgs/openaiDark";
 import {
@@ -95,6 +96,14 @@ const AVAILABLE_MODELS = [
     pricing: "$2.50 input / $15 output per 1M",
     provider: "openai",
   },
+  {
+    id: "moonshotai/kimi-k2.6",
+    label: "Kimi K2.6",
+    description: "Agentic coding specialist",
+    pricing: "$0.95 input / $4 output per 1M",
+    provider: "moonshotai",
+    beta: true,
+  },
 ] as const;
 
 type ModelProvider = (typeof AVAILABLE_MODELS)[number]["provider"];
@@ -113,6 +122,9 @@ function ModelIcon({
         <OpenaiDark className={`${className ?? ""} hidden dark:block`} />
       </>
     );
+  }
+  if (provider === "moonshotai") {
+    return <Moonshot className={className} />;
   }
   return <ClaudeAiIcon className={className} />;
 }
@@ -1258,6 +1270,11 @@ export function ChatInputAdvanced({
                       provider={currentModel.provider}
                     />
                     {currentModel.label}
+                    {"beta" in currentModel && currentModel.beta && (
+                      <span className="rounded-sm bg-primary/10 px-1 py-px font-medium text-[0.625rem] text-primary uppercase leading-none tracking-wide">
+                        Beta
+                      </span>
+                    )}
                   </div>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-56">
@@ -1274,7 +1291,14 @@ export function ChatInputAdvanced({
                         provider={m.provider}
                       />
                       <div className="flex min-w-0 flex-col">
-                        <span className="text-sm">{m.label}</span>
+                        <span className="flex items-center gap-1.5 text-sm">
+                          {m.label}
+                          {"beta" in m && m.beta && (
+                            <span className="rounded-sm bg-primary/10 px-1 py-px font-medium text-[0.625rem] text-primary uppercase leading-none tracking-wide">
+                              Beta
+                            </span>
+                          )}
+                        </span>
                         <span className="text-muted-foreground text-xs">
                           {m.description}
                         </span>
