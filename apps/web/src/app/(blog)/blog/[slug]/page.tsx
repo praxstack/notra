@@ -4,11 +4,8 @@ import { notFound } from "next/navigation";
 import { ChangelogHtmlArticle } from "@/components/changelog-html-article";
 import { NotraMark } from "@/components/notra-mark";
 import { formatBlogDate, getNotraBlogPostBySlug } from "@/utils/blog";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "@/utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
+import { SITE_URL } from "@/utils/urls";
 import type { BlogEntryPageProps } from "~types/blog";
 
 export async function generateMetadata({

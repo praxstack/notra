@@ -5,7 +5,6 @@ import {
   listNotraChangelogPosts,
 } from "@/utils/changelog";
 import { stripFrontmatter } from "@/utils/markdown";
-import { SITE_URL } from "@/utils/metadata";
 import {
   getShowcaseCompany,
   getShowcaseEntrySlug,
@@ -16,6 +15,7 @@ import {
   buildLandingMarkdown,
   buildPricingMarkdown,
 } from "@/utils/site-markdown";
+import { SITE_URL } from "@/utils/urls";
 
 function absoluteUrl(path: string) {
   return `${SITE_URL}${path}`;

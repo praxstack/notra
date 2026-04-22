@@ -6,16 +6,13 @@ import { getMDXComponents } from "@/../mdx-components";
 import { NotraMark } from "@/components/notra-mark";
 import { TableOfContents } from "@/components/table-of-contents";
 import { formatChangelogDate } from "@/utils/changelog";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "@/utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
 import {
   getShowcaseCompany,
   getShowcaseEntrySlug,
   SHOWCASE_COMPANIES,
 } from "@/utils/showcase";
+import { SITE_URL } from "@/utils/urls";
 import type { ShowcaseEntryPageProps } from "~types/showcase";
 
 export function generateStaticParams() {

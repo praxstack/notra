@@ -6,16 +6,13 @@ import { notFound } from "next/navigation";
 import { changelog } from "@/../.source/server";
 import { ChangelogPageHeader } from "@/components/changelog-page-header";
 import { ChangelogTimeline } from "@/components/changelog-timeline";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "@/utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
 import {
   getShowcaseCompany,
   getShowcaseEntrySlug,
   SHOWCASE_COMPANIES,
 } from "@/utils/showcase";
+import { SITE_URL } from "@/utils/urls";
 import type { ShowcaseCompanyPageProps } from "~types/showcase";
 
 export function generateStaticParams() {

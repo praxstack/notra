@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { changelog } from "@/../.source/server";
 import { listNotraBlogPosts } from "@/utils/blog";
 import { listNotraChangelogPosts } from "@/utils/changelog";
-import { SITE_URL } from "@/utils/metadata";
+import { SITE_URL } from "@/utils/urls";
 import { getShowcaseEntrySlug, SHOWCASE_COMPANIES } from "../utils/showcase";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

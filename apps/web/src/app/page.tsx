@@ -10,7 +10,7 @@ import ReferencesPreview from "../components/references-preview";
 import TestimonialsSection from "../components/testimonials-section";
 import { TrackedSignupLink } from "../components/tracked-signup-link";
 import { SOCIAL_PROOF_LOGOS } from "../utils/constants";
-import { SITE_URL } from "../utils/metadata";
+import { SITE_URL } from "../utils/urls";
 
 const DocumentationSection = dynamic(
   () => import("../components/documentation-section")

@@ -1,5 +1,3 @@
-export const SITE_URL = "https://usenotra.com";
-
 export const DEFAULT_SOCIAL_IMAGE = {
   url: "/og-image.png",
   width: 1200,

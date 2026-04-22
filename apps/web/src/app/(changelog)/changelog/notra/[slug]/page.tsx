@@ -7,11 +7,8 @@ import {
   formatChangelogDate,
   getNotraChangelogPostBySlug,
 } from "@/utils/changelog";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "@/utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
+import { SITE_URL } from "@/utils/urls";
 import type { ChangelogEntryPageProps } from "~types/changelog";
 
 export async function generateMetadata({

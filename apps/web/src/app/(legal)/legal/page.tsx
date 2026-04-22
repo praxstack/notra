@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import LegalContent from "../../../content/legal/legal.mdx";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "../../../utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "../../../utils/metadata";
+import { SITE_URL } from "../../../utils/urls";
 
 const title = "Legal Notice";
 const description =

@@ -2,13 +2,10 @@ import type { Metadata } from "next";
 import { changelog } from "@/../.source/server";
 import { ChangelogPageHeader } from "@/components/changelog-page-header";
 import { ShowcaseOverviewGrid } from "@/components/showcase-overview-grid";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "@/utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
 import { SHOWCASE_COMPANIES } from "@/utils/showcase";
 import { SHOWCASE_COMPANY_ICONS } from "@/utils/showcase-icons";
+import { SITE_URL } from "@/utils/urls";
 
 const title = "Changelog";
 const description =

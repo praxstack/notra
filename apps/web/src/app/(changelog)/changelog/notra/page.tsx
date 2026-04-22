@@ -5,11 +5,8 @@ import {
   buildChangelogTimelineItems,
   listNotraChangelogPosts,
 } from "@/utils/changelog";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "@/utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
+import { SITE_URL } from "@/utils/urls";
 
 const title = "Notra Changelog";
 const description =

@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import PricingComparisonTable from "../../components/pricing-comparison-table";
 import { PricingCards } from "../../components/pricing-section";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "../../utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "../../utils/metadata";
+import { SITE_URL } from "../../utils/urls";
 
 const title = "Pricing";
 const description =

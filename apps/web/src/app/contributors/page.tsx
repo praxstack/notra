@@ -7,11 +7,8 @@ import { ContributorsContent } from "@/components/contributors/contributors-cont
 import { ContributorsPageSkeleton } from "@/components/contributors/skeleton";
 import { TrackedSignupLink } from "@/components/tracked-signup-link";
 import { GITHUB_REPO_URL } from "@/utils/github";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "@/utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
+import { SITE_URL } from "@/utils/urls";
 
 const title = "Contributors & Community";
 const description =

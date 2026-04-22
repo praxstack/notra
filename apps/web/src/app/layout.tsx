@@ -6,11 +6,8 @@ import { Toaster } from "sonner";
 import FooterSection from "../components/footer-section";
 import { Navbar } from "../components/navbar";
 import { ThemeProvider } from "../components/theme-provider";
-import {
-  DEFAULT_SOCIAL_IMAGE,
-  SITE_URL,
-  TWITTER_HANDLE,
-} from "../utils/metadata";
+import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "../utils/metadata";
+import { SITE_URL } from "../utils/urls";
 
 import "@/styles/globals.css";
 
