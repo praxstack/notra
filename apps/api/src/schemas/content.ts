@@ -18,6 +18,7 @@ import {
   LOOKBACK_WINDOWS,
   SUPPORTED_CONTENT_GENERATION_TYPES,
 } from "@notra/content-generation/schemas";
+import { resourceIdSchema } from "./ids";
 
 const HTTP_PROTOCOL_REGEX = /^https?:\/\//i;
 export const getPostsParamsSchema = z.object({});
@@ -221,45 +222,33 @@ export const getPostsOpenApiQuerySchema = z.object({
 });
 
 export const getPostParamsSchema = z.object({
-  postId: z
-    .string()
-    .trim()
-    .min(1, "postId is required")
-    .openapi({
-      param: {
-        in: "path",
-        name: "postId",
-      },
-      example: "post_123",
-    }),
+  postId: resourceIdSchema("postId").openapi({
+    param: {
+      in: "path",
+      name: "postId",
+    },
+    example: "post_123",
+  }),
 });
 
 export const getBrandIdentityParamsSchema = z.object({
-  brandIdentityId: z
-    .string()
-    .trim()
-    .min(1, "brandIdentityId is required")
-    .openapi({
-      param: {
-        in: "path",
-        name: "brandIdentityId",
-      },
-      example: "51c2f3aa-efdd-4e28-8e69-23fa2dfd3561",
-    }),
+  brandIdentityId: resourceIdSchema("brandIdentityId").openapi({
+    param: {
+      in: "path",
+      name: "brandIdentityId",
+    },
+    example: "51c2f3aa-efdd-4e28-8e69-23fa2dfd3561",
+  }),
 });
 
 export const getIntegrationParamsSchema = z.object({
-  integrationId: z
-    .string()
-    .trim()
-    .min(1, "integrationId is required")
-    .openapi({
-      param: {
-        in: "path",
-        name: "integrationId",
-      },
-      example: "51c2f3aa-efdd-4e28-8e69-23fa2dfd3561",
-    }),
+  integrationId: resourceIdSchema("integrationId").openapi({
+    param: {
+      in: "path",
+      name: "integrationId",
+    },
+    example: "51c2f3aa-efdd-4e28-8e69-23fa2dfd3561",
+  }),
 });
 
 export const errorResponseSchema = z
@@ -471,17 +460,13 @@ export const createBrandIdentityResponseSchema = z.object({
 });
 
 export const getBrandAnalysisJobParamsSchema = z.object({
-  jobId: z
-    .string()
-    .trim()
-    .min(1, "jobId is required")
-    .openapi({
-      param: {
-        in: "path",
-        name: "jobId",
-      },
-      example: "brand_job_123",
-    }),
+  jobId: resourceIdSchema("jobId").openapi({
+    param: {
+      in: "path",
+      name: "jobId",
+    },
+    example: "brand_job_123",
+  }),
 });
 
 export const getBrandAnalysisJobResponseSchema = z.object({
@@ -838,17 +823,13 @@ export const createPostGenerationResponseSchema = z.object({
 });
 
 export const getPostGenerationParamsSchema = z.object({
-  jobId: z
-    .string()
-    .trim()
-    .min(1, "jobId is required")
-    .openapi({
-      param: {
-        in: "path",
-        name: "jobId",
-      },
-      example: "job_123",
-    }),
+  jobId: resourceIdSchema("jobId").openapi({
+    param: {
+      in: "path",
+      name: "jobId",
+    },
+    example: "job_123",
+  }),
 });
 
 export const getPostGenerationResponseSchema = z.object({

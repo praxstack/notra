@@ -8,6 +8,7 @@ import { integrationsRoutes } from "./routes/integrations";
 import { legacyRedirectRoutes } from "./routes/legacy-redirects";
 import { postsRoutes } from "./routes/posts";
 import { schedulesRoutes } from "./routes/schedules";
+import { assertRequiredEnv } from "./utils/env";
 
 const FRAMER_PLUGIN_ID = "8d4wmwtko6960jsu3ojmalvqm";
 
@@ -55,6 +56,8 @@ interface AppEnv {
   };
 }
 
+assertRequiredEnv();
+
 const app = new OpenAPIHono<AppEnv>({ strict: true });
 
 app.use("/v1/*", async (c, next) => {
@@ -80,7 +83,7 @@ app.use("/v1/*", async (c, next) => {
   }
 
   if (c.req.method === "OPTIONS") {
-    return c.body(null, 204);
+    return c.body(null, allowedOrigin ? 204 : 403);
   }
 
   await next();

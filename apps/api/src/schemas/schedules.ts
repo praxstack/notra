@@ -3,6 +3,7 @@ import {
   LOOKBACK_WINDOWS,
   SUPPORTED_CONTENT_GENERATION_TYPES,
 } from "@notra/content-generation/schemas";
+import { resourceIdSchema } from "./ids";
 
 const CRON_FREQUENCIES = ["daily", "weekly", "monthly"] as const;
 const MAX_SCHEDULE_NAME_LENGTH = 120;
@@ -23,17 +24,13 @@ function splitCommaSeparatedValues(value: string | undefined) {
 }
 
 export const scheduleParamsSchema = z.object({
-  scheduleId: z
-    .string()
-    .trim()
-    .min(1, "scheduleId is required")
-    .openapi({
-      param: {
-        in: "path",
-        name: "scheduleId",
-      },
-      example: "sched_123",
-    }),
+  scheduleId: resourceIdSchema("scheduleId").openapi({
+    param: {
+      in: "path",
+      name: "scheduleId",
+    },
+    example: "sched_123",
+  }),
 });
 
 export const getSchedulesQuerySchema = z.object({

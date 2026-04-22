@@ -15,6 +15,18 @@ interface AuthOptions {
   permissions?: string;
 }
 
+const BEARER_HEADER_REGEX = /^Bearer\s+(.+)$/i;
+
+function extractBearerToken(c: Context): string | null {
+  const header = c.req.header("Authorization");
+  if (!header) {
+    return null;
+  }
+
+  const match = BEARER_HEADER_REGEX.exec(header.trim());
+  return match?.[1]?.trim() || null;
+}
+
 type AuthResult =
   | { success: true; auth: V2KeysVerifyKeyResponseData }
   | { success: false; error: string; status: 401 | 403 | 503 };
@@ -23,11 +35,7 @@ async function verifyRequestAuth(
   c: Context,
   options: AuthOptions = {}
 ): Promise<AuthResult> {
-  const getKey =
-    options.getKey ??
-    ((c: Context) =>
-      c.req.header("Authorization")?.replace("Bearer ", "") ?? null);
-
+  const getKey = options.getKey ?? extractBearerToken;
   const apiKey = getKey(c);
 
   if (!apiKey) {
