@@ -20,12 +20,18 @@ export function subscriptionMiddleware() {
 
     const secretKey = c.env.AUTUMN_SECRET_KEY as string | undefined;
     if (!secretKey) {
-      return next();
+      console.error(
+        "AUTUMN_SECRET_KEY is not configured — rejecting write request"
+      );
+      return c.json({ error: "Billing service unavailable" }, 503);
     }
 
     const orgId = getOrganizationId(c);
     if (!orgId) {
-      return next();
+      return c.json(
+        { error: "Forbidden: API key must be scoped to an organization" },
+        403
+      );
     }
 
     const autumn = new Autumn({ secretKey });
