@@ -1,9 +1,9 @@
-import { Notra } from "@usenotra/sdk";
-import type {
-  GetPostPost,
-  ListPostsPost,
-} from "@usenotra/sdk/models/operations";
 import { unstable_cache } from "next/cache";
+import {
+  type NotraApiPost,
+  notraApiListPostsResponseSchema,
+} from "@/schemas/notra-api";
+import { API_URL } from "@/utils/urls";
 import type { BlogTimelineItem, NotraBlogPost } from "~types/blog";
 
 const BLOG_CONTENT_TYPE = "blog_post";
@@ -18,10 +18,26 @@ function getNotraBlogConfig() {
   };
 }
 
-function createNotraClient(apiKey: string) {
-  return new Notra({
-    bearerAuth: apiKey,
+async function fetchNotraBlogPosts(apiKey: string): Promise<NotraApiPost[]> {
+  const url = new URL("/v1/posts", API_URL);
+  url.searchParams.set("contentType", BLOG_CONTENT_TYPE);
+  url.searchParams.set("status", BLOG_STATUS);
+  url.searchParams.set("sort", "desc");
+  url.searchParams.set("limit", String(DEFAULT_POST_LIMIT));
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: "application/json",
+    },
   });
+
+  if (!response.ok) {
+    throw new Error(`Notra API responded with ${response.status}`);
+  }
+
+  const parsed = notraApiListPostsResponseSchema.parse(await response.json());
+  return parsed.posts;
 }
 
 function sortPostsByCreatedAt(posts: NotraBlogPost[]) {
@@ -73,11 +89,10 @@ function slugifySegment(value: string) {
   return slug || "post";
 }
 
-function normalizePost(post: ListPostsPost | GetPostPost): NotraBlogPost {
+function normalizePost(post: NotraApiPost): NotraBlogPost {
+  const apiSlug = typeof post.slug === "string" ? post.slug.trim() : "";
   const slug =
-    "slug" in post && typeof post.slug === "string"
-      ? post.slug
-      : createBlogPostSlug({ title: post.title });
+    apiSlug.length > 0 ? apiSlug : createBlogPostSlug({ title: post.title });
 
   return {
     id: post.id,
@@ -104,15 +119,8 @@ const fetchBlogPosts = unstable_cache(
     }
 
     try {
-      const client = createNotraClient(apiKey);
-      const response = await client.content.listPosts({
-        contentType: BLOG_CONTENT_TYPE,
-        limit: DEFAULT_POST_LIMIT,
-        sort: "desc",
-        status: BLOG_STATUS,
-      });
-
-      return sortPostsByCreatedAt(response.posts.map(normalizePost));
+      const posts = await fetchNotraBlogPosts(apiKey);
+      return sortPostsByCreatedAt(posts.map(normalizePost));
     } catch (error) {
       console.error("Failed to load Notra blog posts", error);
       return [] satisfies NotraBlogPost[];
