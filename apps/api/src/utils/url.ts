@@ -7,6 +7,7 @@ const BLOCKED_HOSTNAMES = new Set([
 ]);
 
 const BLOCKED_HOSTNAME_SUFFIXES = [".internal", ".local", ".localhost"];
+const IPV4_MAPPED_IPV6_REGEX = /::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/;
 
 function ipv4ToNumber(ip: string): number | null {
   const parts = ip.split(".");
@@ -31,7 +32,7 @@ function isPrivateOrReservedIpv4(ip: string): boolean {
     return true;
   }
 
-  const ranges: Array<[number, number]> = [
+  const ranges: [number, number][] = [
     [0x00_00_00_00, 0x00_ff_ff_ff], // 0.0.0.0/8
     [0x0a_00_00_00, 0x0a_ff_ff_ff], // 10.0.0.0/8
     [0x7f_00_00_00, 0x7f_ff_ff_ff], // 127.0.0.0/8
@@ -57,17 +58,16 @@ function isPrivateOrReservedIpv6(ip: string): boolean {
 
   const firstByte = Number.parseInt(normalized.split(":")[0] ?? "", 16);
   if (Number.isFinite(firstByte)) {
-    if ((firstByte & 0xfe_00) === 0xfc_00) {
-      return true;
-    }
-    if ((firstByte & 0xff_00) === 0xff_00) {
+    // biome-ignore lint/suspicious/noBitwiseOperators: <>
+    const isUniqueLocal = (firstByte & 0xfe_00) === 0xfc_00;
+    // biome-ignore lint/suspicious/noBitwiseOperators: <>
+    const isReserved = (firstByte & 0xff_00) === 0xff_00;
+    if (isUniqueLocal || isReserved) {
       return true;
     }
   }
 
-  const mappedMatch = normalized.match(
-    /::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/
-  );
+  const mappedMatch = normalized.match(IPV4_MAPPED_IPV6_REGEX);
   if (mappedMatch?.[1]) {
     return isPrivateOrReservedIpv4(mappedMatch[1]);
   }

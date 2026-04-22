@@ -356,13 +356,17 @@ export default function PageClient({
   const handleAddContext = useCallback((item: ContextItem) => {
     setContext((prev) => {
       const exists = prev.some((c) => {
-        if (c.type !== item.type) return false;
+        if (c.type !== item.type) {
+          return false;
+        }
         if (c.type === "github-repo" && item.type === "github-repo") {
           return c.owner === item.owner && c.repo === item.repo;
         }
         return c.integrationId === item.integrationId;
       });
-      if (exists) return prev;
+      if (exists) {
+        return prev;
+      }
       return [...prev, item];
     });
   }, []);
@@ -370,7 +374,9 @@ export default function PageClient({
   const handleRemoveContext = useCallback((item: ContextItem) => {
     setContext((prev) =>
       prev.filter((c) => {
-        if (c.type !== item.type) return true;
+        if (c.type !== item.type) {
+          return true;
+        }
         if (c.type === "github-repo" && item.type === "github-repo") {
           return !(c.owner === item.owner && c.repo === item.repo);
         }
