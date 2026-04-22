@@ -3,6 +3,7 @@
 import { Moon02Icon, Sun02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
@@ -19,6 +20,8 @@ export function ThemeToggle() {
   function handleToggle() {
     setTheme(isDark ? "light" : "dark");
   }
+
+  useHotkey("M", handleToggle);
 
   let ariaLabel = "Toggle theme";
   if (mounted && isDark) {
