@@ -12,11 +12,13 @@ import {
 import { Progress } from "@notra/ui/components/ui/progress";
 import { SidebarGroup } from "@notra/ui/components/ui/sidebar";
 import { useCustomer } from "autumn-js/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { useOnboardingStatus } from "@/lib/hooks/use-onboarding";
 
 const STORAGE_KEY = "onboarding-collapsed";
+const MORPH_TRANSITION = { duration: 0.28, ease: [0.22, 1, 0.36, 1] } as const;
 
 export function SidebarOnboarding() {
   const { activeOrganization } = useOrganizationsContext();
@@ -74,57 +76,99 @@ export function SidebarOnboarding() {
   const completedCount = steps.filter((s) => s.completed).length;
   const progress = (completedCount / steps.length) * 100;
 
-  if (collapsed) {
-    return (
-      <SidebarGroup className="px-3 pb-2 group-data-[collapsible=icon]:hidden">
-        <button
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-muted-foreground text-xs transition-colors hover:bg-muted"
-          onClick={toggleCollapsed}
-          type="button"
-        >
-          <span className="flex-1 truncate font-medium">
-            Getting Started ({completedCount}/{steps.length})
-          </span>
-          <svg
-            aria-hidden="true"
-            className="size-3 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <title>Expand</title>
-            <path d="m18 15-6-6-6 6" />
-          </svg>
-        </button>
-        <Progress className="mt-1 h-1" value={progress} />
-      </SidebarGroup>
-    );
-  }
-
   return (
     <SidebarGroup className="px-3 pb-2 group-data-[collapsible=icon]:hidden">
-      <OnboardingChecklist onClose={toggleCollapsed}>
-        <OnboardingChecklistHeader>
-          <OnboardingChecklistTitle>Getting Started</OnboardingChecklistTitle>
-        </OnboardingChecklistHeader>
-        <OnboardingChecklistContent title="Complete these steps to get the most out of Notra.">
-          <OnboardingChecklistProgress value={progress} />
-          <OnboardingChecklistItems>
-            {steps.map((step) => (
-              <OnboardingChecklistItem
-                completed={step.completed}
-                href={step.href}
-                key={step.href}
+      <motion.div
+        layout
+        style={{ transformOrigin: "top" }}
+        transition={MORPH_TRANSITION}
+      >
+        <AnimatePresence initial={false} mode="popLayout">
+          {collapsed ? (
+            <motion.div
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              key="collapsed"
+              transition={MORPH_TRANSITION}
+            >
+              <button
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-muted-foreground text-xs transition-colors hover:bg-muted"
+                onClick={toggleCollapsed}
+                type="button"
               >
-                {step.label}
-              </OnboardingChecklistItem>
-            ))}
-          </OnboardingChecklistItems>
-        </OnboardingChecklistContent>
-      </OnboardingChecklist>
+                <motion.span
+                  className="flex-1 truncate font-medium"
+                  layoutId="onboarding-title"
+                  transition={MORPH_TRANSITION}
+                >
+                  Getting Started ({completedCount}/{steps.length})
+                </motion.span>
+                <svg
+                  aria-hidden="true"
+                  className="size-3 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <title>Expand</title>
+                  <path d="m18 15-6-6-6 6" />
+                </svg>
+              </button>
+              <motion.div
+                className="mt-1"
+                layoutId="onboarding-progress"
+                transition={MORPH_TRANSITION}
+              >
+                <Progress className="h-1" value={progress} />
+              </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              key="expanded"
+              transition={MORPH_TRANSITION}
+            >
+              <OnboardingChecklist onClose={toggleCollapsed}>
+                <OnboardingChecklistHeader>
+                  <motion.div
+                    layoutId="onboarding-title"
+                    transition={MORPH_TRANSITION}
+                  >
+                    <OnboardingChecklistTitle>
+                      Getting Started
+                    </OnboardingChecklistTitle>
+                  </motion.div>
+                </OnboardingChecklistHeader>
+                <OnboardingChecklistContent title="Complete these steps to get the most out of Notra.">
+                  <motion.div
+                    layoutId="onboarding-progress"
+                    transition={MORPH_TRANSITION}
+                  >
+                    <OnboardingChecklistProgress value={progress} />
+                  </motion.div>
+                  <OnboardingChecklistItems>
+                    {steps.map((step) => (
+                      <OnboardingChecklistItem
+                        completed={step.completed}
+                        href={step.href}
+                        key={step.href}
+                      >
+                        {step.label}
+                      </OnboardingChecklistItem>
+                    ))}
+                  </OnboardingChecklistItems>
+                </OnboardingChecklistContent>
+              </OnboardingChecklist>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </SidebarGroup>
   );
 }
