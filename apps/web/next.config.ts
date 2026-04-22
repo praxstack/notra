@@ -87,25 +87,6 @@ const nextConfig: NextConfig = {
         destination: "/blog/markdown",
       },
       {
-        source: "/blog/engineers-are-great-marketing",
-        destination: "/blog/engineers-are-great-for-marketing",
-      },
-      {
-        source: "/blog/engineers-are-great-marketing",
-        destination: "/blog/engineers-are-great-for-marketing/markdown",
-        has: [
-          {
-            type: "header",
-            key: "accept",
-            value: ".*text/markdown.*",
-          },
-        ],
-      },
-      {
-        source: "/blog/engineers-are-great-marketing.md",
-        destination: "/blog/engineers-are-great-for-marketing/markdown",
-      },
-      {
         source: "/blog/markdown",
         destination: "/blog/markdown",
         has: [
