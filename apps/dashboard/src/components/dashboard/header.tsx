@@ -152,15 +152,19 @@ export function SiteHeader() {
   return (
     <header className="relative flex h-12 shrink-0 items-center gap-2 border-b border-dashed transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator
-          className="mx-2 border-border border-l border-dashed bg-transparent"
-          orientation="vertical"
-        />
-        <Breadcrumb>
-          <BreadcrumbList>{breadcrumbs}</BreadcrumbList>
-        </Breadcrumb>
-        <div className="-translate-x-1/2 pointer-events-none absolute left-1/2 hidden w-full max-w-md px-4 sm:block">
+        <div className="flex min-w-0 flex-1 items-center gap-1 lg:gap-2">
+          <SidebarTrigger className="-ml-1" />
+          <Separator
+            className="mx-2 border-border border-l border-dashed bg-transparent"
+            orientation="vertical"
+          />
+          <Breadcrumb className="min-w-0">
+            <BreadcrumbList className="flex-nowrap">
+              {breadcrumbs}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
+        <div className="pointer-events-none hidden w-full max-w-sm shrink-0 px-4 lg:block">
           <Button
             className="pointer-events-auto flex h-8 w-full items-center gap-2 border-dashed pr-1.5 pl-2 text-muted-foreground hover:text-foreground"
             onClick={() => setCommandPaletteOpen(true)}
@@ -174,7 +178,7 @@ export function SiteHeader() {
             </kbd>
           </Button>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <CreditBalanceButton />
           <Button
             className="gap-1.5"
