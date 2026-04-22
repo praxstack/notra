@@ -552,7 +552,7 @@ export function CommandPalette() {
                     {items.map((item) => (
                       <CommandPrimitive.Item
                         className={cn(
-                          "group/item relative flex cursor-default select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors",
+                          "group/item relative flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors",
                           "data-[selected=true]:bg-muted data-[selected=true]:text-foreground",
                           "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50"
                         )}
@@ -592,7 +592,7 @@ export function CommandPalette() {
                     {items.map((hit) => (
                       <CommandPrimitive.Item
                         className={cn(
-                          "group/item relative flex cursor-default select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors",
+                          "group/item relative flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors",
                           "data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                         )}
                         key={hit.key}
@@ -627,7 +627,7 @@ export function CommandPalette() {
                 heading="Actions"
               >
                 <CommandPrimitive.Item
-                  className="group/item relative flex cursor-default select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+                  className="group/item relative flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                   keywords={["feedback", "bug", "report", "idea", "feature"]}
                   onSelect={openFeedback}
                   value="__action_feedback"
@@ -652,7 +652,7 @@ export function CommandPalette() {
                   heading="AI"
                 >
                   <CommandPrimitive.Item
-                    className="group/item relative flex cursor-default select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+                    className="group/item relative flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                     keywords={["ai", "ask", "natural language"]}
                     onSelect={runAiSearch}
                     value={`__ai_navigate_${query}`}
@@ -676,7 +676,7 @@ export function CommandPalette() {
                     </div>
                   </CommandPrimitive.Item>
                   <CommandPrimitive.Item
-                    className="group/item relative flex cursor-default select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
+                    className="group/item relative flex cursor-pointer select-none items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[selected=true]:bg-muted data-[selected=true]:text-foreground"
                     keywords={["chat", "conversation", "message"]}
                     onSelect={() => openChatWithQuery(trimmedQuery)}
                     value={`__ai_chat_${query}`}

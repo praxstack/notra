@@ -97,10 +97,10 @@ function FeedbackForm({ onSubmitted, autoFocus = true }: FeedbackFormProps) {
                 aria-label={option.label}
                 aria-pressed={isActive}
                 className={cn(
-                  "flex size-7 items-center justify-center rounded-md outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                  "flex size-7 cursor-pointer items-center justify-center rounded-md text-base leading-none outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50",
                   isActive
-                    ? "bg-muted text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-muted opacity-100"
+                    : "opacity-60 hover:opacity-100"
                 )}
                 disabled={isSubmitting}
                 key={option.value}
@@ -111,11 +111,7 @@ function FeedbackForm({ onSubmitted, autoFocus = true }: FeedbackFormProps) {
                 }
                 type="button"
               >
-                <HugeiconsIcon
-                  aria-hidden="true"
-                  icon={option.icon}
-                  size={16}
-                />
+                <span aria-hidden="true">{option.emoji}</span>
               </button>
             );
           })}

@@ -1,11 +1,10 @@
-import type { IconSvgElement } from "@hugeicons/react";
 import type { ReactElement } from "react";
 
 export type FeedbackSentiment = "sad_crying" | "sad" | "happy" | "excited";
 
 export interface FeedbackSentimentOption {
   value: FeedbackSentiment;
-  icon: IconSvgElement;
+  emoji: string;
   label: string;
 }
 
