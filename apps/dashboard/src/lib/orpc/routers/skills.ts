@@ -6,13 +6,21 @@ import { nanoid } from "nanoid";
 import * as z from "zod";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { authorizedProcedure } from "@/lib/orpc/base";
+import { parseSkillFrontmatter } from "@/lib/skills/parse-frontmatter";
 import { organizationIdSchema } from "@/schemas/auth/organization";
 import {
   createSkillSchema,
+  skillImportUrlSchema,
   skillNameSchema,
   updateSkillSchema,
 } from "@/schemas/skills";
-import { conflict, forbidden, notFound } from "../utils/errors";
+import {
+  badRequest,
+  conflict,
+  forbidden,
+  notFound,
+  serviceUnavailable,
+} from "../utils/errors";
 
 const listSkillsInput = z.object({
   organizationId: organizationIdSchema,
@@ -38,6 +46,33 @@ const deleteSkillInput = z.object({
   organizationId: organizationIdSchema,
   name: skillNameSchema,
 });
+
+const importSkillFromUrlInput = z.object({
+  url: skillImportUrlSchema,
+});
+
+const SKILLS_SH_API_BASE = "https://skills.sh/api/v1/skills";
+
+interface SkillsShFile {
+  path: string;
+  contents: string;
+}
+
+interface SkillsShSkill {
+  id?: string;
+  source?: string;
+  slug?: string;
+  files?: SkillsShFile[] | null;
+}
+
+function pickPrimarySkillFile(files: SkillsShFile[]): SkillsShFile | null {
+  const named = files.find((f) => /(^|\/)SKILL\.md$/i.test(f.path));
+  if (named) {
+    return named;
+  }
+  const anyMd = files.find((f) => f.path.toLowerCase().endsWith(".md"));
+  return anyMd ?? files[0] ?? null;
+}
 
 export const skillsRouter = {
   list: authorizedProcedure
@@ -218,5 +253,67 @@ export const skillsRouter = {
         );
 
       return { success: true as const };
+    }),
+
+  importFromUrl: authorizedProcedure
+    .input(importSkillFromUrlInput)
+    .handler(async ({ input }) => {
+      let pathname: string;
+      try {
+        pathname = new URL(input.url).pathname.replace(/^\/+|\/+$/g, "");
+      } catch {
+        throw badRequest("Invalid URL");
+      }
+
+      if (!pathname) {
+        throw badRequest("URL must point to a specific skill");
+      }
+
+      const apiKey = process.env.SKILLS_SH_API_KEY;
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (apiKey) {
+        headers.Authorization = `Bearer ${apiKey}`;
+      }
+
+      let response: Response;
+      try {
+        response = await fetch(`${SKILLS_SH_API_BASE}/${pathname}`, {
+          headers,
+        });
+      } catch (error) {
+        throw serviceUnavailable(
+          `Failed to reach skills.sh: ${(error as Error).message}`
+        );
+      }
+
+      if (response.status === 404) {
+        throw notFound("Skill not found on skills.sh");
+      }
+
+      if (!response.ok) {
+        throw serviceUnavailable(
+          `skills.sh returned ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = (await response.json()) as SkillsShSkill;
+      const file = pickPrimarySkillFile(data.files ?? []);
+      if (!file) {
+        throw badRequest("Skill has no importable files");
+      }
+
+      const parsed = parseSkillFrontmatter(file.contents);
+      const fallbackName = data.slug ?? "";
+      const name = parsed?.name ?? fallbackName;
+      const description = parsed?.description ?? "";
+      const content = parsed?.body ?? file.contents;
+
+      return {
+        name,
+        description,
+        content,
+        source: data.source ?? null,
+        slug: data.slug ?? null,
+      };
     }),
 };

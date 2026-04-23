@@ -15,7 +15,7 @@ export const skillDescriptionSchema = z
   .string()
   .trim()
   .min(1, "Description is required")
-  .max(500, "Description must be 500 characters or fewer");
+  .max(1000, "Description must be 1000 characters or fewer");
 
 export const skillContentSchema = z
   .string()
@@ -27,6 +27,19 @@ export const createSkillSchema = z.object({
   description: skillDescriptionSchema,
   content: skillContentSchema,
 });
+
+export const skillImportUrlSchema = z
+  .string()
+  .trim()
+  .min(1, "URL is required")
+  .refine((value) => {
+    try {
+      const url = new URL(value);
+      return url.host === "skills.sh";
+    } catch {
+      return false;
+    }
+  }, "Only skills.sh links are supported");
 
 export const updateSkillSchema = z.object({
   name: skillNameSchema.optional(),

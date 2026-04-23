@@ -43,7 +43,8 @@
     "LINEAR_CLIENT_SECRET",
     "AXIOM_TOKEN",
     "AXIOM_AI_DATASET",
-    "AXIOM_ORG_ID"
+    "AXIOM_ORG_ID",
+    "SKILLS_SH_API_KEY"
   ],
   "envMode": "strict",
   "tasks": {

@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusSignIcon } from "@hugeicons/core-free-icons";
+import { Link04Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ResponsiveDialog,
@@ -20,11 +20,18 @@ import {
 } from "@notra/ui/components/ui/card";
 import { Field, FieldLabel } from "@notra/ui/components/ui/field";
 import { Input } from "@notra/ui/components/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@notra/ui/components/ui/input-group";
+import { Separator } from "@notra/ui/components/ui/separator";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { Textarea } from "@notra/ui/components/ui/textarea";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2Icon } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/layout/container";
@@ -41,19 +48,52 @@ export default function PageClient({ slug }: PageClientProps) {
   const { activeOrganization } = useOrganizationsContext();
   const organizationId = activeOrganization?.id;
   const queryClient = useQueryClient();
-  const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [quickstartUrl, setQuickstartUrl] = useState("");
   const [form, setForm] = useState({
     name: "",
     description: "",
     content: "",
   });
 
+  const quickstartError = (() => {
+    if (!quickstartUrl.trim()) {
+      return null;
+    }
+    try {
+      const parsed = new URL(quickstartUrl.trim());
+      if (parsed.host !== "skills.sh") {
+        return "Only skills.sh links are supported.";
+      }
+      return null;
+    } catch {
+      return "Enter a valid skills.sh URL.";
+    }
+  })();
+
   const { data: skills = [], isPending } = useQuery({
     ...dashboardOrpc.skills.list.queryOptions({
       input: { organizationId: organizationId ?? "" },
     }),
     enabled: !!organizationId,
+  });
+
+  const importMutation = useMutation({
+    mutationFn: () =>
+      dashboardOrpc.skills.importFromUrl.call({
+        url: quickstartUrl.trim(),
+      }),
+    onSuccess: (data) => {
+      setForm((f) => ({
+        name: f.name || data.name,
+        description: f.description || data.description,
+        content: f.content || data.content,
+      }));
+      toast.success("Skill imported from skills.sh");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   const createMutation = useMutation({
@@ -74,16 +114,16 @@ export default function PageClient({ slug }: PageClientProps) {
         payload: parsed.data,
       });
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       setDialogOpen(false);
       setForm({ name: "", description: "", content: "" });
+      setQuickstartUrl("");
       queryClient.invalidateQueries({
         queryKey: dashboardOrpc.skills.list.queryKey({
           input: { organizationId: organizationId ?? "" },
         }),
       });
       toast.success("Skill created");
-      router.push(`/${slug}/skills/${data.name}`);
     },
     onError: (error: Error) => {
       toast.error(error.message);
@@ -165,14 +205,78 @@ export default function PageClient({ slug }: PageClientProps) {
       </div>
 
       <ResponsiveDialog onOpenChange={setDialogOpen} open={dialogOpen}>
-        <ResponsiveDialogContent className="sm:max-w-[32rem]">
+        <ResponsiveDialogContent className="flex max-h-[85svh] flex-col overflow-hidden sm:max-w-[32rem]">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle>Create skill</ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
               A skill is a reusable prompt your agents load at runtime.
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="-mx-4 min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-2">
+            <Field>
+              <FieldLabel>Quickstart</FieldLabel>
+              <InputGroup className="h-9">
+                <InputGroupAddon>
+                  <HugeiconsIcon
+                    className="size-4 text-muted-foreground"
+                    icon={Link04Icon}
+                  />
+                </InputGroupAddon>
+                <InputGroupInput
+                  aria-invalid={quickstartError ? true : undefined}
+                  disabled={
+                    createMutation.isPending || importMutation.isPending
+                  }
+                  onChange={(e) => setQuickstartUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      !quickstartError &&
+                      quickstartUrl.trim() &&
+                      !importMutation.isPending
+                    ) {
+                      e.preventDefault();
+                      importMutation.mutate();
+                    }
+                  }}
+                  placeholder="https://skills.sh/..."
+                  value={quickstartUrl}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    disabled={
+                      !quickstartUrl.trim() ||
+                      !!quickstartError ||
+                      importMutation.isPending ||
+                      createMutation.isPending
+                    }
+                    onClick={() => importMutation.mutate()}
+                    variant="default"
+                  >
+                    {importMutation.isPending ? (
+                      <Loader2Icon className="size-3.5 animate-spin" />
+                    ) : null}
+                    {importMutation.isPending ? "Importing" : "Import"}
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
+              <p
+                className={
+                  quickstartError
+                    ? "text-destructive text-xs"
+                    : "text-muted-foreground text-xs"
+                }
+              >
+                {quickstartError ?? "Paste a skills.sh link to import a skill."}
+              </p>
+            </Field>
+            <div className="flex items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-muted-foreground text-xs uppercase tracking-wider">
+                or create manually
+              </span>
+              <Separator className="flex-1" />
+            </div>
             <Field>
               <FieldLabel>
                 Name<span className="-ml-1 text-destructive">*</span>

@@ -1,21 +1,12 @@
+import matter from "gray-matter";
+
 export interface ParsedSkillFrontmatter {
   name?: string;
   description?: string;
   body: string;
 }
 
-const FRONTMATTER_REGEX = /^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/;
 const BOM_REGEX = /^\uFEFF/;
-
-function stripQuotes(value: string): string {
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-  return value;
-}
 
 export function parseSkillFrontmatter(
   input: string
@@ -25,29 +16,23 @@ export function parseSkillFrontmatter(
     return null;
   }
 
-  const match = trimmed.match(FRONTMATTER_REGEX);
-  if (!match) {
+  let parsed: matter.GrayMatterFile<string>;
+  try {
+    parsed = matter(trimmed);
+  } catch {
     return null;
   }
 
-  const [, block = "", body = ""] = match;
-  const fields: Record<string, string> = {};
-
-  for (const line of block.split("\n")) {
-    const colonIdx = line.indexOf(":");
-    if (colonIdx === -1) {
-      continue;
-    }
-    const key = line.slice(0, colonIdx).trim();
-    const value = stripQuotes(line.slice(colonIdx + 1).trim());
-    if (key) {
-      fields[key] = value;
-    }
-  }
+  const data = parsed.data as Record<string, unknown>;
+  const name = typeof data.name === "string" ? data.name.trim() : undefined;
+  const description =
+    typeof data.description === "string"
+      ? data.description.replace(/\s+/g, " ").trim()
+      : undefined;
 
   return {
-    name: fields.name,
-    description: fields.description,
-    body: body.trim(),
+    name,
+    description,
+    body: parsed.content.trim(),
   };
 }
