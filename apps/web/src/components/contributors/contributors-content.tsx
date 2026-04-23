@@ -27,6 +27,26 @@ export async function ContributorsContent() {
         </div>
       </section>
 
+      {data.clankers.length > 0 && (
+        <section className="flex w-full flex-col gap-8 border-border border-t px-4 py-12 sm:px-6 md:px-8 md:py-16">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <h2 className="font-sans font-semibold text-2xl text-foreground tracking-tight md:text-3xl">
+              Clankers
+            </h2>
+            <p className="max-w-2xl text-balance text-muted-foreground">
+              The bots that help us ship faster.
+            </p>
+          </div>
+
+          <div className="mx-auto w-full max-w-4xl">
+            <ContributorsGrid
+              contributors={data.clankers}
+              emptyMessage="No clankers yet."
+            />
+          </div>
+        </section>
+      )}
+
       <section className="grid w-full grid-cols-1 gap-8 border-border border-t px-4 py-12 sm:px-6 md:grid-cols-2 md:gap-10 md:px-8 md:py-16">
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
