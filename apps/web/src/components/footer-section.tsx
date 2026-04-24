@@ -31,7 +31,7 @@ export default function FooterSection() {
             Ship more. Write less. Reach more.
           </div>
           <div className="font-normal font-sans text-foreground/60 text-xs leading-5">
-            {`© ${year} Notra. All rights reserved.`}
+            {`© ${year} Notra, Inc. All rights reserved.`}
           </div>
 
           <div className="flex items-start justify-start gap-2 text-foreground">
