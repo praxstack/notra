@@ -1222,7 +1222,7 @@ function StandaloneChatPageClient({
       if (isImageMimeType(mediaType)) {
         return (
           <button
-            className="my-1 block overflow-hidden rounded-lg border border-border transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="my-1 block w-fit overflow-hidden rounded-lg border border-border transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             key={fileKey}
             onClick={() =>
               setPreviewAttachment({
@@ -1235,10 +1235,11 @@ function StandaloneChatPageClient({
           >
             <Image
               alt={filename ?? "attachment"}
-              className="h-auto max-h-72 w-auto max-w-full object-cover"
-              height={400}
+              className="block h-auto max-h-72 w-auto max-w-full"
+              height={480}
               src={url}
-              width={600}
+              unoptimized
+              width={640}
             />
           </button>
         );

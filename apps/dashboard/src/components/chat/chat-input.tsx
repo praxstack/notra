@@ -1230,6 +1230,13 @@ export function ChatInputAdvanced({
 
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLDivElement>) => {
+      const pastedFiles = Array.from(event.clipboardData.files);
+      if (pastedFiles.length > 0) {
+        event.preventDefault();
+        handleFilesSelected(pastedFiles).catch(() => undefined);
+        return;
+      }
+
       event.preventDefault();
       const text = event.clipboardData.getData("text/plain");
 
