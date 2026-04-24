@@ -51,7 +51,7 @@ export default function DocumentationSection() {
       </div>
 
       <div className="flex items-center justify-start self-stretch overflow-hidden px-4 md:px-9">
-        <div className="flex flex-1 flex-col items-center justify-start gap-6 py-8 md:flex-row md:gap-12 md:py-11">
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 py-8 md:flex-row md:gap-12 md:py-11">
           <div className="order-2 flex w-full flex-col items-center justify-between gap-4 md:order-1 md:w-auto md:max-w-[400px] md:self-stretch">
             <button
               className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-border/70 transition-all duration-300 ${
