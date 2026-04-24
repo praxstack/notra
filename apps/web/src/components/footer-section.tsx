@@ -3,6 +3,7 @@ import { Discord } from "@notra/ui/components/ui/svgs/discord";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
+import { cn } from "@notra/ui/lib/utils";
 import Link from "next/link";
 import { AI_SUMMARY_LINKS } from "@/utils/ai-summary-links";
 import {
@@ -162,7 +163,7 @@ export default function FooterSection() {
           Summarize with AI
         </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-          {AI_SUMMARY_LINKS.map(({ name, Icon, href }) => (
+          {AI_SUMMARY_LINKS.map(({ name, Icon, href, iconClassName }) => (
             <Link
               aria-label={`Summarize Notra with ${name}`}
               className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
@@ -171,7 +172,9 @@ export default function FooterSection() {
               rel="noopener noreferrer"
               target="_blank"
             >
-              <Icon className="size-5 shrink-0 grayscale" />
+              <Icon
+                className={cn("size-5 shrink-0 grayscale", iconClassName)}
+              />
               <span className="font-normal font-sans text-sm leading-5">
                 {name}
               </span>

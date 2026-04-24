@@ -15,6 +15,7 @@ export const AI_SUMMARY_LINKS = [
     name: "ChatGPT",
     Icon: Openai,
     href: buildQueryUrl("https://chatgpt.com/?q=", AI_SUMMARY_QUERY),
+    iconClassName: "dark:invert",
   },
   {
     name: "Perplexity",
