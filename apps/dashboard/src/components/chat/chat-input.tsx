@@ -4,7 +4,7 @@ import {
   AiBrain01Icon,
   ArrowRight01Icon,
   AtIcon,
-  Attachment02Icon,
+  Attachment01Icon,
   Cancel01Icon,
   File02Icon,
   StopIcon,
@@ -2054,7 +2054,7 @@ export function ChatInputAdvanced({
                   >
                     <HugeiconsIcon
                       className="size-3.5"
-                      icon={Attachment02Icon}
+                      icon={Attachment01Icon}
                     />
                   </TooltipTrigger>
                   <TooltipContent>{attachmentTooltipText}</TooltipContent>
