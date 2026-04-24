@@ -29,7 +29,14 @@ import { cn } from "@notra/ui/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Command as CommandPrimitive } from "cmdk";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useFeedback } from "@/components/dashboard/feedback-context";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
@@ -97,9 +104,10 @@ export function CommandPalette() {
   const [aiState, setAiState] = useState<
     | { status: "idle" }
     | { status: "loading" }
-    | { status: "ready"; result: AiResult }
+    | { status: "navigating"; label: string }
     | { status: "error" }
   >({ status: "idle" });
+  const [isNavigating, startNavigation] = useTransition();
   const { openFeedback: triggerFeedback } = useFeedback();
   const abortRef = useRef<AbortController | null>(null);
 
@@ -146,13 +154,22 @@ export function CommandPalette() {
       });
     }
     for (const voice of data.voices) {
+      const parts = [voice.companyName, voice.websiteUrl]
+        .filter(Boolean)
+        .join(" · ");
       hits.push({
         key: `voice:${voice.id}`,
         label: voice.name,
-        sublabel: voice.companyName ?? "Brand voice",
+        sublabel: parts || "Brand voice",
         icon: CorporateIcon,
         path: `/${slug}/brand/identity`,
-        keywords: ["brand", "voice", "identity", debouncedQuery],
+        keywords: [
+          "brand",
+          "voice",
+          "identity",
+          voice.websiteUrl ?? "",
+          debouncedQuery,
+        ],
       });
     }
     for (const reference of data.references) {
@@ -285,6 +302,12 @@ export function CommandPalette() {
   }, []);
 
   useEffect(() => {
+    if (aiState.status === "navigating" && !isNavigating) {
+      handleOpenChange(false);
+    }
+  }, [aiState.status, isNavigating, handleOpenChange]);
+
+  useEffect(() => {
     const platform = navigator.platform || navigator.userAgent;
     setIsApplePlatform(APPLE_PLATFORM_PATTERN.test(platform));
   }, []);
@@ -309,6 +332,16 @@ export function CommandPalette() {
       router.push(path);
     },
     [router, handleOpenChange]
+  );
+
+  const navigateFromAi = useCallback(
+    (path: string, label: string) => {
+      setAiState({ status: "navigating", label });
+      startNavigation(() => {
+        router.push(path);
+      });
+    },
+    [router]
   );
 
   const openFeedback = useCallback(() => {
@@ -354,21 +387,23 @@ export function CommandPalette() {
       if (controller.signal.aborted) {
         return;
       }
-      setAiState({ status: "ready", result });
       if (result.action === "navigate" && result.path) {
-        navigate(result.path);
-      } else if (result.action === "chat") {
-        openChatWithQuery(trimmed);
-      } else {
-        setAiState({ status: "error" });
+        navigateFromAi(result.path, "Opening");
+        return;
       }
+      if (result.action === "chat") {
+        const qs = trimmed ? `?q=${encodeURIComponent(trimmed)}` : "";
+        navigateFromAi(`/${slug}/chat${qs}`, "Opening chat");
+        return;
+      }
+      setAiState({ status: "error" });
     } catch (error) {
       if ((error as Error).name === "AbortError") {
         return;
       }
       setAiState({ status: "error" });
     }
-  }, [query, slug, navigate, openChatWithQuery]);
+  }, [query, slug, navigateFromAi]);
 
   if (!slug) {
     return null;
@@ -376,7 +411,9 @@ export function CommandPalette() {
 
   const trimmedQuery = query.trim();
   const hasQuery = trimmedQuery.length > 0;
-  const isLoading = aiState.status === "loading";
+  const isLoading =
+    aiState.status === "loading" || aiState.status === "navigating";
+  const isNavigatingAi = aiState.status === "navigating";
   const aiModifierLabel = isApplePlatform ? "⌘" : "Ctrl";
 
   return (
@@ -420,6 +457,8 @@ export function CommandPalette() {
               onValueChange={(value) => {
                 setQuery(value);
                 if (aiState.status !== "idle") {
+                  abortRef.current?.abort();
+                  abortRef.current = null;
                   setAiState({ status: "idle" });
                 }
               }}
@@ -440,11 +479,16 @@ export function CommandPalette() {
               <div className="flex h-[14rem] flex-col items-center justify-center gap-3 px-6 text-center">
                 <div className="flex items-center gap-2 text-foreground text-sm">
                   <BrailleSpinner className="text-[18px] leading-none" />
-                  <span className="font-medium">Thinking…</span>
+                  <span className="font-medium">
+                    {isNavigatingAi
+                      ? `${(aiState as { status: "navigating"; label: string }).label}…`
+                      : "Thinking…"}
+                  </span>
                 </div>
                 <p className="max-w-xs text-muted-foreground text-xs">
-                  Figuring out where to take you for &ldquo;{trimmedQuery}
-                  &rdquo;.
+                  {isNavigatingAi
+                    ? "Hang tight, almost there."
+                    : `Figuring out where to take you for “${trimmedQuery}”.`}
                 </p>
               </div>
             ) : null}

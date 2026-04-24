@@ -3,6 +3,165 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+function ChangelogCard() {
+  return (
+    <div className="relative h-full w-full bg-background">
+      <div className="h-full overflow-hidden">
+        <article className="prose prose-stone prose-sm dark:prose-invert h-full max-w-none overflow-hidden px-5 py-4 md:px-6 md:py-5">
+          <p>
+            This week focused on changelog quality, editor polish, and smoother
+            onboarding. We added configurable lookback windows, improved
+            markdown editing reliability, and shipped a progress-aware setup
+            checklist.
+          </p>
+
+          <h3>Configurable lookback windows for scheduled changelogs</h3>
+          <p>
+            Schedules now support five predefined time ranges (current day,
+            yesterday, last 7/14/30 days) instead of hardcoded 7-day windows.
+            The selected range flows through the entire generation pipeline and
+            appears in stored metadata, so you can see exactly which window
+            produced each post.
+          </p>
+
+          <h3>Full table support in the rich-text editor</h3>
+          <p>
+            The Lexical editor can now insert, edit, and manipulate tables with
+            a /table slash command and floating action menu. Markdown
+            roundtripping preserves table syntax across view switches, and
+            editor normalization prevents false-positive dirty states on initial
+            load.
+          </p>
+
+          <h3>Database-backed onboarding checklist</h3>
+          <p>
+            A collapsible checklist in the sidebar footer tracks brand identity,
+            integration, and schedule setup. Progress is synced across all
+            mutation flows, completion auto-hides the widget, and collapse state
+            persists via localStorage to reduce visual noise.
+          </p>
+
+          <h3>Modular tone-specific changelog prompts</h3>
+          <p>
+            Changelog generation moved from a shared base prompt to
+            self-contained, one-file-per-tone templates. This simplifies backend
+            selection logic, hardens tool input validation, and centralizes tone
+            profile resolution through Zod schemas.
+          </p>
+
+          <h3>Point-in-time source metadata on generated content</h3>
+          <p>
+            Each post now stores a JSONB snapshot of its trigger, repositories,
+            and lookback window. The content detail page displays this metadata
+            with Zod validation and tooltip formatting for multi-repo scenarios.
+          </p>
+        </article>
+      </div>
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-background via-background/95 to-transparent" />
+    </div>
+  );
+}
+
+function BlogCard() {
+  return (
+    <div className="relative h-full w-full bg-background">
+      <div className="h-full overflow-hidden">
+        <article className="prose prose-stone prose-sm dark:prose-invert h-full max-w-none overflow-hidden px-5 py-4 md:px-6 md:py-5">
+          <p>
+            When we built Notra, we made one big bet: that most teams would
+            rather automate what goes to their audience than hand-tweak it every
+            time. Still true. But we missed something. Not every ship deserves
+            coverage. Not every commit is worth mentioning. And automatic is not
+            helpful if the output does not sound like you.
+          </p>
+          <p>
+            This week we shipped three things that change how you generate
+            content. They come down to one idea: you decide what gets made and
+            how it sounds.
+          </p>
+
+          <h2>Generate what you actually want to ship</h2>
+          <p>
+            For the first two months, Notra worked like this: set up a trigger,
+            the AI looks at everything since last time, drafts appear. Fine if
+            you wanted broad coverage. Broke down when you wanted to be
+            selective.
+          </p>
+          <p>
+            So we rebuilt the generate flow. When you create content on-demand
+            now, you see a preview first. The commits, PRs, and releases Notra
+            found. You check boxes for what belongs in your story. Toggle
+            releases on or off. Pick a time window. Scope to specific repos.
+          </p>
+
+          <h2>Your voice, not a generic one</h2>
+          <p>
+            The other gap we kept hearing: content that looked good but sounded
+            like nobody. Teams would edit our drafts because the tone felt off.
+            Not wrong. Just not theirs.
+          </p>
+          <p>
+            This week we shipped brand voice learning. Add references from your
+            Twitter account (or paste custom text), and Notra's agents study
+            them first, before generating anything.
+          </p>
+        </article>
+      </div>
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-background via-background/95 to-transparent" />
+    </div>
+  );
+}
+
+function SocialCard() {
+  return (
+    <div className="relative h-full w-full bg-background">
+      <div className="flex h-full flex-col gap-4 overflow-hidden px-5 py-4 md:px-6 md:py-5">
+        <div className="flex flex-col gap-3 rounded-xl border p-4">
+          <div className="flex items-center gap-2.5">
+            <Image
+              alt="Notra"
+              className="size-10 shrink-0 rounded-full"
+              height={40}
+              src="/notra-mark.svg"
+              width={40}
+            />
+            <div>
+              <p className="font-semibold text-sm">Notra</p>
+              <p className="text-muted-foreground text-xs">
+                2,400 followers · 1h
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2 text-[0.8125rem] leading-relaxed">
+            <p>Built on-demand content generation flow.</p>
+            <p>Actually built it over the last week. Major ship.</p>
+            <p>
+              The problem our users kept asking for: they want content generated
+              right now. Not scheduled, not waiting for the next webhook. Just a
+              quick button press and a preview.
+            </p>
+            <p>
+              We shipped:
+              <br />- Configurable data sources (choose which repos, which
+              commits, which releases)
+              <br />- Live preview before generating
+            </p>
+          </div>
+          <div className="flex items-center gap-4 border-t pt-3 text-muted-foreground text-xs">
+            <span>42 likes</span>
+            <span>8 comments</span>
+            <span>3 reposts</span>
+          </div>
+        </div>
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-background via-background/80 to-transparent" />
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-28 bg-linear-to-t from-background via-background/95 to-transparent" />
+    </div>
+  );
+}
+
+const CARD_CONTENT = [ChangelogCard, BlogCard, SocialCard] as const;
+
 export default function DocumentationSection() {
   const [activeCard, setActiveCard] = useState(0);
   const [animationKey, setAnimationKey] = useState(0);
@@ -32,6 +191,8 @@ export default function DocumentationSection() {
     setAnimationKey((prev) => prev + 1);
     startInterval();
   };
+
+  const Card = CARD_CONTENT[activeCard] ?? CARD_CONTENT[0];
 
   return (
     <div className="flex w-full flex-col items-center justify-center shadow-[inset_0_-1px_0_var(--border)]">
@@ -148,164 +309,7 @@ export default function DocumentationSection() {
 
           <div className="order-1 flex w-full flex-col items-center justify-center gap-2 px-0 md:order-2 md:w-auto md:px-0">
             <div className="flex h-[250px] w-full flex-col items-start justify-start overflow-hidden border border-border bg-background md:h-[420px] md:w-[580px]">
-              {activeCard === 0 ? (
-                <div className="relative h-full w-full bg-background">
-                  <div className="h-full overflow-hidden">
-                    <article className="prose prose-stone prose-sm dark:prose-invert h-full max-w-none overflow-hidden px-5 py-4 md:px-6 md:py-5">
-                      <p>
-                        This week focused on changelog quality, editor polish,
-                        and smoother onboarding. We added configurable lookback
-                        windows, improved markdown editing reliability, and
-                        shipped a progress-aware setup checklist.
-                      </p>
-
-                      <h3>
-                        Configurable lookback windows for scheduled changelogs
-                      </h3>
-                      <p>
-                        Schedules now support five predefined time ranges
-                        (current day, yesterday, last 7/14/30 days) instead of
-                        hardcoded 7-day windows. The selected range flows
-                        through the entire generation pipeline and appears in
-                        stored metadata, so you can see exactly which window
-                        produced each post.
-                      </p>
-
-                      <h3>Full table support in the rich-text editor</h3>
-                      <p>
-                        The Lexical editor can now insert, edit, and manipulate
-                        tables with a /table slash command and floating action
-                        menu. Markdown roundtripping preserves table syntax
-                        across view switches, and editor normalization prevents
-                        false-positive dirty states on initial load.
-                      </p>
-
-                      <h3>Database-backed onboarding checklist</h3>
-                      <p>
-                        A collapsible checklist in the sidebar footer tracks
-                        brand identity, integration, and schedule setup.
-                        Progress is synced across all mutation flows, completion
-                        auto-hides the widget, and collapse state persists via
-                        localStorage to reduce visual noise.
-                      </p>
-
-                      <h3>Modular tone-specific changelog prompts</h3>
-                      <p>
-                        Changelog generation moved from a shared base prompt to
-                        self-contained, one-file-per-tone templates. This
-                        simplifies backend selection logic, hardens tool input
-                        validation, and centralizes tone profile resolution
-                        through Zod schemas.
-                      </p>
-
-                      <h3>
-                        Point-in-time source metadata on generated content
-                      </h3>
-                      <p>
-                        Each post now stores a JSONB snapshot of its trigger,
-                        repositories, and lookback window. The content detail
-                        page displays this metadata with Zod validation and
-                        tooltip formatting for multi-repo scenarios.
-                      </p>
-                    </article>
-                  </div>
-                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-background via-background/95 to-transparent" />
-                </div>
-              ) : activeCard === 1 ? (
-                <div className="relative h-full w-full bg-background">
-                  <div className="h-full overflow-hidden">
-                    <article className="prose prose-stone prose-sm dark:prose-invert h-full max-w-none overflow-hidden px-5 py-4 md:px-6 md:py-5">
-                      <p>
-                        When we built Notra, we made one big bet: that most
-                        teams would rather automate what goes to their audience
-                        than hand-tweak it every time. Still true. But we missed
-                        something. Not every ship deserves coverage. Not every
-                        commit is worth mentioning. And automatic is not helpful
-                        if the output does not sound like you.
-                      </p>
-                      <p>
-                        This week we shipped three things that change how you
-                        generate content. They come down to one idea: you decide
-                        what gets made and how it sounds.
-                      </p>
-
-                      <h2>Generate what you actually want to ship</h2>
-                      <p>
-                        For the first two months, Notra worked like this: set up
-                        a trigger, the AI looks at everything since last time,
-                        drafts appear. Fine if you wanted broad coverage. Broke
-                        down when you wanted to be selective.
-                      </p>
-                      <p>
-                        So we rebuilt the generate flow. When you create content
-                        on-demand now, you see a preview first. The commits,
-                        PRs, and releases Notra found. You check boxes for what
-                        belongs in your story. Toggle releases on or off. Pick a
-                        time window. Scope to specific repos.
-                      </p>
-
-                      <h2>Your voice, not a generic one</h2>
-                      <p>
-                        The other gap we kept hearing: content that looked good
-                        but sounded like nobody. Teams would edit our drafts
-                        because the tone felt off. Not wrong. Just not theirs.
-                      </p>
-                      <p>
-                        This week we shipped brand voice learning. Add
-                        references from your Twitter account (or paste custom
-                        text), and Notra's agents study them first, before
-                        generating anything.
-                      </p>
-                    </article>
-                  </div>
-                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-20 bg-linear-to-t from-background via-background/95 to-transparent" />
-                </div>
-              ) : (
-                <div className="relative h-full w-full bg-background">
-                  <div className="flex h-full flex-col gap-4 overflow-hidden px-5 py-4 md:px-6 md:py-5">
-                    <div className="flex flex-col gap-3 rounded-xl border p-4">
-                      <div className="flex items-center gap-2.5">
-                        <Image
-                          alt="Notra"
-                          className="size-10 shrink-0 rounded-full"
-                          height={40}
-                          src="/notra-mark.svg"
-                          width={40}
-                        />
-                        <div>
-                          <p className="font-semibold text-sm">Notra</p>
-                          <p className="text-muted-foreground text-xs">
-                            2,400 followers · 1h
-                          </p>
-                        </div>
-                      </div>
-                      <div className="space-y-2 text-[0.8125rem] leading-relaxed">
-                        <p>Built on-demand content generation flow.</p>
-                        <p>Actually built it over the last week. Major ship.</p>
-                        <p>
-                          The problem our users kept asking for: they want
-                          content generated right now. Not scheduled, not
-                          waiting for the next webhook. Just a quick button
-                          press and a preview.
-                        </p>
-                        <p>
-                          We shipped:
-                          <br />- Configurable data sources (choose which repos,
-                          which commits, which releases)
-                          <br />- Live preview before generating
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-4 border-t pt-3 text-muted-foreground text-xs">
-                        <span>42 likes</span>
-                        <span>8 comments</span>
-                        <span>3 reposts</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-background via-background/80 to-transparent" />
-                  <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-28 bg-linear-to-t from-background via-background/95 to-transparent" />
-                </div>
-              )}
+              <Card />
             </div>
           </div>
         </div>

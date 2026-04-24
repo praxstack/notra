@@ -3,8 +3,8 @@ export function dragEventHasFiles(event: DragEvent): boolean {
   if (!types) {
     return false;
   }
-  for (let index = 0; index < types.length; index += 1) {
-    if (types[index] === "Files") {
+  for (const type of types) {
+    if (type === "Files") {
       return true;
     }
   }

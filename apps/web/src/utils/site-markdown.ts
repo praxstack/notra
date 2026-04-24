@@ -68,6 +68,14 @@ function renderPlanFeatures(
   });
 }
 
+function renderComparisonValue(value: boolean | string): string {
+  if (typeof value !== "boolean") {
+    return value;
+  }
+
+  return value ? "Yes" : "No";
+}
+
 export function buildFeaturesMarkdown() {
   return [
     "# Features",
@@ -128,24 +136,9 @@ export function buildPricingMarkdown() {
     markdownSection(
       category,
       features.map((feature) => {
-        const basic =
-          typeof feature.basic === "boolean"
-            ? feature.basic
-              ? "Yes"
-              : "No"
-            : feature.basic;
-        const pro =
-          typeof feature.pro === "boolean"
-            ? feature.pro
-              ? "Yes"
-              : "No"
-            : feature.pro;
-        const enterprise =
-          typeof feature.enterprise === "boolean"
-            ? feature.enterprise
-              ? "Yes"
-              : "No"
-            : feature.enterprise;
+        const basic = renderComparisonValue(feature.basic);
+        const pro = renderComparisonValue(feature.pro);
+        const enterprise = renderComparisonValue(feature.enterprise);
 
         return `- ${feature.name}: Basic ${basic}, Pro ${pro}, Enterprise ${enterprise}`;
       })

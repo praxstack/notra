@@ -1,7 +1,9 @@
 import { autumnHandler } from "autumn-js/next";
 import { auth } from "@/lib/auth/server";
 
-export const { GET, POST } = autumnHandler({
+type RouteHandler = (request: Request) => Response | Promise<Response>;
+
+const handlers: { GET: RouteHandler; POST: RouteHandler } = autumnHandler({
   identify: async (request) => {
     const session = await auth.api.getSession({
       headers: request.headers,
@@ -20,3 +22,5 @@ export const { GET, POST } = autumnHandler({
     };
   },
 });
+
+export const { GET, POST } = handlers;

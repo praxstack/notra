@@ -9,9 +9,9 @@ export class SvgSanitizationError extends Error {
   }
 }
 
-type DOMPurifySanitizer = {
+interface DOMPurifySanitizer {
   sanitize: (input: string, config: Record<string, unknown>) => string;
-};
+}
 
 let dompurifyPromise: Promise<DOMPurifySanitizer> | null = null;
 

@@ -715,6 +715,9 @@ export function ChatInputAdvanced({
     }
     return (editor.innerText ?? "").replace(/\u00A0/g, " ");
   }, []);
+  const submitRef = useRef<() => void>(() => {
+    // Populated after handleSend is defined.
+  });
 
   useImperativeHandle(
     ref,
@@ -736,6 +739,9 @@ export function ChatInputAdvanced({
       },
       focus: () => {
         editorRef.current?.focus();
+      },
+      submit: () => {
+        submitRef.current();
       },
     }),
     []
@@ -1203,6 +1209,7 @@ export function ChatInputAdvanced({
     onSend,
     performSend,
   ]);
+  submitRef.current = handleSend;
 
   useEffect(() => {
     if (!(pendingSend && !isUploading)) {

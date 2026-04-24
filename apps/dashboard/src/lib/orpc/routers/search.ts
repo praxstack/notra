@@ -67,6 +67,7 @@ export const searchRouter = {
             id: brandSettings.id,
             name: brandSettings.name,
             companyName: brandSettings.companyName,
+            websiteUrl: brandSettings.websiteUrl,
             isDefault: brandSettings.isDefault,
           })
           .from(brandSettings)
@@ -75,7 +76,8 @@ export const searchRouter = {
               eq(brandSettings.organizationId, input.organizationId),
               or(
                 ilike(brandSettings.name, pattern),
-                ilike(brandSettings.companyName, pattern)
+                ilike(brandSettings.companyName, pattern),
+                ilike(brandSettings.websiteUrl, pattern)
               )
             )
           )
