@@ -37,7 +37,7 @@ export function ContributorsGrid({
           <span className="w-full truncate text-center font-sans text-muted-foreground text-xs transition-colors group-hover:text-foreground">
             {contributor.login}
           </span>
-          <span className="font-sans text-[0.6875rem] text-muted-foreground/70">
+          <span className="w-full text-center font-sans text-[0.6875rem] text-muted-foreground/70">
             {contributor.contributions} contribution
             {contributor.contributions === 1 ? "" : "s"}
           </span>
