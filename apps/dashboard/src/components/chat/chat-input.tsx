@@ -97,6 +97,8 @@ import {
   serializeFragmentWithReferences,
 } from "./integration-reference";
 
+const GENERIC_PASTED_IMAGE_NAME_RE = /^image\.(jpe?g|png|gif|webp)$/i;
+
 export const AVAILABLE_MODELS = [
   {
     id: "auto",
@@ -1241,7 +1243,7 @@ export function ChatInputAdvanced({
       const pastedFiles = Array.from(event.clipboardData.files).map(
         (file, index) => {
           const hasMeaningfulName =
-            file.name && !/^image\.(jpe?g|png|gif|webp)$/i.test(file.name);
+            file.name && !GENERIC_PASTED_IMAGE_NAME_RE.test(file.name);
           if (hasMeaningfulName) {
             return file;
           }

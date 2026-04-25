@@ -11,8 +11,10 @@ interface R2Env {
 let cachedR2Client: S3Client | undefined;
 let cachedR2Env: R2Env | undefined;
 
+const TRAILING_SLASHES_RE = /\/+$/;
+
 function normalizeEndpoint(endpoint: string, bucketName: string) {
-  const trimmed = endpoint.replace(/\/+$/, "");
+  const trimmed = endpoint.replace(TRAILING_SLASHES_RE, "");
   const suffix = `/${bucketName}`;
   return trimmed.endsWith(suffix) ? trimmed.slice(0, -suffix.length) : trimmed;
 }
