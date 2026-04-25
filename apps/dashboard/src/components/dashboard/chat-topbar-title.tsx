@@ -138,6 +138,7 @@ export function ChatTopbarTitle({ chatId }: ChatTopbarTitleProps) {
           {isEditing ? (
             <motion.div
               animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+              className="min-w-0"
               exit={{ opacity: 0, filter: "blur(4px)", scale: 0.98 }}
               initial={{ opacity: 0, filter: "blur(4px)", scale: 0.98 }}
               key="editing"
@@ -167,6 +168,7 @@ export function ChatTopbarTitle({ chatId }: ChatTopbarTitleProps) {
           ) : (
             <motion.div
               animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+              className="min-w-0"
               exit={{ opacity: 0, filter: "blur(4px)", scale: 0.98 }}
               initial={{ opacity: 0, filter: "blur(4px)", scale: 0.98 }}
               key="display"
@@ -175,7 +177,7 @@ export function ChatTopbarTitle({ chatId }: ChatTopbarTitleProps) {
               <DropdownMenu onOpenChange={setIsMenuOpen} open={isMenuOpen}>
                 <DropdownMenuTrigger
                   className={cn(
-                    "flex min-w-0 max-w-[40ch] cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-foreground text-sm no-underline outline-hidden transition-colors hover:bg-accent hover:no-underline focus-visible:bg-accent",
+                    "flex min-w-0 max-w-[20ch] cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-foreground text-sm no-underline outline-hidden transition-colors hover:bg-accent hover:no-underline focus-visible:bg-accent sm:max-w-[40ch]",
                     (isRenaming || isPinning) && "opacity-70"
                   )}
                   onDoubleClick={(event) => {

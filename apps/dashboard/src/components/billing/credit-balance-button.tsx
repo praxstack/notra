@@ -3,49 +3,30 @@
 import { Wallet01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
+import { DropdownMenuItem } from "@notra/ui/components/ui/dropdown-menu";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
-import { useCustomer } from "autumn-js/react";
+import { cn } from "@notra/ui/lib/utils";
 import { useState } from "react";
 import { CreditTopupModal } from "@/components/billing/credit-topup-modal";
-import { FEATURES } from "@/constants/features";
+import { useCreditBalance } from "@/lib/hooks/use-credit-balance";
+import { formatDollars } from "@/utils/format";
 
-function formatDollars(cents: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(cents / 100);
-}
-
-export function CreditBalanceButton() {
+export function CreditBalanceButton({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
-  const { data: customer, isLoading } = useCustomer({
-    expand: ["balances.feature", "subscriptions.plan"],
-  });
+  const { isLoading, hasActiveSubscription, balance } = useCreditBalance();
 
   if (isLoading) {
-    return <Skeleton className="h-8 w-20 rounded-md" />;
+    return <Skeleton className={cn("h-8 w-20 rounded-md", className)} />;
   }
-
-  if (!customer) {
-    return null;
-  }
-
-  const hasActiveSubscription = customer.subscriptions?.some(
-    (sub) => !sub.addOn && sub.status === "active"
-  );
 
   if (!hasActiveSubscription) {
     return null;
   }
 
-  const aiCredits = customer.balances?.[FEATURES.AI_CREDITS];
-  const balance =
-    typeof aiCredits?.remaining === "number" ? aiCredits.remaining : null;
-
   return (
     <>
       <Button
-        className="gap-1.5 tabular-nums"
+        className={cn("gap-1.5 tabular-nums", className)}
         onClick={() => setOpen(true)}
         size="sm"
         variant="outline"
@@ -53,6 +34,33 @@ export function CreditBalanceButton() {
         <HugeiconsIcon icon={Wallet01Icon} size={16} />
         {balance !== null ? formatDollars(balance) : "-"}
       </Button>
+      <CreditTopupModal onOpenChange={setOpen} open={open} />
+    </>
+  );
+}
+
+export function CreditBalanceMenuItem({ className }: { className?: string }) {
+  const [open, setOpen] = useState(false);
+  const { isLoading, hasActiveSubscription, balance } = useCreditBalance();
+
+  if (isLoading || !hasActiveSubscription) {
+    return null;
+  }
+
+  return (
+    <>
+      <DropdownMenuItem
+        className={cn("cursor-pointer", className)}
+        onClick={() => setOpen(true)}
+      >
+        <HugeiconsIcon icon={Wallet01Icon} />
+        Credits
+        {balance !== null ? (
+          <span className="ml-auto text-muted-foreground tabular-nums">
+            {formatDollars(balance)}
+          </span>
+        ) : null}
+      </DropdownMenuItem>
       <CreditTopupModal onOpenChange={setOpen} open={open} />
     </>
   );

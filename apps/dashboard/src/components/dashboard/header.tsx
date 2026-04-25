@@ -3,8 +3,16 @@ import {
   ArrowRight01Icon,
   Calendar03Icon,
   Message01Icon,
+  MoreHorizontalIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@notra/ui/components/shared/responsive-dialog";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,17 +22,30 @@ import {
   BreadcrumbSeparator,
 } from "@notra/ui/components/ui/breadcrumb";
 import { Button } from "@notra/ui/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@notra/ui/components/ui/dropdown-menu";
 import { Kbd } from "@notra/ui/components/ui/kbd";
 import { Separator } from "@notra/ui/components/ui/separator";
 import { SidebarTrigger } from "@notra/ui/components/ui/sidebar";
+import { cn } from "@notra/ui/lib/utils";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useId, useRef } from "react";
-import { CreditBalanceButton } from "@/components/billing/credit-balance-button";
+import { useEffect, useId, useRef, useState } from "react";
+import {
+  CreditBalanceButton,
+  CreditBalanceMenuItem,
+} from "@/components/billing/credit-balance-button";
 import { ChatTopbarTitle } from "@/components/dashboard/chat-topbar-title";
 import { useFeedback } from "@/components/dashboard/feedback-context";
-import { FeedbackPopover } from "@/components/dashboard/feedback-popover";
+import {
+  FeedbackForm,
+  FeedbackPopover,
+} from "@/components/dashboard/feedback-popover";
 
 const NON_ORG_PATHS: string[] = [];
 
@@ -43,6 +64,15 @@ export function SiteHeader() {
   const preSettingsPathsRef = useRef<Record<string, string>>({});
   const activeSettingsShortcutSlugRef = useRef<string | null>(null);
   const { openFeedback } = useFeedback();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileFeedbackOpen, setMobileFeedbackOpen] = useState(false);
+
+  function triggerBookCall() {
+    const btn = document.querySelector<HTMLButtonElement>(
+      '[data-cal-namespace="15min"]'
+    );
+    btn?.click();
+  }
 
   useEffect(() => {
     const activeSlug = activeSettingsShortcutSlugRef.current;
@@ -87,10 +117,7 @@ export function SiteHeader() {
   }, []);
 
   useHotkey("C", () => {
-    const btn = document.querySelector<HTMLButtonElement>(
-      '[data-cal-namespace="15min"]'
-    );
-    btn?.click();
+    triggerBookCall();
   });
 
   useHotkey("F", () => {
@@ -134,9 +161,10 @@ export function SiteHeader() {
 
     const item = (
       <BreadcrumbItem
-        className={
-          isClickable && !isChatDetailLast ? "hover:underline" : undefined
-        }
+        className={cn(
+          isChatDetailLast && "min-w-0",
+          isClickable && !isChatDetailLast && "hover:underline"
+        )}
         key={`${id}-item-${segment}`}
       >
         {content}
@@ -165,35 +193,93 @@ export function SiteHeader() {
             orientation="vertical"
           />
           <Breadcrumb className="min-w-0">
-            <BreadcrumbList className="flex-nowrap">
+            <BreadcrumbList className="min-w-0 flex-nowrap">
               {breadcrumbs}
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <CreditBalanceButton />
-          <FeedbackPopover
-            sharedState
-            trigger={
-              <Button className="gap-1.5" size="sm" variant="outline">
-                <HugeiconsIcon icon={Message01Icon} size={16} />
+        <div className="flex min-w-0 items-center justify-end gap-2">
+          <CreditBalanceButton className="hidden sm:inline-flex" />
+          <div className="hidden items-center gap-2 lg:flex">
+            <FeedbackPopover
+              sharedState
+              trigger={
+                <Button className="gap-1.5" size="sm" variant="outline">
+                  <HugeiconsIcon icon={Message01Icon} size={16} />
+                  Feedback
+                  <Kbd className="ml-1 hidden sm:inline-flex">F</Kbd>
+                </Button>
+              }
+            />
+            <Button
+              className="gap-1.5"
+              data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
+              data-cal-link="dominikkoch/15min"
+              data-cal-namespace="15min"
+              size="sm"
+              variant="outline"
+            >
+              <HugeiconsIcon icon={Calendar03Icon} size={16} />
+              Book a Call
+              <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
+            </Button>
+          </div>
+          <DropdownMenu onOpenChange={setMobileMenuOpen} open={mobileMenuOpen}>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label="More actions"
+                  className="lg:hidden"
+                  size="icon-sm"
+                  variant="outline"
+                >
+                  <HugeiconsIcon icon={MoreHorizontalIcon} size={16} />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" className="w-44">
+              <CreditBalanceMenuItem className="sm:hidden" />
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setMobileFeedbackOpen(true);
+                }}
+              >
+                <HugeiconsIcon icon={Message01Icon} />
                 Feedback
-                <Kbd className="ml-1 hidden sm:inline-flex">F</Kbd>
-              </Button>
-            }
-          />
-          <Button
-            className="gap-1.5"
-            data-cal-config='{"layout":"month_view","useSlotsViewOnSmallScreen":"true"}'
-            data-cal-link="dominikkoch/15min"
-            data-cal-namespace="15min"
-            size="sm"
-            variant="outline"
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  triggerBookCall();
+                }}
+              >
+                <HugeiconsIcon icon={Calendar03Icon} />
+                Book a Call
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ResponsiveDialog
+            onOpenChange={setMobileFeedbackOpen}
+            open={mobileFeedbackOpen}
           >
-            <HugeiconsIcon icon={Calendar03Icon} size={16} />
-            Book a Call
-            <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
-          </Button>
+            <ResponsiveDialogContent className="gap-0 p-0 sm:max-w-md">
+              <ResponsiveDialogHeader className="sr-only">
+                <ResponsiveDialogTitle>Send feedback</ResponsiveDialogTitle>
+                <ResponsiveDialogDescription>
+                  Share your thoughts with us.
+                </ResponsiveDialogDescription>
+              </ResponsiveDialogHeader>
+              {mobileFeedbackOpen ? (
+                <FeedbackForm
+                  autoFocus={false}
+                  onSubmitted={() => setMobileFeedbackOpen(false)}
+                />
+              ) : null}
+            </ResponsiveDialogContent>
+          </ResponsiveDialog>
         </div>
       </div>
     </header>

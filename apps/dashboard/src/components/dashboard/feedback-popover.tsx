@@ -25,7 +25,10 @@ import type {
 import { FEEDBACK_SENTIMENT_OPTIONS } from "@/utils/feedback";
 import { getFeedbackPageUrl } from "@/utils/feedback-page-url";
 
-function FeedbackForm({ onSubmitted, autoFocus = true }: FeedbackFormProps) {
+export function FeedbackForm({
+  onSubmitted,
+  autoFocus = true,
+}: FeedbackFormProps) {
   const pathname = usePathname();
   const { activeOrganization } = useOrganizationsContext();
 
