@@ -12,7 +12,9 @@ import {
   createGitHubIntegration,
   deleteGitHubIntegration,
   deleteRepository,
+  findConflictingRepositoryInOrganization,
   GitHubBranchNotFoundError,
+  GitHubRepositoryNotFoundError,
   generateWebhookSecretForRepository,
   getGitHubIntegrationById,
   getOutputById,
@@ -23,6 +25,7 @@ import {
   updateGitHubIntegration,
   updateGitHubIntegrationToken,
   updateRepository,
+  validateRepositoryAccess,
   validateRepositoryBranchExists,
 } from "@/lib/services/github-integration";
 import { getIntegrationsByOrganization } from "@/lib/services/integrations";
@@ -263,6 +266,12 @@ function mapKnownIntegrationError(error: unknown): never {
     throw badRequest(error.message);
   }
 
+  if (error instanceof GitHubRepositoryNotFoundError) {
+    throw badRequest(
+      "Unable to access repository. It may be private and require a Personal Access Token, or the name is incorrect."
+    );
+  }
+
   if (error instanceof Error) {
     throw badRequest(error.message);
   }
@@ -340,10 +349,47 @@ export const integrationsRouter = {
         input.integrationId
       );
 
+      const repository = integration.repositories[0];
       const normalizedBranch =
         input.branch !== undefined ? input.branch || null : undefined;
+      const ownerChanged =
+        input.owner !== undefined &&
+        repository !== undefined &&
+        input.owner !== repository.owner;
+      const repoChanged =
+        input.repo !== undefined &&
+        repository !== undefined &&
+        input.repo !== repository.repo;
+      const isRenaming = ownerChanged || repoChanged;
+      const effectiveOwner = input.owner ?? repository?.owner ?? "";
+      const effectiveRepo = input.repo ?? repository?.repo ?? "";
 
       try {
+        if (isRenaming) {
+          const conflictingRepo = await findConflictingRepositoryInOrganization(
+            input.organizationId,
+            effectiveOwner,
+            effectiveRepo,
+            input.integrationId
+          );
+
+          if (conflictingRepo) {
+            throw conflict("Repository already connected");
+          }
+
+          await validateRepositoryAccess({
+            owner: effectiveOwner,
+            repo: effectiveRepo,
+            token: input.token,
+            encryptedToken: integration.encryptedToken,
+          });
+
+          await updateGitHubIntegration(input.integrationId, {
+            owner: effectiveOwner,
+            repo: effectiveRepo,
+          });
+        }
+
         if (input.token !== undefined) {
           await updateGitHubIntegrationToken(input.integrationId, input.token);
         }
@@ -355,16 +401,14 @@ export const integrationsRouter = {
             );
           }
 
-          const repository = integration.repositories[0];
-
           if (!repository) {
             throw notFound("Repository not found");
           }
 
           if (normalizedBranch) {
             await validateRepositoryBranchExists({
-              owner: repository.owner,
-              repo: repository.repo,
+              owner: effectiveOwner,
+              repo: effectiveRepo,
               branch: normalizedBranch,
               token: input.token,
               encryptedToken: integration.encryptedToken,

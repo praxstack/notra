@@ -114,6 +114,63 @@ async function findRepositoryInOrganization(
   return existing ?? null;
 }
 
+export async function findConflictingRepositoryInOrganization(
+  organizationId: string,
+  owner: string,
+  repo: string,
+  excludeIntegrationId: string
+) {
+  const existing = await findRepositoryInOrganization(
+    organizationId,
+    owner,
+    repo
+  );
+
+  if (!existing || existing.id === excludeIntegrationId) {
+    return null;
+  }
+
+  return existing;
+}
+
+export class GitHubRepositoryNotFoundError extends Error {
+  constructor(owner: string, repo: string) {
+    super(`Repository ${owner}/${repo} not found or inaccessible`);
+    this.name = "GitHubRepositoryNotFoundError";
+  }
+}
+
+export async function validateRepositoryAccess(params: {
+  owner: string;
+  repo: string;
+  token?: string;
+  encryptedToken: string | null;
+}) {
+  const { owner, repo, token, encryptedToken } = params;
+  const resolvedToken =
+    token?.trim() ||
+    (encryptedToken ? decryptToken(encryptedToken) : undefined);
+  const octokit = createOctokit(resolvedToken);
+
+  try {
+    await octokit.request("GET /repos/{owner}/{repo}", {
+      owner,
+      repo,
+      headers: {
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+  } catch (error) {
+    const status = (error as ErrorWithStatus).status;
+
+    if (status === 404) {
+      throw new GitHubRepositoryNotFoundError(owner, repo);
+    }
+
+    throw error;
+  }
+}
+
 export async function validateUserOrgAccess(
   userId: string,
   organizationId: string
@@ -418,7 +475,12 @@ export async function toggleGitHubIntegration(
 
 export async function updateGitHubIntegration(
   integrationId: string,
-  data: { enabled?: boolean; displayName?: string }
+  data: {
+    enabled?: boolean;
+    displayName?: string;
+    owner?: string;
+    repo?: string;
+  }
 ) {
   const [updated] = await db
     .update(githubIntegrations)
