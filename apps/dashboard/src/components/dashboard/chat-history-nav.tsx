@@ -111,7 +111,9 @@ export function ChatHistoryNav() {
   const shouldReduceMotion = useReducedMotion();
   const { renameChat, togglePinned, deleteChat } = useChatSessionMutations();
 
-  const currentChatId = pathname.split("/").filter(Boolean)[2];
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const currentChatId = pathSegments[2];
+  const isOnChatRoute = pathSegments[1] === "chat";
   const pinnedSessions = sessions.filter((session) =>
     Boolean(session.pinnedAt)
   );
@@ -248,6 +250,7 @@ export function ChatHistoryNav() {
                             onMouseEnter={() =>
                               prefetchChatHistory(session.chatId)
                             }
+                            replace={isOnChatRoute}
                           >
                             <span className="truncate">{session.title}</span>
                           </Link>
@@ -344,7 +347,7 @@ export function ChatHistoryNav() {
               <SidebarMenuButton
                 className="cursor-pointer"
                 render={
-                  <Link href={`/${slug}/chat`}>
+                  <Link href={`/${slug}/chat`} replace={isOnChatRoute}>
                     <HugeiconsIcon icon={Add01Icon} />
                     <span>New chat</span>
                   </Link>
