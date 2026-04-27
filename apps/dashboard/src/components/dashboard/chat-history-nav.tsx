@@ -263,7 +263,7 @@ export function ChatHistoryNav() {
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           aria-label="Chat options"
-                          className="-translate-y-1/2 absolute top-1/2 right-1.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground opacity-0 outline-hidden ring-sidebar-ring transition-opacity duration-150 ease-out hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[popup-open]:bg-sidebar-accent data-[popup-open]:text-foreground data-[popup-open]:opacity-100 [&>svg]:size-4 [&>svg]:shrink-0"
+                          className="-translate-y-1/2 absolute top-1/2 right-1.5 flex size-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground opacity-0 outline-hidden ring-sidebar-ring transition-opacity duration-150 ease-out hover:bg-sidebar-accent hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-popup-open:bg-sidebar-accent data-popup-open:text-foreground data-popup-open:opacity-100 [&>svg]:size-4 [&>svg]:shrink-0"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
