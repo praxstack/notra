@@ -875,15 +875,28 @@ function StandaloneChatPageClient({
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
-  const extractUserMessageText = useCallback((message: ChatUIMessage) => {
+  const extractUserMessageContent = useCallback((message: ChatUIMessage) => {
     let text = "";
+    const attachments: ChatMessagePart[] = [];
     for (const part of message.parts) {
       if (part.type === "text") {
         text += part.text;
+      } else if (part.type === "file") {
+        attachments.push({
+          type: "file",
+          url: part.url,
+          mediaType: part.mediaType,
+          filename: part.filename,
+        });
       }
     }
-    return text;
+    return { text, attachments };
   }, []);
+
+  const getUserMessageText = useCallback(
+    (message: ChatUIMessage) => extractUserMessageContent(message).text,
+    [extractUserMessageContent]
+  );
 
   const toDisplayText = useCallback((serialized: string) => {
     return serialized.replace(
@@ -904,7 +917,12 @@ function StandaloneChatPageClient({
   }, []);
 
   const resendFromUserMessage = useCallback(
-    async (userMessageId: string, text: string, modelOverride?: string) => {
+    async (
+      userMessageId: string,
+      text: string,
+      attachments: ChatMessagePart[],
+      modelOverride?: string
+    ) => {
       const current = messagesRef.current;
       const index = current.findIndex((m) => m.id === userMessageId);
       if (index === -1) {
@@ -942,7 +960,16 @@ function StandaloneChatPageClient({
       setMessages(truncated);
       setWasStoppedByUser(false);
       setChatError(null);
-      await sendMessage({ text, messageId: userMessageId });
+      if (attachments.length > 0) {
+        const parts: ChatMessagePart[] = [];
+        if (text.length > 0) {
+          parts.push({ type: "text", text });
+        }
+        parts.push(...attachments);
+        await sendMessage({ role: "user", parts, messageId: userMessageId });
+      } else {
+        await sendMessage({ text, messageId: userMessageId });
+      }
     },
     [sendMessage, setMessages]
   );
@@ -950,9 +977,14 @@ function StandaloneChatPageClient({
   const handleEditMessage = useCallback(
     async (userMessageId: string, newText: string) => {
       setEditingMessageId(null);
-      await resendFromUserMessage(userMessageId, newText);
+      const current = messagesRef.current;
+      const message = current.find((m) => m.id === userMessageId);
+      const attachments = message
+        ? extractUserMessageContent(message).attachments
+        : [];
+      await resendFromUserMessage(userMessageId, newText, attachments);
     },
-    [resendFromUserMessage]
+    [extractUserMessageContent, resendFromUserMessage]
   );
 
   const handleRetryMessage = useCallback(
@@ -962,13 +994,18 @@ function StandaloneChatPageClient({
       if (!message) {
         return;
       }
-      const text = extractUserMessageText(message);
-      if (!text.trim()) {
+      const { text, attachments } = extractUserMessageContent(message);
+      if (!text.trim() && attachments.length === 0) {
         return;
       }
-      await resendFromUserMessage(userMessageId, text, modelOverride);
+      await resendFromUserMessage(
+        userMessageId,
+        text,
+        attachments,
+        modelOverride
+      );
     },
-    [extractUserMessageText, resendFromUserMessage]
+    [extractUserMessageContent, resendFromUserMessage]
   );
 
   const [branchSwitchSignal, setBranchSwitchSignal] = useState<{
@@ -1742,7 +1779,7 @@ function StandaloneChatPageClient({
                             {isEditing ? (
                               <UserMessageEditor
                                 initialText={toDisplayText(
-                                  extractUserMessageText(message)
+                                  getUserMessageText(message)
                                 )}
                                 onCancel={handleCancelEditMessage}
                                 onSubmit={(text) =>
@@ -1775,7 +1812,7 @@ function StandaloneChatPageClient({
                             canInteract={!isLoading}
                             isEditing={isEditing}
                             messageText={toDisplayText(
-                              extractUserMessageText(message)
+                              getUserMessageText(message)
                             )}
                             onEdit={() => handleStartEditMessage(message.id)}
                             onNextBranch={() =>
