@@ -179,6 +179,12 @@
     "light": "favicon.svg",
     "dark": "favicon.svg"
   },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/usenotra/notra"
+    }
+  },
   "footer": {
     "socials": {
       "x": "https://x.com/usenotra",
