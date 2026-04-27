@@ -1097,6 +1097,14 @@ function StandaloneChatPageClient({
         await sendMessage({ text });
       }
       if (isFirstMessage) {
+        queryClient.setQueryData(
+          ["chat-history", organizationId, stableChatId],
+          {
+            messages: messagesRef.current,
+            lastResponseStopped: wasStoppedByUserRef.current,
+            activeStreamId: null,
+          }
+        );
         router.replace(`/${organizationSlug}/chat/${stableChatId}`, {
           scroll: false,
         });
