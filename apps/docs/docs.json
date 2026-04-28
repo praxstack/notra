@@ -38,6 +38,24 @@
   "api": {
     "url": "full"
   },
+  "metadata": {
+    "timestamp": true
+  },
+  "seo": {
+    "metatags": {
+      "twitter:site": "@usenotra"
+    }
+  },
+  "search": {
+    "prompt": "Search the Notra docs..."
+  },
+  "errors": {
+    "404": {
+      "redirect": false,
+      "title": "This page is on a content pipeline of its own",
+      "description": "Looks like this page hasn't shipped yet. Try the [quickstart](/quickstart) or head back to the [overview](/overview)."
+    }
+  },
   "contextual": {
     "options": [
       "copy",
