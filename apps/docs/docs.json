@@ -69,14 +69,51 @@
             "pages": ["overview", "quickstart"]
           },
           {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/how-it-works",
+              "concepts/content-pipeline",
+              "concepts/brand-voice"
+            ]
+          },
+          {
             "group": "Integrations",
             "pages": [
+              "integrations/overview",
               "integrations/github",
               "integrations/linear",
+              "integrations/slack",
               "integrations/framer",
               "integrations/featul",
-              "integrations/kontentspace",
-              "integrations/mcp"
+              "integrations/kontentspace"
+            ]
+          },
+          {
+            "group": "Developer Tools",
+            "pages": ["devtools/cli", "devtools/mcp", "devtools/raycast"]
+          },
+          {
+            "group": "Automation",
+            "pages": [
+              "automation/overview",
+              "automation/event-based",
+              "automation/scheduled"
+            ]
+          },
+          {
+            "group": "Content Types",
+            "pages": [
+              "content/changelogs",
+              "content/blog-posts",
+              "content/social-media"
+            ]
+          },
+          {
+            "group": "Organization",
+            "pages": [
+              "organization/workspace-setup",
+              "organization/team-management",
+              "organization/billing"
             ]
           }
         ]
@@ -86,7 +123,11 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["api/getting-started", "api/authentication"]
+            "pages": [
+              "api/getting-started",
+              "api/authentication",
+              "api/rate-limits"
+            ]
           },
           {
             "group": "Guides",
@@ -97,6 +138,10 @@
               "api/pagination",
               "api/types"
             ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": ["api/webhooks/overview", "api/webhooks/events"]
           },
           {
             "group": "Endpoints",
