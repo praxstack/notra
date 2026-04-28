@@ -1,17 +1,12 @@
 import { gateway } from "@notra/ai/gateway";
-import type { UIMessage } from "ai";
-import { generateText } from "ai";
-import {
-  CHAT_ABORT_FLAG_TTL_SECONDS,
-  CHAT_DELETION_TOMBSTONE_TTL_SECONDS,
-} from "@/constants/chat";
+import { db } from "@notra/db/drizzle";
+import { chatSessions } from "@notra/db/schema";
+import { generateText, type UIMessage } from "ai";
+import { and, eq, isNull } from "drizzle-orm";
+import { CHAT_ABORT_FLAG_TTL_SECONDS } from "@/constants/chat";
 import type { ChatSessionSummary } from "@/types/chat";
 import { normalizeChatTitle, sortChatSessions } from "@/utils/chat";
 import { redis } from "./redis";
-
-function historyKey(organizationId: string, chatId: string) {
-  return `chat:history:${organizationId}:${chatId}`;
-}
 
 function activeStreamKey(organizationId: string, chatId: string) {
   return `chat:stream:${organizationId}:${chatId}`;
@@ -29,26 +24,6 @@ function lastStoppedKey(organizationId: string, chatId: string) {
   return `chat:lastStopped:${organizationId}:${chatId}`;
 }
 
-function deletedChatKey(organizationId: string, chatId: string) {
-  return `chat:deleted:${organizationId}:${chatId}`;
-}
-
-function chatStateVersionKey(organizationId: string, chatId: string) {
-  return `chat:stateVersion:${organizationId}:${chatId}`;
-}
-
-function abortFlagKeyPrefix(organizationId: string, chatId: string) {
-  return `chat:abort:${organizationId}:${chatId}:`;
-}
-
-function sessionsKey(organizationId: string) {
-  return `chat:sessions:${organizationId}`;
-}
-
-function sessionMetaKey(organizationId: string, chatId: string) {
-  return `chat:session:${organizationId}:${chatId}`;
-}
-
 export function getChatStreamChannelName(
   organizationId: string,
   chatId: string,
@@ -61,354 +36,172 @@ export function generateChatId() {
   return crypto.randomUUID();
 }
 
-const CHAT_SESSION_WRITE_MAX_ATTEMPTS = 3;
-
-const WRITE_CHAT_HISTORY_SCRIPT = `
-local deleted = redis.call("GET", KEYS[1])
-if deleted == "1" then
-  return 0
-end
-
-local currentVersion = tonumber(redis.call("GET", KEYS[2]) or "0")
-local expectedVersion = tonumber(ARGV[1])
-if currentVersion ~= expectedVersion then
-  return 0
-end
-
-if ARGV[2] == "replace" then
-  redis.call("DEL", KEYS[3])
-end
-
-local entryCount = tonumber(ARGV[6])
-local entryIndex = 7
-
-for _ = 1, entryCount do
-  redis.call("ZADD", KEYS[3], tonumber(ARGV[entryIndex]), ARGV[entryIndex + 1])
-  entryIndex = entryIndex + 2
-end
-
-redis.call("INCR", KEYS[2])
-redis.call("SET", KEYS[4], ARGV[3])
-redis.call("ZADD", KEYS[5], tonumber(ARGV[4]), ARGV[5])
-
-return 1
-`;
-
-const UPDATE_EXISTING_CHAT_METADATA_SCRIPT = `
-local deleted = redis.call("GET", KEYS[1])
-if deleted == "1" then
-  return 0
-end
-
-local currentVersion = tonumber(redis.call("GET", KEYS[2]) or "0")
-local expectedVersion = tonumber(ARGV[1])
-if currentVersion ~= expectedVersion then
-  return 0
-end
-
-if redis.call("GET", KEYS[3]) == false then
-  return 0
-end
-
-redis.call("INCR", KEYS[2])
-redis.call("SET", KEYS[3], ARGV[2])
-redis.call("ZADD", KEYS[4], tonumber(ARGV[3]), ARGV[4])
-
-return 1
-`;
-
-const DELETE_CHAT_SESSION_SCRIPT = `
-if redis.call("GET", KEYS[1]) == false then
-  return 0
-end
-
-local activeStreamId = redis.call("GET", KEYS[4])
-
-redis.call("INCR", KEYS[7])
-redis.call("SET", KEYS[2], "1", "EX", tonumber(ARGV[2]))
-
-if activeStreamId then
-  redis.call("SET", ARGV[4] .. activeStreamId, "1", "EX", tonumber(ARGV[3]))
-end
-
-redis.call("DEL", KEYS[3], KEYS[1], KEYS[4], KEYS[5])
-redis.call("ZREM", KEYS[6], ARGV[1])
-
-return 1
-`;
-
-export async function isChatDeleted(organizationId: string, chatId: string) {
-  if (!redis) {
-    return false;
-  }
-  const value = await redis.get<string>(deletedChatKey(organizationId, chatId));
-  return value === "1";
-}
-
-async function getChatStateVersion(organizationId: string, chatId: string) {
-  if (!redis) {
-    return 0;
-  }
-  const value = await redis.get<string | number>(
-    chatStateVersionKey(organizationId, chatId)
-  );
-  if (typeof value === "number") {
-    return value;
-  }
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function parseChatSessionSummary(
-  value: ChatSessionSummary | string | false | null | undefined
-): ChatSessionSummary | null {
-  if (value === false || value == null) {
-    return null;
-  }
-  return typeof value === "string" ? JSON.parse(value) : value;
-}
-
-function buildSessionMetadata(
-  chatId: string,
-  messages: UIMessage[],
-  timestamp: number,
-  existing: ChatSessionSummary | null
+function toSessionSummary(
+  row: typeof chatSessions.$inferSelect
 ): ChatSessionSummary {
   return {
-    chatId,
-    title:
-      existing?.title ??
-      normalizeChatTitle(getChatTitle(messages) ?? "New chat"),
-    createdAt: existing?.createdAt ?? new Date(timestamp).toISOString(),
-    updatedAt: new Date(timestamp).toISOString(),
-    pinnedAt: existing?.pinnedAt ?? null,
+    chatId: row.id,
+    title: row.title,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    pinnedAt: row.pinnedAt?.toISOString() ?? null,
   };
 }
 
-async function getChatSessionSnapshot(
+export async function isChatDeleted(
   organizationId: string,
   chatId: string
-): Promise<{
-  expectedVersion: number;
-  session: ChatSessionSummary | null;
-}> {
-  const [expectedVersion, raw] = await Promise.all([
-    getChatStateVersion(organizationId, chatId),
-    redis?.get<ChatSessionSummary | string | false>(
-      sessionMetaKey(organizationId, chatId)
-    ),
-  ]);
+): Promise<boolean> {
+  const row = await db
+    .select({ deletedAt: chatSessions.deletedAt })
+    .from(chatSessions)
+    .where(
+      and(
+        eq(chatSessions.id, chatId),
+        eq(chatSessions.organizationId, organizationId)
+      )
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
 
-  return {
-    expectedVersion,
-    session: parseChatSessionSummary(raw),
-  };
+  if (!row) {
+    return false;
+  }
+
+  return row.deletedAt !== null;
 }
 
-async function writeChatHistory(
+async function upsertChatSession(
   organizationId: string,
   chatId: string,
   messages: UIMessage[],
   mode: "append" | "replace"
 ) {
-  if (!redis) {
+  const existingRow = await db
+    .select({
+      messages: chatSessions.messages,
+      title: chatSessions.title,
+      deletedAt: chatSessions.deletedAt,
+    })
+    .from(chatSessions)
+    .where(
+      and(
+        eq(chatSessions.id, chatId),
+        eq(chatSessions.organizationId, organizationId)
+      )
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (existingRow?.deletedAt !== undefined && existingRow.deletedAt !== null) {
     return false;
   }
 
-  for (
-    let attempt = 0;
-    attempt < CHAT_SESSION_WRITE_MAX_ATTEMPTS;
-    attempt += 1
-  ) {
-    const { expectedVersion, session: existing } = await getChatSessionSnapshot(
+  const title =
+    existingRow?.title ??
+    normalizeChatTitle(getChatTitle(messages) ?? "New chat");
+
+  const finalMessages =
+    mode === "replace" || !existingRow
+      ? messages
+      : [...(existingRow.messages as UIMessage[]), ...messages];
+
+  if (existingRow) {
+    const updated = await db
+      .update(chatSessions)
+      .set({
+        messages: finalMessages as unknown as Record<string, unknown>,
+        title,
+      })
+      .where(
+        and(
+          eq(chatSessions.id, chatId),
+          eq(chatSessions.organizationId, organizationId),
+          isNull(chatSessions.deletedAt)
+        )
+      )
+      .returning({ id: chatSessions.id });
+
+    if (updated.length === 0) {
+      return false;
+    }
+  } else {
+    await db.insert(chatSessions).values({
+      id: chatId,
       organizationId,
-      chatId
-    );
-    const timestamp = Date.now();
-    const session = buildSessionMetadata(chatId, messages, timestamp, existing);
-
-    const args = [
-      String(expectedVersion),
-      mode,
-      JSON.stringify(session),
-      String(timestamp),
-      chatId,
-      String(messages.length),
-      ...messages.flatMap((message, index) => [
-        String(timestamp + index),
-        JSON.stringify(message),
-      ]),
-    ];
-
-    const result = Number(
-      await redis.eval(
-        WRITE_CHAT_HISTORY_SCRIPT,
-        [
-          deletedChatKey(organizationId, chatId),
-          chatStateVersionKey(organizationId, chatId),
-          historyKey(organizationId, chatId),
-          sessionMetaKey(organizationId, chatId),
-          sessionsKey(organizationId),
-        ],
-        args
-      )
-    );
-
-    if (result === 1) {
-      return true;
-    }
+      title,
+      messages: messages as unknown as Record<string, unknown>,
+    });
   }
 
-  return false;
-}
-
-async function updateExistingChatSessionMetadata(
-  organizationId: string,
-  chatId: string,
-  buildNextSession: (session: ChatSessionSummary) => ChatSessionSummary | null
-): Promise<ChatSessionSummary | null> {
-  if (!redis) {
-    return null;
-  }
-
-  for (
-    let attempt = 0;
-    attempt < CHAT_SESSION_WRITE_MAX_ATTEMPTS;
-    attempt += 1
-  ) {
-    const snapshot = await getChatSessionSnapshot(organizationId, chatId);
-    if (!snapshot.session) {
-      return null;
-    }
-
-    const nextSession = buildNextSession(snapshot.session);
-    if (!nextSession) {
-      return snapshot.session;
-    }
-
-    const result = Number(
-      await redis.eval(
-        UPDATE_EXISTING_CHAT_METADATA_SCRIPT,
-        [
-          deletedChatKey(organizationId, chatId),
-          chatStateVersionKey(organizationId, chatId),
-          sessionMetaKey(organizationId, chatId),
-          sessionsKey(organizationId),
-        ],
-        [
-          String(snapshot.expectedVersion),
-          JSON.stringify(nextSession),
-          String(Date.parse(nextSession.updatedAt)),
-          chatId,
-        ]
-      )
-    );
-
-    if (result === 1) {
-      return nextSession;
-    }
-  }
-
-  return null;
+  return true;
 }
 
 export async function saveChatMessage(
   organizationId: string,
   chatId: string,
   message: UIMessage
-) {
-  if (!redis) {
-    return;
-  }
-  await writeChatHistory(organizationId, chatId, [message], "append");
+): Promise<boolean> {
+  return upsertChatSession(organizationId, chatId, [message], "append");
 }
 
 export async function saveChatMessages(
   organizationId: string,
   chatId: string,
   messages: UIMessage[]
-) {
-  if (!redis) {
-    return;
-  }
-  await writeChatHistory(organizationId, chatId, messages, "append");
+): Promise<boolean> {
+  return upsertChatSession(organizationId, chatId, messages, "append");
 }
 
 export async function replaceChatHistory(
   organizationId: string,
   chatId: string,
   messages: UIMessage[]
-) {
-  if (!redis) {
-    return;
-  }
-  await writeChatHistory(organizationId, chatId, messages, "replace");
+): Promise<boolean> {
+  return upsertChatSession(organizationId, chatId, messages, "replace");
 }
 
 export async function loadChatHistory(
   organizationId: string,
   chatId: string
 ): Promise<UIMessage[]> {
-  if (!redis) {
+  const row = await db
+    .select({
+      messages: chatSessions.messages,
+      deletedAt: chatSessions.deletedAt,
+    })
+    .from(chatSessions)
+    .where(
+      and(
+        eq(chatSessions.id, chatId),
+        eq(chatSessions.organizationId, organizationId)
+      )
+    )
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (!row || row.deletedAt !== null) {
     return [];
   }
-  if (await isChatDeleted(organizationId, chatId)) {
-    return [];
-  }
-  const raw = await redis.zrange<string[]>(
-    historyKey(organizationId, chatId),
-    0,
-    -1
-  );
-  return raw.map((entry) =>
-    typeof entry === "string" ? JSON.parse(entry) : entry
-  );
+
+  return row.messages as UIMessage[];
 }
 
 export async function listChatSessions(
   organizationId: string
 ): Promise<ChatSessionSummary[]> {
-  if (!redis) {
-    return [];
-  }
-  const redisClient = redis;
+  const rows = await db
+    .select()
+    .from(chatSessions)
+    .where(
+      and(
+        eq(chatSessions.organizationId, organizationId),
+        isNull(chatSessions.deletedAt)
+      )
+    );
 
-  const chatIds = await redisClient.zrange<string[]>(
-    sessionsKey(organizationId),
-    0,
-    -1
-  );
-  const orderedChatIds = [...chatIds].reverse();
-
-  const sessions = await Promise.all(
-    orderedChatIds.map(async (chatId) => {
-      const raw = await redisClient.get<ChatSessionSummary | string>(
-        sessionMetaKey(organizationId, chatId)
-      );
-
-      if (!raw) {
-        return null;
-      }
-
-      const session = typeof raw === "string" ? JSON.parse(raw) : raw;
-      return {
-        chatId,
-        title: session.title,
-        updatedAt: session.updatedAt,
-        createdAt: session.createdAt,
-        pinnedAt: session.pinnedAt ?? null,
-      } satisfies ChatSessionSummary;
-    })
-  );
-
-  return sortChatSessions(
-    sessions.filter(
-      (session): session is ChatSessionSummary => session !== null
-    )
-  );
+  const sessions = rows.map(toSessionSummary);
+  return sortChatSessions(sessions);
 }
 
 export async function getActiveChatStream(
@@ -519,19 +312,26 @@ export async function renameChatSession(
   chatId: string,
   title: string
 ): Promise<ChatSessionSummary | null> {
-  if (!redis) {
+  const nextTitle = normalizeChatTitle(title);
+
+  const rows = await db
+    .update(chatSessions)
+    .set({ title: nextTitle })
+    .where(
+      and(
+        eq(chatSessions.id, chatId),
+        eq(chatSessions.organizationId, organizationId),
+        isNull(chatSessions.deletedAt)
+      )
+    )
+    .returning();
+
+  const row = rows[0];
+  if (!row) {
     return null;
   }
 
-  const nextTitle = normalizeChatTitle(title);
-  return updateExistingChatSessionMetadata(
-    organizationId,
-    chatId,
-    (session) => ({
-      ...session,
-      title: nextTitle,
-    })
-  );
+  return toSessionSummary(row);
 }
 
 export async function setChatSessionPinned(
@@ -539,18 +339,24 @@ export async function setChatSessionPinned(
   chatId: string,
   pinned: boolean
 ): Promise<ChatSessionSummary | null> {
-  if (!redis) {
+  const rows = await db
+    .update(chatSessions)
+    .set({ pinnedAt: pinned ? new Date() : null })
+    .where(
+      and(
+        eq(chatSessions.id, chatId),
+        eq(chatSessions.organizationId, organizationId),
+        isNull(chatSessions.deletedAt)
+      )
+    )
+    .returning();
+
+  const row = rows[0];
+  if (!row) {
     return null;
   }
 
-  return updateExistingChatSessionMetadata(
-    organizationId,
-    chatId,
-    (session) => ({
-      ...session,
-      pinnedAt: pinned ? new Date().toISOString() : null,
-    })
-  );
+  return toSessionSummary(row);
 }
 
 function collectFileUrlsFromMessages(messages: UIMessage[]): string[] {
@@ -574,42 +380,21 @@ function collectFileUrlsFromMessages(messages: UIMessage[]): string[] {
 export async function purgeOrganizationChatData(
   organizationId: string
 ): Promise<{ fileUrls: string[] }> {
-  if (!redis) {
-    return { fileUrls: [] };
-  }
-  const redisClient = redis;
-
-  const chatIds = await redisClient.zrange<string[]>(
-    sessionsKey(organizationId),
-    0,
-    -1
-  );
+  const rows = await db
+    .select({ messages: chatSessions.messages })
+    .from(chatSessions)
+    .where(eq(chatSessions.organizationId, organizationId));
 
   const fileUrls: string[] = [];
 
-  for (const chatId of chatIds) {
-    const raw = await redisClient.zrange<string[]>(
-      historyKey(organizationId, chatId),
-      0,
-      -1
-    );
-    const messages = raw.map((entry) =>
-      typeof entry === "string" ? JSON.parse(entry) : entry
-    ) as UIMessage[];
-
+  for (const row of rows) {
+    const messages = row.messages as UIMessage[];
     fileUrls.push(...collectFileUrlsFromMessages(messages));
-
-    await redisClient.del(
-      historyKey(organizationId, chatId),
-      sessionMetaKey(organizationId, chatId),
-      activeStreamKey(organizationId, chatId),
-      lastStoppedKey(organizationId, chatId),
-      chatStateVersionKey(organizationId, chatId),
-      deletedChatKey(organizationId, chatId)
-    );
   }
 
-  await redisClient.del(sessionsKey(organizationId));
+  await db
+    .delete(chatSessions)
+    .where(eq(chatSessions.organizationId, organizationId));
 
   return { fileUrls };
 }
@@ -618,39 +403,35 @@ export async function deleteChatSession(
   organizationId: string,
   chatId: string
 ): Promise<boolean> {
-  if (!redis) {
-    return false;
-  }
-
-  const metaKey = sessionMetaKey(organizationId, chatId);
-  const existing = await redis.get<ChatSessionSummary | string>(metaKey);
-
-  if (!existing) {
-    return false;
-  }
-
-  const deleted = Number(
-    await redis.eval(
-      DELETE_CHAT_SESSION_SCRIPT,
-      [
-        metaKey,
-        deletedChatKey(organizationId, chatId),
-        historyKey(organizationId, chatId),
-        activeStreamKey(organizationId, chatId),
-        lastStoppedKey(organizationId, chatId),
-        sessionsKey(organizationId),
-        chatStateVersionKey(organizationId, chatId),
-      ],
-      [
-        chatId,
-        String(CHAT_DELETION_TOMBSTONE_TTL_SECONDS),
-        String(CHAT_ABORT_FLAG_TTL_SECONDS),
-        abortFlagKeyPrefix(organizationId, chatId),
-      ]
+  const rows = await db
+    .update(chatSessions)
+    .set({
+      deletedAt: new Date(),
+      messages: [] as unknown as Record<string, unknown>,
+    })
+    .where(
+      and(
+        eq(chatSessions.id, chatId),
+        eq(chatSessions.organizationId, organizationId),
+        isNull(chatSessions.deletedAt)
+      )
     )
-  );
+    .returning({ id: chatSessions.id });
 
-  return deleted === 1;
+  if (rows.length === 0) {
+    return false;
+  }
+
+  if (redis) {
+    const streamId = await getActiveChatStream(organizationId, chatId);
+    await Promise.allSettled([
+      clearActiveChatStream(organizationId, chatId),
+      redis.del(lastStoppedKey(organizationId, chatId)),
+      ...(streamId ? [setChatAbortFlag(organizationId, chatId, streamId)] : []),
+    ]);
+  }
+
+  return true;
 }
 
 function getFirstUserMessage(messages: UIMessage[]): string | null {
@@ -720,18 +501,17 @@ export async function generateAndSetChatTitle(
     }
     const fallbackTitle = getFallbackTitle(userMessage);
 
-    // Skip the LLM call when the only thing we have is a filename — the
-    // generated title won't be meaningfully better than the filename itself.
     if (!firstUserMessageHasText(firstUserMessage)) {
-      await updateExistingChatSessionMetadata(
-        organizationId,
-        chatId,
-        (session) => ({
-          ...session,
-          title: normalizeChatTitle(fallbackTitle),
-          updatedAt: new Date().toISOString(),
-        })
-      );
+      await db
+        .update(chatSessions)
+        .set({ title: normalizeChatTitle(fallbackTitle) })
+        .where(
+          and(
+            eq(chatSessions.id, chatId),
+            eq(chatSessions.organizationId, organizationId),
+            isNull(chatSessions.deletedAt)
+          )
+        );
       return;
     }
 
@@ -745,11 +525,16 @@ export async function generateAndSetChatTitle(
     const aiTitle = text.replace(/^["']|["']$/g, "").trim();
     const title = normalizeChatTitle(aiTitle || fallbackTitle);
 
-    await updateExistingChatSessionMetadata(
-      organizationId,
-      chatId,
-      (session) => ({ ...session, title, updatedAt: new Date().toISOString() })
-    );
+    await db
+      .update(chatSessions)
+      .set({ title })
+      .where(
+        and(
+          eq(chatSessions.id, chatId),
+          eq(chatSessions.organizationId, organizationId),
+          isNull(chatSessions.deletedAt)
+        )
+      );
   } catch (err) {
     console.error("[Chat Title] Generation failed:", err);
   }

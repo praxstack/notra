@@ -40,6 +40,32 @@ export const users = pgTable("users", {
   showAgentStats: boolean("show_agent_stats").default(false).notNull(),
 });
 
+export const chatSessions = pgTable(
+  "chat_sessions",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    messages: jsonb("messages").notNull().default(sql`'[]'::jsonb`),
+    pinnedAt: timestamp("pinned_at"),
+    deletedAt: timestamp("deleted_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("chatSessions_organizationId_idx").on(table.organizationId),
+    index("chatSessions_organizationId_deletedAt_idx").on(
+      table.organizationId,
+      table.deletedAt
+    ),
+  ]
+);
+
 export const chatAttachments = pgTable(
   "chat_attachments",
   {
@@ -546,6 +572,13 @@ export const usersRelations = relations(users, ({ many }) => ({
   chatAttachments: many(chatAttachments),
 }));
 
+export const chatSessionsRelations = relations(chatSessions, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [chatSessions.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
 export const chatAttachmentsRelations = relations(
   chatAttachments,
   ({ one }) => ({
@@ -586,6 +619,7 @@ export const organizationsRelations = relations(
     connectedSocialAccounts: many(connectedSocialAccounts),
     posts: many(posts),
     skills: many(skills),
+    chatSessions: many(chatSessions),
     chatAttachments: many(chatAttachments),
   })
 );

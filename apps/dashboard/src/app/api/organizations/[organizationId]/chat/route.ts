@@ -142,11 +142,15 @@ export const POST = withEvlog(async function POST(
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });
     }
 
-    await Promise.all([
+    const [historySaved] = await Promise.all([
       replaceChatHistory(organizationId, chatId, messages),
       setActiveChatStream(organizationId, chatId, latestMessage.id),
       clearLastResponseStopped(organizationId, chatId),
     ]);
+
+    if (!historySaved) {
+      return NextResponse.json({ error: "Chat not found" }, { status: 404 });
+    }
 
     if (messages.length === 1 && latestMessage.role === "user") {
       await generateAndSetChatTitle(organizationId, chatId, latestMessage);
@@ -470,7 +474,17 @@ async function createDirectStandaloneChatResponse({
       },
       onFinish: async ({ messages: responseMessages }) => {
         try {
-          await replaceChatHistory(organizationId, chatId, responseMessages);
+          const saved = await replaceChatHistory(
+            organizationId,
+            chatId,
+            responseMessages
+          );
+          if (!saved) {
+            console.warn(
+              "[Standalone Chat] Skipped saving response: chat was deleted",
+              { requestId, organizationId, chatId }
+            );
+          }
         } finally {
           await cleanup();
           streamDone.resolve();

@@ -252,7 +252,17 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
       },
       onFinish: async ({ messages: responseMessages }) => {
         try {
-          await replaceChatHistory(organizationId, chatId, responseMessages);
+          const saved = await replaceChatHistory(
+            organizationId,
+            chatId,
+            responseMessages
+          );
+          if (!saved) {
+            console.warn(
+              "[Chat Workflow] Skipped saving response: chat was deleted",
+              { requestId, organizationId, chatId }
+            );
+          }
         } finally {
           await clearActiveChatStream(organizationId, chatId);
         }
