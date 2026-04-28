@@ -19,7 +19,7 @@ Limits are scoped per API key, with a sliding window. If your request would exce
 All other endpoints (post list/get/delete, brand list/get/delete, integrations list/remove, schedules) have no rate limit at this time.
 
 <Note>
-  Limits are tracked per API key. If a request arrives without an authenticated key, the limit is applied per IP instead. Each endpoint has its own bucket — hitting the post-generation limit does not affect post updates.
+  Limits are tracked per API key. If a request arrives without an authenticated key, the limit is applied per IP instead. Each endpoint has its own bucket, so hitting the post-generation limit does not affect post updates.
 </Note>
 
 ## Response headers
