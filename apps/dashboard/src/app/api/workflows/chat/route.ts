@@ -1,18 +1,25 @@
-import { orchestrateStandaloneChat } from "@notra/ai/orchestration/orchestrate-standalone";
-import type { StandaloneChatContextItem } from "@notra/ai/types/standalone-chat";
-import { serve } from "@upstash/workflow/nextjs";
-import type { UIMessageChunk } from "ai";
-import { nanoid } from "nanoid";
-import { FEATURES } from "@/constants/features";
-import { autumn } from "@/lib/billing/autumn";
-import { calculateTokenCostCents } from "@/lib/billing/token-pricing";
+import { startChatAbortPolling } from "@notra/ai/chat/abort-polling";
 import {
   clearActiveChatStream,
   clearChatAbortFlag,
   getChatStreamChannelName,
   loadChatHistory,
   replaceChatHistory,
-} from "@/lib/chat-history";
+} from "@notra/ai/chat/history";
+import { orchestrateStandaloneChat } from "@notra/ai/orchestration/orchestrate-standalone";
+import { chatWorkflowPayloadSchema } from "@notra/ai/schemas/chat";
+import type {
+  ChatUsageSnapshot,
+  ChatWorkflowPayload,
+} from "@notra/ai/types/chat";
+import type { StandaloneChatContextItem } from "@notra/ai/types/standalone-chat";
+import { buildChatFinishMetadata } from "@notra/ai/utils/chat";
+import { serve } from "@upstash/workflow/nextjs";
+import type { UIMessageChunk } from "ai";
+import { nanoid } from "nanoid";
+import { FEATURES } from "@/constants/features";
+import { autumn } from "@/lib/billing/autumn";
+import { calculateTokenCostCents } from "@/lib/billing/token-pricing";
 import { realtime } from "@/lib/realtime";
 import {
   getGitHubIntegrationById,
@@ -24,10 +31,6 @@ import {
   getLinearIntegrationsByOrganization,
   getLinearToolContextByIntegrationId,
 } from "@/lib/services/linear-integration";
-import { chatWorkflowPayloadSchema } from "@/schemas/chat";
-import type { ChatUsageSnapshot, ChatWorkflowPayload } from "@/types/chat";
-import { buildChatFinishMetadata } from "@/utils/chat";
-import { startChatAbortPolling } from "@/utils/chat-abort-polling.server";
 
 export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
   const parseResult = chatWorkflowPayloadSchema.safeParse(
