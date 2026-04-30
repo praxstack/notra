@@ -106,6 +106,14 @@ export async function fetchContributorsData(): Promise<ContributorsData> {
   };
 }
 
+export function formatContributionCount(count: number): string {
+  if (count >= 1000) {
+    const thousands = count / 1000;
+    return `${thousands.toFixed(thousands >= 10 ? 0 : 1).replace(/\.0$/, "")}k`;
+  }
+  return count.toString();
+}
+
 export function formatGitHubDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
