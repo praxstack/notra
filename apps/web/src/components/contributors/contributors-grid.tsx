@@ -42,7 +42,7 @@ export function ContributorsGrid({
             <span className="w-full truncate text-center font-sans text-muted-foreground text-xs transition-colors group-hover:text-foreground">
               {contributor.login}
             </span>
-            <span className="font-sans text-[0.625rem] text-muted-foreground leading-none transition-colors group-hover:text-foreground">
+            <span className="w-full text-center font-sans text-[0.625rem] text-muted-foreground leading-none transition-colors group-hover:text-foreground">
               <span className="tabular-nums">
                 {formatContributionCount(contributor.contributions)}
               </span>{" "}
