@@ -66,7 +66,7 @@ ${items}
 }
 
 export function buildBlogRssFeed(posts: NotraBlogPost[]) {
-  const feedUrl = `https://www.usenotra.com${RSS_FEED_PATH}`;
+  const feedUrl = `${SITE_URL}${RSS_FEED_PATH}`;
   const blogUrl = `${SITE_URL}/blog`;
 
   const items: RssFeedItem[] = posts.map((post) => {
