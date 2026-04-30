@@ -3,6 +3,10 @@ title: "Caching"
 description: "Cache paginated Notra post data safely, including sorting and invalidation patterns."
 ---
 
+import LlmsDirective from '/snippets/llms-directive.mdx';
+
+<LlmsDirective />
+
 When caching Notra post data, include every query input that changes the result set in the cache key.
 
 For `list posts`, that usually means:
