@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import FooterSection from "../components/footer-section";
 import { Navbar } from "../components/navbar";
 import { ThemeProvider } from "../components/theme-provider";
+import { RSS_FEED_PATH, RSS_FEED_TITLE } from "../utils/constants";
 import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "../utils/metadata";
 import { SITE_URL } from "../utils/urls";
 
@@ -45,6 +46,7 @@ export const metadata: Metadata = {
     canonical: SITE_URL,
     types: {
       "text/plain": `${SITE_URL}/llms.txt`,
+      "application/rss+xml": `${SITE_URL}${RSS_FEED_PATH}`,
     },
   },
   openGraph: {
@@ -88,6 +90,14 @@ export default function RootLayout({
       style={{ scrollbarGutter: "stable" }}
       suppressHydrationWarning
     >
+      <head>
+        <link
+          href={RSS_FEED_PATH}
+          rel="alternate"
+          title={RSS_FEED_TITLE}
+          type="application/rss+xml"
+        />
+      </head>
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
