@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "maple",
+  "theme": "luma",
   "name": "Notra Documentation",
   "description": "Documentation for Notra, the content pipeline for teams.",
   "colors": {
