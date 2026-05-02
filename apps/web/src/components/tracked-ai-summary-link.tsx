@@ -20,7 +20,7 @@ export function TrackedAiSummaryLink({
   return (
     <Link
       aria-label={`Summarize Notra with ${name}`}
-      className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
+      className="group flex items-center gap-2 text-foreground transition-colors hover:text-primary"
       href={href}
       onClick={handleClick}
       rel="noopener noreferrer"

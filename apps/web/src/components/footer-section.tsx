@@ -176,7 +176,10 @@ export default function FooterSection() {
               slug={slug}
             >
               <Icon
-                className={cn("size-5 shrink-0 grayscale", iconClassName)}
+                className={cn(
+                  "size-5 shrink-0 grayscale transition-[filter] group-hover:grayscale-0",
+                  iconClassName
+                )}
               />
               <span className="font-normal font-sans text-sm leading-5">
                 {name}
