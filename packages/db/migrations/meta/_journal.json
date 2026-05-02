@@ -232,6 +232,13 @@
       "when": 1777408398343,
       "tag": "0032_smart_ulik",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1777709813339,
+      "tag": "0033_late_the_hunter",
+      "breakpoints": true
     }
   ]
 }

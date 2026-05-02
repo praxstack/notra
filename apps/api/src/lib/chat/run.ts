@@ -3,6 +3,7 @@ import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
 import { shouldApplyMarkup } from "@notra/ai/billing/token-pricing";
 import {
+  claimChatSessionForExternalChannel,
   clearLastResponseStopped,
   generateAndSetChatTitle,
   generateChatId,
@@ -81,20 +82,39 @@ export async function runChatMessage({
     thinkingLevel,
     timezone,
     context: inputContext,
+    externalChannelId,
   } = body;
 
-  const chatId = existingChatId ?? generateChatId();
+  let resolvedChatId = existingChatId;
+  let isNewChat = resolvedChatId === null;
+  let externalChannelClaimed = false;
 
-  if (existingChatId) {
-    const existingChat = await getChatSession(organizationId, chatId);
+  if (resolvedChatId) {
+    const existingChat = await getChatSession(organizationId, resolvedChatId);
     if (!existingChat) {
       return c.json({ error: "Chat not found" }, 404);
     }
+  } else if (
+    externalChannelId &&
+    externalChannelId.source !== "dashboard" &&
+    externalChannelId.id
+  ) {
+    const claim = await claimChatSessionForExternalChannel(
+      organizationId,
+      externalChannelId.source,
+      externalChannelId.id,
+      generateChatId()
+    );
+    resolvedChatId = claim.chatId;
+    isNewChat = claim.created;
+    externalChannelClaimed = true;
   }
 
-  const existingMessages = existingChatId
-    ? await loadChatHistory(organizationId, chatId)
-    : [];
+  const chatId = resolvedChatId ?? generateChatId();
+
+  const existingMessages = isNewChat
+    ? []
+    : await loadChatHistory(organizationId, chatId);
 
   const userMessage: UIMessage = {
     id: nanoid(),
@@ -110,8 +130,16 @@ export async function runChatMessage({
     inputContext ??
     deriveContextFromValidatedIntegrations(validatedIntegrations);
 
+  const externalChannelIdForInsert =
+    isNewChat && !externalChannelClaimed ? externalChannelId : undefined;
+
   const [historySaved] = await Promise.all([
-    replaceChatHistory(organizationId, chatId, messages),
+    replaceChatHistory(
+      organizationId,
+      chatId,
+      messages,
+      externalChannelIdForInsert
+    ),
     setActiveChatStream(organizationId, chatId, userMessage.id),
     clearLastResponseStopped(organizationId, chatId),
   ]);
@@ -138,5 +166,6 @@ export async function runChatMessage({
     thinkingLevel,
     timezone,
     abortSignal: c.req.raw.signal,
+    externalChannelId,
   });
 }
