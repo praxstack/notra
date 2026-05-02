@@ -3,7 +3,6 @@ import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
 import { shouldApplyMarkup } from "@notra/ai/billing/token-pricing";
 import {
-  clearActiveChatStream,
   clearLastResponseStopped,
   generateAndSetChatTitle,
   generateChatId,
@@ -14,8 +13,6 @@ import {
 } from "@notra/ai/chat/history";
 import { getStandaloneChatIntegrations } from "@notra/ai/chat/integrations-cache";
 import type { useLogger } from "@notra/ai/evlog";
-import { getWorkflowClient } from "@notra/ai/qstash/client";
-import { getBaseUrl } from "@notra/ai/qstash/triggers";
 import type { UIMessage } from "ai";
 import type { CheckResponse } from "autumn-js";
 import type { Context } from "hono";
@@ -23,7 +20,6 @@ import { nanoid } from "nanoid";
 import type { sendChatMessageRequestSchema } from "../../schemas/chats";
 import { deriveContextFromValidatedIntegrations } from "./context";
 import { createDirectStandaloneChatResponse } from "./direct-stream";
-import { canUseUpstashWorkflowStreaming } from "./streaming";
 
 type SendChatMessageInput = z.infer<typeof sendChatMessageRequestSchema>;
 
@@ -128,46 +124,19 @@ export async function runChatMessage({
     await generateAndSetChatTitle(organizationId, chatId, userMessage);
   }
 
-  try {
-    if (!canUseUpstashWorkflowStreaming()) {
-      return await createDirectStandaloneChatResponse({
-        organizationId,
-        chatId,
-        messages,
-        context,
-        validatedIntegrations,
-        useMarkup,
-        requestId,
-        log,
-        model,
-        enableThinking,
-        thinkingLevel,
-        timezone,
-        abortSignal: c.req.raw.signal,
-      });
-    }
-
-    await getWorkflowClient().trigger({
-      url: `${getBaseUrl()}/internal/workflows/chat`,
-      body: {
-        requestId,
-        organizationId,
-        chatId,
-        userId: organizationId,
-        userEmail: null,
-        context,
-        useMarkup,
-        model,
-        enableThinking,
-        thinkingLevel,
-        timezone,
-      },
-    });
-
-    c.header("X-Chat-Id", chatId);
-    return c.json({ ok: true, chatId, streamId: userMessage.id }, 202);
-  } catch (error) {
-    await clearActiveChatStream(organizationId, chatId).catch(() => undefined);
-    throw error;
-  }
+  return await createDirectStandaloneChatResponse({
+    organizationId,
+    chatId,
+    messages,
+    context,
+    validatedIntegrations,
+    useMarkup,
+    requestId,
+    log,
+    model,
+    enableThinking,
+    thinkingLevel,
+    timezone,
+    abortSignal: c.req.raw.signal,
+  });
 }

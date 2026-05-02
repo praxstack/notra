@@ -12,7 +12,6 @@ import {
   getChatParamsSchema,
   getChatResponseSchema,
   getChatsResponseSchema,
-  sendChatMessageQueuedResponseSchema,
   sendChatMessageRequestSchema,
   sendChatParamsSchema,
 } from "../schemas/chats";
@@ -168,13 +167,6 @@ const streamingChatResponses = {
       "text/event-stream": {
         schema: { type: "string" as const },
       },
-    },
-  },
-  202: {
-    description:
-      "Queued for async streaming via Upstash workflow. Subscribe to the realtime channel `chat:<orgId>:<chatId>:<streamId>` to receive chunks.",
-    content: {
-      "application/json": { schema: sendChatMessageQueuedResponseSchema },
     },
   },
   400: errorResponse("Invalid request body"),

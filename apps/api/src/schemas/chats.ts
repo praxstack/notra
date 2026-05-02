@@ -35,14 +35,6 @@ export const sendChatMessageRequestSchema = z
   })
   .openapi("SendChatMessageRequest");
 
-export const sendChatMessageQueuedResponseSchema = z
-  .object({
-    ok: z.literal(true),
-    chatId: z.string(),
-    streamId: z.string(),
-  })
-  .openapi("SendChatMessageQueuedResponse");
-
 export const sendChatParamsSchema = z.object({
   chatId: z
     .string()
