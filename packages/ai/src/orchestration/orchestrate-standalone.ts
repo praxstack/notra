@@ -260,10 +260,17 @@ function getLastUserMessage(messages: UIMessage[]): string {
   return "";
 }
 
+// Tool-part states that are "complete" from the user's perspective and must
+// survive history trimming before `convertToModelMessages` runs. Missing
+// `approval-responded` here previously dropped the user's approval payload,
+// leaving the conversation ending on an assistant turn — which Bedrock-routed
+// Anthropic (Sonnet 4.6 / Opus 4.7 via AI Gateway) rejects with
+// "This model does not support assistant message prefill".
 const TERMINAL_TOOL_STATES = new Set([
   "output-available",
   "output-error",
   "output-denied",
+  "approval-responded",
 ]);
 
 const STRIP_TAIL_SCAN_DEPTH = 2;
