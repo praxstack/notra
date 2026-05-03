@@ -5,7 +5,6 @@ import { Input } from "@notra/ui/components/ui/input";
 import { Label } from "@notra/ui/components/ui/label";
 import { useForm } from "@tanstack/react-form";
 import { Loader2Icon } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
@@ -39,7 +38,6 @@ interface WorkspaceFormProps {
 }
 
 export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
-  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isResuming = !!existingOrg;
 
@@ -96,14 +94,20 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
           await setLastVisitedOrganization(data.slug);
         }
 
-        await triggerOnboardingBrandAnalysis({
+        const brandAnalysisPromise = triggerOnboardingBrandAnalysis({
           organizationId,
           websiteUrl: parsed.data.websiteUrl,
           name: parsed.data.name,
         });
 
-        router.push("/onboarding/socials");
-        router.refresh();
+        brandAnalysisPromise.catch((error) => {
+          console.error("[Onboarding] Background brand analysis failed", {
+            organizationId,
+            error,
+          });
+        });
+
+        window.location.assign("/onboarding/socials");
         // Keep button in submitting state during navigation
         return;
       } catch (err) {

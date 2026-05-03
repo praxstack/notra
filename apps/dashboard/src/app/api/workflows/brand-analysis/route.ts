@@ -206,7 +206,11 @@ export const { POST } = serve<BrandAnalysisPayload>(
 
               if (
                 detailMessages.includes("Invalid URL") ||
-                error.message?.includes("Invalid URL")
+                detailMessages.some((message) =>
+                  message.includes("valid top-level domain")
+                ) ||
+                error.message?.includes("Invalid URL") ||
+                error.message?.includes("valid top-level domain")
               ) {
                 return { success: false, error: "Invalid URL", fatal: true };
               }
