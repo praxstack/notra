@@ -25,6 +25,14 @@ import {
   CardHeader,
 } from "@notra/ui/components/ui/card";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@notra/ui/components/ui/command";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -36,8 +44,14 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@notra/ui/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@notra/ui/components/ui/popover";
 import { ClaudeAiIcon } from "@notra/ui/components/ui/svgs/claudeAiIcon";
 import { Github } from "@notra/ui/components/ui/svgs/github";
+import { KimiIcon } from "@notra/ui/components/ui/svgs/kimiIcon";
 import { Linear } from "@notra/ui/components/ui/svgs/linear";
 import { Notra } from "@notra/ui/components/ui/svgs/notra";
 import { Openai } from "@notra/ui/components/ui/svgs/openai";
@@ -135,6 +149,20 @@ export const AVAILABLE_MODELS = [
     pricing: "$2.50 input / $15 output per 1M",
     provider: "openai",
   },
+  {
+    id: "openai/gpt-5.5",
+    label: "GPT-5.5",
+    description: "Latest OpenAI flagship",
+    pricing: "$5 input / $30 output per 1M",
+    provider: "openai",
+  },
+  {
+    id: "moonshotai/kimi-k2.6",
+    label: "Kimi K2.6",
+    description: "Long-context Moonshot model",
+    pricing: "$0.95 input / $4 output per 1M",
+    provider: "moonshotai",
+  },
 ] as const;
 
 type ModelProvider = (typeof AVAILABLE_MODELS)[number]["provider"];
@@ -156,6 +184,9 @@ export function ModelIcon({
   }
   if (provider === "auto") {
     return <Notra className={className} />;
+  }
+  if (provider === "moonshotai") {
+    return <KimiIcon className={className} />;
   }
   return <ClaudeAiIcon className={className} />;
 }
@@ -320,6 +351,7 @@ export function ChatInputAdvanced({
   const currentModel =
     AVAILABLE_MODELS.find((availableModel) => availableModel.id === model) ??
     AVAILABLE_MODELS[0];
+  const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isEmpty, setIsEmpty] = useState(true);
   const [internalError, setInternalError] = useState<string | null>(null);
@@ -1765,8 +1797,11 @@ export function ChatInputAdvanced({
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger
+                <Popover
+                  onOpenChange={setIsModelPickerOpen}
+                  open={isModelPickerOpen}
+                >
+                  <PopoverTrigger
                     render={
                       <Button
                         className="bg-muted hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
@@ -1783,55 +1818,63 @@ export function ChatInputAdvanced({
                       />
                       {currentModel.label}
                     </div>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel>Model</DropdownMenuLabel>
-                    </DropdownMenuGroup>
-                    {AVAILABLE_MODELS.map((m) => (
-                      <DropdownMenuItem
-                        key={m.id}
-                        onClick={() => {
-                          if (
-                            m.id === "openai/gpt-5.4" &&
-                            attachmentsRef.current.some(
-                              (attachment) =>
-                                !isAllowedChatMimeType(
-                                  attachment.mediaType,
-                                  m.id
-                                )
-                            )
-                          ) {
-                            toast.error(
-                              getUnsupportedAttachmentMessage(m.label)
-                            );
-                            return;
-                          }
-                          onModelChange?.(m.id);
-                        }}
-                      >
-                        <ModelIcon
-                          className="size-4 shrink-0"
-                          provider={m.provider}
-                        />
-                        <div className="flex min-w-0 flex-col">
-                          <span className="text-sm">{m.label}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {m.description}
-                          </span>
-                          <span className="text-[0.625rem] text-muted-foreground/70">
-                            {m.pricing}
-                          </span>
-                        </div>
-                        {model === m.id && (
-                          <span className="ml-auto shrink-0 text-primary text-xs">
-                            ✓
-                          </span>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-72 p-0"
+                    sideOffset={6}
+                  >
+                    <Command>
+                      <CommandInput placeholder="Search models..." />
+                      <CommandList>
+                        <CommandEmpty>No models found.</CommandEmpty>
+                        <CommandGroup>
+                          {AVAILABLE_MODELS.map((m) => (
+                            <CommandItem
+                              data-checked={model === m.id}
+                              key={m.id}
+                              keywords={[m.label, m.provider, m.description]}
+                              onSelect={() => {
+                                if (
+                                  m.id === "openai/gpt-5.4" &&
+                                  attachmentsRef.current.some(
+                                    (attachment) =>
+                                      !isAllowedChatMimeType(
+                                        attachment.mediaType,
+                                        m.id
+                                      )
+                                  )
+                                ) {
+                                  toast.error(
+                                    getUnsupportedAttachmentMessage(m.label)
+                                  );
+                                  return;
+                                }
+                                onModelChange?.(m.id);
+                                setIsModelPickerOpen(false);
+                              }}
+                              value={m.id}
+                            >
+                              <ModelIcon
+                                className="size-4 shrink-0"
+                                provider={m.provider}
+                              />
+                              <div className="flex min-w-0 flex-col">
+                                <span className="text-sm">{m.label}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  {m.description}
+                                </span>
+                                <span className="text-[0.625rem] text-muted-foreground/70">
+                                  {m.pricing}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger

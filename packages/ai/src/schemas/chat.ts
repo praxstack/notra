@@ -10,6 +10,8 @@ export const chatModelSchema = z.enum([
   "anthropic/claude-sonnet-4.6",
   "anthropic/claude-haiku-4.5",
   "openai/gpt-5.4",
+  "openai/gpt-5.5",
+  "moonshotai/kimi-k2.6",
 ]);
 
 export const thinkingLevelSchema = z.enum(["off", "low", "medium", "high"]);
