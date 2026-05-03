@@ -1,7 +1,6 @@
 import { createModel } from "@notra/ai/model";
 import type { AILogTarget } from "@notra/ai/observability";
 import { getContentEditorChatPrompt } from "@notra/ai/prompts/content-editor";
-import { buildExperimentalTelemetry } from "@notra/ai/utils/tcc";
 import type {
   ResolveIntegrationContext,
   ResolveLinearIntegrationContext,
@@ -11,6 +10,7 @@ import type {
   OrchestrateInput,
   OrchestrateResult,
 } from "@notra/ai/types/orchestration";
+import { buildExperimentalTelemetry } from "@notra/ai/utils/tcc";
 import {
   convertToModelMessages,
   type LanguageModelUsage,

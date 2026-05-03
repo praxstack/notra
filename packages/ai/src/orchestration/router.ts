@@ -5,15 +5,15 @@ import {
 } from "@notra/ai/observability";
 import { ROUTING_PROMPT } from "@notra/ai/prompts/router";
 import { routingDecisionSchema } from "@notra/ai/schemas/orchestration";
-import {
-  buildExperimentalTelemetry,
-  type TccMetadata,
-} from "@notra/ai/utils/tcc";
 import type {
   AutoSelection,
   RoutingDecision,
   RoutingResult,
 } from "@notra/ai/types/orchestration";
+import {
+  buildExperimentalTelemetry,
+  type TccMetadata,
+} from "@notra/ai/utils/tcc";
 import { generateText, Output } from "ai";
 
 const MODELS = {
