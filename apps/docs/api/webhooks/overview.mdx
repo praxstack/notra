@@ -1,29 +1,25 @@
 ---
 title: "Webhooks Overview"
-description: "Learn how to receive real-time notifications from GitHub and Linear using webhooks"
+description: "Learn how to receive real-time notifications from GitHub using webhooks"
 ---
 
 Webhooks allow Notra to receive real-time notifications when events occur in your connected integrations. Instead of polling for changes, webhooks push data to Notra immediately when events happen.
 
 ## How Webhooks Work
 
-When you connect an integration (like GitHub or Linear) to Notra, webhooks are automatically configured to send event notifications to your organization's webhook endpoint:
+When you connect a GitHub integration to Notra, webhooks are automatically configured to send event notifications to your organization's webhook endpoint:
 
 ```text
-POST https://api.notra.ai/api/webhooks/{provider}/{organizationId}/{integrationId}/{repositoryId}
+POST https://api.usenotra.com/api/webhooks/{provider}/{organizationId}/{integrationId}/{repositoryId}
 ```
 
 ### Supported Providers
 
-Notra currently supports webhooks from the following providers:
+Notra currently supports webhooks from GitHub. Other integrations (such as Linear) connect via direct API access and do not use webhooks.
 
-<CardGroup cols={2}>
+<CardGroup cols={1}>
   <Card title="GitHub" icon="github">
     Receive notifications for pushes, releases, and more
-  </Card>
-
-  <Card title="Linear" icon="linear">
-    Track issue updates and project changes
   </Card>
 </CardGroup>
 
@@ -62,20 +58,12 @@ GitHub webhooks use HMAC SHA-256 signatures sent in the `X-Hub-Signature-256` he
   Webhook secrets are automatically generated and managed by Notra when you connect an integration. You don't need to manually configure them.
 </Note>
 
-### Linear Signature Verification
-
-Linear webhooks include a `Linear-Signature` header for authentication. Notra validates this signature before processing Linear events.
-
-```http
-Linear-Signature: <signature-value>
-```
-
 ## Setting Up Webhooks
 
 Webhooks are automatically configured when you:
 
-1. **Connect an Integration** - Navigate to your organization settings and connect GitHub or Linear
-2. **Add a Repository** - For GitHub integrations, add specific repositories you want to track
+1. **Connect an Integration** - Navigate to your organization settings and connect GitHub
+2. **Add a Repository** - Add specific repositories you want to track
 3. **Enable Event Triggers** - Configure which events should trigger workflows
 
 <Warning>

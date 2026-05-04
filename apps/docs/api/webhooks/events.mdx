@@ -188,23 +188,6 @@ Sent by GitHub when a webhook is first configured or manually tested.
   Ping events are automatically acknowledged and do not trigger any workflows. They're used solely for connectivity testing.
 </Note>
 
-## Linear Events
-
-Linear webhook support is currently in development. Events are received and logged but not yet fully processed.
-
-### Supported Actions
-
-<Warning>
-  Linear webhooks are acknowledged but event processing is not yet implemented. Check back for updates on Linear event support.
-</Warning>
-
-#### Headers
-
-```http
-Linear-Signature: <signature>
-Content-Type: application/json
-```
-
 ## Event Processing Pipeline
 
 When a webhook event is received, Notra follows this processing pipeline:
