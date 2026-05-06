@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { EMAIL_CONFIG } from "@notra/email/utils/config";
 import { sendDevEmail } from "@notra/email/utils/dev";
