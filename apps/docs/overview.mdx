@@ -3,7 +3,7 @@ title: "Welcome to Notra"
 description: "Turn your team's work into ready-to-publish content with AI-powered automation"
 ---
 
-Notra helps teams transform daily work (merged PRs, closed issues, and Slack conversations) into polished content for changelogs, blog posts, and social media updates.
+Notra helps teams transform daily work, including merged pull requests, releases, commits, and Linear issues, into polished content for changelogs, blog posts, and social media updates.
 
 <img
   src="/images/dashboard/dashboard-light.webp"
@@ -22,7 +22,7 @@ Notra is a SaaS platform that automates content creation by connecting to your t
 
 <CardGroup cols={2}>
   <Card title="Connect your tools" icon="plug">
-    Integrate GitHub, Linear, and Slack to pull product and engineering activity.
+    Integrate GitHub and Linear to pull product and engineering activity. Slack support is planned.
   </Card>
   <Card title="AI-powered analysis" icon="sparkles">
     Automatically identify high-signal updates worth sharing with your audience.
@@ -69,7 +69,7 @@ Notra runs as an event-driven content pipeline that transforms technical activit
 
 <CardGroup cols={3}>
   <Card title="Ingest activity" icon="download">
-    Pull updates from GitHub, Linear, and Slack into a normalized format.
+    Pull updates from GitHub and Linear into a normalized format.
   </Card>
   <Card title="Analyze context" icon="magnifying-glass">
     AI identifies what changed, why it matters, and what's worth sharing.
@@ -86,7 +86,7 @@ Notra runs as an event-driven content pipeline that transforms technical activit
     Adapt output to your preferred tone while keeping technical accuracy.
   </Card>
   <Card title="Review and publish" icon="check">
-    Access ready-to-review content in your dashboard.
+    Access ready-to-review content in your dashboard and copy it for publishing.
   </Card>
 </CardGroup>
 
@@ -104,7 +104,7 @@ Connect the tools your team already uses to automatically track product updates.
     Monitor issue status and project progress.
   </Card>
   <Card title="Slack" icon="slack" href="/integrations/slack">
-    Capture important conversations and announcements.
+    Capture important conversations and announcements. Coming soon.
   </Card>
 </CardGroup>
 
@@ -114,7 +114,7 @@ Set up workflows that run automatically without manual intervention.
 
 <CardGroup cols={2}>
   <Card title="Event-based triggers" icon="bolt" href="/automation/event-based">
-    React to GitHub webhooks and generate content when PRs are merged.
+    React to GitHub webhooks and generate content when releases are published or commits are pushed to the default branch.
   </Card>
   <Card title="Scheduled workflows" icon="clock" href="/automation/scheduled">
     Run daily, weekly, or monthly summaries on a cron schedule.
@@ -135,8 +135,8 @@ Generate multiple content formats from the same source activity.
   <Card title="Social media" icon="share-nodes" href="/content/social-media">
     Twitter and LinkedIn posts optimized for engagement.
   </Card>
-  <Card title="Investor updates" icon="chart-line" href="/content/social-media">
-    Progress summaries for stakeholders and investors.
+  <Card title="Investor updates" icon="chart-line">
+    Planned progress summaries for stakeholders and investors.
   </Card>
 </CardGroup>
 
@@ -167,7 +167,7 @@ Train Notra to write in your unique voice and style.
 
 <AccordionGroup>
   <Accordion title="Automated weekly changelogs" icon="calendar">
-    Set up a **scheduled workflow** that runs every Friday at 5 PM UTC to generate a changelog from the week's merged PRs across all your repositories. Content is automatically created in draft status for review before publishing.
+    Set up a **scheduled workflow** that runs every Friday at 5 PM UTC to generate a changelog from the week's merged PRs across your repositories. Content is created in draft status for review and manual publishing.
   </Accordion>
 
   <Accordion title="Instant release notes" icon="rocket">
@@ -175,11 +175,11 @@ Train Notra to write in your unique voice and style.
   </Accordion>
 
   <Accordion title="Social media pipeline" icon="megaphone">
-    Create **multiple content types** from a single trigger. When a major PR is merged, automatically generate a technical changelog entry, a blog post draft, and Twitter/LinkedIn announcements.
+    Create **multiple content types** from the same source activity. When a release is published, generate a technical changelog entry, a blog post draft, and Twitter/LinkedIn announcements.
   </Accordion>
 
-  <Accordion title="Monthly investor updates" icon="chart-simple">
-    Schedule a **monthly summary** that analyzes activity across all repositories and generates an investor-friendly update highlighting progress, metrics, and key achievements.
+  <Accordion title="Monthly product summaries" icon="chart-simple">
+    Schedule a **monthly summary** that analyzes activity across all repositories and generates a blog post or changelog highlighting shipped work and key achievements.
   </Accordion>
 </AccordionGroup>
 

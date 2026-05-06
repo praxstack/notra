@@ -3,7 +3,7 @@ title: "CLI"
 description: "Manage posts, brand identities, integrations, and schedules from the terminal."
 ---
 
-The Notra CLI gives you scriptable access to your workspace. List and edit posts, queue generation jobs, connect GitHub repos, and manage schedules without leaving your terminal.
+The Notra CLI gives you scriptable access to your workspace when installed. This repository currently does not include a CLI package, so treat these commands as the intended public CLI interface rather than local monorepo commands.
 
 ## Install
 
@@ -186,11 +186,11 @@ Tone options: `Conversational`, `Professional`, `Casual`, `Formal`.
 
 ## Integrations
 
-Connect GitHub, Linear, and Slack as content sources.
+Connect GitHub repositories and manage existing Linear integrations. Slack is planned.
 
 | Command | Description |
 | --- | --- |
-| `notra integrations list` | List GitHub, Linear, and Slack integrations |
+| `notra integrations list` | List GitHub and Linear integrations |
 | `notra integrations github` | Connect a GitHub repository |
 | `notra integrations remove <integrationId>` | Disconnect a GitHub or Linear integration |
 

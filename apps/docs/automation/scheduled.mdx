@@ -53,7 +53,7 @@ Notra uses cron-based scheduling to trigger content generation at your preferred
 
     * Daily LinkedIn posts about product progress
     * End-of-day changelog updates
-    * Daily investor updates during intensive development periods
+    * Daily social posts during intensive development periods
   </Tab>
 
   <Tab title="Weekly">
@@ -70,7 +70,7 @@ Notra uses cron-based scheduling to trigger content generation at your preferred
     * Regular content cadence without overwhelming your audience
     * Weekly progress summaries
     * Consistent social media schedule
-    * Team and stakeholder updates
+    * Team and investor updates
 
     **Example Use Cases:**
 
@@ -102,14 +102,14 @@ Notra uses cron-based scheduling to trigger content generation at your preferred
     **Best For:**
 
     * Comprehensive monthly recaps
-    * Investor and board updates
+    * Investor updates
     * Monthly blog publishing schedules
     * Long-form content about major milestones
 
     **Example Use Cases:**
 
     * Monthly product update blog posts
-    * End-of-month investor reports
+    * End-of-month product recaps
     * Monthly changelog newsletters
 
     <Note>
@@ -155,14 +155,18 @@ Scheduled automation currently supports:
     Customer-facing summaries of features, fixes, and improvements shipped during the time period.
   </Card>
 
+  <Card title="Blog Posts" icon="newspaper">
+    Long-form feature announcements and product updates generated from recent activity.
+  </Card>
+
   <Card title="LinkedIn Posts" icon="linkedin">
     Professional updates about product progress and achievements, optimized for LinkedIn's format.
   </Card>
-</CardGroup>
 
-<Note>
-  More output types (blog posts, investor updates) are coming soon to scheduled automation.
-</Note>
+  <Card title="Twitter Posts" icon="twitter">
+    Short social updates for releases, feature announcements, and product progress.
+  </Card>
+</CardGroup>
 
 ## Configuring Scheduled Triggers
 
@@ -198,7 +202,7 @@ Set up scheduled automation through the Notra dashboard:
   </Step>
 
   <Step title="Configure Output">
-    Select the content type (changelog or LinkedIn post)
+    Select the content type: changelog, blog post, LinkedIn post, or Twitter post
   </Step>
 
   <Step title="Enable Schedule">
@@ -213,7 +217,7 @@ When a schedule triggers content generation, Notra analyzes:
 * **Time Range**: Activity within your configured lookback window
 * **Repositories**: All selected repositories' combined activity
 * **Commits & PRs**: Merged pull requests and commit history
-* **Issues**: Closed issues and significant discussions
+* **Linear issues**: Completed issues from connected Linear workspaces, when selected
 * **Releases**: Published releases during the period
 * **Brand Voice**: Your configured tone, audience, and custom instructions
 
@@ -326,8 +330,8 @@ Logs help you:
     Generate daily summaries for high-velocity teams shipping continuously.
   </Card>
 
-  <Card title="Investor Reports" icon="chart-line">
-    Automate monthly or weekly progress updates for stakeholders.
+  <Card title="Investor Updates" icon="chart-line">
+    Use scheduled blog posts or changelogs as investor-focused product progress updates.
   </Card>
 </CardGroup>
 
@@ -355,7 +359,7 @@ Logs help you:
 
     * Weekly changelog for customers
     * Weekly LinkedIn post for general audience
-    * Monthly investor update
+    * Monthly blog post for investors
   </Accordion>
 
   <Accordion title="Review Generated Content">

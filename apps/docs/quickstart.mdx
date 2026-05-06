@@ -47,7 +47,7 @@ Notra generates content from GitHub activity like merged pull requests, releases
 
 <Steps>
   <Step title="Navigate to Integrations">
-    From your dashboard, go to **Integrations** in the sidebar. You'll see a list of available integrations including GitHub, Linear, and Slack.
+    From your dashboard, go to **Integrations** in the sidebar. You'll see available integrations including GitHub and Linear. Slack is listed as coming soon.
   </Step>
 
   <Step title="Click Connect on GitHub">
@@ -223,7 +223,6 @@ Now that you've connected GitHub and configured your brand, you're ready to gene
         - Blog Post
         - Twitter Post
         - LinkedIn Post
-        - Investor Update
       </Step>
 
       <Step title="Set lookback window">
@@ -261,11 +260,10 @@ Now that you've connected GitHub and configured your brand, you're ready to gene
 
       <Step title="Choose event types">
         Select which GitHub events should trigger content generation:
-        - **Pull Request Merged**: When a PR is merged
         - **Release Published**: When a new release is created
-        - **Push to Branch**: When commits are pushed
+        - **Push to default branch**: When commits are pushed to the default branch
 
-        Or leave empty to trigger on **all events**.
+        Select release, push, or both.
       </Step>
 
       <Step title="Select target repositories">
@@ -273,7 +271,7 @@ Now that you've connected GitHub and configured your brand, you're ready to gene
       </Step>
 
       <Step title="Choose output type">
-        Select what content to generate when the event occurs (Changelog, Blog Post, etc.).
+        Select what content to generate when the event occurs: Changelog, Blog Post, Twitter Post, or LinkedIn Post.
       </Step>
 
       <Step title="Save event trigger">
@@ -299,7 +297,7 @@ Once content is generated (either from a schedule running or an event trigger), 
   <Step title="Browse content">
     Content is organized by date with the most recent posts first. You can:
     - Switch between **Grid view** and **Table view**
-    - Filter by content type (Changelog, Blog Post, etc.)
+    - Filter by content type
     - See post status (Draft or Published)
   </Step>
 
@@ -331,7 +329,7 @@ Once content is generated (either from a schedule running or an event trigger), 
 
 <CardGroup cols={2}>
   <Card title="Set up more integrations" icon="plug" href="/integrations/linear">
-    Connect Linear, Framer, and other sources to pull activity from more places.
+    Connect Linear for issue context. Framer and other publishing destinations are planned.
   </Card>
 
   <Card title="Connect AI agents" icon="sparkles" href="/devtools/mcp">
@@ -383,19 +381,19 @@ Once content is generated (either from a schedule running or an event trigger), 
     **Result:** When you publish a release on GitHub, Notra generates a blog post draft and social media posts for review.
   </Accordion>
 
-  <Accordion title="Monthly investor update" icon="chart-line">
-    **Goal:** Generate a monthly summary of product progress for investors and stakeholders.
+  <Accordion title="Monthly product recap" icon="chart-line">
+    **Goal:** Generate a monthly summary of product progress for customers or investors.
 
     **Setup:**
     1. Go to **Automation → Schedules**
-    2. Create a schedule named "Monthly Investor Update"
+    2. Create a schedule named "Monthly Product Recap"
     3. Set frequency to **Monthly**, day to **1** (first of month), time to **9:00 AM UTC**
     4. Select all repositories as targets
-    5. Choose **Investor Update** as output type
+    5. Choose **Blog Post** or **Changelog** as output type
     6. Set lookback window to **30 days**
     7. Save and enable
 
-    **Result:** On the first of every month, Notra generates a high-level summary of the previous month's achievements, features shipped, and progress metrics.
+    **Result:** On the first of every month, Notra generates a summary of the previous month's achievements, features shipped, and progress.
   </Accordion>
 </AccordionGroup>
 

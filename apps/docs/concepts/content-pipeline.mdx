@@ -25,8 +25,7 @@ The pipeline begins when Notra receives activity from your connected systems.
 * Merged pull requests on main/default branch
 * New releases and version tags
 * Commit batches from push events
-* Issue closures (Linear integration)
-* Notable Slack conversations (Slack integration)
+* Completed issues from connected Linear workspaces
 
 <Info>
   Notra only processes activity from repositories and channels you've explicitly connected. The platform uses integration IDs to enforce strict access control.
@@ -124,7 +123,8 @@ With analyzed context in hand, Notra produces structured content using specializ
 
 * **Changelogs**: Technical release notes organized by category
 * **LinkedIn posts**: Social-friendly updates highlighting key improvements
-* **Blog posts** (roadmap): Long-form feature announcements and stories
+* **Blog posts**: Long-form feature announcements and stories
+* **Twitter posts**: Short social updates
 
 **Agent workflow for changelog generation:**
 
@@ -219,10 +219,10 @@ The final step stores polished content in your dashboard.
 **What happens at this stage:**
 
 * Draft is saved to the database with metadata
-* Content type (changelog, linkedin\_post) is recorded
+* Content type (changelog, blog\_post, linkedin\_post, or twitter\_post) is recorded
 * Source repositories and timeframe are attached
 * Draft appears immediately in your dashboard
-* You receive notification that content is ready for review
+* The dashboard shows the content as ready for review
 
 **Dashboard capabilities:**
 
@@ -272,7 +272,7 @@ The pipeline includes robust error handling:
 
 * AI omits details it can't verify rather than guessing
 * Tools are called to fill gaps when needed
-* Generic descriptions used when specifics unavailable
+* Generic descriptions are avoided when specifics are unavailable
 
 ## Performance and Scaling
 

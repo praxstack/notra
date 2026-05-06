@@ -11,11 +11,11 @@ Notra operates as an event-driven content pipeline that transforms engineering a
 
 <Steps>
   <Step title="Connect your tools">
-    Link GitHub, Linear, and Slack to Notra. The platform authenticates with OAuth and sets up webhooks to receive real-time activity updates from your integrated systems.
+    Link GitHub and Linear to Notra. GitHub repositories can send webhook events, and Linear workspaces provide issue context. Slack support is planned.
   </Step>
 
   <Step title="Activity ingestion">
-    Notra pulls updates from connected tools like merged pull requests, closed issues, and important conversations. All activity is normalized into a common internal format for consistent processing.
+    Notra pulls updates from connected tools like merged pull requests, releases, commits, and completed Linear issues. Activity is normalized into a common internal format for consistent processing.
   </Step>
 
   <Step title="AI analysis">
@@ -106,7 +106,7 @@ graph LR
 
 **Key components:**
 
-* **Connected Tools**: GitHub, Linear, Slack providing raw activity data
+* **Connected Tools**: GitHub and Linear provide raw activity data. Slack is planned.
 * **Activity Ingestion**: Normalizes different data formats into a unified structure
 * **AI Analysis**: Evaluates significance and extracts key information
 * **Content Generator**: Creates structured drafts using specialized agents
