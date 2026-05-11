@@ -787,7 +787,7 @@ export function CreateContentDialog({
       <ResponsiveDialog onOpenChange={handleOpenChange} open={open}>
         <ResponsiveDialogTrigger
           render={
-            <Button className="gap-1.5" disabled={!organizationId} size="sm">
+            <Button className="gap-1.5" disabled={!organizationId}>
               <HugeiconsIcon className="size-4" icon={Add01Icon} />
               Create Content
               <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
