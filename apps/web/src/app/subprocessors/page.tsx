@@ -58,7 +58,7 @@ const subprocessors = [
     website: "https://stripe.com",
   },
   {
-    name: "DataBuddy",
+    name: "databuddy",
     purpose: "Cookie-free product analytics and attribution",
     location: "European Union",
     website: "https://databuddy.cc",
