@@ -1693,6 +1693,10 @@ function StandaloneChatPageClient({
               onDeny={handleDeny}
               onPersist={handlePersist}
               onRegenerate={handleRegenerate}
+              organization={{
+                name: organization?.name ?? "Your Name",
+                logo: organization?.logo ?? null,
+              }}
               persistedStatus={persistedStatus}
               state={previewState}
               title={title}
@@ -1709,6 +1713,10 @@ function StandaloneChatPageClient({
               onDeny={handleDeny}
               onPersist={handlePersist}
               onRegenerate={handleRegenerate}
+              organization={{
+                name: organization?.name ?? "Your Name",
+                logo: organization?.logo ?? null,
+              }}
               persistedStatus={persistedStatus}
               state={previewState}
               title={title}
