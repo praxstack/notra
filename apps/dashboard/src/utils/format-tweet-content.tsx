@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  TWEET_CASHTAG_REGEX,
   TWEET_MENTION_REGEX,
   TWEET_TOKEN_REGEX,
   TWEET_URL_REGEX,
@@ -16,6 +17,11 @@ function getTweetTokenUrl(token: string): string | undefined {
     TWEET_MENTION_REGEX.lastIndex = 0;
     return `https://x.com/${token.slice(1)}`;
   }
+  if (TWEET_CASHTAG_REGEX.test(token)) {
+    TWEET_CASHTAG_REGEX.lastIndex = 0;
+    return `https://x.com/search?q=%24${encodeURIComponent(token.slice(1))}&src=cashtag_click`;
+  }
+  TWEET_CASHTAG_REGEX.lastIndex = 0;
   TWEET_MENTION_REGEX.lastIndex = 0;
   return `https://x.com/hashtag/${token.slice(1)}`;
 }
