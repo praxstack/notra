@@ -21,7 +21,7 @@ COPY packages/typescript-config/package.json ./packages/typescript-config/packag
 COPY packages/ui/package.json ./packages/ui/package.json
 COPY packages/utils/package.json ./packages/utils/package.json
 
-# Install all workspace deps (frozen lockfile for reproducibility)
+# Install all workspace deps
 RUN bun install
 
 # ─── Stage 2: build ──────────────────────────────────────────────────────────
