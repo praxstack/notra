@@ -2,6 +2,7 @@ import { buttonVariants } from "@notra/ui/components/ui/button";
 import { Discord } from "@notra/ui/components/ui/svgs/discord";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
+import { Reddit } from "@notra/ui/components/ui/svgs/reddit";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
 import { cn } from "@notra/ui/lib/utils";
 import Link from "next/link";
@@ -73,6 +74,15 @@ export default function FooterSection() {
               target="_blank"
             >
               <Discord className="size-5" />
+            </Link>
+            <Link
+              aria-label="Visit Notra on Reddit"
+              className={buttonVariants({ size: "icon", variant: "ghost" })}
+              href={SOCIAL_LINKS.reddit}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <Reddit className="size-5" />
             </Link>
           </div>
         </div>

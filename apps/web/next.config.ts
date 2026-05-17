@@ -74,6 +74,11 @@ const nextConfig: NextConfig = {
       destination: "https://github.com/usenotra/notra",
       permanent: false,
     },
+    {
+      source: "/reddit",
+      destination: "https://www.reddit.com/r/notra/",
+      permanent: false,
+    },
   ],
   headers: async () => [
     {

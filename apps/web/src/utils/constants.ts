@@ -9,6 +9,7 @@ export const SOCIAL_LINKS = {
   linkedin: "/linkedin",
   github: "/github",
   discord: "/discord",
+  reddit: "/reddit",
 } as const;
 
 export const NOTRA_LOGO_PATH = "/notra-mark.svg";
