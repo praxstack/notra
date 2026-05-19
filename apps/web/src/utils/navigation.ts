@@ -85,6 +85,11 @@ export const FOOTER_PRODUCT_LINKS = [
     label: "Contributors",
   },
   {
+    href: "https://www.notrareviews.com/",
+    label: "Reviews",
+    target: "_blank",
+  },
+  {
     href: "https://docs.usenotra.com",
     label: "Docs",
     rel: "noopener noreferrer",
