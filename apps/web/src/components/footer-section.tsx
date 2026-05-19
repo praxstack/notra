@@ -8,6 +8,7 @@ import { cn } from "@notra/ui/lib/utils";
 import Link from "next/link";
 import { AI_SUMMARY_LINKS } from "@/utils/ai-summary-links";
 import {
+  FOOTER_FREE_TOOL_LINKS,
   FOOTER_INTEGRATION_LINKS,
   FOOTER_PRODUCT_LINKS,
   FOOTER_TOOL_LINKS,
@@ -119,6 +120,23 @@ export default function FooterSection() {
                   key={link.href}
                   rel={link.rel}
                   target={link.target}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex min-w-30 flex-1 flex-col items-start justify-start gap-3">
+            <div className="font-medium font-sans text-foreground/50 text-sm leading-5">
+              Free Tools
+            </div>
+            <div className="flex flex-col items-start justify-end gap-2">
+              {FOOTER_FREE_TOOL_LINKS.map((link) => (
+                <Link
+                  className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                  href={link.href}
+                  key={link.href}
                 >
                   {link.label}
                 </Link>

@@ -44,6 +44,13 @@ export const FOOTER_TOOL_LINKS = [
   },
 ] as const;
 
+export const FOOTER_FREE_TOOL_LINKS = [
+  {
+    href: "/twitter-thread-creator",
+    label: "X Thread Builder",
+  },
+] as const;
+
 export const FOOTER_INTEGRATION_LINKS = [
   {
     href: "https://github.com",
