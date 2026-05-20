@@ -2,6 +2,7 @@
 
 import {
   Add01Icon,
+  AlertCircleIcon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
   Loading03Icon,
@@ -18,6 +19,7 @@ import {
 import { Button } from "@notra/ui/components/ui/button";
 import { Kbd } from "@notra/ui/components/ui/kbd";
 import { cn } from "@notra/ui/lib/utils";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -34,7 +36,10 @@ import type {
   OnDemandContentType,
   SelectedItems,
 } from "@/schemas/content";
-import type { LookbackWindow } from "@/schemas/integrations";
+import {
+  type CreateContentFormValues,
+  createContentFormSchema,
+} from "@/schemas/content/create-content-form";
 import type { IntegrationOption, WizardStep } from "@/types/content/create";
 import type { PrSelection, ReleaseSelection } from "@/types/content/preview";
 import {
@@ -62,6 +67,16 @@ const STEP_LABELS: Record<WizardStep, string> = {
   identities: "Identity",
 };
 
+function getDefaultContentFormValues(): CreateContentFormValues {
+  return {
+    formats: [],
+    repositoryIds: [],
+    brandVoiceIds: [],
+    lookbackWindow: "last_7_days",
+    dataPoints: DEFAULT_DATA_POINTS,
+  };
+}
+
 export function CreateContentDialog({
   organizationId,
 }: CreateContentDialogProps) {
@@ -80,17 +95,37 @@ export function CreateContentDialog({
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<WizardStep>("formats");
-  const [selectedFormats, setSelectedFormats] = useState<OnDemandContentType[]>(
-    []
+
+  const submitHandlerRef = useRef<
+    (value: CreateContentFormValues) => Promise<void>
+  >(async () => {
+    return;
+  });
+
+  const form = useForm({
+    defaultValues: getDefaultContentFormValues(),
+    validators: {
+      onSubmit: ({ value }) => {
+        const result = createContentFormSchema.safeParse(value);
+        if (!result.success) {
+          return result.error.issues[0]?.message ?? "Form is invalid";
+        }
+        return;
+      },
+    },
+    onSubmit: async ({ value }) => {
+      await submitHandlerRef.current(value);
+    },
+  });
+
+  const selectedFormats = useStore(form.store, (s) => s.values.formats);
+  const selectedRepoIds = useStore(form.store, (s) => s.values.repositoryIds);
+  const selectedBrandVoiceIds = useStore(
+    form.store,
+    (s) => s.values.brandVoiceIds
   );
-  const [selectedRepoIds, setSelectedRepoIds] = useState<string[]>([]);
-  const [selectedBrandVoiceIds, setSelectedBrandVoiceIds] = useState<string[]>(
-    []
-  );
-  const [lookbackWindow, setLookbackWindow] =
-    useState<LookbackWindow>("last_7_days");
-  const [dataPoints, setDataPoints] =
-    useState<ContentDataPointSettings>(DEFAULT_DATA_POINTS);
+  const lookbackWindow = useStore(form.store, (s) => s.values.lookbackWindow);
+  const dataPoints = useStore(form.store, (s) => s.values.dataPoints);
 
   const [selectedCommitKeys, setSelectedCommitKeys] = useState<Set<string>>(
     new Set()
@@ -373,20 +408,17 @@ export function CreateContentDialog({
 
   const resetWizard = useCallback(() => {
     setStep("formats");
-    setSelectedFormats([]);
-    setSelectedRepoIds([]);
-    setSelectedBrandVoiceIds([]);
-    setLookbackWindow("last_7_days");
-    setDataPoints(DEFAULT_DATA_POINTS);
+    form.reset();
     setSelectedCommitKeys(new Set());
     setSelectedPrKeys(new Set());
     setSelectedReleaseKeys(new Set());
     setSelectedLinearKeys(new Set());
     setSearchQuery("");
+    setAttemptedAdvance(false);
     lastInitializedParamsRef.current = "";
     selectionsTouchedRef.current = false;
     integrationsInitializedRef.current = false;
-  }, []);
+  }, [form]);
 
   useEffect(() => {
     if (
@@ -397,8 +429,11 @@ export function CreateContentDialog({
       return;
     }
     integrationsInitializedRef.current = true;
-    setSelectedRepoIds(integrationOptions.map((opt) => opt.value));
-  }, [integrationOptions, selectedRepoIds.length]);
+    form.setFieldValue(
+      "repositoryIds",
+      integrationOptions.map((opt) => opt.value)
+    );
+  }, [integrationOptions, selectedRepoIds.length, form]);
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -419,32 +454,61 @@ export function CreateContentDialog({
     [addRepoMode, resetWizard]
   );
 
-  const toggleFormat = useCallback((format: OnDemandContentType) => {
-    setSelectedFormats((prev) =>
-      prev.includes(format)
-        ? prev.filter((f) => f !== format)
-        : [...prev, format]
-    );
-  }, []);
+  const toggleFormat = useCallback(
+    (format: OnDemandContentType) => {
+      const current = form.state.values.formats;
+      form.setFieldValue(
+        "formats",
+        current.includes(format)
+          ? current.filter((f) => f !== format)
+          : [...current, format]
+      );
+    },
+    [form]
+  );
 
   const handleDataPointChange = useCallback(
     (key: keyof ContentDataPointSettings, value: boolean) => {
-      setDataPoints((prev) => ({ ...prev, [key]: value }));
+      form.setFieldValue("dataPoints", {
+        ...form.state.values.dataPoints,
+        [key]: value,
+      });
     },
-    []
+    [form]
   );
 
-  const toggleRepoId = useCallback((value: string) => {
-    setSelectedRepoIds((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    );
-  }, []);
+  const handleLookbackChange = useCallback(
+    (window: CreateContentFormValues["lookbackWindow"]) => {
+      form.setFieldValue("lookbackWindow", window);
+    },
+    [form]
+  );
 
-  const toggleVoiceId = useCallback((id: string) => {
-    setSelectedBrandVoiceIds((prev) =>
-      prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
-    );
-  }, []);
+  const toggleRepoId = useCallback(
+    (value: string) => {
+      const current = form.state.values.repositoryIds;
+      form.setFieldValue(
+        "repositoryIds",
+        current.includes(value)
+          ? current.filter((v) => v !== value)
+          : [...current, value]
+      );
+    },
+    [form]
+  );
+
+  const toggleVoiceId = useCallback(
+    (id: string) => {
+      const current = form.state.values.brandVoiceIds;
+      form.setFieldValue(
+        "brandVoiceIds",
+        current.includes(id)
+          ? current.filter((v) => v !== id)
+          : [...current, id]
+      );
+    },
+    [form]
+  );
 
   const eventCounts = useMemo(() => {
     let total = 0;
@@ -565,16 +629,40 @@ export function CreateContentDialog({
     eventCounts,
   ]);
 
+  const [attemptedAdvance, setAttemptedAdvance] = useState(false);
+
   const goNext = useCallback(() => {
     const idx = STEP_ORDER.indexOf(step);
-    if (idx < STEP_ORDER.length - 1) {
-      setStep(STEP_ORDER[idx + 1] as WizardStep);
+    if (idx >= STEP_ORDER.length - 1) {
+      return;
     }
-  }, [step]);
+    if (step === "formats" && selectedFormats.length === 0) {
+      setAttemptedAdvance(true);
+      return;
+    }
+    if (step === "activity") {
+      if (isLoadingPreview) {
+        return;
+      }
+      if (selectedRepoIds.length === 0 || eventCounts.selected === 0) {
+        setAttemptedAdvance(true);
+        return;
+      }
+    }
+    setAttemptedAdvance(false);
+    setStep(STEP_ORDER[idx + 1] as WizardStep);
+  }, [
+    step,
+    selectedFormats.length,
+    selectedRepoIds.length,
+    isLoadingPreview,
+    eventCounts.selected,
+  ]);
 
   const goBack = useCallback(() => {
     const idx = STEP_ORDER.indexOf(step);
     if (idx > 0) {
+      setAttemptedAdvance(false);
       setStep(STEP_ORDER[idx - 1] as WizardStep);
     }
   }, [step]);
@@ -633,15 +721,20 @@ export function CreateContentDialog({
     selectedLinearIds,
   ]);
 
-  const handleCreate = useCallback(() => {
+  submitHandlerRef.current = async (value: CreateContentFormValues) => {
     const voiceIds =
-      selectedBrandVoiceIds.length > 0 ? selectedBrandVoiceIds : [""];
-    mutation.mutate({
-      formats: selectedFormats,
+      value.brandVoiceIds.length > 0 ? value.brandVoiceIds : [""];
+    await mutation.mutateAsync({
+      formats: value.formats,
       voiceIds,
       selectedItems: buildSelectedItems(),
     });
-  }, [selectedBrandVoiceIds, selectedFormats, mutation, buildSelectedItems]);
+  };
+
+  const handleCreate = useCallback(() => {
+    setAttemptedAdvance(true);
+    form.handleSubmit();
+  }, [form]);
 
   const handleOpenAddRepositoryFlow = useCallback(() => {
     openingAddRepoFlowRef.current = true;
@@ -677,14 +770,6 @@ export function CreateContentDialog({
     setOpen(true);
   }, []);
 
-  const canContinueFromFormats = selectedFormats.length > 0;
-  const canContinueFromActivity =
-    selectedRepoIds.length > 0 && !isLoadingPreview && eventCounts.selected > 0;
-
-  const continueDisabled =
-    (step === "formats" && !canContinueFromFormats) ||
-    (step === "activity" && !canContinueFromActivity);
-
   const identityButtonLabel =
     selectedBrandVoiceIds.length === 0
       ? "Skip & start creating"
@@ -692,20 +777,62 @@ export function CreateContentDialog({
 
   const stepIndex = STEP_ORDER.indexOf(step);
 
-  const footerLeft = useMemo(() => {
+  const footerLeft = useMemo<{
+    text: string;
+    tone: "warning" | "muted";
+  }>(() => {
+    if (
+      attemptedAdvance &&
+      step === "formats" &&
+      selectedFormats.length === 0
+    ) {
+      return {
+        text: "Select at least one content format",
+        tone: "warning",
+      };
+    }
+    if (attemptedAdvance && step === "activity") {
+      if (selectedRepoIds.length === 0) {
+        return { text: "Select at least one source", tone: "warning" };
+      }
+      if (eventCounts.selected === 0) {
+        return { text: "Select at least one event", tone: "warning" };
+      }
+    }
+    if (
+      attemptedAdvance &&
+      step === "identities" &&
+      selectedFormats.length === 0
+    ) {
+      return {
+        text: "Select a content format before creating",
+        tone: "warning",
+      };
+    }
     if (step === "formats") {
-      return `${selectedFormats.length} format${selectedFormats.length === 1 ? "" : "s"} selected`;
+      return {
+        text: `${selectedFormats.length} format${selectedFormats.length === 1 ? "" : "s"} selected`,
+        tone: "muted",
+      };
     }
     if (step === "activity") {
       if (selectedRepoIds.length === 0) {
-        return "Select at least one source";
+        return { text: "No sources selected yet", tone: "muted" };
       }
-      return `${eventCounts.selected} / ${eventCounts.total} events · ${selectedRepoIds.length} source${selectedRepoIds.length === 1 ? "" : "s"}`;
+      return {
+        text: `${eventCounts.selected} / ${eventCounts.total} events · ${selectedRepoIds.length} source${selectedRepoIds.length === 1 ? "" : "s"}`,
+        tone: "muted",
+      };
     }
-    return selectedBrandVoiceIds.length === 0
-      ? "No identities selected"
-      : `${selectedBrandVoiceIds.length} ${selectedBrandVoiceIds.length === 1 ? "identity" : "identities"} selected`;
+    return {
+      text:
+        selectedBrandVoiceIds.length === 0
+          ? "No identities selected"
+          : `${selectedBrandVoiceIds.length} ${selectedBrandVoiceIds.length === 1 ? "identity" : "identities"} selected`,
+      tone: "muted",
+    };
   }, [
+    attemptedAdvance,
     step,
     selectedFormats.length,
     selectedRepoIds.length,
@@ -742,7 +869,7 @@ export function CreateContentDialog({
                   dataPoints={dataPoints}
                   lookbackWindow={lookbackWindow}
                   onDataPointChange={handleDataPointChange}
-                  onLookbackChange={setLookbackWindow}
+                  onLookbackChange={handleLookbackChange}
                   onToggle={toggleFormat}
                   selected={selectedFormats}
                 />
@@ -846,15 +973,26 @@ export function CreateContentDialog({
                       Back
                     </Button>
                   )}
-                  <span className="text-muted-foreground text-xs">
-                    {footerLeft}
+                  <span
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs",
+                      footerLeft.tone === "warning"
+                        ? "font-medium text-destructive"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {footerLeft.tone === "warning" && (
+                      <HugeiconsIcon
+                        className="size-3.5"
+                        icon={AlertCircleIcon}
+                      />
+                    )}
+                    {footerLeft.text}
                   </span>
                 </div>
                 {step === "identities" ? (
                   <Button
-                    disabled={
-                      mutation.isPending || selectedFormats.length === 0
-                    }
+                    disabled={mutation.isPending}
                     onClick={handleCreate}
                     type="button"
                   >
@@ -878,7 +1016,7 @@ export function CreateContentDialog({
                   </Button>
                 ) : (
                   <Button
-                    disabled={continueDisabled}
+                    disabled={mutation.isPending}
                     onClick={goNext}
                     type="button"
                   >
