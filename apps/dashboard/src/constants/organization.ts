@@ -3,8 +3,14 @@ export const RESERVED_ORGANIZATION_SLUGS = [
   "auth",
   "login",
   "signup",
+  "forgot-password",
+  "reset-password",
+  "invitation",
+  "callback",
   "onboarding",
   "dashboard",
+  "rpc",
+  "design-system",
   "settings",
   "admin",
   "help",
@@ -16,3 +22,8 @@ export const RESERVED_ORGANIZATION_SLUGS = [
   "privacy",
   "contact",
 ] as const;
+
+export const DATABUDDY_DASHBOARD_MASK_PATTERNS = ["/*"];
+
+export const DATABUDDY_RESERVED_ROUTE_SKIP_PATTERNS =
+  RESERVED_ORGANIZATION_SLUGS.flatMap((slug) => [`/${slug}`, `/${slug}/**`]);

@@ -14,10 +14,13 @@ import { AutumnProvider } from "autumn-js/react";
 import { ThemeProvider } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { toast } from "sonner";
+import {
+  DATABUDDY_DASHBOARD_MASK_PATTERNS,
+  DATABUDDY_RESERVED_ROUTE_SKIP_PATTERNS,
+} from "@/constants/organization";
 
 const databuddyClientID =
   process.env.NEXT_PUBLIC_DATABUDDY_DASHBOARD_WEBSITE_ID;
-const databuddyMaskPatterns = ["/*"];
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
@@ -62,7 +65,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
               {databuddyClientID && (
                 <Databuddy
                   clientId={databuddyClientID}
-                  maskPatterns={databuddyMaskPatterns}
+                  maskPatterns={DATABUDDY_DASHBOARD_MASK_PATTERNS}
+                  skipPatterns={DATABUDDY_RESERVED_ROUTE_SKIP_PATTERNS}
                   trackAttributes={true}
                   trackErrors={true}
                   trackHashChanges={true}
