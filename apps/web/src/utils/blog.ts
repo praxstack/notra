@@ -1,51 +1,21 @@
 import { unstable_cache } from "next/cache";
 import {
-  type NotraApiPost,
-  notraApiListPostsResponseSchema,
-} from "@/schemas/notra-api";
-import { API_URL } from "@/utils/urls";
+  BLOG_INDEX_PATH,
+  MARBLE_BLOG_CATEGORY_SLUG,
+  MARBLE_CACHE_KEYS,
+  MARBLE_CACHE_TAGS,
+  MARBLE_REVALIDATE_SECONDS,
+} from "@/utils/constants";
+import {
+  getMarblePostCacheTag,
+  listMarblePublishedPosts,
+  type MarblePublishedPost,
+} from "@/utils/marble";
 import type { BlogTimelineItem, NotraBlogPost } from "~types/blog";
 
 const BLOG_CONTENT_TYPE = "blog_post";
-const BLOG_STATUS = "published";
-const DEFAULT_POST_LIMIT = 100;
 const FALLBACK_EXCERPT_MAX_LENGTH = 160;
 const BLOCK_SEPARATOR_REGEX = /\n\s*\n/;
-
-function getNotraBlogConfig() {
-  return {
-    apiKey: process.env.NOTRA_API_KEY?.trim() ?? "",
-  };
-}
-
-async function fetchNotraBlogPosts(apiKey: string): Promise<NotraApiPost[]> {
-  const url = new URL("/v1/posts", API_URL);
-  url.searchParams.set("contentType", BLOG_CONTENT_TYPE);
-  url.searchParams.set("status", BLOG_STATUS);
-  url.searchParams.set("sort", "desc");
-  url.searchParams.set("limit", String(DEFAULT_POST_LIMIT));
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Notra API responded with ${response.status}`);
-  }
-
-  const parsed = notraApiListPostsResponseSchema.parse(await response.json());
-  return parsed.posts;
-}
-
-function sortPostsByCreatedAt(posts: NotraBlogPost[]) {
-  return [...posts].sort(
-    (left, right) =>
-      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
-  );
-}
 
 function stripMarkdownFormatting(value: string) {
   return value
@@ -94,46 +64,48 @@ function slugifySegment(value: string) {
   return slug || "post";
 }
 
-function normalizePost(post: NotraApiPost): NotraBlogPost {
+function normalizePost(post: MarblePublishedPost): NotraBlogPost {
   const apiSlug = typeof post.slug === "string" ? post.slug.trim() : "";
   const slug =
     apiSlug.length > 0 ? apiSlug : createBlogPostSlug({ title: post.title });
+  const createdAt = post.publishedAt.toISOString();
+  const markdown = post.markdown || post.content;
 
   return {
     id: post.id,
     title: post.title,
     content: post.content,
-    markdown: post.markdown,
-    recommendations: post.recommendations ?? null,
-    contentType: post.contentType,
+    markdown,
+    recommendations: null,
+    contentType: BLOG_CONTENT_TYPE,
     sourceMetadata: null,
     status: post.status,
-    createdAt: post.createdAt,
-    updatedAt: post.updatedAt,
+    createdAt,
+    updatedAt: post.updatedAt.toISOString(),
     slug,
-    excerpt: getPostExcerpt(post.markdown, post.title),
+    excerpt: post.description.trim() || getPostExcerpt(markdown, post.title),
   };
 }
 
 const fetchBlogPosts = unstable_cache(
   async () => {
-    const { apiKey } = getNotraBlogConfig();
-
-    if (!apiKey) {
-      return [] satisfies NotraBlogPost[];
-    }
-
     try {
-      const posts = await fetchNotraBlogPosts(apiKey);
-      return sortPostsByCreatedAt(posts.map(normalizePost));
+      const posts = await listMarblePublishedPosts({
+        category: MARBLE_BLOG_CATEGORY_SLUG,
+      });
+      return posts.map(normalizePost);
     } catch (error) {
-      console.error("Failed to load Notra blog posts", error);
+      console.error("Failed to load Marble blog posts", error);
       return [] satisfies NotraBlogPost[];
     }
   },
-  ["notra-blog-posts"],
+  [MARBLE_CACHE_KEYS.blogPosts],
   {
-    revalidate: 3000,
+    revalidate: MARBLE_REVALIDATE_SECONDS.blogPosts,
+    tags: [
+      MARBLE_CACHE_TAGS.blogPosts,
+      `${MARBLE_CACHE_TAGS.blogPosts}:${MARBLE_BLOG_CATEGORY_SLUG}`,
+    ],
   }
 );
 
@@ -142,7 +114,7 @@ function createBlogPostSlug(post: Pick<NotraBlogPost, "title">) {
 }
 
 function getBlogPostHref(slug: string) {
-  return `/blog/${slug}`;
+  return `${BLOG_INDEX_PATH}/${slug}`;
 }
 
 export function formatBlogDate(date: string) {
@@ -158,7 +130,18 @@ export async function listNotraBlogPosts() {
 }
 
 export async function getNotraBlogPostBySlug(slug: string) {
-  const posts = await listNotraBlogPosts();
+  const posts = await unstable_cache(
+    listNotraBlogPosts,
+    [MARBLE_CACHE_KEYS.blogPosts, slug],
+    {
+      revalidate: MARBLE_REVALIDATE_SECONDS.blogPosts,
+      tags: [
+        MARBLE_CACHE_TAGS.blogPosts,
+        `${MARBLE_CACHE_TAGS.blogPosts}:${MARBLE_BLOG_CATEGORY_SLUG}`,
+        getMarblePostCacheTag(slug),
+      ],
+    }
+  )();
   return posts.find((post) => post.slug === slug) ?? null;
 }
 

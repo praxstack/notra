@@ -174,7 +174,7 @@
         "@tailwindcss/typography": "^0.5.19",
         "@tanstack/react-hotkeys": "^0.3.0",
         "@toolwind/corner-shape": "^0.0.8-3",
-        "@usenotra/sdk": "^0.0.6",
+        "@usemarble/sdk": "^1.2.1",
         "fumadocs-core": "^16.6.17",
         "fumadocs-mdx": "^14.2.7",
         "motion": "^12.34.2",
@@ -1793,7 +1793,7 @@
 
     "@upstash/workflow": ["@upstash/workflow@1.2.1", "", { "dependencies": { "@upstash/qstash": "^2.10.1" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-G2WfWruKXbPpKJNyCWS097jtRZXW993BeMPYJPc7gGoEjnpJTH9S9j/YsfRJXZxWBPAuHB31tMzmKMGWAkAMQw=="],
 
-    "@usenotra/sdk": ["@usenotra/sdk@0.0.6", "", { "dependencies": { "zod": "^3.25.65 || ^4.0.0" } }, "sha512-LGwisnK7NQkghc6/hW0jYDLPm46IKQSM/uycJV8kQ1VUsoIj+HToiIET7fwJR9EvsAC1hTN92f57hOXwj3bTuw=="],
+    "@usemarble/sdk": ["@usemarble/sdk@1.2.1", "", { "dependencies": { "zod": "^3.25.65 || ^4.0.0" } }, "sha512-rklBYmj7sdN5VD0bkLZRttuzOTTj618Ob6V112+gP1a2eW6FQ3kYixPK7hahME3pP4eHiyC/sSZVSWwddg7tsQ=="],
 
     "@vercel/analytics": ["@vercel/analytics@1.6.1", "", { "peerDependencies": { "@remix-run/react": "^2", "@sveltejs/kit": "^1 || ^2", "next": ">= 13", "react": "^18 || ^19 || ^19.0.0-rc", "svelte": ">= 4", "vue": "^3", "vue-router": "^4" }, "optionalPeers": ["@remix-run/react", "@sveltejs/kit", "next", "react", "svelte", "vue", "vue-router"] }, "sha512-oH9He/bEM+6oKlv3chWuOOcp8Y6fo6/PSro8hEkgCW3pu9/OiCXiUpRUogDh3Fs3LH2sosDrx8CxeOLBEE+afg=="],
 

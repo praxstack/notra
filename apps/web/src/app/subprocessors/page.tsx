@@ -6,7 +6,7 @@ const title = "Subprocessors";
 const description =
   "Current subprocessors Notra uses to provide hosting, analytics, authentication, billing, email, AI, and integrations.";
 const url = `${SITE_URL}/subprocessors`;
-const currentAsOf = "May 12, 2026";
+const currentAsOf = "May 22, 2026";
 
 const subprocessors = [
   {
@@ -104,6 +104,12 @@ const subprocessors = [
     purpose: "Long-term context and memory infrastructure",
     location: "United States",
     website: "https://supermemory.ai",
+  },
+  {
+    name: "Marble",
+    purpose: "Hosted CMS and content publishing infrastructure",
+    location: "United States",
+    website: "https://marblecms.com",
   },
 ];
 
