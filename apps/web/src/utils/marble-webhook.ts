@@ -27,8 +27,11 @@ const SHARED_CONTENT_PATHS = [
   "/md/changelog/notra",
 ] as const;
 
+const HEX_STRING_REGEX = /^[a-f0-9]+$/i;
+const SHA256_PREFIX_REGEX = /^sha256=/;
+
 function safeHexBuffer(value: string) {
-  if (!/^[a-f0-9]+$/i.test(value)) {
+  if (!HEX_STRING_REGEX.test(value)) {
     return null;
   }
 
@@ -87,7 +90,7 @@ export function verifyMarbleSignature(
   signatureHeader: string,
   bodyText: string
 ) {
-  const expectedHex = signatureHeader.replace(/^sha256=/, "");
+  const expectedHex = signatureHeader.replace(SHA256_PREFIX_REGEX, "");
   const expected = safeHexBuffer(expectedHex);
 
   if (!expected) {

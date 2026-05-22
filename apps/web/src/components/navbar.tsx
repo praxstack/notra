@@ -98,34 +98,34 @@ export function Navbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <div className="pointer-events-none absolute inset-0 hidden items-center justify-center gap-2 sm:flex sm:gap-3 md:gap-4 lg:gap-4">
+            <div className="pointer-events-none absolute inset-0 hidden items-center justify-center gap-2 lg:flex lg:gap-4">
               {MARKETING_NAV_LINKS.map((link) => (
                 <Link
                   className="pointer-events-auto flex items-center justify-start"
                   href={link.href}
                   key={link.href}
                 >
-                  <div className="flex flex-col justify-center font-medium font-sans text-foreground/80 text-xs leading-[14px] transition-colors hover:text-foreground md:text-[13px]">
+                  <div className="flex flex-col justify-center font-medium font-sans text-[13px] text-foreground/80 leading-[14px] transition-colors hover:text-foreground">
                     {link.label}
                   </div>
                 </Link>
               ))}
             </div>
-            <div className="z-10 hidden h-6 items-center justify-start gap-2 sm:flex sm:h-7 sm:gap-3 md:h-8">
+            <div className="z-10 hidden h-6 items-center justify-start gap-2 lg:flex lg:h-8 lg:gap-3">
               <ThemeToggle />
               <Link href="https://app.usenotra.com/login">
                 <Button
-                  className="overflow-hidden rounded-lg px-2 py-1 sm:px-3 sm:py-[6px] md:px-[14px]"
+                  className="overflow-hidden rounded-lg px-2 py-1 lg:px-[14px] lg:py-[6px]"
                   variant="outline"
                 >
-                  <span className="flex flex-col justify-center font-medium font-sans text-primary text-xs leading-5 md:text-[13px]">
+                  <span className="flex flex-col justify-center font-medium font-sans text-primary text-xs leading-5 lg:text-[13px]">
                     Log in
                   </span>
                 </Button>
               </Link>
               <TrackedSignupLink source="navbar_desktop_signup">
-                <Button className="overflow-hidden rounded-lg border-transparent bg-primary px-2 py-1 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-primary-hover sm:px-3 sm:py-[6px] md:px-[14px]">
-                  <span className="flex flex-col justify-center font-medium font-sans text-primary-foreground text-xs leading-5 md:text-[13px]">
+                <Button className="overflow-hidden rounded-lg border-transparent bg-primary px-2 py-1 shadow-[0px_1px_2px_rgba(55,50,47,0.12)] hover:bg-primary-hover lg:px-[14px] lg:py-[6px]">
+                  <span className="flex flex-col justify-center font-medium font-sans text-primary-foreground text-xs leading-5 lg:text-[13px]">
                     Sign up
                   </span>
                 </Button>
@@ -133,7 +133,7 @@ export function Navbar() {
             </div>
             <button
               aria-label={isOpen ? "Close menu" : "Open menu"}
-              className="flex items-center justify-center sm:hidden"
+              className="flex items-center justify-center lg:hidden"
               onClick={() => setIsOpen(!isOpen)}
               type="button"
             >
@@ -150,7 +150,7 @@ export function Navbar() {
       </div>
 
       {isOpen && (
-        <div className="fixed inset-0 z-15 flex flex-col items-center justify-center gap-6 bg-background px-8 sm:hidden">
+        <div className="fixed inset-0 z-15 flex flex-col items-center justify-center gap-6 bg-background px-8 lg:hidden">
           <nav className="flex flex-col items-center gap-6">
             {MARKETING_NAV_LINKS.map((link) => (
               <Link

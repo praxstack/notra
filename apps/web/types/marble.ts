@@ -1,4 +1,4 @@
-export type MarbleWebhookEvent = `${string}.${string}`;
+type MarbleWebhookEvent = `${string}.${string}`;
 
 export interface MarbleWebhookPayload {
   event?: MarbleWebhookEvent;

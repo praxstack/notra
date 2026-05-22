@@ -56,18 +56,6 @@ async function listPostsByFormat(
   return posts;
 }
 
-function getPostTimestamp(post: Pick<Post, "publishedAt" | "updatedAt">) {
-  return post.publishedAt.getTime() || post.updatedAt.getTime();
-}
-
-export function sortMarblePostsByPublishedAt<
-  T extends Pick<Post, "publishedAt" | "updatedAt">,
->(posts: T[]) {
-  return [...posts].sort(
-    (left, right) => getPostTimestamp(right) - getPostTimestamp(left)
-  );
-}
-
 export async function listMarblePublishedPosts({
   category,
 }: ListMarblePublishedPostsOptions): Promise<MarblePublishedPost[]> {
