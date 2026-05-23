@@ -25,6 +25,12 @@ import {
   getCreatePostToolName,
 } from "@notra/ai/tools/post";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
+import {
+  createWebSearchTool,
+  isWebSearchAvailable,
+  WEB_SEARCH_TOOL_DESCRIPTION,
+  WEB_SEARCH_TOOL_NAME,
+} from "@notra/ai/tools/web-search";
 import type {
   ResolveIntegrationContext,
   ResolveLinearIntegrationContext,
@@ -57,6 +63,7 @@ export function buildStandaloneToolSet(
   deps?: BuildStandaloneToolSetDeps
 ): ToolSet {
   const { organizationId, validatedIntegrations, postResult } = params;
+  const hasWebSearch = isWebSearchAvailable();
 
   const tools: Record<string, Tool> = {};
   const descriptions: string[] = [];
@@ -87,6 +94,9 @@ export function buildStandaloneToolSet(
   tools.getAvailableBrandReferences = createGetAvailableBrandReferencesTool({
     organizationId,
   });
+  if (hasWebSearch) {
+    tools[WEB_SEARCH_TOOL_NAME] = createWebSearchTool();
+  }
 
   descriptions.push(
     "**Content Creation**: Create posts using createChangelog, createBlogPost, createTwitterPost, createLinkedInPost, createInvestorUpdate, plus updatePost and viewPost"
@@ -94,6 +104,9 @@ export function buildStandaloneToolSet(
   descriptions.push(
     "**Organization Data**: Inspect brand identities, brand references, available integrations, and existing posts using listBrandIdentities, getBrandIdentity, getAvailableBrandReferences, getAvailableIntegrations, getAvailablePosts, and getPostById"
   );
+  if (hasWebSearch) {
+    descriptions.push(WEB_SEARCH_TOOL_DESCRIPTION);
+  }
 
   tools.listAvailableSkills = listAvailableSkills({ organizationId });
   tools.getSkillByName = getSkillByName({ organizationId });
