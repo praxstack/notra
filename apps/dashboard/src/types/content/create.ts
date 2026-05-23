@@ -7,6 +7,7 @@ import type {
   PreviewResponse,
   RepositoryPreview,
 } from "@/types/content/preview";
+import type { BrandSettings } from "@/types/hooks/brand-analysis";
 
 export type WizardStep = "formats" | "activity" | "identities";
 
@@ -63,7 +64,7 @@ export interface ActivityStepProps {
 }
 
 export interface BrandIdentitiesStepProps {
-  voices: Array<{ id: string; name: string; isDefault: boolean }>;
+  voices: BrandSettings[];
   selected: string[];
   onToggle: (id: string) => void;
   isLoading: boolean;
