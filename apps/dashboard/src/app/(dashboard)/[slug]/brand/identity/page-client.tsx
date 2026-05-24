@@ -283,10 +283,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
   if (!hasVoices) {
     return (
-      <PageContainer
-        className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6"
-        variant="compact"
-      >
+      <PageContainer className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
         <div className="w-full px-4 lg:px-6">
           <div className="relative min-h-125">
             <div className="pointer-events-none blur-sm">
