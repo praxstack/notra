@@ -1,6 +1,7 @@
-import { PlusSignIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
+import { Kbd } from "@notra/ui/components/ui/kbd";
 import { PageContainer } from "@/components/layout/container";
 import { SchedulePageSkeleton } from "./skeleton";
 
@@ -15,9 +16,10 @@ export default function Loading() {
               Configure cron schedules that run daily, weekly, or monthly
             </p>
           </div>
-          <Button variant="default">
-            <HugeiconsIcon className="size-4" icon={PlusSignIcon} />
-            <span className="ml-1">New Schedule</span>
+          <Button className="gap-1.5">
+            <HugeiconsIcon className="size-4" icon={Add01Icon} />
+            Create Schedule
+            <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
           </Button>
         </div>
         <SchedulePageSkeleton />

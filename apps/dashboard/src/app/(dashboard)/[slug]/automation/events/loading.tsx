@@ -1,6 +1,7 @@
-import { PlusSignIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
+import { Kbd } from "@notra/ui/components/ui/kbd";
 import { EventsPageSkeleton } from "@/components/automation/events-skeleton";
 import { PageContainer } from "@/components/layout/container";
 
@@ -16,9 +17,10 @@ export default function Loading() {
               automatically
             </p>
           </div>
-          <Button variant="default">
-            <HugeiconsIcon className="size-4" icon={PlusSignIcon} />
-            <span className="ml-1">New Event Trigger</span>
+          <Button className="gap-1.5">
+            <HugeiconsIcon className="size-4" icon={Add01Icon} />
+            Create Trigger
+            <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
           </Button>
         </div>
         <EventsPageSkeleton />

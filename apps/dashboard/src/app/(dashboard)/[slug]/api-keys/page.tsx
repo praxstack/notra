@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Add01Icon,
   ArrowDown01Icon,
   ArrowUp01Icon,
   ArrowUpDownIcon,
@@ -484,6 +485,7 @@ export default function ApiKeysPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button className="gap-1.5" onClick={() => setDialogOpen(true)}>
+              <HugeiconsIcon className="size-4" icon={Add01Icon} />
               Create API Key
               <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
             </Button>

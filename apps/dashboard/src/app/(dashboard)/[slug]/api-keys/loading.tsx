@@ -1,4 +1,4 @@
-import { Book01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Book01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import { Kbd } from "@notra/ui/components/ui/kbd";
@@ -20,6 +20,7 @@ export default function Loading() {
           </div>
           <div className="flex items-center gap-2">
             <Button className="gap-1.5">
+              <HugeiconsIcon className="size-4" icon={Add01Icon} />
               Create API Key
               <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
             </Button>

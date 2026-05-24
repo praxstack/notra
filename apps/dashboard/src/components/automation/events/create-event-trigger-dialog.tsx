@@ -68,8 +68,22 @@ export function CreateEventTriggerDialog({
   organizationId,
   onSuccess,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: CreateEventTriggerDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = useCallback(
+    (next: boolean) => {
+      if (isControlled) {
+        controlledOnOpenChange?.(next);
+      } else {
+        setInternalOpen(next);
+      }
+    },
+    [controlledOnOpenChange, isControlled]
+  );
   const [addRepoOpen, setAddRepoOpen] = useState(false);
   const comboboxAnchor = useComboboxAnchor();
 
@@ -208,7 +222,7 @@ export function CreateEventTriggerDialog({
   const handleOpenAddRepoFlow = useCallback(() => {
     setOpen(false);
     setAddRepoOpen(true);
-  }, []);
+  }, [setOpen]);
 
   return (
     <>
