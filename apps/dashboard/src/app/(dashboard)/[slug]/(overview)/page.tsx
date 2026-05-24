@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import PageClient from "./page-client";
-import { DashboardPageSkeleton } from "./skeleton";
+import { HomePageSkeleton } from "./skeleton";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -17,7 +17,7 @@ async function Page({
   const { slug } = await params;
 
   return (
-    <Suspense fallback={<DashboardPageSkeleton />}>
+    <Suspense fallback={<HomePageSkeleton />}>
       <PageClient organizationSlug={slug} />
     </Suspense>
   );
