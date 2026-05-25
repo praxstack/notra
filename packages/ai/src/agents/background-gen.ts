@@ -2,6 +2,7 @@ import { AGENT_DEFAULT_MODEL } from "@notra/ai/constants/models";
 import { createModel } from "@notra/ai/model";
 import type { AILogTarget } from "@notra/ai/observability";
 import { getUserPrompt } from "@notra/ai/prompts/user";
+import { withGatewayAutomaticCaching } from "@notra/ai/provider-options";
 import type { ContentType } from "@notra/ai/schemas/content";
 import {
   createGetBrandReferencesTool,
@@ -215,11 +216,11 @@ export async function runBackgroundGen(
 
   const agent = new ToolLoopAgent({
     model,
-    providerOptions: {
+    providerOptions: withGatewayAutomaticCaching({
       anthropic: {
         thinking: { type: "enabled", budgetTokens: 4096 },
       },
-    },
+    }),
     tools: {
       ...brandReferenceTools,
       ...buildGitHubDataTools({

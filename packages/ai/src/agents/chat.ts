@@ -1,5 +1,6 @@
 import { createModel } from "@notra/ai/model";
 import { routeMessage, selectModel } from "@notra/ai/orchestration/router";
+import { withGatewayAutomaticCaching } from "@notra/ai/provider-options";
 import { createMarkdownTools } from "@notra/ai/tools/edit-markdown";
 import { exampleTool } from "@notra/ai/tools/example";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
@@ -52,6 +53,7 @@ export async function createChatAgent(
 
   return new ToolLoopAgent({
     model: modelWithMemory,
+    providerOptions: withGatewayAutomaticCaching(),
     tools: {
       getMarkdown,
       editMarkdown,

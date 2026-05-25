@@ -1,5 +1,6 @@
 import { createModel } from "@notra/ai/model";
 import { getStandaloneChatPrompt } from "@notra/ai/prompts/standalone-chat";
+import { withGatewayAutomaticCaching } from "@notra/ai/provider-options";
 import {
   createCreatePostTool,
   createUpdatePostTool,
@@ -199,7 +200,7 @@ export async function orchestrateStandaloneChat(
     tools,
     stopWhen: stepCountIs(isSimpleNoTools ? 1 : maxSteps),
     experimental_transform: smoothStream(),
-    providerOptions,
+    providerOptions: withGatewayAutomaticCaching(providerOptions),
     abortSignal,
     experimental_telemetry: buildExperimentalTelemetry(telemetryMetadata),
     onChunk({ chunk }) {

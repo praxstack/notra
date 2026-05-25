@@ -4,6 +4,7 @@ import {
   wrapModelWithObservability,
 } from "@notra/ai/observability";
 import { ROUTING_PROMPT } from "@notra/ai/prompts/router";
+import { withGatewayAutomaticCaching } from "@notra/ai/provider-options";
 import { routingDecisionSchema } from "@notra/ai/schemas/orchestration";
 import type {
   AutoSelection,
@@ -104,6 +105,7 @@ export async function routeMessage(
     prompt: `Classify this user message:
 
 "${userMessage}"${contextHint}`,
+    providerOptions: withGatewayAutomaticCaching(),
     experimental_telemetry: buildExperimentalTelemetry(telemetryMetadata),
   });
 

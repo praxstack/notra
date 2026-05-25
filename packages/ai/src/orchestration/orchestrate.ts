@@ -1,6 +1,7 @@
 import { createModel } from "@notra/ai/model";
 import type { AILogTarget } from "@notra/ai/observability";
 import { getContentEditorChatPrompt } from "@notra/ai/prompts/content-editor";
+import { withGatewayAutomaticCaching } from "@notra/ai/provider-options";
 import type {
   ResolveIntegrationContext,
   ResolveLinearIntegrationContext,
@@ -130,6 +131,7 @@ export async function orchestrateChat(
       ignoreIncompleteToolCalls: true,
     }),
     tools,
+    providerOptions: withGatewayAutomaticCaching(),
     stopWhen: stepCountIs(maxSteps),
     experimental_telemetry: buildExperimentalTelemetry(telemetryMetadata),
     async onFinish({ totalUsage }) {

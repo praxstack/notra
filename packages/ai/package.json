@@ -9,6 +9,7 @@
     "./gateway": "./src/gateway.ts",
     "./model": "./src/model.ts",
     "./observability": "./src/observability.ts",
+    "./provider-options": "./src/provider-options.ts",
     "./evlog": "./src/evlog.ts",
     "./realtime": "./src/realtime.ts",
     "./agents/*": "./src/agents/*.ts",
