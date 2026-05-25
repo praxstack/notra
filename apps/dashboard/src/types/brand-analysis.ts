@@ -58,9 +58,3 @@ export interface InsertBrandIdentityInput {
   brandName: string;
   websiteUrl: string;
 }
-
-export interface TriggerOnboardingBrandAnalysisInput {
-  organizationId: string;
-  websiteUrl: string;
-  name?: string;
-}
