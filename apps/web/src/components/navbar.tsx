@@ -389,7 +389,7 @@ export function Navbar() {
                   render={
                     <Link
                       aria-label="Notra home"
-                      className="flex flex-1 items-center gap-2"
+                      className="group flex flex-1 items-center"
                       href="/"
                       onContextMenu={(event) => {
                         event.preventDefault();
@@ -398,11 +398,13 @@ export function Navbar() {
                     />
                   }
                 >
-                  <div className="flex size-10 items-center justify-center rounded-lg dark:inset-shadow-sm dark:inset-shadow-white/8 dark:bg-[#f3eeea] dark:shadow-black/40 dark:shadow-sm dark:ring-1 dark:ring-white/10">
-                    <NotraMark className="size-6 shrink-0" />
-                  </div>
-                  <span className="font-semibold text-lg text-neutral-950 dark:text-white">
-                    Notra
+                  <span className="inline-flex origin-left items-center gap-2 transition-transform duration-150 ease-out group-active:scale-95">
+                    <span className="flex size-10 items-center justify-center rounded-lg dark:inset-shadow-sm dark:inset-shadow-white/8 dark:bg-[#f3eeea] dark:shadow-black/40 dark:shadow-sm dark:ring-1 dark:ring-white/10">
+                      <NotraMark className="size-6 shrink-0" />
+                    </span>
+                    <span className="font-semibold text-lg text-neutral-950 dark:text-white">
+                      Notra
+                    </span>
                   </span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -435,7 +437,7 @@ export function Navbar() {
                   if (entry.type === "link") {
                     return (
                       <Link
-                        className={`rounded-md px-3 py-2 text-sm transition-colors hover:bg-neutral-100 hover:text-neutral-950 dark:hover:bg-white/6 dark:hover:text-white ${mutedNavClass}`}
+                        className={`rounded-md px-3 py-2 text-sm transition-[transform,background-color,color] duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 active:scale-95 dark:hover:bg-white/6 dark:hover:text-white ${mutedNavClass}`}
                         href={entry.href}
                         key={entry.href}
                         onFocus={() => setActiveGroup(null)}
@@ -453,7 +455,7 @@ export function Navbar() {
                     <button
                       aria-expanded={isActive}
                       aria-haspopup="menu"
-                      className={`inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm transition-colors hover:bg-neutral-100 hover:text-neutral-950 aria-expanded:bg-neutral-100 aria-expanded:text-neutral-950 dark:aria-expanded:bg-white/6 dark:aria-expanded:text-white dark:hover:bg-white/6 dark:hover:text-white ${mutedNavClass}`}
+                      className={`inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm transition-[transform,background-color,color] duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 active:scale-95 aria-expanded:bg-neutral-100 aria-expanded:text-neutral-950 dark:aria-expanded:bg-white/6 dark:aria-expanded:text-white dark:hover:bg-white/6 dark:hover:text-white ${mutedNavClass}`}
                       key={entry.label}
                       onClick={() =>
                         setActiveGroup(isActive ? null : entry.label)
@@ -553,13 +555,13 @@ export function Navbar() {
                 <div className="hidden items-center gap-1 lg:flex">
                   <ThemeToggle />
                   <Link
-                    className={`rounded-lg px-3 py-1.5 text-sm transition-colors hover:bg-accent hover:text-accent-foreground ${mutedNavClass}`}
+                    className={`rounded-lg px-3 py-1.5 text-sm transition-[transform,background-color,color] duration-150 ease-out hover:bg-accent hover:text-accent-foreground active:scale-95 ${mutedNavClass}`}
                     href={SIGNIN_URL}
                   >
                     Sign in
                   </Link>
                   <TrackedSignupLink
-                    className="corner-squircle overflow-hidden rounded-[2rem] border-transparent bg-primary px-4 py-1.5 font-medium text-primary-foreground text-sm shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2 supports-[corner-shape:round]:rounded-[1.25rem]"
+                    className="corner-squircle overflow-hidden rounded-[2rem] border-transparent bg-primary px-4 py-1.5 font-medium text-primary-foreground text-sm shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] transition-[transform,background-color] duration-150 ease-out hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2 active:scale-95 supports-[corner-shape:round]:rounded-[1.25rem]"
                     source="navbar_desktop_signup"
                   >
                     Sign up
@@ -660,7 +662,7 @@ function MobileNav({ onNavigate }: { onNavigate: () => void }) {
           Sign in
         </Link>
         <TrackedSignupLink
-          className="corner-squircle overflow-hidden rounded-[2rem] border-transparent bg-primary px-3 py-2 text-center font-medium text-primary-foreground text-sm shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] transition-colors hover:bg-primary-hover supports-[corner-shape:round]:rounded-[1.25rem]"
+          className="corner-squircle overflow-hidden rounded-[2rem] border-transparent bg-primary px-3 py-2 text-center font-medium text-primary-foreground text-sm shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] transition-[transform,background-color] duration-150 ease-out hover:bg-primary-hover active:scale-95 supports-[corner-shape:round]:rounded-[1.25rem]"
           onClick={onNavigate}
           source="navbar_mobile_signup"
         >
