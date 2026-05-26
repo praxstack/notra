@@ -1,7 +1,7 @@
 "use client";
 
-import { Button } from "@notra/ui/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
 import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
 import { IntegrationCard } from "@/components/integrations/integration-card";

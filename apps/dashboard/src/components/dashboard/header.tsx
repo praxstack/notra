@@ -20,7 +20,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@notra/ui/components/ui/breadcrumb";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +38,7 @@ import {
   CreditBalanceButton,
   CreditBalanceMenuItem,
 } from "@/components/billing/credit-balance-button";
+import { Button } from "@/components/button";
 import { ChatTopbarTitle } from "@/components/dashboard/chat-topbar-title";
 import { useFeedback } from "@/components/dashboard/feedback-context";
 import {

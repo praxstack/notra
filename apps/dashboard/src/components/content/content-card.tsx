@@ -18,7 +18,6 @@ import {
   ResponsiveAlertDialogTitle,
 } from "@notra/ui/components/shared/responsive-alert-dialog";
 import { Badge } from "@notra/ui/components/ui/badge";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +29,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { memo, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/button";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import { cn } from "@/lib/utils";
 import type { PostStatus } from "@/schemas/content";

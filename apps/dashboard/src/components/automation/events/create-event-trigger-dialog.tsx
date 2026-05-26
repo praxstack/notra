@@ -14,7 +14,6 @@ import {
   ResponsiveDialogTitle,
   ResponsiveDialogTrigger,
 } from "@notra/ui/components/shared/responsive-dialog";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   Combobox,
   ComboboxChip,
@@ -40,6 +39,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BrandIdentityRadioGroup } from "@/components/brand-identity-radio-group";
+import { Button } from "@/components/button";
 import { FormatCard } from "@/components/content/create/format-card";
 import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
 import { AddRepositoryButton } from "@/components/integrations/add-repository-button";

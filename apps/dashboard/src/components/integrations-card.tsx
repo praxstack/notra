@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@notra/ui/components/ui/badge";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +14,7 @@ import type React from "react";
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/button";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import type {
   AffectedTriggersData,

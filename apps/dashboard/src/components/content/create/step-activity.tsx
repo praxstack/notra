@@ -7,13 +7,13 @@ import {
   Tick01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@notra/ui/components/ui/button";
 import { Input } from "@notra/ui/components/ui/input";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linear } from "@notra/ui/components/ui/svgs/linear";
 import { cn } from "@notra/ui/lib/utils";
 import { useMemo } from "react";
+import { Button } from "@/components/button";
 import type { ActivityStepProps } from "@/types/content/create";
 import type { RepositoryPreview } from "@/types/content/preview";
 import { formatEventDate } from "@/utils/content-preview";

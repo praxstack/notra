@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@notra/ui/components/ui/badge";
-import { Button } from "@notra/ui/components/ui/button";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import {
   Tabs,
@@ -21,6 +20,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { memo, useMemo, useState } from "react";
+import { Button } from "@/components/button";
 import { AddLinearIntegrationDialog } from "@/components/integrations/add-linear-integration-dialog";
 import { InstalledIntegrationCard } from "@/components/integrations-card";
 import { PageContainer } from "@/components/layout/container";

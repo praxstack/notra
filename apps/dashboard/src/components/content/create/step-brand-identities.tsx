@@ -2,7 +2,6 @@
 
 import { Loading03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@notra/ui/components/ui/button";
 import { Label } from "@notra/ui/components/ui/label";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { useState } from "react";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
 import * as z from "zod";
 import { BrandIdentityRadioGroup } from "@/components/brand-identity-radio-group";
+import { Button } from "@/components/button";
 import {
   useAnalyzeBrand,
   useBrandAnalysisProgress,

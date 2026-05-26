@@ -10,7 +10,6 @@ import {
   AvatarImage,
 } from "@notra/ui/components/ui/avatar";
 import { Badge } from "@notra/ui/components/ui/badge";
-import { Button } from "@notra/ui/components/ui/button";
 import { useSidebar } from "@notra/ui/components/ui/sidebar";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
@@ -25,6 +24,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import remend from "remend";
 import { toast } from "sonner";
+import { Button } from "@/components/button";
 import ChatInput from "@/components/chat-input";
 import { getContentTypeLabel } from "@/components/content/content-card";
 import type { EditorRefHandle } from "@/components/content/editor/plugins/editor-ref-plugin";

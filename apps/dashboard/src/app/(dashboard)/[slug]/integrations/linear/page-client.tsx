@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@notra/ui/components/ui/badge";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   Card,
   CardAction,
@@ -21,6 +20,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/button";
 import { DeleteIntegrationDialog } from "@/components/delete-integration-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { AddLinearIntegrationDialog } from "@/components/integrations/add-linear-integration-dialog";

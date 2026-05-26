@@ -17,7 +17,6 @@ import type {
   ChatInputHandle,
   ContextItem,
 } from "@notra/ai/types/chat";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   Card,
   CardContent,
@@ -77,6 +76,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
+import { Button } from "@/components/button";
 import {
   MAX_CHAT_ATTACHMENTS,
   MAX_CHAT_FILE_SIZE,

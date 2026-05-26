@@ -8,7 +8,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@notra/ui/components/ui/alert";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   Card,
   CardContent,
@@ -29,6 +28,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
 import * as z from "zod";
+import { Button } from "@/components/button";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { getValidLanguage } from "@/schemas/brand";

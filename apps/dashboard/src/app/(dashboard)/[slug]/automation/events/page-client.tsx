@@ -7,7 +7,6 @@ import {
   ArrowUpDownIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@notra/ui/components/ui/button";
 import { Kbd } from "@notra/ui/components/ui/kbd";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import {
@@ -34,6 +33,7 @@ import { EventsPageSkeleton } from "@/components/automation/events-skeleton";
 import { SourcesCell } from "@/components/automation/sources-cell";
 import { TriggerRowActions } from "@/components/automation/triggers/trigger-row-actions";
 import { TriggerStatusBadge } from "@/components/automation/triggers/trigger-status-badge";
+import { Button } from "@/components/button";
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";

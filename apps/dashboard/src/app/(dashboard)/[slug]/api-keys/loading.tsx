@@ -1,8 +1,8 @@
 import { Add01Icon, Book01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@notra/ui/components/ui/button";
 import { Kbd } from "@notra/ui/components/ui/kbd";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
+import { Button } from "@/components/button";
 import { PageContainer } from "@/components/layout/container";
 
 const SKELETON_ROW_KEYS = ["row-1", "row-2", "row-3", "row-4", "row-5"];

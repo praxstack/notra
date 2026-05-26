@@ -1,8 +1,8 @@
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Button } from "@notra/ui/components/ui/button";
 import { Kbd } from "@notra/ui/components/ui/kbd";
 import { EventsPageSkeleton } from "@/components/automation/events-skeleton";
+import { Button } from "@/components/button";
 import { PageContainer } from "@/components/layout/container";
 
 export default function Loading() {

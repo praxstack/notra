@@ -9,7 +9,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CHAT_PREVIEW_SAVE_TIMEOUT_MS } from "@notra/ai/constants/chat";
 import { Badge } from "@notra/ui/components/ui/badge";
-import { Button } from "@notra/ui/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -24,6 +23,7 @@ import {
 import { Loader2Icon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/button";
 import { LinkedInPost } from "@/components/linkedin-post";
 import { LINKEDIN_BRAND_PRIMARY } from "@/constants/linkedin";
 import {

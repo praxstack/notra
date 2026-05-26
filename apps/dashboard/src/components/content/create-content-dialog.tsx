@@ -15,13 +15,13 @@ import {
   ResponsiveDialogTitle,
   ResponsiveDialogTrigger,
 } from "@notra/ui/components/shared/responsive-dialog";
-import { Button } from "@notra/ui/components/ui/button";
 import { cn } from "@notra/ui/lib/utils";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Button } from "@/components/button";
 import { StepActivity } from "@/components/content/create/step-activity";
 import { StepBrandIdentities } from "@/components/content/create/step-brand-identities";
 import { StepFormats } from "@/components/content/create/step-formats";

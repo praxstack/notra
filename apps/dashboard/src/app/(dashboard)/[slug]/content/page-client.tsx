@@ -10,7 +10,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ContentType } from "@notra/ai/schemas/content";
 import { Badge } from "@notra/ui/components/ui/badge";
-import { Button } from "@notra/ui/components/ui/button";
 import { ButtonGroup } from "@notra/ui/components/ui/button-group";
 import {
   Pagination,
@@ -38,6 +37,7 @@ import { cn } from "@notra/ui/lib/utils";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/button";
 import {
   ContentCard,
   getContentTypeLabel,
