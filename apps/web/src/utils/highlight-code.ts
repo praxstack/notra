@@ -1,4 +1,4 @@
-import { Copy01Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { createHighlighter } from "shiki";
 
 const SHIKI_THEMES = {
@@ -69,7 +69,7 @@ function iconToSvg(icon: typeof Copy01Icon, className: string) {
 const COPY_BUTTON_HTML = `<button aria-label="Copy code" class="code-copy-button" data-copy-code type="button">${iconToSvg(
   Copy01Icon,
   "code-copy-icon"
-)}</button>`;
+)}${iconToSvg(Tick02Icon, "code-copy-icon-success")}</button>`;
 
 let highlighterPromise: ReturnType<typeof createHighlighter> | null = null;
 

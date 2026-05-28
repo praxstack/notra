@@ -223,9 +223,26 @@
   outline-offset: 0.125rem;
 }
 
-.prose .code-copy-icon {
+.prose .code-copy-icon,
+.prose .code-copy-icon-success {
   width: 1rem;
   height: 1rem;
+}
+
+.prose .code-copy-icon-success {
+  display: none;
+}
+
+.prose .code-copy-button[data-copied] {
+  color: var(--foreground);
+}
+
+.prose .code-copy-button[data-copied] .code-copy-icon {
+  display: none;
+}
+
+.prose .code-copy-button[data-copied] .code-copy-icon-success {
+  display: block;
 }
 
 .prose .shiki {

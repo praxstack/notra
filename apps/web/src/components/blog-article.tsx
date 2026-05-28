@@ -6,15 +6,38 @@ import { copyToClipboard } from "@/utils/copy-to-clipboard";
 import type { BlogArticleProps } from "~types/blog";
 
 const COPY_BUTTON_SELECTOR = "[data-copy-code]";
+const COPIED_STATE_DURATION_MS = 2000;
 
 export function BlogArticle({ html }: BlogArticleProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const copiedTimers = useRef(
+    new Map<Element, ReturnType<typeof setTimeout>>()
+  );
 
   useEffect(() => {
     const container = containerRef.current;
 
     if (!container) {
       return;
+    }
+
+    const timers = copiedTimers.current;
+
+    function markCopied(button: Element) {
+      button.setAttribute("data-copied", "true");
+
+      const existingTimer = timers.get(button);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      timers.set(
+        button,
+        setTimeout(() => {
+          button.removeAttribute("data-copied");
+          timers.delete(button);
+        }, COPIED_STATE_DURATION_MS)
+      );
     }
 
     async function handleCopyClick(event: MouseEvent) {
@@ -33,13 +56,21 @@ export function BlogArticle({ html }: BlogArticleProps) {
       const code =
         button.parentElement?.querySelector("code")?.textContent ?? "";
 
-      await copyToClipboard(code, "Copied to clipboard");
+      const copied = await copyToClipboard(code, "Copied to clipboard");
+
+      if (copied) {
+        markCopied(button);
+      }
     }
 
     container.addEventListener("click", handleCopyClick);
 
     return () => {
       container.removeEventListener("click", handleCopyClick);
+      for (const timer of timers.values()) {
+        clearTimeout(timer);
+      }
+      timers.clear();
     };
   }, []);
 
