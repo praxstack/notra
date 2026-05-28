@@ -25,7 +25,8 @@ export default async function Image({ params }: BlogEntryPageProps) {
   const author = post?.authors[0] ?? null;
 
   const eyebrow = "BLOG";
-  const uiText = `${eyebrow} ${description} ${author?.name ?? ""}`;
+  const domain = "usenotra.com";
+  const uiText = `${eyebrow} ${domain} ${description} ${author?.name ?? ""} ${author?.role ?? ""}`;
 
   const [serifFont, sansFont, sansBoldFont, logoSvg, authorImageDataUrl] =
     await Promise.all([
@@ -113,25 +114,60 @@ export default async function Image({ params }: BlogEntryPageProps) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "1rem",
+          justifyContent: "space-between",
         }}
       >
-        {/* biome-ignore lint/performance/noImgElement: next/og JSX requires native img */}
-        <img
-          alt=""
-          height={64}
-          src={authorImage}
-          style={{ borderRadius: "9999px" }}
-          width={64}
-        />
         <div
           style={{
-            color: "#1a1a1a",
-            fontSize: "1.5rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "1rem",
+          }}
+        >
+          {/* biome-ignore lint/performance/noImgElement: next/og JSX requires native img */}
+          <img
+            alt=""
+            height={64}
+            src={authorImage}
+            style={{ borderRadius: "9999px" }}
+            width={64}
+          />
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <div
+              style={{
+                color: "#1a1a1a",
+                fontSize: "1.5rem",
+                fontWeight: 600,
+              }}
+            >
+              {author?.name ?? "Notra"}
+            </div>
+            {author?.role ? (
+              <div
+                style={{
+                  color: "#525252",
+                  fontSize: "1.125rem",
+                  marginTop: "0.125rem",
+                }}
+              >
+                {author.role}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div
+          style={{
+            color: "#525252",
+            fontSize: "1.25rem",
             fontWeight: 600,
           }}
         >
-          {author?.name ?? "Notra"}
+          {domain}
         </div>
       </div>
     </div>,

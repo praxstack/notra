@@ -78,6 +78,7 @@ function normalizePost(post: MarblePublishedPost): NotraBlogPost {
     id: author.id,
     name: author.name,
     image: author.image,
+    role: author.role,
   }));
 
   return {

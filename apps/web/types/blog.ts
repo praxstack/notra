@@ -4,6 +4,7 @@ export interface NotraBlogAuthor {
   id: string;
   name: string;
   image: string | null;
+  role: string | null;
 }
 
 export interface NotraBlogPost {

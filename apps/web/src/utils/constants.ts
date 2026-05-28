@@ -24,7 +24,7 @@ export const MARBLE_CHANGELOG_CATEGORY_SLUG = "changelog";
 export const MARBLE_DEFAULT_POST_LIMIT = 100;
 
 export const MARBLE_CACHE_KEYS = {
-  blogPosts: "marble-blog-posts-v2",
+  blogPosts: "marble-blog-posts-v3",
   changelogPosts: "marble-changelog-posts-v2",
 } as const;
 
