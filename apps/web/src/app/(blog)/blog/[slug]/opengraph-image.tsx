@@ -87,7 +87,8 @@ export default async function Image({ params }: BlogEntryPageProps) {
             maxWidth: "44rem",
           }}
         >
-          {title}
+          <span>{title}</span>
+          <span style={{ color: "#7c3aed" }}>.</span>
         </div>
       </div>
 
