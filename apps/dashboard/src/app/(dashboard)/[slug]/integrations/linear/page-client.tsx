@@ -260,11 +260,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           </div>
           <AddLinearIntegrationDialog
             authorizeUrl={authorizeUrl}
-            trigger={
-              <Button size="sm" variant="default">
-                Connect Linear
-              </Button>
-            }
+            trigger={<Button variant="default">Connect Linear</Button>}
           />
         </div>
 

@@ -389,7 +389,6 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             <Button
               className="gap-1.5"
               onClick={() => setAddIdentityOpen(true)}
-              size="sm"
             >
               <HugeiconsIcon className="size-4" icon={Add01Icon} />
               Create Identity
@@ -399,7 +398,6 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             <Button
               className="gap-1.5"
               onClick={() => setAddReferenceOpen(true)}
-              size="sm"
             >
               <HugeiconsIcon className="size-4" icon={Add01Icon} />
               Create Reference

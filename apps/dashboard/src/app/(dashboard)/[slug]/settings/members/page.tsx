@@ -106,7 +106,7 @@ export default function MembersPage({ params }: PageProps) {
               Manage who has access to this organization
             </p>
           </div>
-          <Button onClick={() => setIsInviteModalOpen(true)} size="sm">
+          <Button onClick={() => setIsInviteModalOpen(true)}>
             <HugeiconsIcon className="size-4" icon={Add01Icon} />
             Invite Member
           </Button>

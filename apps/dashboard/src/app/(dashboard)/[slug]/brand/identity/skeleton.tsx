@@ -22,7 +22,7 @@ export function BrandIdentityPageSkeleton() {
               Configure your brand identity and tone
             </p>
           </div>
-          <Button className="gap-1.5" size="sm">
+          <Button className="gap-1.5">
             <HugeiconsIcon className="size-4" icon={Add01Icon} />
             Create Identity
             <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>

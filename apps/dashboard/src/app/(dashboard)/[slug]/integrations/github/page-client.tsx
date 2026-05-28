@@ -50,11 +50,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             onSuccess={() => refetch()}
             organizationId={organization?.id ?? ""}
             organizationSlug={organizationSlug}
-            trigger={
-              <Button size="sm" variant="default">
-                Add Github Integration
-              </Button>
-            }
+            trigger={<Button variant="default">Add Github Integration</Button>}
           />
         </div>
 
