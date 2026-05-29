@@ -15,7 +15,7 @@ import {
   listNotraAuthors,
 } from "@/utils/authors";
 import { buildBlogCardItems, listNotraBlogPosts } from "@/utils/blog";
-import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
+import { TWITTER_HANDLE } from "@/utils/metadata";
 import { SITE_URL } from "@/utils/urls";
 import type { BlogAuthorPageProps } from "~types/blog";
 
@@ -49,7 +49,6 @@ export async function generateMetadata({
       url,
       type: "profile",
       siteName: "Notra",
-      images: [DEFAULT_SOCIAL_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
