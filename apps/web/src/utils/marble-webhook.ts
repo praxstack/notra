@@ -89,6 +89,7 @@ function revalidateChangelogContent(slug?: string) {
 function revalidateAuthorContent(slug?: string) {
   revalidateTag(MARBLE_CACHE_TAGS.blogAuthors, { expire: 0 });
   revalidateBlogContent();
+  revalidateSharedContentPaths();
 
   if (slug) {
     revalidatePath(`${BLOG_AUTHOR_PATH}/${slug}`);
