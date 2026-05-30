@@ -1596,10 +1596,13 @@ function StandaloneChatPageClient({
       ) {
         return (
           <ChatToolBlock
-            iconUrl={getMcpFaviconFromToolMetadata(
-              toolPart.toolMetadata,
-              mcpServers
-            )}
+            iconUrl={
+              getMcpFaviconFromToolMetadata(
+                toolPart.toolMetadata,
+                mcpServers
+              ) ??
+              getBrandFaviconFromToolOutput(toolPart.toolName, toolPart.output)
+            }
             input={toolPart.input}
             isMcp={toolPart.toolName.startsWith("mcp_")}
             key={toolPart.toolCallId}
