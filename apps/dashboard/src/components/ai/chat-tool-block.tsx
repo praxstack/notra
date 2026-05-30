@@ -493,7 +493,7 @@ interface ChatToolBlockProps {
   input?: unknown;
   output?: unknown;
   isMcp?: boolean;
-  mcpIconUrl?: string;
+  iconUrl?: string;
   toolMetadata?: unknown;
 }
 
@@ -503,7 +503,7 @@ export function ChatToolBlock({
   input,
   output,
   isMcp = false,
-  mcpIconUrl,
+  iconUrl,
   toolMetadata,
 }: ChatToolBlockProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -526,9 +526,9 @@ export function ChatToolBlock({
         className="group flex w-full min-w-0 items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground disabled:cursor-default disabled:hover:text-muted-foreground"
         disabled={!hasDetails}
       >
-        {isMcp && mcpIconUrl ? (
+        {iconUrl ? (
           <Avatar className="size-4 shrink-0 rounded-sm after:hidden">
-            <AvatarImage className="rounded-sm" src={mcpIconUrl} />
+            <AvatarImage className="rounded-sm" src={iconUrl} />
             <AvatarFallback className="rounded-sm bg-transparent">
               <HugeiconsIcon className="size-3" icon={CpuIcon} />
             </AvatarFallback>

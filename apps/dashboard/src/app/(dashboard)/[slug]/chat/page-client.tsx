@@ -69,6 +69,7 @@ import { getMcpFaviconFromToolMetadata } from "@/lib/integrations/mcp";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import { isImageMimeType } from "@/lib/upload/mime";
 import { cn } from "@/lib/utils";
+import { getBrandFaviconFromToolOutput } from "@/utils/brand";
 import {
   CHAT_PREFERENCES_STORAGE_KEY,
   DEFAULT_CHAT_PREFERENCES,
@@ -1595,13 +1596,13 @@ function StandaloneChatPageClient({
       ) {
         return (
           <ChatToolBlock
-            input={toolPart.input}
-            isMcp={toolPart.toolName.startsWith("mcp_")}
-            key={toolPart.toolCallId}
-            mcpIconUrl={getMcpFaviconFromToolMetadata(
+            iconUrl={getMcpFaviconFromToolMetadata(
               toolPart.toolMetadata,
               mcpServers
             )}
+            input={toolPart.input}
+            isMcp={toolPart.toolName.startsWith("mcp_")}
+            key={toolPart.toolCallId}
             output={
               toolPart.state === "output-error"
                 ? { error: toolPart.errorText }
@@ -1809,6 +1810,7 @@ function StandaloneChatPageClient({
       ) {
         return (
           <ChatToolBlock
+            iconUrl={getBrandFaviconFromToolOutput(toolName, toolPart.output)}
             input={toolPart.input}
             key={toolPart.toolCallId}
             output={toolPart.output}
