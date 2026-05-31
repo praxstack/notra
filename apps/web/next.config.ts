@@ -19,16 +19,19 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForDev: false,
   },
   transpilePackages: ["@notra/ui"],
-  rewrites: async () => ({
-    beforeFiles: [
+  rewrites: async () => {
+    const c15tBackendUrl = process.env.NEXT_PUBLIC_C15T_BACKEND_URL;
+    if (!c15tBackendUrl) {
+      return [];
+    }
+
+    return [
       {
         source: "/api/c15t/:path*",
-        destination: `${process.env.NEXT_PUBLIC_C15T_BACKEND_URL}/:path*`,
+        destination: `${c15tBackendUrl}/:path*`,
       },
-    ],
-    afterFiles: [],
-    fallback: [],
-  }),
+    ];
+  },
   redirects: async () => [
     ...SHOWCASE_COMPANY_SLUGS.map((slug) => ({
       source: `/showcase/${slug}`,
