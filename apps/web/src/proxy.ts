@@ -53,7 +53,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     {
-      source: "/((?!_next/|favicon.ico|md/).*)",
+      source: "/((?!_next/|favicon.ico|md/|api(?:/|$)).*)",
       missing: [{ type: "header", key: "next-router-prefetch" }],
     },
   ],
