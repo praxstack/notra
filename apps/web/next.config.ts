@@ -10,8 +10,6 @@ const SHOWCASE_COMPANY_SLUGS = SHOWCASE_COMPANIES.map(
   (company) => company.slug
 );
 
-const C15T_BACKEND_URL = "https://notra-prod-notra.inth.app";
-
 const nextConfig: NextConfig = {
   reactCompiler: true,
   turbopack: {
@@ -22,10 +20,15 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: ["@notra/ui"],
   rewrites: async () => {
+    const c15tBackendUrl = process.env.NEXT_PUBLIC_C15T_BACKEND_URL;
+    if (!c15tBackendUrl) {
+      return [];
+    }
+
     return [
       {
         source: "/api/c15t/:path*",
-        destination: `${C15T_BACKEND_URL}/:path*`,
+        destination: `${c15tBackendUrl}/:path*`,
       },
     ];
   },
