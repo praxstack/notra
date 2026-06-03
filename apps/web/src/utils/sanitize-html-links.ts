@@ -14,6 +14,11 @@ const URL_SCHEME_REGEX = /^([a-z][a-z0-9+.-]*):/;
 const MAX_CODE_POINT = 0x10_ff_ff;
 const SAFE_SCHEMES = new Set(["http", "https", "mailto", "tel"]);
 
+const FIGCAPTION_REGEX = /<figcaption([^>]*)>([\s\S]*?)<\/figcaption>/gi;
+const ENCODED_ANCHOR_REGEX = /&lt;a\b([\s\S]*?)&gt;([\s\S]*?)&lt;\/a&gt;/gi;
+const ENCODED_QUOTE_REGEX = /&quot;/g;
+const ENCODED_APOS_REGEX = /&#39;/g;
+
 function decodeCodePoint(code: number): string {
   if (Number.isNaN(code) || code < 0 || code > MAX_CODE_POINT) {
     return "";
@@ -88,4 +93,25 @@ export function addExternalLinkAttrs(html: string): string {
 
     return `<a ${updatedAttrs}>`;
   });
+}
+
+function decodeAnchorMarkup(value: string): string {
+  return value
+    .replace(ENCODED_QUOTE_REGEX, '"')
+    .replace(ENCODED_APOS_REGEX, "'");
+}
+
+export function decodeFigcaptionLinks(html: string): string {
+  return html.replace(
+    FIGCAPTION_REGEX,
+    (_match, attrs: string, content: string) => {
+      const decoded = content.replace(
+        ENCODED_ANCHOR_REGEX,
+        (_anchor, anchorAttrs: string, text: string) =>
+          `<a${decodeAnchorMarkup(anchorAttrs)}>${decodeAnchorMarkup(text)}</a>`
+      );
+
+      return `<figcaption${attrs}>${decoded}</figcaption>`;
+    }
+  );
 }
