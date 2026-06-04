@@ -1,5 +1,7 @@
 import { createDualmarkMiddleware } from "@dualmark/nextjs";
 import type { NextRequest } from "next/server";
+import { after } from "next/server";
+import { agentAnalytics } from "@/utils/agent-analytics";
 import { HOMEPAGE_LINK_HEADER, SITE_URL } from "@/utils/urls";
 
 const dualmarkProxy = createDualmarkMiddleware({
@@ -37,6 +39,11 @@ function appendLinkHeader(headers: Headers, value: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  if (agentAnalytics) {
+    const analytics = agentAnalytics;
+    after(() => analytics.track(request));
+  }
+
   const response = await dualmarkProxy(request);
 
   if (

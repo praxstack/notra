@@ -174,6 +174,8 @@
         "@tailwindcss/typography": "^0.5.19",
         "@tanstack/react-hotkeys": "^0.3.0",
         "@toolwind/corner-shape": "^0.0.8-3",
+        "@upstash/agent-analytics": "0.1.3",
+        "@upstash/redis": "^1.35.8",
         "@usemarble/sdk": "^1.2.1",
         "fumadocs-core": "^16.6.17",
         "fumadocs-mdx": "^14.2.7",
@@ -1762,6 +1764,8 @@
     "@unkey/api": ["@unkey/api@2.3.4", "", { "dependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-irQCkLIlGedXU0cON4zbfNjGjxWaBr0XdW7JxHl9Hi4M0kAthQ8ZOLX+EYyKO4SS6kmFkfIlq96nDhaMziqtSw=="],
 
     "@upsetjs/venn.js": ["@upsetjs/venn.js@2.0.0", "", { "optionalDependencies": { "d3-selection": "^3.0.0", "d3-transition": "^3.0.1" } }, "sha512-WbBhLrooyePuQ1VZxrJjtLvTc4NVfpOyKx0sKqioq9bX1C1m7Jgykkn8gLrtwumBioXIqam8DLxp88Adbue6Hw=="],
+
+    "@upstash/agent-analytics": ["@upstash/agent-analytics@0.1.3", "", { "peerDependencies": { "@upstash/redis": "^1.38.0", "typescript": ">=5" } }, "sha512-ujoA3SIl/89ZiijuyJQpd6sGhBcHfwaugvG/VnTFH9/jYPkDfL2rmqCx1lnFMh6GdirWCWEKYTLxA0aW8QS9Rg=="],
 
     "@upstash/box": ["@upstash/box@0.4.3", "", { "dependencies": { "zod-to-json-schema": "^3.25.1" }, "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-7+VKMlI4fgqIlWg8hDsc9R+jd7Auon0cLkAEFMlql7WdPcxnONczEeDOAFLqpyOts+Jjlmv4yneZ4oEXIHHKgQ=="],
 
