@@ -67,11 +67,28 @@ interface BlogTimelineItem {
   date: string;
 }
 
-interface BlogCardAuthor {
+export interface BlogCardAuthor {
   name: string;
   image: string | null;
   slug: string;
   href: string;
+}
+
+export interface BlogPaginationLink {
+  slug: string;
+  href: string;
+  title: string;
+  author: BlogCardAuthor | null;
+}
+
+export interface BlogPostPaginationProps {
+  previous: BlogPaginationLink | null;
+  next: BlogPaginationLink | null;
+}
+
+export interface BlogPaginationCardProps {
+  link: BlogPaginationLink;
+  direction: "previous" | "next";
 }
 
 export interface BlogCardItem {

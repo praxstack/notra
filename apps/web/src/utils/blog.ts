@@ -12,7 +12,13 @@ import {
   listMarblePublishedPosts,
   type MarblePublishedPost,
 } from "@/utils/marble";
-import type { BlogCardItem, NotraBlogAuthor, NotraBlogPost } from "~types/blog";
+import type {
+  BlogCardAuthor,
+  BlogCardItem,
+  BlogPaginationLink,
+  NotraBlogAuthor,
+  NotraBlogPost,
+} from "~types/blog";
 
 const BLOG_CONTENT_TYPE = "blog_post";
 const FALLBACK_EXCERPT_MAX_LENGTH = 160;
@@ -159,25 +165,55 @@ export async function getNotraBlogPostBySlug(slug: string) {
   return posts.find((post) => post.slug === slug) ?? null;
 }
 
-export function buildBlogCardItems(posts: NotraBlogPost[]): BlogCardItem[] {
-  return posts.map((post) => {
-    const [primaryAuthor] = post.authors;
+function toBlogCardAuthor(
+  author: NotraBlogAuthor | undefined
+): BlogCardAuthor | null {
+  if (!author) {
+    return null;
+  }
 
-    return {
-      id: post.id,
-      slug: post.slug,
-      title: post.title,
-      description: post.excerpt,
-      href: getBlogPostHref(post.slug),
-      date: post.createdAt,
-      author: primaryAuthor
-        ? {
-            name: primaryAuthor.name,
-            image: primaryAuthor.image,
-            slug: primaryAuthor.slug,
-            href: getAuthorHref(primaryAuthor.slug),
-          }
-        : null,
-    };
-  });
+  return {
+    name: author.name,
+    image: author.image,
+    slug: author.slug,
+    href: getAuthorHref(author.slug),
+  };
+}
+
+export function buildBlogCardItems(posts: NotraBlogPost[]): BlogCardItem[] {
+  return posts.map((post) => ({
+    id: post.id,
+    slug: post.slug,
+    title: post.title,
+    description: post.excerpt,
+    href: getBlogPostHref(post.slug),
+    date: post.createdAt,
+    author: toBlogCardAuthor(post.authors[0]),
+  }));
+}
+
+function buildBlogPaginationLink(post: NotraBlogPost): BlogPaginationLink {
+  return {
+    slug: post.slug,
+    href: getBlogPostHref(post.slug),
+    title: post.title,
+    author: toBlogCardAuthor(post.authors[0]),
+  };
+}
+
+export async function getNotraBlogPostPagination(slug: string) {
+  const posts = await listNotraBlogPosts();
+  const index = posts.findIndex((post) => post.slug === slug);
+
+  if (index === -1) {
+    return { previous: null, next: null };
+  }
+
+  const olderPost = posts[index + 1] ?? null;
+  const newerPost = posts[index - 1] ?? null;
+
+  return {
+    previous: olderPost ? buildBlogPaginationLink(olderPost) : null,
+    next: newerPost ? buildBlogPaginationLink(newerPost) : null,
+  };
 }
