@@ -23,6 +23,7 @@ import { useAsyncDebouncer } from "@tanstack/react-pacer";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useUpdateBrandSettings } from "../../../../../../lib/hooks/use-brand-analysis";
+import { normalizePublicWebsiteUrl } from "../../../../../../schemas/url";
 import {
   AUTO_SAVE_DELAY,
   getLanguageFlag,
@@ -45,10 +46,9 @@ export function BrandForm({
     async (values: typeof initialData) => {
       const { useCustomTone: _, websiteUrl: rawUrl, ...valuesToSave } = values;
       const trimmedUrl = rawUrl.trim();
-      const websiteUrl =
-        trimmedUrl && !trimmedUrl.startsWith("https://")
-          ? `https://${trimmedUrl}`
-          : trimmedUrl || undefined;
+      const websiteUrl = trimmedUrl
+        ? normalizePublicWebsiteUrl(trimmedUrl)
+        : undefined;
       await updateMutation.mutateAsync({
         ...valuesToSave,
         id: voiceId,

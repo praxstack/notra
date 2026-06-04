@@ -12,7 +12,6 @@ import {
   contentTriggers,
 } from "@notra/db/schema";
 import { deleteBrandReferenceMemory } from "@notra/db/utils/supermemory";
-import { assertPublicHttpUrl } from "@notra/utils/url";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
 import * as z from "zod";
@@ -28,6 +27,7 @@ import {
   updateBrandSettingsSchema,
   updateReferenceSchema,
 } from "@/schemas/brand";
+import { publicWebsiteUrlSchema } from "@/schemas/url";
 import type {
   BrandSettings as BrandVoiceOutput,
   ProgressData,
@@ -149,25 +149,15 @@ function isMemorySyncFieldUpdate(data: {
 }
 
 function normalizeBrandVoiceWebsiteUrl(rawUrl: string) {
-  const trimmed = rawUrl.trim();
+  const parseResult = publicWebsiteUrlSchema.safeParse(rawUrl);
 
-  if (!trimmed) {
-    throw badRequest("Website URL is required");
-  }
-
-  const websiteUrl = trimmed.startsWith("https://")
-    ? trimmed
-    : `https://${trimmed}`;
-
-  try {
-    assertPublicHttpUrl(websiteUrl);
-  } catch (error) {
+  if (!parseResult.success) {
     throw badRequest(
-      error instanceof Error ? error.message : "Invalid website URL"
+      parseResult.error.issues[0]?.message ?? "Invalid website URL"
     );
   }
 
-  return websiteUrl;
+  return new URL(parseResult.data).href;
 }
 
 async function fetchPinnedTweet(
