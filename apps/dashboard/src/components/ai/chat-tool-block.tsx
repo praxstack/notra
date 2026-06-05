@@ -8,13 +8,15 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@notra/ui/components/ui/avatar";
+import { Button } from "@notra/ui/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@notra/ui/components/ui/collapsible";
 import { cn } from "@notra/ui/lib/utils";
-import { type ReactNode, useState } from "react";
+import { CheckIcon, XIcon } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 import {
   commitsByTimeframeInputSchema,
   type MemoryToolInput,
@@ -39,6 +41,7 @@ interface ToolCopy {
     input: unknown;
     output: unknown;
     isStreaming: boolean;
+    isError: boolean;
   }) => string | undefined;
   suffix?: (input: unknown, output: unknown) => string | undefined;
 }
@@ -205,7 +208,143 @@ function getWebSearchResultCount(output: unknown): number | undefined {
     : undefined;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function getArrayLength(value: unknown, key: string): number | undefined {
+  const array = asRecord(value)?.[key];
+  return Array.isArray(array) ? array.length : undefined;
+}
+
+function getNumericValue(value: unknown, key: string): number | undefined {
+  const number = asRecord(value)?.[key];
+  return typeof number === "number" ? number : undefined;
+}
+
+function getStringArray(value: unknown, key: string): string[] {
+  const array = asRecord(value)?.[key];
+  return Array.isArray(array)
+    ? array.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function getToolObjectNames(value: unknown, key: string): string[] {
+  const array = asRecord(value)?.[key];
+  if (!Array.isArray(array)) {
+    return [];
+  }
+
+  return array
+    .map((item) => {
+      const record = asRecord(item);
+      const name =
+        record?.toolName ??
+        record?.runtimeToolName ??
+        record?.title ??
+        record?.serverName;
+      return typeof name === "string" ? name : undefined;
+    })
+    .filter((name): name is string => Boolean(name));
+}
+
+function countSuffix(
+  count: number | undefined,
+  singular: string,
+  plural: string
+) {
+  if (count === undefined) {
+    return undefined;
+  }
+  return `(${count} ${count === 1 ? singular : plural})`;
+}
+
+function toolSearchSuffix(input: unknown, output: unknown): string | undefined {
+  const query = quotedSuffix(input, ["query"]);
+  const count = getArrayLength(output, "results");
+  const resultCount = countSuffix(count, "result", "results");
+  if (query && resultCount) {
+    return `for ${query} ${resultCount}`;
+  }
+  return query ?? resultCount;
+}
+
+function activatedToolsSuffix(output: unknown): string | undefined {
+  const names = getToolObjectNames(output, "activated");
+  if (names.length === 0) {
+    return countSuffix(getArrayLength(output, "activated"), "tool", "tools");
+  }
+  if (names.length === 1) {
+    return names[0];
+  }
+  return `(${names.length} tools)`;
+}
+
+function activeToolsSuffix(output: unknown): string | undefined {
+  const names = [
+    ...getStringArray(output, "activeTools"),
+    ...getToolObjectNames(output, "activeTools"),
+  ];
+  if (names.length === 0) {
+    return countSuffix(getArrayLength(output, "activeTools"), "tool", "tools");
+  }
+  return `(${names.length} active)`;
+}
+
+function deactivatedToolsSuffix(output: unknown): string | undefined {
+  return countSuffix(
+    getArrayLength(output, "deactivated") ??
+      getNumericValue(output, "deactivated") ??
+      getArrayLength(output, "removed") ??
+      getNumericValue(output, "removed"),
+    "tool",
+    "tools"
+  );
+}
+
 const TOOL_COPY: Record<string, ToolCopy> = {
+  searchNotraTools: {
+    verbs: ["Searching", "Searched"],
+    noun: "tools",
+    suffix: toolSearchSuffix,
+  },
+  activateNotraTools: {
+    verbs: ["Loading", "Loaded"],
+    noun: "tool",
+    suffix: (_input, output) => activatedToolsSuffix(output),
+  },
+  listActiveNotraTools: {
+    verbs: ["Checking", "Checked"],
+    noun: "active tools",
+    suffix: (_input, output) => activeToolsSuffix(output),
+  },
+  deactivateNotraTools: {
+    verbs: ["Unloading", "Unloaded"],
+    noun: "tools",
+    suffix: (_input, output) => deactivatedToolsSuffix(output),
+  },
+  searchMcpTools: {
+    verbs: ["Searching", "Searched"],
+    noun: "MCP tools",
+    suffix: toolSearchSuffix,
+  },
+  activateMcpTools: {
+    verbs: ["Loading", "Loaded"],
+    noun: "MCP tool",
+    suffix: (_input, output) => activatedToolsSuffix(output),
+  },
+  listActiveMcpTools: {
+    verbs: ["Checking", "Checked"],
+    noun: "active MCP tools",
+    suffix: (_input, output) => activeToolsSuffix(output),
+  },
+  deactivateMcpTools: {
+    verbs: ["Unloading", "Unloaded"],
+    noun: "MCP tools",
+    suffix: (_input, output) => deactivatedToolsSuffix(output),
+  },
   getPullRequests: {
     verbs: ["Fetching", "Fetched"],
     noun: "pull request",
@@ -398,28 +537,51 @@ function getSubtitle({
   input,
   output,
   isStreaming,
+  isError,
+  isAwaitingApproval,
   toolMetadata,
 }: {
   toolName: string;
   input: unknown;
   output: unknown;
   isStreaming: boolean;
+  isError: boolean;
+  isAwaitingApproval: boolean;
   toolMetadata?: unknown;
 }): string {
   const copy = TOOL_COPY[toolName];
+  const failurePrefix = isError ? "Failed to call" : undefined;
   if (!copy) {
     if (MCP_TOOL_NAME_REGEX.test(toolName)) {
       const label = getMcpToolLabel(toolName, toolMetadata);
+      if (isAwaitingApproval) {
+        return `Approve ${label}`;
+      }
+      if (failurePrefix) {
+        return `${failurePrefix} ${label}`;
+      }
       return isStreaming ? `Calling ${label}` : `Called ${label}`;
+    }
+    if (isAwaitingApproval) {
+      return `Approve ${toolName}`;
+    }
+    if (failurePrefix) {
+      return `${failurePrefix} ${toolName}`;
     }
     return isStreaming ? `Running ${toolName}` : `Ran ${toolName}`;
   }
-  const subtitle = copy.subtitle?.({ input, output, isStreaming });
+  const suffix = copy.suffix?.(input, isStreaming ? undefined : output);
+  if (isAwaitingApproval) {
+    return suffix ? `Approve ${copy.noun} ${suffix}` : `Approve ${copy.noun}`;
+  }
+  if (isError) {
+    return suffix ? `Failed ${copy.noun} ${suffix}` : `Failed ${copy.noun}`;
+  }
+  const subtitle = copy.subtitle?.({ input, output, isStreaming, isError });
   if (subtitle) {
     return subtitle;
   }
   const verb = copy.verbs[isStreaming ? 0 : 1];
-  const suffix = copy.suffix?.(input, isStreaming ? undefined : output);
   return suffix ? `${verb} ${copy.noun} ${suffix}` : `${verb} ${copy.noun}`;
 }
 
@@ -515,6 +677,8 @@ interface ChatToolBlockProps {
   state: string;
   input?: unknown;
   output?: unknown;
+  onApprove?: () => void;
+  onDeny?: () => void;
   isMcp?: boolean;
   iconUrl?: string;
   toolMetadata?: unknown;
@@ -525,23 +689,37 @@ export function ChatToolBlock({
   state,
   input,
   output,
+  onApprove,
+  onDeny,
   isMcp = false,
   iconUrl,
   toolMetadata,
 }: ChatToolBlockProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const isAwaitingApproval = state === "approval-requested";
+  const [isOpen, setIsOpen] = useState(isAwaitingApproval);
+  const isError = state === "output-error";
   const isStreaming =
     state === "input-streaming" || state === "input-available";
+
+  useEffect(() => {
+    if (isAwaitingApproval) {
+      setIsOpen(true);
+    }
+  }, [isAwaitingApproval]);
+
   const subtitle = getSubtitle({
     toolName,
     input,
     output,
     isStreaming,
+    isError,
+    isAwaitingApproval,
     toolMetadata,
   });
   const hasInput = input != null;
   const hasOutput = output != null;
-  const hasDetails = hasInput || hasOutput;
+  const hasApprovalActions = isAwaitingApproval && (onApprove || onDeny);
+  const hasDetails = hasInput || hasOutput || hasApprovalActions;
   let toolIcon: ReactNode = null;
 
   if (iconUrl) {
@@ -598,6 +776,27 @@ export function ChatToolBlock({
         <div className="mt-3 space-y-4">
           {hasInput ? <ToolDataSection label="Input" value={input} /> : null}
           {hasOutput ? <ToolDataSection label="Output" value={output} /> : null}
+          {hasApprovalActions ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {onApprove ? (
+                <Button onClick={onApprove} size="sm" type="button">
+                  <CheckIcon className="size-3.5" />
+                  Allow
+                </Button>
+              ) : null}
+              {onDeny ? (
+                <Button
+                  onClick={onDeny}
+                  size="sm"
+                  type="button"
+                  variant="ghost"
+                >
+                  <XIcon className="size-3.5" />
+                  Deny
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </CollapsibleContent>
     </Collapsible>

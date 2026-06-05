@@ -6,11 +6,15 @@ import {
 import type { GatewayArgs, GatewayResult } from "@notra/ai/types/gateway";
 import type { SupermemoryOptions } from "@notra/ai/types/model";
 import { withSupermemory } from "@supermemory/tools/ai-sdk";
+import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
 
 export interface CreateModelOptions {
   supermemory?: Omit<SupermemoryOptions, "mode" | "addMemory">;
   disableMemory?: boolean;
 }
+
+type DevToolsMiddleware =
+  typeof import("@ai-sdk/devtools")["devToolsMiddleware"];
 
 export function createModel(
   organizationId: string | undefined,
@@ -21,12 +25,12 @@ export function createModel(
   const base = gateway(modelId);
 
   if (!organizationId || options?.disableMemory) {
-    return wrapModelWithObservability(base, log);
+    return wrapModelForDevTools(wrapModelWithObservability(base, log));
   }
 
   const supermemoryApiKey = process.env.SUPERMEMORY_API_KEY?.trim();
   if (!supermemoryApiKey) {
-    return wrapModelWithObservability(base, log);
+    return wrapModelForDevTools(wrapModelWithObservability(base, log));
   }
 
   const model = withSupermemory(base, organizationId, {
@@ -36,5 +40,53 @@ export function createModel(
     ...options?.supermemory,
   });
 
-  return wrapModelWithObservability(model, log);
+  return wrapModelForDevTools(wrapModelWithObservability(model, log));
+}
+
+function wrapModelForDevTools(model: GatewayResult): GatewayResult {
+  if (
+    process.env.NODE_ENV !== "development" ||
+    process.env.AI_SDK_DEVTOOLS !== "true"
+  ) {
+    return model;
+  }
+
+  return wrapLanguageModel({
+    model,
+    middleware: createLazyDevToolsMiddleware(),
+  }) as GatewayResult;
+}
+
+function createLazyDevToolsMiddleware(): LanguageModelMiddleware {
+  let middlewarePromise: Promise<LanguageModelMiddleware> | undefined;
+
+  const getMiddleware = async () => {
+    middlewarePromise ??= import("@ai-sdk/devtools").then(
+      ({ devToolsMiddleware }: { devToolsMiddleware: DevToolsMiddleware }) =>
+        devToolsMiddleware()
+    );
+    return middlewarePromise;
+  };
+
+  return {
+    specificationVersion: "v3",
+    async transformParams(options) {
+      const middleware = await getMiddleware();
+      return middleware.transformParams
+        ? middleware.transformParams(options)
+        : options.params;
+    },
+    async wrapGenerate(options) {
+      const middleware = await getMiddleware();
+      return middleware.wrapGenerate
+        ? middleware.wrapGenerate(options)
+        : options.doGenerate();
+    },
+    async wrapStream(options) {
+      const middleware = await getMiddleware();
+      return middleware.wrapStream
+        ? middleware.wrapStream(options)
+        : options.doStream();
+    },
+  };
 }
