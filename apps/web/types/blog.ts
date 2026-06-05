@@ -89,6 +89,7 @@ export interface BlogPostPaginationProps {
 export interface BlogPaginationCardProps {
   link: BlogPaginationLink;
   direction: "previous" | "next";
+  align: "left" | "right";
 }
 
 export interface BlogCardItem {
@@ -140,6 +141,13 @@ export interface BlogPostAuthorCardProps {
 
 export interface BlogPostTocProps {
   toc: TOCItemType[];
+}
+
+export interface TocPosition {
+  id: string;
+  depth: number;
+  top: number;
+  height: number;
 }
 
 export interface BlogPostSidebarProps {

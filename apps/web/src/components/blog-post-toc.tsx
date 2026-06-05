@@ -1,84 +1,22 @@
 "use client";
 
-import type { TOCItemType } from "fumadocs-core/toc";
+import { ArrowUp01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { BlogPostTocProps } from "~types/blog";
-
-const TOC_DEPTHS = [2, 3] as const;
-const SCROLL_OFFSET_PX = 48;
-const PATH_TRACK_WIDTH = 20;
-const X_BY_DEPTH: Record<number, number> = {
-  2: 1,
-  3: 13,
-};
-const FALLBACK_X = 1;
-const TRANSITION_INSET = 5;
-const SCROLL_LOCK_FALLBACK_MS = 900;
-
-interface TocPosition {
-  id: string;
-  depth: number;
-  top: number;
-  height: number;
-}
-
-function getHeadingId(item: TOCItemType) {
-  return item.url.startsWith("#") ? item.url.slice(1) : item.url;
-}
-
-function scrollToHeading(id: string) {
-  const target = document.getElementById(id);
-  if (!target) {
-    return;
-  }
-  const rect = target.getBoundingClientRect();
-  const top = rect.top + window.scrollY - SCROLL_OFFSET_PX;
-  window.scrollTo({ top, behavior: "smooth" });
-  if (typeof history !== "undefined") {
-    history.replaceState(null, "", `#${id}`);
-  }
-}
-
-function buildPath(positions: TocPosition[]) {
-  if (positions.length === 0) {
-    return "";
-  }
-
-  const segments = positions.map((position, index) => {
-    const x = X_BY_DEPTH[position.depth] ?? FALLBACK_X;
-    const prev = positions[index - 1];
-    const next = positions[index + 1];
-    const prevX = prev ? (X_BY_DEPTH[prev.depth] ?? FALLBACK_X) : x;
-    const nextX = next ? (X_BY_DEPTH[next.depth] ?? FALLBACK_X) : x;
-    const startY =
-      prev && prevX !== x ? position.top + TRANSITION_INSET : position.top;
-    const endY =
-      next && nextX !== x
-        ? position.top + position.height - TRANSITION_INSET
-        : position.top + position.height;
-    return { x, startY, endY };
-  });
-
-  const first = segments[0];
-  if (!first) {
-    return "";
-  }
-
-  let d = `M ${first.x} ${first.startY}`;
-  for (let i = 0; i < segments.length; i += 1) {
-    const segment = segments[i];
-    if (!segment) {
-      continue;
-    }
-    d += ` L ${segment.x} ${segment.endY}`;
-    const next = segments[i + 1];
-    if (next) {
-      d += ` L ${next.x} ${next.startY}`;
-    }
-  }
-
-  return d;
-}
+import {
+  TOC_DEPTHS,
+  TOC_PATH_TRACK_WIDTH,
+  TOC_SCROLL_LOCK_FALLBACK_MS,
+  TOC_SCROLL_OFFSET_PX,
+  TOC_STICKY_OFFSET_PX,
+} from "@/lib/blog/constants";
+import {
+  buildTocPath,
+  getHeadingId,
+  scrollToHeading,
+  scrollToTop,
+} from "@/lib/blog/toc";
+import type { BlogPostTocProps, TocPosition } from "~types/blog";
 
 export function BlogPostToc({ toc }: BlogPostTocProps) {
   const items = useMemo(
@@ -90,6 +28,8 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [positions, setPositions] = useState<TocPosition[]>([]);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const linkRefs = useRef(new Map<string, HTMLAnchorElement>());
   const scrollLockRef = useRef(false);
@@ -102,8 +42,25 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
     }
     scrollLockTimerRef.current = setTimeout(() => {
       scrollLockRef.current = false;
-    }, SCROLL_LOCK_FALLBACK_MS);
+    }, TOC_SCROLL_LOCK_FALLBACK_MS);
   }
+
+  useEffect(() => {
+    function update() {
+      const nav = navRef.current;
+      if (!nav) {
+        return;
+      }
+      setHasScrolled(nav.getBoundingClientRect().top <= TOC_STICKY_OFFSET_PX);
+    }
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
 
   useEffect(() => {
     function handleScrollEnd() {
@@ -169,7 +126,7 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
       if (scrollLockRef.current) {
         return;
       }
-      const scrollY = window.scrollY + SCROLL_OFFSET_PX + 8;
+      const scrollY = window.scrollY + TOC_SCROLL_OFFSET_PX + 8;
       let current: string | null = headings[0]?.id ?? null;
       for (const heading of headings) {
         if (heading.offsetTop <= scrollY) {
@@ -198,7 +155,7 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
   const containerHeight = lastPosition
     ? lastPosition.top + lastPosition.height
     : 0;
-  const pathD = buildPath(positions);
+  const pathD = buildTocPath(positions);
   const activePos = activeId
     ? (positions.find((p) => p.id === activeId) ?? null)
     : null;
@@ -210,7 +167,7 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
     : "inset(100% 0px 0px 0px)";
 
   return (
-    <nav aria-label="On this page" className="not-prose">
+    <nav aria-label="On this page" className="not-prose" ref={navRef}>
       <p className="mb-3 font-medium font-sans text-foreground text-sm">
         On this page
       </p>
@@ -222,8 +179,8 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
               className="pointer-events-none absolute top-0 left-0 text-border"
               height={containerHeight}
               preserveAspectRatio="none"
-              viewBox={`0 0 ${PATH_TRACK_WIDTH} ${containerHeight}`}
-              width={PATH_TRACK_WIDTH}
+              viewBox={`0 0 ${TOC_PATH_TRACK_WIDTH} ${containerHeight}`}
+              width={TOC_PATH_TRACK_WIDTH}
             >
               <path
                 d={pathD}
@@ -240,8 +197,8 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
               height={containerHeight}
               preserveAspectRatio="none"
               style={{ clipPath }}
-              viewBox={`0 0 ${PATH_TRACK_WIDTH} ${containerHeight}`}
-              width={PATH_TRACK_WIDTH}
+              viewBox={`0 0 ${TOC_PATH_TRACK_WIDTH} ${containerHeight}`}
+              width={TOC_PATH_TRACK_WIDTH}
             >
               <path
                 d={pathD}
@@ -289,6 +246,16 @@ export function BlogPostToc({ toc }: BlogPostTocProps) {
           })}
         </ul>
       </div>
+      {hasScrolled ? (
+        <button
+          className="mt-6 flex w-full cursor-pointer items-center gap-2 border-border/70 border-t pt-4 font-medium font-sans text-muted-foreground text-sm transition-colors hover:text-foreground"
+          onClick={scrollToTop}
+          type="button"
+        >
+          <HugeiconsIcon className="size-4" icon={ArrowUp01Icon} />
+          Back to top
+        </button>
+      ) : null}
     </nav>
   );
 }

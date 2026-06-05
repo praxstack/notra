@@ -14,16 +14,22 @@ export function BlogPostPagination({
       aria-label="Blog post navigation"
       className="mt-16 grid gap-4 border-border border-t pt-8 sm:grid-cols-2"
     >
-      {previous ? (
-        <BlogPaginationCard direction="previous" link={previous} />
-      ) : (
+      {previous && !next ? (
         <div aria-hidden="true" className="hidden sm:block" />
-      )}
+      ) : null}
       {next ? (
-        <BlogPaginationCard direction="next" link={next} />
-      ) : (
+        <BlogPaginationCard align="left" direction="next" link={next} />
+      ) : null}
+      {previous ? (
+        <BlogPaginationCard
+          align="right"
+          direction="previous"
+          link={previous}
+        />
+      ) : null}
+      {next && !previous ? (
         <div aria-hidden="true" className="hidden sm:block" />
-      )}
+      ) : null}
     </nav>
   );
 }
