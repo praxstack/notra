@@ -1816,11 +1816,11 @@ function StandaloneChatPageClient({
 
   if (isLoadingHistory) {
     return (
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto">
-          <div className="relative flex min-h-full flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="relative flex min-h-full min-w-0 flex-col">
             <div className="flex flex-1 flex-col px-4 pt-6 pb-28">
-              <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+              <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col gap-6">
                 <div className="flex justify-end">
                   <Skeleton className="h-10 w-48 rounded-2xl" />
                 </div>
