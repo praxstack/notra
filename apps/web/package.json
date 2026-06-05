@@ -24,7 +24,7 @@
     "@toolwind/corner-shape": "^0.0.8-3",
     "@upstash/redis": "^1.35.8",
     "@usemarble/sdk": "^1.2.1",
-    "@usenotra/agent-analytics": "^0.0.2",
+    "@usenotra/agent-analytics": "^0.0.3",
     "fumadocs-core": "^16.6.17",
     "fumadocs-mdx": "^14.2.7",
     "motion": "^12.34.2",

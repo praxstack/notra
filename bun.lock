@@ -176,7 +176,7 @@
         "@toolwind/corner-shape": "^0.0.8-3",
         "@upstash/redis": "^1.35.8",
         "@usemarble/sdk": "^1.2.1",
-        "@usenotra/agent-analytics": "^0.0.2",
+        "@usenotra/agent-analytics": "^0.0.3",
         "fumadocs-core": "^16.6.17",
         "fumadocs-mdx": "^14.2.7",
         "motion": "^12.34.2",
@@ -1781,7 +1781,7 @@
 
     "@usemarble/sdk": ["@usemarble/sdk@1.2.1", "", { "dependencies": { "zod": "^3.25.65 || ^4.0.0" } }, "sha512-rklBYmj7sdN5VD0bkLZRttuzOTTj618Ob6V112+gP1a2eW6FQ3kYixPK7hahME3pP4eHiyC/sSZVSWwddg7tsQ=="],
 
-    "@usenotra/agent-analytics": ["@usenotra/agent-analytics@0.0.2", "", { "peerDependencies": { "@upstash/redis": "^1.38.0" } }, "sha512-bja3ld0QhuQosh2Wzk56FwKEmbKoTXvsdSnnEKPtvOJHJl/3PT3+uH40nXqAoqxNV6puoL878fPxecc9EAem+w=="],
+    "@usenotra/agent-analytics": ["@usenotra/agent-analytics@0.0.3", "", { "peerDependencies": { "@upstash/redis": "^1.38.0" } }, "sha512-U7NJoywZY+tIxOsns7UdioFLjARvxftiWjESsJ/fyS5zXCESW6FG18HwnuTJOAwx0a0BA3efU7pXNTroYlFIhA=="],
 
     "@vercel/analytics": ["@vercel/analytics@1.6.1", "", { "peerDependencies": { "@remix-run/react": "^2", "@sveltejs/kit": "^1 || ^2", "next": ">= 13", "react": "^18 || ^19 || ^19.0.0-rc", "svelte": ">= 4", "vue": "^3", "vue-router": "^4" }, "optionalPeers": ["@remix-run/react", "@sveltejs/kit", "next", "react", "svelte", "vue", "vue-router"] }, "sha512-oH9He/bEM+6oKlv3chWuOOcp8Y6fo6/PSro8hEkgCW3pu9/OiCXiUpRUogDh3Fs3LH2sosDrx8CxeOLBEE+afg=="],
 
