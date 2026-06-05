@@ -1,6 +1,8 @@
 import { getEnabledMcpServerCount } from "@notra/ai/integrations/mcp-tool-index";
 import { createModel } from "@notra/ai/model";
 import { getStandaloneChatPrompt } from "@notra/ai/prompts/standalone-chat";
+import { STANDALONE_SKILL_CATALOG_LIMIT } from "@notra/ai/skills/constants";
+import { listSkillSummaries } from "@notra/ai/skills/functions/service";
 import { createLazyMcpRuntime } from "@notra/ai/tools/mcp-lazy";
 import type {
   AutoThinkingLevel,
@@ -16,8 +18,6 @@ import type {
   StandaloneChatInput,
 } from "@notra/ai/types/standalone-chat";
 import { buildExperimentalTelemetry } from "@notra/ai/utils/tcc";
-import { db } from "@notra/db/drizzle";
-import { skills } from "@notra/db/schema";
 import {
   convertToModelMessages,
   isToolUIPart,
@@ -28,7 +28,6 @@ import {
   tool,
   type UIMessage,
 } from "ai";
-import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   hasEnabledGitHubIntegration,
@@ -287,20 +286,10 @@ export async function orchestrateStandaloneChat(
 }
 
 async function getStandaloneSkillSummaries(organizationId: string) {
-  const rows = await db
-    .select({
-      name: skills.name,
-      description: skills.description,
-    })
-    .from(skills)
-    .where(eq(skills.organizationId, organizationId))
-    .orderBy(asc(skills.name))
-    .limit(30);
-
-  return rows.map((row) => ({
-    name: row.name,
-    description: row.description,
-  }));
+  return listSkillSummaries(
+    { organizationId },
+    { limit: STANDALONE_SKILL_CATALOG_LIMIT }
+  );
 }
 
 function createStandaloneToolProvisioningRuntime({
