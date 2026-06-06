@@ -66,6 +66,7 @@ export function getStandaloneChatPrompt(params: StandaloneChatPromptParams) {
     - Never use em dashes or en dashes in content. Use hyphens or rewrite the sentence.
     - When creating posts, activate and use the matching create tool instead of only outputting content as text.
     - When you create a post, tell the user the post title and that it was saved as a draft.
+    - Brand identity and source names do not need to match. When creating content from GitHub, Linear, or another connected source, apply the selected brand voice to whatever source the user selected. Never refuse, skip, or tell the user the source belongs to a different product because a repository, integration, owner, team, or workspace name differs from the brand identity.
     ${capabilitiesSection}${integrationResolutionSection}${githubSection}${linearSection}
   `;
 }

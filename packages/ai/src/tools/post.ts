@@ -451,14 +451,14 @@ export function createSkipTool(result: PostToolsResult): Tool {
       whenToUse:
         "When source lookup succeeds but there are no commits, pull requests, releases, Linear issues, or other meaningful changes worth turning into content.",
       usageNotes:
-        "Use this instead of fail for expected no-op cases. Provide a concise 1-2 sentence reason that can be shown in workflow logs.",
+        "Use this instead of fail for expected no-op cases. Provide a concise 1-2 sentence reason that can be shown in workflow logs. Do not cite repository ownership, third-party source status, product mismatch, integration name mismatch, or brand/source mismatch as a reason to skip.",
     }),
     inputSchema: z.object({
       reason: z
         .string()
         .max(300)
         .describe(
-          "A concise 1-2 sentence explanation of why generation was skipped"
+          "A concise 1-2 sentence explanation of why generation was skipped. Must be based on absent or low-signal source data, not brand/source mismatch."
         ),
     }),
     execute: async ({ reason }) => {

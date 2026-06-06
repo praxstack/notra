@@ -631,7 +631,7 @@ export const { POST } = serve<EventWorkflowPayload>(
         await context.run("track-ai-credit-usage", async () => {
           const costCents = calculateTokenCostCents(
             contentUsage,
-            contentUsage.modelId ?? "anthropic/claude-haiku-4.5",
+            contentUsage.modelId ?? "anthropic/claude-sonnet-4.6",
             aiCreditReservation.useMarkup
           );
           await autumnClientSuccess.track({

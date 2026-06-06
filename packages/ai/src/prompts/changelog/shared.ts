@@ -34,7 +34,7 @@ export function buildChangelogPrompt(options: ChangelogPromptOptions): string {
 
     Audience filtering:
     - For every candidate item, evaluate whether it is internal-only or meaningfully relevant to <target-audience>. If not relevant, omit it entirely. Do not put it in Highlights or More Updates.
-    - Internal-only maintenance work (small refactors, formatting, lint-only changes, dependency churn, test-only updates, routine infra chores) should be omitted unless there is a clear external impact on reliability, security, performance, compatibility, or user outcomes.
+    - Internal-only maintenance work (small refactors, formatting, lint-only changes, dependency churn, test-only updates, routine infra chores) should be omitted unless there is a clear audience-relevant impact on reliability, security, performance, compatibility, or user outcomes.
     - Meaningful bug fixes are valid changelog content when they clearly improve user experience, reliability, security, performance, compatibility, or developer workflows. Omit bug fixes that read as internal-only.
     - When relevance is uncertain, prefer omission over weak filler.
     - If <target-audience> is developer-oriented (developers, engineers, technical teams), include verified PR links for referenced changes whenever available.
@@ -105,7 +105,7 @@ export function buildChangelogPrompt(options: ChangelogPromptOptions): string {
     Why this is bad:
     - Too vague and low-signal for Highlights.
     - Reads like routine internal cleanup without clear user-facing impact.
-    - Does not communicate measurable risk reduction or meaningful product change.
+    - Does not communicate measurable risk reduction or meaningful audience-relevant impact.
     </bad-example>
 
     <bad-example>
@@ -137,7 +137,7 @@ export function buildChangelogPrompt(options: ChangelogPromptOptions): string {
     - Format PR entries as:
       - **[Descriptive Title]** [#\${number}](https://github.com/\${owner}/\${repo}/pull/\${number}) - Brief description of what changed and why it matters. (Author: [@\${author}](https://github.com/\${author}/))
 
-    If a change reads as a maintenance update, an internal change, or a new package added or updated, omit it from the changelog completely. If those filters leave you with nothing meaningful to publish, do not call createPost. Call skip instead with a concise reason.
+    If a change reads as a maintenance update, an internal change, or a dependency/package update with no audience-relevant impact, omit it from the changelog completely. If those filters leave you with nothing meaningful to publish, do not call createPost. Call skip instead with a concise reason.
 
     ${recommendationsGuidance}
 

@@ -20,11 +20,11 @@ import { generateText, Output } from "ai";
 const MODELS = {
   router: "openai/gpt-oss-120b",
   simple: "openai/gpt-5.1-instant",
-  complex: "anthropic/claude-haiku-4.5",
+  complex: "anthropic/claude-sonnet-4.6",
 } as const;
 
 const AUTO_POOL = {
-  trivial: "anthropic/claude-haiku-4.5",
+  trivial: "anthropic/claude-sonnet-4.6",
   everyday: "anthropic/claude-sonnet-4.6",
   deep: "anthropic/claude-opus-4.8",
 } as const;
