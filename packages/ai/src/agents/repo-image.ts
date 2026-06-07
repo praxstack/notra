@@ -63,6 +63,9 @@ async function runRepoImageAgentStream(params: {
   const stream = await params.box.agent.stream({
     prompt: params.prompt,
     timeout: params.timeout,
+    options: {
+      reasoningEffort: "high",
+    },
   });
 
   for await (const chunk of stream) {
