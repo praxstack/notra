@@ -6,7 +6,7 @@ const title = "Subprocessors";
 const description =
   "Current subprocessors Notra uses to provide hosting, analytics, authentication, billing, email, AI, and integrations.";
 const url = `${SITE_URL}/subprocessors`;
-const currentAsOf = "May 22, 2026";
+const currentAsOf = "June 9, 2026";
 
 const subprocessors = [
   {
@@ -68,6 +68,12 @@ const subprocessors = [
     purpose: "Cookie-free product analytics and attribution",
     location: "European Union",
     website: "https://databuddy.cc",
+  },
+  {
+    name: "Promptwatch",
+    purpose: "AI search visibility analytics and agent traffic monitoring",
+    location: "European Union",
+    website: "https://promptwatch.com",
   },
   {
     name: "GitHub",
