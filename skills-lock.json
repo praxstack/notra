@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "brand-logos": {
+      "source": "usenotra/skills",
+      "sourceType": "github",
+      "skillPath": "skills/brand-logos/SKILL.md",
+      "computedHash": "fe2c9d787a2781c7f3ddff57ab4697d6fc268e728b104a3756f8746ea71fe5c6"
+    },
     "c15t": {
       "source": "c15t/skills",
       "sourceType": "github",
@@ -17,6 +23,12 @@
       "source": "charlietlamb/openlogs",
       "sourceType": "github",
       "computedHash": "8f05f0f8c7a0dbdd0b274ae4cb76cb887cc3ca794310907cc15f158c50bfd704"
+    },
+    "satori": {
+      "source": "usenotra/skills",
+      "sourceType": "github",
+      "skillPath": "skills/satori/SKILL.md",
+      "computedHash": "0e5950c83005ec8d88269cca4541525a0f1c18e5b5035535083fb155d88385cd"
     },
     "turborepo": {
       "source": "vercel/turborepo",
