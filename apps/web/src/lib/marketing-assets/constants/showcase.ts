@@ -1,5 +1,5 @@
-import { assetShowcaseSectionsSchema } from "./schemas";
-import type { AssetShowcaseSection } from "./types";
+import { assetShowcaseSectionsSchema } from "../schemas/showcase";
+import type { AssetShowcaseSection } from "../types/showcase";
 
 export const ASSET_SHOWCASE_SECTIONS = assetShowcaseSectionsSchema.parse([
   {
@@ -8,13 +8,13 @@ export const ASSET_SHOWCASE_SECTIONS = assetShowcaseSectionsSchema.parse([
     headingAccent: "nobody",
     headingPost: " clicks.",
     paragraphs: [
-      "Screenshots get skipped and stock templates get scrolled past. Notra fetches your site for brand identity, scans your repo for real UI, and composes a launch visual that actually looks like your product.",
+      "Screenshots get skipped and stock templates get scrolled past. Notra fetches your site for brand identity, scans your repo for real UI, and composes a marketing visual that actually looks like your product.",
       "When it's done, one click copies it for Paper or Figma. No exports, no file juggling.",
     ],
     videoSrc: "/marketing/marketing-assets-loop.mp4",
     posterSrc: "/marketing/marketing-assets-loop-poster.jpg",
     videoLabel:
-      "Notra generating a launch image from a merged PR and copying it for Paper",
+      "Notra generating a marketing image from a merged PR and copying it for Paper",
     mediaSide: "right",
   },
   {

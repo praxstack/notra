@@ -1,9 +1,10 @@
 "use client";
 
+import { cn } from "@notra/ui/lib/utils";
 import { useEffect, useRef, useState } from "react";
-import type { LoopVideoProps } from "@/lib/marketing-assets/types";
+import type { LoopVideoProps } from "@/lib/marketing-assets/types/components";
 
-export function LoopVideo({ src, poster, label }: LoopVideoProps) {
+export function LoopVideo({ src, poster, label, className }: LoopVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState<
     boolean | null
@@ -51,7 +52,10 @@ export function LoopVideo({ src, poster, label }: LoopVideoProps) {
     <video
       aria-label={label}
       autoPlay={shouldAutoplay}
-      className="block w-full rounded-2xl border border-border/60 shadow-[0_2.5rem_5rem_-2.5rem_rgb(0_0_0/0.45)]"
+      className={cn(
+        "corner-squircle block aspect-video w-full rounded-2xl border border-border/60 object-cover shadow-[0_2.5rem_5rem_-2.5rem_rgb(0_0_0/0.45)] supports-[corner-shape:round]:rounded-[1.25rem]",
+        className
+      )}
       loop={shouldAutoplay}
       muted
       playsInline

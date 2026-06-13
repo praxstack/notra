@@ -3,7 +3,7 @@ import type {
   repoImageModeSchema,
 } from "@notra/ai/schemas/repo-image";
 import type { AgentTokenUsage } from "@notra/ai/types/agents";
-import type { z } from "zod";
+import type * as z from "zod";
 
 export type RepoImageMode = z.infer<typeof repoImageModeSchema>;
 

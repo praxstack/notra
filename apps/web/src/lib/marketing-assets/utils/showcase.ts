@@ -1,4 +1,4 @@
-import type { AssetShowcaseSection } from "./types";
+import type { AssetShowcaseSection } from "../types/showcase";
 
 export function getAssetShowcaseDescription(section: AssetShowcaseSection) {
   return section.paragraphs[0];

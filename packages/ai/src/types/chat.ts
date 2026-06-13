@@ -1,6 +1,6 @@
 import type { Redis } from "@upstash/redis";
 import type { LanguageModelUsage, UIMessage } from "ai";
-import type { z } from "zod";
+import type * as z from "zod";
 import type {
   chatMessageMetadataSchema,
   chatModelSchema,
