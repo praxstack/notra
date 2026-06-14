@@ -140,7 +140,7 @@ export const chatWorkflowHandler = serve<ChatWorkflowPayload>(
           organizationId,
           messages,
           context: standaloneContext as StandaloneChatContextItem[],
-          maxSteps: 5,
+          maxSteps: 50,
           abortSignal: abortController.signal,
           requestedModel: model,
           enableThinking,

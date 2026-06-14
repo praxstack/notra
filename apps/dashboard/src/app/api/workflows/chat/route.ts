@@ -141,7 +141,7 @@ export const { POST } = serve<ChatWorkflowPayload>(async (context) => {
         userId,
         messages,
         context: standaloneContext as StandaloneChatContextItem[],
-        maxSteps: 5,
+        maxSteps: 50,
         abortSignal: abortController.signal,
         requestedModel: model,
         enableThinking,

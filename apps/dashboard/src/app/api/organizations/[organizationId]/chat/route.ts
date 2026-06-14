@@ -343,7 +343,7 @@ async function createDirectStandaloneChatResponse({
         userId,
         messages: messages as never,
         context,
-        maxSteps: 5,
+        maxSteps: 50,
         log: streamLog,
         requestedModel: model,
         enableThinking,

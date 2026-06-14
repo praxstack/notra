@@ -73,7 +73,7 @@ export async function orchestrateStandaloneChat(
     userId,
     messages,
     context = [],
-    maxSteps = 5,
+    maxSteps = 50,
     log: inputLog,
     requestedModel,
     enableThinking = true,

@@ -78,7 +78,7 @@ export async function createDirectStandaloneChatResponse({
         organizationId,
         messages: messages as never,
         context,
-        maxSteps: 5,
+        maxSteps: 50,
         log,
         requestedModel: model,
         enableThinking,
