@@ -19,6 +19,7 @@ const CLAUDE_OPUS_4_8_PRICING: ModelPricing = {
 export const MODEL_PRICING: Record<string, ModelPricing> = {
   "opencode/claude-opus-4-8": CLAUDE_OPUS_4_8_PRICING,
   "anthropic/claude-opus-4.8": CLAUDE_OPUS_4_8_PRICING,
+  "vercel/anthropic/claude-opus-4.8": CLAUDE_OPUS_4_8_PRICING,
   "opencode/claude-sonnet-4-6": CLAUDE_SONNET_4_6_PRICING,
   "anthropic/claude-sonnet-4.6": CLAUDE_SONNET_4_6_PRICING,
   "anthropic/claude-haiku-4.5": {
