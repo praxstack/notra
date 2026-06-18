@@ -50,7 +50,6 @@ import {
 } from "@notra/ui/components/ui/popover";
 import { ClaudeAiIcon } from "@notra/ui/components/ui/svgs/claudeAiIcon";
 import { Github } from "@notra/ui/components/ui/svgs/github";
-import { KimiIcon } from "@notra/ui/components/ui/svgs/kimiIcon";
 import { Linear } from "@notra/ui/components/ui/svgs/linear";
 import { Notra } from "@notra/ui/components/ui/svgs/notra";
 import { Openai } from "@notra/ui/components/ui/svgs/openai";
@@ -156,13 +155,6 @@ export const AVAILABLE_MODELS = [
     pricing: "$5 input / $30 output per 1M",
     provider: "openai",
   },
-  {
-    id: "moonshotai/kimi-k2.6",
-    label: "Kimi K2.6",
-    description: "Long-context Moonshot model",
-    pricing: "$0.95 input / $4 output per 1M",
-    provider: "moonshotai",
-  },
 ] as const;
 
 type ModelProvider = (typeof AVAILABLE_MODELS)[number]["provider"];
@@ -184,9 +176,6 @@ export function ModelIcon({
   }
   if (provider === "auto") {
     return <Notra className={className} />;
-  }
-  if (provider === "moonshotai") {
-    return <KimiIcon className={className} />;
   }
   return <ClaudeAiIcon className={className} />;
 }
