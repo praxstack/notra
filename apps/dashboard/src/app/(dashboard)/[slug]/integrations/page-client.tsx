@@ -30,14 +30,6 @@ import { dashboardOrpc } from "@/lib/orpc/query";
 import type { IntegrationType } from "@/schemas/integrations";
 import type { IntegrationConfig } from "@/types/integrations/catalog";
 
-const AddIntegrationDialog = dynamic(
-  () =>
-    import("@/components/integrations/add-integration-dialog").then((mod) => ({
-      default: mod.AddIntegrationDialog,
-    })),
-  { ssr: false }
-);
-
 interface Integration {
   id: string;
   displayName: string;
@@ -49,6 +41,14 @@ interface Integration {
 interface PageClientProps {
   organizationSlug: string;
 }
+
+const GitHubIntegrationDialog = dynamic(
+  () =>
+    import("@/components/integrations/github/github-integration-dialog").then(
+      (module) => module.GitHubIntegrationDialog
+    ),
+  { ssr: false }
+);
 
 const IntegrationCard = memo(function IntegrationCard({
   integration,
@@ -134,13 +134,11 @@ const IntegrationCard = memo(function IntegrationCard({
         cardContent
       )}
       {showGitHubDialog ? (
-        <AddIntegrationDialog
+        <GitHubIntegrationDialog
           onOpenChange={setDialogOpen}
-          onSuccess={() => {
-            setDialogOpen(false);
-          }}
           open={dialogOpen}
           organizationId={organizationId}
+          organizationSlug={organizationSlug}
         />
       ) : null}
       {showLinearDialog ? (
