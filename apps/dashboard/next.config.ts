@@ -1,6 +1,8 @@
 import path from "node:path";
 import type { NextConfig } from "next";
 
+const C15T_BACKEND_URL = "https://notra-prod-notra.inth.app";
+
 const nextConfig: NextConfig = {
   reactCompiler: true,
   outputFileTracingIncludes: {
@@ -29,15 +31,10 @@ const nextConfig: NextConfig = {
   ],
   serverExternalPackages: ["@resvg/resvg-js"],
   async rewrites() {
-    const c15tBackendUrl = process.env.NEXT_PUBLIC_C15T_BACKEND_URL;
-    if (!c15tBackendUrl) {
-      return [];
-    }
-
     return [
       {
         source: "/api/c15t/:path*",
-        destination: `${c15tBackendUrl}/:path*`,
+        destination: `${C15T_BACKEND_URL}/:path*`,
       },
     ];
   },
