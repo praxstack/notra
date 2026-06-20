@@ -6,8 +6,10 @@ interface TitleCardProps extends Omit<React.ComponentProps<"div">, "title"> {
   heading: React.ReactNode;
   icon?: React.ReactNode;
   action?: React.ReactNode;
+  footer?: React.ReactNode;
   accentColor?: string;
   contentClassName?: string;
+  footerClassName?: string;
   disabled?: boolean;
 }
 
@@ -15,9 +17,11 @@ function TitleCard({
   heading,
   icon,
   action,
+  footer,
   accentColor,
   className,
   contentClassName,
+  footerClassName,
   disabled = false,
   children,
   ...props
@@ -32,7 +36,7 @@ function TitleCard({
     <div
       aria-disabled={disabled || undefined}
       className={cn(
-        "group relative flex flex-col rounded-lg border border-border/80 bg-muted/80 p-2",
+        "group relative isolate flex flex-col overflow-hidden rounded-lg border border-border/80 border-b-border/40 bg-muted/80 shadow-2xs",
         disabled && "cursor-not-allowed",
         className
       )}
@@ -41,18 +45,13 @@ function TitleCard({
       {accentColor && (
         <div
           className={cn(
-            "pointer-events-none absolute inset-0 rounded-lg opacity-0 transition-opacity duration-200",
+            "pointer-events-none absolute inset-0 -z-10 opacity-0 transition-opacity duration-200",
             !disabled && "group-hover:opacity-100"
           )}
           style={gradientStyle}
         />
       )}
-      <div
-        className={cn(
-          "flex items-start justify-between gap-4 py-1.5 pr-2",
-          icon ? "pl-3" : "pl-2"
-        )}
-      >
+      <div className="flex items-start justify-between gap-4 px-4 py-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {icon && (
             <div className="flex size-8 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-5">
@@ -67,12 +66,22 @@ function TitleCard({
       </div>
       <div
         className={cn(
-          "flex-1 rounded-lg border border-border/80 bg-background px-4 py-3",
+          "flex-1 rounded-t-lg border-border/60 border-t bg-background px-4 py-3",
           contentClassName
         )}
       >
         {children}
       </div>
+      {footer && (
+        <div
+          className={cn(
+            "flex items-center justify-between gap-4 border-border/80 border-t bg-background px-4 py-3",
+            footerClassName
+          )}
+        >
+          {footer}
+        </div>
+      )}
     </div>
   );
 }
