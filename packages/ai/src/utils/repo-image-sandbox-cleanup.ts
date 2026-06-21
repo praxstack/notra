@@ -7,7 +7,7 @@ const OPENCODE_SANDBOX_CLEANUP_COMMAND = [
   "find . \\(",
   "-type d -name .opencode -prune -exec rm -rf {} +",
   "\\) -o \\(",
-  "-type f \\( -name opencode.json -o -name opencode.jsonc \\) -delete",
+  "-type f \\( -name opencode.json -o -name opencode.jsonc -o -name tui.json -o -name tui.jsonc \\) -delete",
   "\\) >/dev/null 2>&1 || true",
 ].join(" ");
 
