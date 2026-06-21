@@ -296,7 +296,7 @@ export function LegacyAddIntegrationDialog({
     <>
       <ResponsiveDialog onOpenChange={setOpen} open={open}>
         {triggerElement}
-        <ResponsiveDialogContent className="sm:max-w-[520px]">
+        <ResponsiveDialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-[520px] [&>*]:min-w-0">
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle className="text-2xl">
               Add GitHub Integration
