@@ -5,7 +5,7 @@ import { OssApplicationForm } from "@/components/oss-program/oss-application-for
 import { DEFAULT_SOCIAL_IMAGE, TWITTER_HANDLE } from "@/utils/metadata";
 import { SITE_URL } from "@/utils/urls";
 
-const title = "OSS Program";
+const title = "Notra for Open Source";
 const description =
   "Notra is free for open source builders. Get the Pro plan at no cost in exchange for feedback, and turn your shipped work into changelogs, launch posts, and marketing assets.";
 const url = `${SITE_URL}/oss-program`;
@@ -99,7 +99,7 @@ export default function OssProgramPage() {
       <section className="flex w-full items-center justify-center px-6 py-12 md:px-24 md:py-16">
         <div className="flex w-full max-w-[640px] flex-col items-center gap-4">
           <h1 className="text-balance text-center font-sans font-semibold text-4xl text-foreground leading-tight tracking-tight md:text-6xl">
-            Notra for <span className="text-primary">open source</span>
+            Notra for <span className="text-primary">Open Source</span>
           </h1>
           <p className="text-pretty text-center font-normal font-sans text-base text-muted-foreground leading-7">
             Notra is free for open source builders. Get the Pro plan at no cost
