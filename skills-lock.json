@@ -24,6 +24,12 @@
       "sourceType": "github",
       "computedHash": "8f05f0f8c7a0dbdd0b274ae4cb76cb887cc3ca794310907cc15f158c50bfd704"
     },
+    "pr-workflow": {
+      "source": "mezotv/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pr-workflow/SKILL.md",
+      "computedHash": "ef2498ea4423919f0b832cde520b71f68bb7b4c300c234eb9c5cca08ea3e3f6a"
+    },
     "satori": {
       "source": "usenotra/skills",
       "sourceType": "github",
