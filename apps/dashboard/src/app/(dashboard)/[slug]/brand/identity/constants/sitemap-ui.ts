@@ -18,8 +18,6 @@ export const PAGE_FILTER_TABS: {
   label: string;
 }[] = [
   { value: "crawled", label: "Crawled Pages" },
-  { value: "redirect", label: "Redirects" },
-  { value: "queued", label: "Queued" },
   { value: "failed", label: "Failed" },
 ];
 
