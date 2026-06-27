@@ -87,7 +87,7 @@ export function NavSettings({ slug }: NavSettingsProps) {
               isActive={isActive(item.url)}
               key={item.label}
               render={
-                <Link href={`/${slug}/${item.url}`}>
+                <Link href={`/${slug}/${item.url}`} replace>
                   <HugeiconsIcon icon={item.icon} />
                   <span>{item.label}</span>
                 </Link>
@@ -106,7 +106,7 @@ export function NavSettings({ slug }: NavSettingsProps) {
               isActive={isActive(item.url)}
               key={item.label}
               render={
-                <Link href={`/${slug}/${item.url}`}>
+                <Link href={`/${slug}/${item.url}`} replace>
                   <HugeiconsIcon icon={item.icon} />
                   <span>{item.label}</span>
                 </Link>
