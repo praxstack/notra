@@ -3,10 +3,13 @@ import { createDualmarkMiddleware } from "@dualmark/nextjs";
 import { after, type NextRequest, NextResponse } from "next/server";
 import { HOMEPAGE_LINK_HEADER, SITE_URL } from "@/utils/urls";
 
-const tracker = new Tracker({
-  token: process.env.BYDEFAULT_TOKEN as string,
-  exclude: ["/api"],
-});
+const bydefaultToken = process.env.BYDEFAULT_TOKEN;
+const tracker = bydefaultToken
+  ? new Tracker({
+      token: bydefaultToken,
+      exclude: ["/api"],
+    })
+  : null;
 
 const dualmarkProxy = createDualmarkMiddleware({
   siteUrl: SITE_URL,
@@ -50,18 +53,22 @@ export async function proxy(request: NextRequest) {
   ) {
     const response = NextResponse.rewrite(new URL("/agent", request.url));
 
-    after(async () => {
-      await tracker.track(request);
-    });
+    if (tracker) {
+      after(async () => {
+        await tracker.track(request);
+      });
+    }
 
     return response;
   }
 
   const response = await dualmarkProxy(request);
 
-  after(async () => {
-    await tracker.track(request);
-  });
+  if (tracker) {
+    after(async () => {
+      await tracker.track(request);
+    });
+  }
 
   if (
     request.nextUrl.pathname === "/" &&
