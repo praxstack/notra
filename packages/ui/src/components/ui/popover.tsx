@@ -17,6 +17,7 @@ function PopoverContent({
   className,
   align = "center",
   alignOffset = 0,
+  showBackdrop = false,
   side = "bottom",
   sideOffset = 4,
   ...props
@@ -24,9 +25,17 @@ function PopoverContent({
   Pick<
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    showBackdrop?: boolean
+  }) {
   return (
     <PopoverPrimitive.Portal>
+      {showBackdrop ? (
+        <PopoverPrimitive.Backdrop
+          className="data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 z-40 bg-black/8 duration-100 data-closed:animate-out data-open:animate-in dark:bg-black/30"
+          data-slot="popover-backdrop"
+        />
+      ) : null}
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

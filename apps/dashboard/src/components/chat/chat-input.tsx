@@ -1804,6 +1804,7 @@ export function ChatInputAdvanced({
                 </DropdownMenu>
 
                 <Popover
+                  modal
                   onOpenChange={setIsModelPickerOpen}
                   open={isModelPickerOpen}
                 >
@@ -1828,6 +1829,7 @@ export function ChatInputAdvanced({
                   <PopoverContent
                     align="start"
                     className="w-72 p-0"
+                    showBackdrop
                     sideOffset={6}
                   >
                     <Command>
