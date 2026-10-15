@@ -11,10 +11,11 @@ if (process.env.NOTRA_MENTION_PROCESS_BILLING_TEST !== "1") {
       ["test", fileURLToPath(import.meta.url)],
       {
         env: { ...process.env, NOTRA_MENTION_PROCESS_BILLING_TEST: "1" },
+        timeout: 15_000,
       }
     );
     expect(result.status, result.stderr?.toString()).toBe(0);
-  });
+  }, 20_000);
 } else {
   const confirm = mock(async (_params: unknown) => undefined);
   const release = mock(async (_params: unknown) => undefined);

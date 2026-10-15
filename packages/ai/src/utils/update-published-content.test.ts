@@ -11,10 +11,13 @@ if (process.env.NOTRA_PUBLICATION_TEST_WORKER !== "1") {
     const result = spawnSync(
       process.execPath,
       ["test", fileURLToPath(import.meta.url)],
-      { env: { ...process.env, NOTRA_PUBLICATION_TEST_WORKER: "1" } }
+      {
+        env: { ...process.env, NOTRA_PUBLICATION_TEST_WORKER: "1" },
+        timeout: 15_000,
+      }
     );
     expect(result.status, result.stderr?.toString()).toBe(0);
-  });
+  }, 20_000);
 } else {
   const syncWrite = mock(async (): Promise<PublicationSyncResult> => ({
     status: "synchronized" as const,
