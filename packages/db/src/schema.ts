@@ -52,6 +52,7 @@ import {
   GEO_CONTENT_BRIEF_STATUSES,
   GEO_WRITER_SOURCE_KINDS,
 } from "./constants/geo-writer";
+import { POST_HISTORY_SOURCES } from "./constants/post-history";
 import {
   SCHEDULED_PUBLICATION_DESTINATIONS,
   SCHEDULED_PUBLICATION_STATUSES,
@@ -63,6 +64,7 @@ import type {
   AgentReadinessScoreBreakdown,
 } from "./types/agent-readiness";
 import type { DemoAffectedEntity, DemoPersonalization } from "./types/demo";
+import type { DiscussionCommentAnchor } from "./types/discussion-comments";
 import type { GeoCheckGrounding } from "./types/geo-checks";
 import type {
   GeoPersonaProfile,
@@ -79,6 +81,7 @@ import {
 import type { GeoContentBriefJson } from "./types/geo-writer";
 import type { GoogleSearchConsoleQuery } from "./types/google-search-console";
 import type { PostGitHubPublish } from "./types/post-github-publish";
+import type { PostHistoryMetadata } from "./types/post-history";
 import type { PostCoverImage } from "./types/post-metadata";
 import type {
   ScheduledPublicationDestinationConfig,
@@ -2347,6 +2350,8 @@ export const posts = pgTable(
       .references(() => postCollections.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     slug: text("slug"),
+    // Maintained by the posts_revision trigger (migration 0120); writes are ignored.
+    revision: integer("revision").default(0).notNull(),
     content: text("content").notNull(),
     htmlUrl: text("html_url"),
     markdown: text("markdown"),
@@ -2404,6 +2409,50 @@ export const posts = pgTable(
     index("posts_org_published_at_idx")
       .on(table.organizationId, table.publishedAt)
       .where(sql`${table.publishedAt} IS NOT NULL`),
+  ]
+);
+
+export const postVersions = pgTable(
+  "post_versions",
+  {
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()::text`),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    postId: text("post_id").notNull(),
+    revision: integer("revision").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    actorUserId: text("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    source: text("source", { enum: POST_HISTORY_SOURCES }).notNull(),
+    retained: boolean("retained").default(false).notNull(),
+    title: text("title").notNull(),
+    slug: text("slug"),
+    markdown: text("markdown"),
+    metadata: jsonb("metadata").$type<PostHistoryMetadata>().notNull(),
+  },
+  (table) => [
+    uniqueIndex("post_versions_org_post_revision_uidx").on(
+      table.organizationId,
+      table.postId,
+      table.revision
+    ),
+    index("post_versions_org_post_unretained_created_at_idx")
+      .on(table.organizationId, table.postId, table.createdAt)
+      .where(sql`${table.retained} = false`),
+    foreignKey({
+      columns: [table.organizationId, table.postId],
+      foreignColumns: [posts.organizationId, posts.id],
+      name: "post_versions_org_post_fk",
+    }).onDelete("cascade"),
+    check(
+      "post_versions_source_check",
+      sql`${table.source} IN ('baseline', 'editor_autosave', 'editor_save', 'checkpoint', 'restore', 'ai', 'api', 'system')`
+    ),
+    check("post_versions_revision_check", sql`${table.revision} >= 0`),
   ]
 );
 
@@ -4043,11 +4092,19 @@ export const discussionComments = pgTable(
       { onDelete: "cascade" }
     ),
     parentId: text("parent_id"),
+    contentId: text("content_id").references(() => posts.id, {
+      onDelete: "cascade",
+    }),
+    resolvedAt: timestamp("resolved_at"),
+    resolvedByUserId: text("resolved_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     depth: integer("depth").notNull().default(0),
     userId: text("user_id").references(() => users.id, {
       onDelete: "set null",
     }),
     body: text("body").notNull(),
+    anchor: jsonb("anchor").$type<DiscussionCommentAnchor>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     editedAt: timestamp("edited_at"),
     deletedAt: timestamp("deleted_at"),
@@ -4067,11 +4124,23 @@ export const discussionComments = pgTable(
     }).onDelete("cascade"),
     check(
       "discussionComments_target_check",
-      sql`num_nonnulls(${table.feedbackId}, ${table.shelfSourceId}) = 1`
+      sql`num_nonnulls(${table.feedbackId}, ${table.shelfSourceId}, ${table.contentId}) = 1`
+    ),
+    index("discussionComments_content_idx").on(
+      table.contentId,
+      table.createdAt
+    ),
+    check(
+      "discussionComments_resolution_check",
+      sql`(${table.resolvedAt} IS NULL AND ${table.resolvedByUserId} IS NULL) OR (${table.resolvedAt} IS NOT NULL AND ${table.contentId} IS NOT NULL AND ${table.parentId} IS NULL)`
     ),
     check(
       "discussionComments_depth_check",
       sql`${table.depth} between 0 and 5`
+    ),
+    check(
+      "discussionComments_anchor_check",
+      sql`${table.anchor} IS NULL OR (${table.contentId} IS NOT NULL AND ${table.parentId} IS NULL AND ${table.depth} = 0 AND jsonb_typeof(${table.anchor}) = 'object')`
     ),
   ]
 );

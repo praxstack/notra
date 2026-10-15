@@ -333,6 +333,23 @@
   background-color: color-mix(in oklch, var(--primary) 22%, transparent);
 }
 
+::highlight(content-comment) {
+  background-color: color-mix(in oklch, var(--warning) 18%, transparent);
+  text-decoration: underline 2px
+    color-mix(in oklch, var(--warning) 70%, transparent);
+  text-underline-offset: 4px;
+}
+
+::highlight(content-comment-active) {
+  background-color: color-mix(in oklch, var(--warning) 34%, transparent);
+  text-decoration: underline 2px var(--warning);
+  text-underline-offset: 4px;
+}
+
+::highlight(content-comment-draft) {
+  background-color: color-mix(in oklch, var(--primary) 22%, transparent);
+}
+
 @keyframes annotation-flash {
   0%,
   35% {

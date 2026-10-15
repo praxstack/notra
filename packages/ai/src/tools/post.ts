@@ -15,7 +15,7 @@ import { toolDescription } from "@notra/ai/utils/description";
 import {
   createPostRecord,
   ensureChatPostCollection,
-  updatePostRecord,
+  updateAiPostRecord as updatePostRecord,
   updatePostSiteMetadata,
 } from "@notra/ai/utils/post-service";
 import { applyPostTextEdits } from "@notra/ai/utils/post-text-edits";

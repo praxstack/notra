@@ -50,7 +50,7 @@ import type {
 } from "@notra/ai/types/post-tools";
 import type { RouteUsageSummary } from "@notra/ai/types/router";
 import { loadBrandGuidelineSourceInstructions } from "@notra/ai/utils/load-brand-guideline-source";
-import { updatePostRecord } from "@notra/ai/utils/post-service";
+import { updateAiPostRecord as updatePostRecord } from "@notra/ai/utils/post-service";
 import { summarizeRouteUsage } from "@notra/ai/utils/route-usage";
 import { logWarn } from "@notra/ai/utils/server-log";
 import { buildTelemetryOptions } from "@notra/ai/utils/tcc";
@@ -684,6 +684,7 @@ async function runGeoWriterWithContext(
             organizationId,
             postId: primaryPost.postId,
             markdown: pass.markdown,
+            expectedMarkdown: draft.markdown,
           });
           humanized = update.status === "updated";
         } else {

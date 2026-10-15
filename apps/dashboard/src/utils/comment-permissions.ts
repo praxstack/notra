@@ -1,4 +1,5 @@
 import { badRequest, forbidden } from "@/lib/orpc/utils/errors";
+import type { CommentResolutionState } from "@/types/comments";
 
 export function replyDepth(
   parent: { depth: number; deletedAt: Date | null } | null,
@@ -20,5 +21,11 @@ export function assertCommentAuthor(
 ) {
   if (authorId !== userId) {
     throw forbidden(rejectedMessage);
+  }
+}
+
+export function assertResolvableComment(comment: CommentResolutionState) {
+  if (comment.parentId || comment.deletedAt) {
+    throw badRequest("Only active content root threads can be resolved");
   }
 }

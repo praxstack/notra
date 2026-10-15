@@ -12,7 +12,10 @@ import {
   getLinearIssuePreviews,
 } from "@notra/ai/utils/linear";
 import { createOctokit } from "@notra/ai/utils/octokit";
-import { listOrganizationTags } from "@notra/ai/utils/post-service";
+import {
+  isPostSlugConflict,
+  listOrganizationTags,
+} from "@notra/ai/utils/post-service";
 import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
 import { logError } from "@notra/ai/utils/server-log";
 import { db } from "@notra/db/drizzle";
@@ -24,6 +27,11 @@ import {
 } from "@notra/db/schema";
 import type { BlogPostSubtype } from "@notra/db/types/content";
 import { buildPostCollectionName } from "@notra/db/utils/post-collections";
+import {
+  checkpointPostHistory,
+  setPostHistoryContext,
+  supportsPostHistory,
+} from "@notra/db/utils/post-history";
 import { extractImageArtifactHtml } from "@notra/db/utils/post-image-artifacts";
 import {
   contentAuthorsInOrganization,
@@ -61,6 +69,7 @@ import {
   updateContentSchema,
   updateExpectedPostCountInputSchema,
 } from "@notra/schemas/dashboard/content";
+import { saveContentDocumentSchema } from "@notra/schemas/dashboard/content-history";
 import { clearCompletedGenerationSchema } from "@notra/schemas/dashboard/generations";
 import type { PostMetadata } from "@notra/schemas/shared/post-metadata";
 import { slugify } from "@notra/utils/slugify";
@@ -108,6 +117,7 @@ import { getTranslations } from "@/lib/i18n/server";
 import { publishSavedContentToGitHub } from "@/lib/integrations/github/publish-saved-content";
 import { baseProcedure } from "@/lib/orpc/base";
 import { contentAuthorsRouter } from "@/lib/orpc/routers/content-authors";
+import { contentHistoryRouter } from "@/lib/orpc/routers/content-history";
 import { isOwnSocialVideo } from "@/lib/social-connect/media-urls";
 import { startOnDemandRun } from "@/lib/workflows/start";
 import type { PostMetadataColumns } from "@/types/content/overview";
@@ -142,6 +152,7 @@ const CONTENT_SIBLING_LIMIT = 100;
 
 const postReadColumns = {
   id: true,
+  revision: true,
   organizationId: true,
   collectionId: true,
   title: true,
@@ -252,12 +263,14 @@ function serializeContent(
     githubPublish: unknown;
     status: "draft" | "published";
     title: string;
+    revision: number;
   }
 ): ContentResponse {
   const githubPublish = postGitHubPublishSchema.safeParse(post.githubPublish);
 
   return {
     id: post.id,
+    revision: post.revision,
     title: post.title,
     slug: post.slug,
     content: post.content,
@@ -535,6 +548,7 @@ async function fetchCommitsPreview(params: {
 }
 
 export const contentRouter = {
+  history: contentHistoryRouter,
   home: {
     get: baseProcedure
       .input(
@@ -755,6 +769,10 @@ export const contentRouter = {
 
       try {
         await db.transaction(async (tx) => {
+          await setPostHistoryContext(tx, {
+            actorUserId: auth.user.id,
+            source: "editor_save",
+          });
           await tx.insert(postCollections).values({
             id: collectionId,
             organizationId: input.organizationId,
@@ -811,6 +829,117 @@ export const contentRouter = {
 
       return { contentId, collectionId };
     }),
+  saveDocument: baseProcedure
+    .input(saveContentDocumentSchema)
+    .handler(async ({ context, input }) => {
+      const auth = await assertOrganizationAccess({
+        headers: context.headers,
+        organizationId: input.organizationId,
+      });
+      await assertActiveSubscription(input.organizationId);
+      const [existingPost, tErrors] = await Promise.all([
+        db.query.posts.findFirst({
+          where: and(
+            eq(posts.id, input.contentId),
+            eq(posts.organizationId, input.organizationId)
+          ),
+          columns: { title: true, contentType: true, status: true },
+        }),
+        getTranslations("errors.content"),
+      ]);
+      if (!existingPost) {
+        throw notFound(tErrors("historyNotFound"));
+      }
+      const updateData = await buildContentUpdateData(existingPost, input);
+      if (input.slug !== undefined) {
+        if (!supportsPostSlug(existingPost.contentType)) {
+          throw badRequest(tErrors("slugNotSupported"));
+        }
+        updateData.slug = input.slug;
+      }
+      try {
+        const [saved] = await db.transaction(async (tx) => {
+          await setPostHistoryContext(tx, {
+            actorUserId: auth.user.id,
+            source: input.autosave ? "editor_autosave" : "editor_save",
+          });
+          const updated = await tx
+            .update(posts)
+            .set(updateData)
+            .where(
+              and(
+                eq(posts.id, input.contentId),
+                eq(posts.organizationId, input.organizationId),
+                eq(posts.revision, input.expectedRevision)
+              )
+            )
+            .returning({
+              id: posts.id,
+              title: posts.title,
+              slug: posts.slug,
+              markdown: posts.markdown,
+              content: posts.content,
+              revision: posts.revision,
+              updatedAt: posts.updatedAt,
+            });
+          const document = updated[0];
+          if (
+            document &&
+            !input.autosave &&
+            document.revision === input.expectedRevision &&
+            supportsPostHistory(existingPost.contentType)
+          ) {
+            await checkpointPostHistory(tx, {
+              organizationId: input.organizationId,
+              postId: input.contentId,
+              expectedRevision: document.revision,
+              actorUserId: auth.user.id,
+              source: "editor_save",
+            });
+          }
+          return updated;
+        });
+        if (!saved) {
+          const current = await db.query.posts.findFirst({
+            where: and(
+              eq(posts.id, input.contentId),
+              eq(posts.organizationId, input.organizationId)
+            ),
+            columns: { revision: true },
+          });
+          if (!current) {
+            throw notFound(tErrors("historyNotFound"));
+          }
+          throw conflict(tErrors("concurrentEdit"), {
+            currentRevision: current.revision,
+          });
+        }
+        if (
+          input.markdown !== undefined &&
+          saved.revision > input.expectedRevision
+        ) {
+          trackServerEvent({
+            event: POSTHOG_EVENTS.CONTENT_SAVED,
+            headers: context.headers,
+            userId: auth.user.id,
+            organizationId: input.organizationId,
+            properties: {
+              content_id: input.contentId,
+              type: existingPost.contentType,
+            },
+          });
+        }
+        return {
+          success: true,
+          document: { ...saved, updatedAt: saved.updatedAt.toISOString() },
+        };
+      } catch (error) {
+        if (isPostSlugConflict(error)) {
+          throw conflict(tErrors("slugTaken"));
+        }
+        throw error;
+      }
+    }),
   update: baseProcedure
     .input(contentInputSchema.and(updateContentSchema))
     .handler(async ({ context, input }) => {
@@ -859,6 +988,10 @@ export const contentRouter = {
 
       try {
         const [updatedPost] = await db.transaction(async (tx) => {
+          await setPostHistoryContext(tx, {
+            actorUserId: auth.user.id,
+            source: "system",
+          });
           const rows = await tx
             .update(posts)
             .set(updateData)
@@ -870,6 +1003,7 @@ export const contentRouter = {
             )
             .returning({
               id: posts.id,
+              revision: posts.revision,
               organizationId: posts.organizationId,
               collectionId: posts.collectionId,
               title: posts.title,
@@ -964,7 +1098,7 @@ export const contentRouter = {
   updateMetadata: baseProcedure
     .input(updateContentMetadataInputSchema)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
+      const auth = await assertOrganizationAccess({
         headers: context.headers,
         organizationId: input.organizationId,
       });
@@ -1001,19 +1135,25 @@ export const contentRouter = {
         }
       }
 
-      const [updated] = await db
-        .update(posts)
-        .set({
-          ...postMetadataUpdateData(metadata),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(posts.id, input.contentId),
-            eq(posts.organizationId, input.organizationId)
+      const [updated] = await db.transaction(async (tx) => {
+        await setPostHistoryContext(tx, {
+          actorUserId: auth.user.id,
+          source: "editor_autosave",
+        });
+        return await tx
+          .update(posts)
+          .set({
+            ...postMetadataUpdateData(metadata),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(posts.id, input.contentId),
+              eq(posts.organizationId, input.organizationId)
+            )
           )
-        )
-        .returning();
+          .returning();
+      });
       if (!updated) {
         throw notFound("Content not found");
       }

@@ -16,7 +16,10 @@ import type {
   UseContentMetadataParams,
 } from "@/types/content/overview";
 import type { ContentApiResponse } from "@/types/hooks/content";
-import { applyMetadataPatch } from "@/utils/content-metadata";
+import {
+  applyMetadataPatch,
+  mergeContentMetadataSave,
+} from "@/utils/content-metadata";
 import { toErrorMessage } from "@/utils/error-message";
 
 export function useContentMetadata(
@@ -64,9 +67,20 @@ export function useContentMetadata(
             ...target,
             metadata: patch,
           });
-          if (request === latestRequest.current && pending.current === null) {
-            setMetadataFor(target, () => result.content.metadata);
-          }
+          const queryKey = dashboardOrpc.content.get.queryKey({
+            input: target,
+          });
+          await queryClient.cancelQueries(
+            { queryKey, exact: true },
+            { revert: false }
+          );
+          queryClient.setQueryData<ContentApiResponse>(queryKey, (current) =>
+            mergeContentMetadataSave(
+              current,
+              result.content,
+              request !== latestRequest.current || pending.current !== null
+            )
+          );
         } catch (error) {
           toast.error(toErrorMessage(error, t("saveFailed")));
           void queryClient.invalidateQueries({
@@ -77,7 +91,7 @@ export function useContentMetadata(
       queue.current = (queue.current ?? Promise.resolve()).then(run);
       return queue.current;
     },
-    [queryClient, setMetadataFor, t]
+    [queryClient, t]
   );
 
   const flush = useCallback(() => {

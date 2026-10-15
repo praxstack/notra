@@ -14,6 +14,11 @@ export interface ContentDetailPublishActionsProps extends ContentDetailToolbarPr
   videoPending: boolean;
 }
 
+export type ContentDetailStatusButtonProps = Pick<
+  ContentDetailToolbarProps,
+  "content" | "document"
+> & { hasUnsavedChanges: boolean };
+
 export type ContentDetailImageActionsProps = Pick<
   ContentDetailToolbarProps,
   "content" | "contentId" | "document" | "organizationId"

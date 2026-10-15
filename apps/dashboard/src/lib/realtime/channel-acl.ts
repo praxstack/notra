@@ -3,6 +3,8 @@ import { isDemoMode } from "@notra/utils/demo-mode";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import type { User } from "@/types/auth/organization";
 import type { ParsedChatChannel } from "@/types/realtime/channel";
+import { parseDiscussionChannel } from "@/utils/comment-channel";
+import { assertDiscussionTarget } from "@/utils/discussion-access";
 
 const CHAT_CHANNEL_PREFIX = "chat";
 const DEMO_CHANNEL_PATTERN = /^demo:([^:*?\s]+)$/;
@@ -54,19 +56,14 @@ export async function authorizeRealtimeChannels({
   const authorizedOrganizationIds = new Set<string>();
 
   for (const channel of channels) {
-    const discussion =
-      /^discussion:([^:*?\s]+):(feedback|shelf):([^:*?\s]+)$/.exec(channel);
+    const discussion = parseDiscussionChannel(channel);
     let parsed = parseChatChannel(channel);
-    if (discussion?.[1] && discussion[2] && discussion[3]) {
-      try {
-        parsed = {
-          organizationId: decodeURIComponent(discussion[1]),
-          chatId: discussion[3],
-          streamId: discussion[2],
-        };
-      } catch {
-        return jsonResponse(403, { error: "Forbidden channel" });
-      }
+    if (discussion) {
+      parsed = {
+        organizationId: discussion.organizationId,
+        chatId: discussion.targetId,
+        streamId: discussion.targetType,
+      };
     }
     const demo = isDemoMode() ? DEMO_CHANNEL_PATTERN.exec(channel) : null;
     if (demo?.[1]) {
@@ -80,16 +77,17 @@ export async function authorizeRealtimeChannels({
       return jsonResponse(403, { error: "Forbidden channel" });
     }
 
-    if (authorizedOrganizationIds.has(parsed.organizationId)) {
-      continue;
-    }
-
     try {
-      await assertOrganizationAccess({
-        headers,
-        organizationId: parsed.organizationId,
-        user,
-      });
+      if (!authorizedOrganizationIds.has(parsed.organizationId)) {
+        await assertOrganizationAccess({
+          headers,
+          organizationId: parsed.organizationId,
+          user,
+        });
+      }
+      if (discussion) {
+        await assertDiscussionTarget(discussion);
+      }
     } catch {
       return jsonResponse(403, { error: "Forbidden channel" });
     }

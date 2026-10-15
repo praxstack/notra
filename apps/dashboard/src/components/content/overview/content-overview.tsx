@@ -193,6 +193,7 @@ export function ContentOverview(props: ContentOverviewProps) {
           label={t("hidden.label")}
           onCheckedChange={(hidden) => api.update({ hidden })}
         />
+        {props.children}
       </div>
 
       <div className="bg-border h-px" />

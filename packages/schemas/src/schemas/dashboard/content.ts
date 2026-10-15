@@ -107,6 +107,7 @@ export const postGitHubPublishSchema = z.object({
 
 export const contentSchema = z.object({
   id: z.string(),
+  revision: z.number().int().min(0),
   title: z.string(),
   slug: z.string().nullable(),
   content: z.string(),

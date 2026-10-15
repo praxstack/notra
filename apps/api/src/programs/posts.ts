@@ -10,6 +10,7 @@ import {
 } from "@notra/content-generation/jobs";
 import { contentAuthors, postCollections, posts } from "@notra/db/schema";
 import { buildPostCollectionName } from "@notra/db/utils/post-collections";
+import { setPostHistoryContext } from "@notra/db/utils/post-history";
 import {
   contentAuthorsInOrganization,
   postMetadataUpdateData,
@@ -407,6 +408,7 @@ export const createPost = Effect.fn("posts.create")(function* (
   const [createdPost] = yield* Effect.tryPromise({
     try: () =>
       input.db.transaction(async (tx) => {
+        await setPostHistoryContext(tx, { actorUserId: null, source: "api" });
         await tx.insert(postCollections).values({
           id: collectionId,
           organizationId: input.organizationId,
@@ -597,6 +599,7 @@ export const commitPatchPost = Effect.fn("posts.commitPatch")(function* (
   const patchResult = yield* Effect.tryPromise({
     try: () =>
       input.db.transaction(async (tx) => {
+        await setPostHistoryContext(tx, { actorUserId: null, source: "api" });
         const rows = await tx
           .update(posts)
           .set(updateData)

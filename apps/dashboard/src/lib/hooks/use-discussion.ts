@@ -1,6 +1,7 @@
 "use client";
 
 import type { RealtimeSchema } from "@notra/ai/realtime";
+import type { DiscussionCommentAnchor } from "@notra/db/types/discussion-comments";
 import { ORPCError } from "@orpc/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRealtime } from "@upstash/realtime/client";
@@ -14,7 +15,7 @@ import type { CommentTarget, DiscussionComment } from "@/types/comments";
 import { commentChannel } from "@/utils/comment-channel";
 import { commentSubmitId } from "@/utils/comment-submit-id";
 
-export function useDiscussion(target: CommentTarget) {
+export function useDiscussion(target: CommentTarget, active = true) {
   const t = useTranslations("comments");
   const client = useQueryClient();
   const { organizationId, targetId, targetType } = target;
@@ -26,34 +27,50 @@ export function useDiscussion(target: CommentTarget) {
     [organizationId, targetId, targetType]
   );
   const lock = useRef(false);
-  const query = useQuery({
-    ...options,
-    staleTime: 15000,
-    retry: (failureCount, error) =>
-      !(error instanceof ORPCError && error.code === "NOT_FOUND") &&
-      failureCount < 1,
-    refetchInterval: (current) =>
-      lock.current || current.state.status === "error" ? false : 10000,
-    refetchOnWindowFocus: (current) =>
-      !lock.current && current.state.status !== "error",
-    refetchOnReconnect: (current) =>
-      !lock.current && current.state.status !== "error",
-  });
+  const resolveToasts = useRef({ active: false, ids: new Set<string>() });
+  useEffect(() => {
+    const scope = { active: true, ids: new Set<string>() };
+    resolveToasts.current = scope;
+    return () => {
+      scope.active = false;
+      for (const id of scope.ids) {
+        toast.dismiss(id);
+      }
+      scope.ids.clear();
+    };
+  }, [organizationId, targetId, targetType]);
   const { status } = useRealtime<RealtimeSchema, "discussion.changed">({
     channels: [commentChannel(target)],
     events: ["discussion.changed"],
-    enabled: query.data?.realtimeEnabled === true,
+    enabled:
+      active && client.getQueryData(options.queryKey)?.realtimeEnabled === true,
     onData: () => {
       if (!lock.current) {
         void client.invalidateQueries({ queryKey: options.queryKey });
       }
     },
   });
+  const query = useQuery({
+    ...options,
+    enabled: active,
+    staleTime: 15000,
+    retry: (failureCount, error) =>
+      !(error instanceof ORPCError && error.code === "NOT_FOUND") &&
+      failureCount < 1,
+    refetchInterval: (current) =>
+      status === "connected" || lock.current || current.state.status === "error"
+        ? false
+        : 10000,
+    refetchOnWindowFocus: (current) =>
+      !lock.current && current.state.status !== "error",
+    refetchOnReconnect: (current) =>
+      !lock.current && current.state.status !== "error",
+  });
   useEffect(() => {
-    if (status === "connected" && !lock.current) {
+    if (active && status === "connected" && !lock.current) {
       void client.invalidateQueries({ queryKey: options.queryKey });
     }
-  }, [status, client, options.queryKey]);
+  }, [active, status, client, options.queryKey]);
   const [draft, setDraft] = useState("");
   const [reply, setReply] = useState<DiscussionComment | null>(null);
   const [busy, setBusy] = useState(false);
@@ -63,6 +80,7 @@ export function useDiscussion(target: CommentTarget) {
     id: string;
     body: string;
     parentId: string | null;
+    anchorKey: string | null;
   } | null>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
@@ -131,19 +149,20 @@ export function useDiscussion(target: CommentTarget) {
       });
   }
 
-  function submit() {
-    const body = draft.trim();
+  function createComment(
+    body: string,
+    parent: DiscussionComment | null,
+    anchor?: DiscussionCommentAnchor
+  ) {
     if (!body || !user || lock.current) {
-      return;
+      return Promise.resolve(null);
     }
-    const parent = reply;
     const parentId = parent?.id ?? null;
-    const id = commentSubmitId(retry.current, body, parentId);
-    retry.current = { id, body, parentId };
+    const anchorKey = anchor ? JSON.stringify(anchor) : null;
+    const id = commentSubmitId(retry.current, body, parentId, anchorKey);
+    retry.current = { id, body, parentId, anchorKey };
     scrollToComment.current = id;
-    setDraft("");
-    setReply(null);
-    void update(
+    return update(
       (comments) =>
         comments.some((item) => item.id === id)
           ? comments
@@ -162,6 +181,7 @@ export function useDiscussion(target: CommentTarget) {
                 deletedAt: null,
                 reactions: [],
                 pending: true,
+                anchor: anchor ?? null,
               },
             ],
       () =>
@@ -170,13 +190,30 @@ export function useDiscussion(target: CommentTarget) {
           id,
           parentId,
           body,
+          ...(anchor ? { anchor } : {}),
         })
     ).then((saved) => {
       if (saved) {
         retry.current = null;
+      } else {
+        scrollToComment.current = null;
+      }
+      return saved ? id : null;
+    });
+  }
+
+  function submit() {
+    const body = draft.trim();
+    if (!body || !user || lock.current) {
+      return;
+    }
+    const parent = reply;
+    setDraft("");
+    setReply(null);
+    void createComment(body, parent).then((saved) => {
+      if (saved) {
         return;
       }
-      scrollToComment.current = null;
       setDraft((current) => (current ? `${body}\n\n${current}` : body));
       setReply(parent);
     });
@@ -256,6 +293,67 @@ export function useDiscussion(target: CommentTarget) {
     );
   }
 
+  function setCommentResolved(commentId: string, resolved: boolean) {
+    if (target.targetType !== "content" || !user) {
+      return Promise.resolve(false);
+    }
+    return update(
+      (comments) =>
+        comments.map((item) =>
+          item.id === commentId
+            ? {
+                ...item,
+                resolvedAt: resolved ? new Date().toISOString() : null,
+                resolvedByUserId: resolved ? user.id : null,
+              }
+            : item
+        ),
+      () =>
+        dashboardOrpc.comments.resolve.call({
+          ...target,
+          targetType: "content",
+          commentId,
+          resolved,
+        })
+    );
+  }
+
+  function resolveComment(commentId: string, resolved: boolean) {
+    const toastId = `resolved:${organizationId}:${targetId}:${commentId}`;
+    const scope = resolveToasts.current;
+    return setCommentResolved(commentId, resolved).then((saved) => {
+      if (!saved) {
+        return false;
+      }
+      if (!scope.active) {
+        return true;
+      }
+      if (resolved) {
+        scope.ids.add(toastId);
+        toast.success(t("threadResolved"), {
+          id: toastId,
+          duration: Infinity,
+          closeButton: true,
+          onDismiss: () => scope.ids.delete(toastId),
+          action: {
+            label: t("reopenThread"),
+            onClick: async (event) => {
+              event.preventDefault();
+              if (await setCommentResolved(commentId, false)) {
+                scope.ids.delete(toastId);
+                toast.dismiss(toastId);
+              }
+            },
+          },
+        });
+      } else {
+        scope.ids.delete(toastId);
+        toast.dismiss(toastId);
+      }
+      return true;
+    });
+  }
+
   return {
     query,
     items,
@@ -268,8 +366,10 @@ export function useDiscussion(target: CommentTarget) {
     section,
     textarea,
     submit,
+    createComment,
     editComment,
     deleteComment,
     reactToComment,
+    resolveComment,
   };
 }

@@ -3,7 +3,28 @@ import type { ContentResponse } from "@notra/schemas/dashboard/content";
 import type { PostMetadataPatch } from "@notra/schemas/shared/post-metadata";
 import { fromMarkdown } from "mdast-util-from-markdown";
 
+import type { ContentApiResponse } from "@/types/hooks/content";
 import type { SiteMarkdownNode } from "@/types/integrations/site-github-publish";
+
+export function mergeContentMetadataSave(
+  current: ContentApiResponse | undefined,
+  content: ContentResponse,
+  preserveOptimisticMetadata: boolean
+): ContentApiResponse | undefined {
+  if (
+    !current ||
+    current.content.id !== content.id ||
+    current.content.revision > content.revision
+  ) {
+    return current;
+  }
+  return {
+    ...current,
+    content: preserveOptimisticMetadata
+      ? { ...content, metadata: current.content.metadata }
+      : content,
+  };
+}
 
 /** The post's metadata with a patch applied, for optimistic updates. */
 export function applyMetadataPatch(

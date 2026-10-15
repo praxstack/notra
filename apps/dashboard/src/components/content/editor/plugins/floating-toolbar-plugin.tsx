@@ -2,6 +2,7 @@
 
 import {
   CodeIcon,
+  Comment01Icon,
   Link01Icon,
   TextBoldIcon,
   TextItalicIcon,
@@ -22,6 +23,13 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "use-intl";
+
+import { useContentComments } from "@/components/content/inline-comments/content-comments-provider";
+import type { CommentAnchorQuote } from "@/types/content/inline-comments";
+import {
+  captureSelectionCommentAnchor,
+  refreshCommentAnchor,
+} from "@/utils/comment-anchor";
 
 interface FloatingToolbarProps {
   editor: ReturnType<typeof useLexicalComposerContext>[0];
@@ -52,8 +60,10 @@ function FloatingToolbar({
 }: FloatingToolbarProps) {
   const t = useTranslations("content.editor.toolbar");
   const tCommon = useTranslations("common");
+  const comments = useContentComments();
   const toolbarRef = useRef<HTMLDivElement>(null);
   const linkInputRef = useRef<HTMLInputElement>(null);
+  const commentQuoteRef = useRef<CommentAnchorQuote | null>(null);
   const [linkUrl, setLinkUrl] = useState("https://");
   const [isEditingExistingLink, setIsEditingExistingLink] = useState(false);
 
@@ -71,6 +81,13 @@ function FloatingToolbar({
     }
 
     const range = selection.getRangeAt(0);
+    const root = editor.getRootElement();
+    if (root) {
+      commentQuoteRef.current = captureSelectionCommentAnchor<Node>(
+        root,
+        selection
+      );
+    }
     const rect = range.getBoundingClientRect();
     const anchorRect = anchorElem.getBoundingClientRect();
 
@@ -94,7 +111,7 @@ function FloatingToolbar({
     toolbar.style.top = `${top}px`;
     toolbar.style.left = `${left}px`;
     toolbar.style.opacity = "1";
-  }, [anchorElem]);
+  }, [anchorElem, editor]);
 
   useEffect(() => {
     updatePosition();
@@ -269,6 +286,39 @@ function FloatingToolbar({
       >
         <HugeiconsIcon icon={Link01Icon} className="size-4" />
       </button>
+      {comments?.enabled ? (
+        <>
+          <div className="bg-border mx-1 h-4 w-px" />
+          <button
+            aria-keyshortcuts="Meta+Alt+M Control+Alt+M"
+            aria-label={t("comment")}
+            className={`${buttonClass(false)} disabled:pointer-events-none disabled:opacity-50`}
+            disabled={Boolean(comments.blockedReason)}
+            onClick={() => {
+              const root = editor.getRootElement();
+              const selectedQuote = root
+                ? captureSelectionCommentAnchor<Node>(
+                    root,
+                    root.ownerDocument.getSelection()
+                  )
+                : null;
+              const quote =
+                selectedQuote ??
+                (root && commentQuoteRef.current
+                  ? refreshCommentAnchor(root, commentQuoteRef.current)
+                  : null);
+              if (quote) {
+                comments.startComment(quote);
+              }
+            }}
+            onMouseDown={(event) => event.preventDefault()}
+            title={comments.blockedReason ?? t("commentTitle")}
+            type="button"
+          >
+            <HugeiconsIcon icon={Comment01Icon} className="size-4" />
+          </button>
+        </>
+      ) : null}
       {isLinkEditMode && (
         <div className="ml-1 flex items-center gap-1">
           <input
@@ -327,6 +377,7 @@ export function FloatingToolbarPlugin({
   const [isLink, setIsLink] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
   const [isLinkEditMode, setIsLinkEditMode] = useState(false);
+  const composingComment = useContentComments()?.composerOpen ?? false;
 
   const updateToolbar = useCallback(() => {
     editor.getEditorState().read(() => {
@@ -405,7 +456,7 @@ export function FloatingToolbarPlugin({
     );
   }, [editor, updateToolbar]);
 
-  if (!(isText || isLinkEditMode)) {
+  if (!(isText || isLinkEditMode) || composingComment) {
     return null;
   }
 

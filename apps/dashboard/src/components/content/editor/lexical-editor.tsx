@@ -27,6 +27,7 @@ import { ContentImageNode } from "./nodes/content-image-node";
 import { ContentVideoNode } from "./nodes/content-video-node";
 import { KiboCodeBlockNode } from "./nodes/kibo-code-block-node";
 import { EditorAutoLinkPlugin } from "./plugins/auto-link-plugin";
+import { CommentAnchorsPlugin } from "./plugins/comment-anchors-plugin";
 import { ComponentPickerPlugin } from "./plugins/component-picker-plugin";
 import { DraggableBlockPlugin } from "./plugins/draggable-block-plugin";
 import {
@@ -151,6 +152,7 @@ export function LexicalEditor({
           onSelectionChange={onSelectionChange}
           selectedExcerpt={selectedExcerpt}
         />
+        <CommentAnchorsPlugin />
         {editorRef && (
           <EditorRefPlugin
             editorRef={editorRef}

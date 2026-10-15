@@ -1129,7 +1129,8 @@
       "replyNotAllowed": "Antworten sind auf fünf Ebenen begrenzt und können sich nicht auf gelöschte Kommentare beziehen",
       "notAuthor": "Du kannst nur deine eigenen Kommentare ändern",
       "notEditable": "Dieser Kommentar kann nicht bearbeitet werden",
-      "deleted": "Dieser Kommentar wurde gelöscht"
+      "deleted": "Dieser Kommentar wurde gelöscht",
+      "anchorStale": "Das Dokument wurde geändert, bevor dein Kommentar gespeichert wurde. Dein Entwurf bleibt erhalten; prüfe die aktuelle Fassung und versuche es erneut."
     },
     "socialAccounts": {
       "requestRejected": "Die Plattform hat diese Anfrage abgelehnt. Prüfe das Konto und versuche es erneut.",
@@ -1169,7 +1170,11 @@
       "authorSlugTaken": "Diese ID verwendet bereits ein anderer Autor",
       "assetsTooLarge": "Bilder, Cover und Autoren-Avatare des Posts sind zu groß für einen Pull Request",
       "existingEntryUnreadable": "Die aktuelle Datei des Posts konnte nicht von GitHub gelesen werden. Versuch es gleich noch mal.",
-      "invalidFrontmatter": "Die Frontmatter oben im Post ist kein gültiges YAML. Korrigier oder entfern sie und veröffentliche erneut."
+      "invalidFrontmatter": "Die Frontmatter oben im Post ist kein gültiges YAML. Korrigier oder entfern sie und veröffentliche erneut.",
+      "concurrentEdit": "Dieses Dokument wurde in einem anderen Editor geändert. Dein Entwurf bleibt erhalten; lade die aktuelle Version oder speichere deinen Entwurf ausdrücklich.",
+      "historyNotFound": "Das Dokument oder die Version wurde nicht gefunden.",
+      "historyNotSupported": "Der Versionsverlauf ist für Artikel und Changelogs verfügbar.",
+      "historyUnavailable": "Diese Version kann nicht wiederhergestellt werden, weil ihr bearbeitbarer Inhalt oder ihre Metadaten nicht verfügbar sind."
     },
     "iris": {
       "runInProgress": "Iris arbeitet bereits an einem Durchlauf"
@@ -6225,7 +6230,9 @@
         "insertLink": "Link einfügen",
         "urlPlaceholder": "URL eingeben",
         "applyLink": "Link übernehmen",
-        "apply": "Übernehmen"
+        "apply": "Übernehmen",
+        "comment": "Kommentar hinzufügen",
+        "commentTitle": "Markierten Text kommentieren (⌘⌥M / Strg+Alt+M)"
       },
       "upload": {
         "animatedTooLarge": "GIF und AVIF dürfen höchstens {maxMb} MB groß sein",
@@ -6677,6 +6684,84 @@
         "role": "Rolle"
       },
       "hintLabel": "Info zu {field}"
+    },
+    "history": {
+      "loading": "Gespeicherte Versionen werden geladen…",
+      "loadingVersion": "Version wird geladen…",
+      "loadFailed": "Der Verlauf oder der aktuelle Speicherpunkt konnte nicht geladen werden.",
+      "versionFailed": "Diese Version konnte nicht geladen werden.",
+      "empty": "Noch keine gespeicherten Versionen.",
+      "versions": "Gespeicherte Versionen",
+      "revision": "Version {revision}",
+      "retained": "Gespeicherte Version",
+      "current": "Aktuell",
+      "currentSelected": "Diese Version entspricht dem aktuell gespeicherten Dokument.",
+      "restoreHint": "Beim Wiederherstellen entsteht eine neue Version. Es wird nichts veröffentlicht.",
+      "unknownActor": "System",
+      "loadMore": "Mehr laden",
+      "retry": "Erneut versuchen",
+      "saveFirst": "Speichere oder verwirf deine Änderungen und warte, bis das Speichern abgeschlossen ist, bevor du eine Version wiederherstellst. Du kannst den Verlauf weiterhin ansehen.",
+      "compare": "Mit aktuellem Dokument vergleichen",
+      "compareDescription": "Schreibgeschützt. Entfernte Zeilen stammen aus der gespeicherten Version, hinzugefügte aus deinem aktuellen Entwurf.",
+      "title": "Gespeicherter Titel",
+      "slug": "Gespeicherter Slug",
+      "metadata": "Gespeicherte Dokumenteinstellungen",
+      "restore": "Version wiederherstellen",
+      "restoring": "Version wird wiederhergestellt…",
+      "restored": "Version wiederhergestellt. Es wurde nichts veröffentlicht oder mit GitHub synchronisiert.",
+      "restoreFailed": "Die Wiederherstellung konnte nicht abgeschlossen werden. Dein Entwurf wurde nicht überschrieben. Lade das Dokument erneut, falls die Wiederherstellung bereits erfolgreich war.",
+      "draftPreserved": "Die gespeicherte Version wurde wiederhergestellt, dein neuer Entwurf aber beibehalten. Verwirf den Entwurf und lade dann das wiederhergestellte Dokument.",
+      "loadRestored": "Wiederhergestelltes Dokument laden",
+      "refreshFailed": "Das wiederhergestellte Dokument konnte nicht aktualisiert werden. Lade es erneut.",
+      "confirmTitle": "Diese gespeicherte Version wiederherstellen?",
+      "confirmDescription": "Der gespeicherte Text und die redaktionellen Einstellungen werden durch diese Version ersetzt. Dabei entsteht ein neuer Verlaufseintrag. Veröffentlichungsstatus, Zeitpläne und verknüpfte Pull Requests bleiben unverändert. Es wird nichts veröffentlicht oder mit GitHub synchronisiert.",
+      "cancel": "Abbrechen",
+      "sources": {
+        "baseline": "Ausgangsversion",
+        "editor_autosave": "Automatisch gespeichert",
+        "editor_save": "Manuell gespeichert",
+        "checkpoint": "Speicherpunkt",
+        "restore": "Wiederhergestellte Version",
+        "ai": "KI-Bearbeitung",
+        "api": "API-Bearbeitung",
+        "system": "System-Bearbeitung"
+      }
+    },
+    "collaboration": {
+      "history": "Verlauf",
+      "loading": "Panel wird geladen…",
+      "conflictTitle": "Speichern pausiert",
+      "saveConflict": "Dieses Dokument wurde auf dem Server geändert. Dein Entwurf bleibt erhalten und das automatische Speichern ist pausiert.",
+      "loadLatest": "Entwurf verwerfen und neueste Version laden",
+      "saveMine": "Meinen Entwurf speichern",
+      "saveMineTitle": "Die neueste gespeicherte Version ersetzen?",
+      "saveMineDescription": "Dein Entwurf ersetzt die neueste Serverversion. Die Serverrevision wird erneut geprüft, damit keine weitere gleichzeitige Änderung überschrieben wird. Wenn das Speichern fehlschlägt, bleibt dein Entwurf erhalten.",
+      "conflictFailed": "Der Konflikt konnte nicht gelöst werden. Dein Entwurf bleibt erhalten. Versuche es erneut.",
+      "cancel": "Abbrechen",
+      "historyDescription": "Vergleiche gespeicherte Versionen und stelle frühere Fassungen wieder her. Dabei wird nichts veröffentlicht.",
+      "loadLatestTitle": "Deinen lokalen Entwurf verwerfen?",
+      "loadLatestDescription": "Deine ungespeicherten Änderungen werden verworfen und die neueste gespeicherte Fassung wird geladen."
+    },
+    "header": {
+      "saved": "Gespeichert",
+      "unsaved": "Ungespeicherte Änderungen",
+      "moreActions": "Weitere Aktionen",
+      "openPullRequest": "GitHub-Pull-Request öffnen",
+      "discardDescription": "Ungespeicherte Änderungen verwerfen und zur letzten gespeicherten Version zurückkehren?"
+    },
+    "comments": {
+      "unavailable": "Kommentare sind für dieses Dokument nicht verfügbar.",
+      "conflict": "Löse den Speicherkonflikt, bevor du kommentierst.",
+      "selectionChanged": "Die markierte Textstelle hat sich geändert. Dein Kommentarentwurf bleibt erhalten; markiere die Stelle erneut.",
+      "saveFailed": "Das Dokument konnte nicht gespeichert werden. Dein Kommentarentwurf bleibt erhalten.",
+      "submitFailed": "Der Kommentar konnte nicht hinzugefügt werden. Dein Entwurf bleibt erhalten. Versuche es erneut.",
+      "threadLabel": "Kommentarstrang von {name}",
+      "textNotFound": "Die Textstelle wurde geändert oder entfernt.",
+      "detachedThreads": "Kommentare zu geändertem Text",
+      "composerLabel": "Kommentar hinzufügen",
+      "composerPlaceholder": "Kommentar hinzufügen…",
+      "send": "Kommentar senden",
+      "replyFailed": "Die Antwort konnte nicht gesendet werden. Dein Entwurf bleibt erhalten."
     }
   },
   "charts": {
@@ -7017,6 +7102,9 @@
     }
   },
   "comments": {
+    "resolveThread": "Kommentarstrang erledigen",
+    "threadResolved": "Kommentarstrang erledigt",
+    "reopenThread": "Kommentarstrang wieder öffnen",
     "title": "Kommentare",
     "loading": "Kommentare werden geladen",
     "loadFailed": "Kommentare konnten nicht geladen werden.",

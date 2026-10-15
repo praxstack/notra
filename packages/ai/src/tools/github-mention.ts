@@ -39,7 +39,7 @@ import {
   getPullRequestHead,
   getRepositoryFileContents,
 } from "@notra/ai/utils/github-pr-commit";
-import { updatePostRecord } from "@notra/ai/utils/post-service";
+import { updateAiPostRecord as updatePostRecord } from "@notra/ai/utils/post-service";
 import {
   syncPublishedPostAfterCommit,
   updatePublishedContentAndCommit,

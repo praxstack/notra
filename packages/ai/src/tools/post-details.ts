@@ -8,6 +8,7 @@ import {
 } from "@notra/ai/utils/post-service";
 import { db } from "@notra/db/drizzle";
 import { contentAuthors, posts } from "@notra/db/schema";
+import { setPostHistoryContext } from "@notra/db/utils/post-history";
 import { postMetadataUpdateData } from "@notra/db/utils/post-metadata";
 import { type Tool, tool } from "ai";
 import { and, asc, eq } from "drizzle-orm";
@@ -112,26 +113,29 @@ export function createPostDetailsTools(context: PostDetailsToolsContext): {
       const tags = input.tags
         ? await matchExistingTags(context.organizationId, input.tags)
         : undefined;
-      await db
-        .update(posts)
-        .set({
-          ...postMetadataUpdateData({
-            coverImage: input.coverImage,
-            tags,
-            excerpt: input.excerpt,
-            authorIds: isBlog ? authorIds : undefined,
-            featured: isBlog ? input.featured : undefined,
-            noindex: isBlog ? input.noindex : undefined,
-            displayDate: input.displayDate,
-          }),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(posts.id, context.postId),
-            eq(posts.organizationId, context.organizationId)
-          )
-        );
+      await db.transaction(async (tx) => {
+        await setPostHistoryContext(tx, { actorUserId: null, source: "ai" });
+        await tx
+          .update(posts)
+          .set({
+            ...postMetadataUpdateData({
+              coverImage: input.coverImage,
+              tags,
+              excerpt: input.excerpt,
+              authorIds: isBlog ? authorIds : undefined,
+              featured: isBlog ? input.featured : undefined,
+              noindex: isBlog ? input.noindex : undefined,
+              displayDate: input.displayDate,
+            }),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(posts.id, context.postId),
+              eq(posts.organizationId, context.organizationId)
+            )
+          );
+      });
       return (await readPostDetails(context)).details;
     },
   });

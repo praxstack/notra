@@ -1,6 +1,11 @@
 "use client";
 
-import { Download01Icon, SentIcon, TextIcon } from "@hugeicons/core-free-icons";
+import {
+  Download01Icon,
+  FloppyDiskIcon,
+  SentIcon,
+  TextIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
 import {
@@ -13,15 +18,14 @@ import {
   SplitButton,
   SplitButtonTrigger,
 } from "@notra/ui/components/ui/split-button";
-import { Github } from "@notra/ui/components/ui/svgs/github";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/button";
+import { ContentSaveConflict } from "@/components/content/content-save-conflict";
 import { DiagramEditorDialog } from "@/components/content/diagram-editor-dialog";
 import { ImageExportTargetIcon } from "@/components/content/image-export-target-icon";
 import { PostSocialButton } from "@/components/content/post-social-button";
-import { PublishContentToGitHubDialog } from "@/components/content/publish-content-to-github-dialog";
 import { ContentPublishButton } from "@/components/content/schedule/content-publish-button";
 import { WriterExecute } from "@/components/geo/writer/writer-execute";
 import { IMAGE_EXPORT_DOWNLOAD_TARGET } from "@/constants/studio-analytics";
@@ -40,6 +44,7 @@ import type {
   ContentDetailToolbarProps,
   ContentDetailImageActionsProps,
   ContentDetailPublishActionsProps,
+  ContentDetailStatusButtonProps,
 } from "@/types/components/content-detail-toolbar";
 import type { ImageExportTarget } from "@/types/content/image-export";
 import {
@@ -203,59 +208,6 @@ function ContentDetailImageActions({
   );
 }
 
-function ContentDetailGitHubAction({
-  content,
-  contentId,
-  document,
-  organizationId,
-  organizationSlug,
-}: ContentDetailToolbarProps) {
-  if (
-    !(
-      content.contentType === "changelog" || content.contentType === "blog_post"
-    )
-  ) {
-    return null;
-  }
-  if (content.githubPublish) {
-    return (
-      <Button
-        nativeButton={false}
-        render={
-          <a
-            href={content.githubPublish.pullRequestUrl}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <Github className="size-4" />
-            <span className="max-w-52 truncate">
-              {content.githubPublish.owner}/{content.githubPublish.repo} #
-              {content.githubPublish.pullRequestNumber}
-            </span>
-          </a>
-        }
-        size="sm"
-        variant="outline"
-      />
-    );
-  }
-  if (document.isGeoArticleLoading || document.currentMarkdown.trim() === "") {
-    return null;
-  }
-  return (
-    <PublishContentToGitHubDialog
-      contentId={contentId}
-      contentType={content.contentType}
-      githubPublish={null}
-      key={organizationId}
-      onSave={document.handleSave}
-      organizationId={organizationId}
-      organizationSlug={organizationSlug}
-      title={document.title}
-    />
-  );
-}
-
 function ContentDetailPublishActions({
   content,
   contentId,
@@ -264,6 +216,42 @@ function ContentDetailPublishActions({
   organizationSlug,
   videoPending,
 }: ContentDetailPublishActionsProps) {
+  if (document.isGeoWriterPlanMode) {
+    return document.isGeoWriterBriefMissing ? null : <WriterExecute.Button />;
+  }
+  const hasUnsavedChanges =
+    document.hasChanges ||
+    document.isSaving ||
+    document.hasSaveConflict ||
+    videoPending;
+  const publishButton = (
+    <ContentDetailStatusButton
+      content={content}
+      document={document}
+      hasUnsavedChanges={hasUnsavedChanges}
+    />
+  );
+  return document.isGeoArticleLoading ? (
+    publishButton
+  ) : (
+    <ContentPublishButton
+      contentId={contentId}
+      contentType={content.contentType}
+      hasUnsavedChanges={hasUnsavedChanges}
+      organizationId={organizationId}
+      organizationSlug={organizationSlug}
+      publishButton={publishButton}
+      published={content.status === "published"}
+      title={document.title}
+    />
+  );
+}
+
+function ContentDetailStatusButton({
+  content,
+  document,
+  hasUnsavedChanges,
+}: ContentDetailStatusButtonProps) {
   const tCommon2 = useTranslations("common");
   let publishLabel = tCommon2("labels.publish");
   if (document.isTogglingStatus) {
@@ -271,64 +259,50 @@ function ContentDetailPublishActions({
   } else if (content.status === "published") {
     publishLabel = tCommon2("labels.moveToDraft");
   }
-  if (document.isGeoWriterPlanMode) {
-    return document.isGeoWriterBriefMissing ? null : <WriterExecute.Button />;
-  }
-  const publishButton = (
+  return (
     <Button
       disabled={
         document.isTogglingStatus ||
         document.isGeoArticleLoading ||
-        document.hasChanges ||
-        document.isSaving ||
-        videoPending
+        hasUnsavedChanges
       }
       onClick={document.handleToggleStatus}
       size="sm"
       variant={content.status === "draft" ? "default" : "outline"}
     >
-      {publishLabel}
+      <span
+        className={
+          content.contentType === "blog_post" ||
+          content.contentType === "changelog"
+            ? "@max-4xl/topbar:sr-only"
+            : undefined
+        }
+      >
+        {publishLabel}
+      </span>
       <HugeiconsIcon
         className="size-4"
         icon={content.status === "published" ? TextIcon : SentIcon}
       />
     </Button>
   );
-  return (
-    <>
-      <ContentDetailGitHubAction
-        content={content}
-        contentId={contentId}
-        document={document}
-        organizationId={organizationId}
-        organizationSlug={organizationSlug}
-      />
-      {document.isGeoArticleLoading ? (
-        publishButton
-      ) : (
-        <ContentPublishButton
-          contentId={contentId}
-          contentType={content.contentType}
-          hasUnsavedChanges={
-            document.hasChanges || document.isSaving || videoPending
-          }
-          organizationId={organizationId}
-          organizationSlug={organizationSlug}
-          publishButton={publishButton}
-          published={content.status === "published"}
-          title={document.title}
-        />
-      )}
-    </>
-  );
 }
 
 export function ContentDetailToolbar(props: ContentDetailToolbarProps) {
+  if (
+    props.content.contentType === "blog_post" ||
+    props.content.contentType === "changelog"
+  ) {
+    return <ContentDetailHeaderActions {...props} />;
+  }
+  return <ContentDetailStandardActions {...props} />;
+}
+
+function ContentDetailStandardActions(props: ContentDetailToolbarProps) {
   const { content, contentId, document, organizationId } = props;
   const [videoUploading, setVideoUploading] = useState(false);
   const videoSaving = useIsSavingSocialVideo(organizationId, contentId);
   const videoPending = videoUploading || videoSaving;
-  const t = useTranslations("content.toolbar");
   const { data: scheduleData } = usePostSchedule(organizationId, contentId);
   const socialSendPending = Boolean(
     scheduleData?.schedule?.publications.some(
@@ -338,43 +312,10 @@ export function ContentDetailToolbar(props: ContentDetailToolbarProps) {
           publication.status === "publishing")
     )
   );
-  const tCommon = useTranslations("common.actions");
-  const updatesLinkedPullRequest = Boolean(content.githubPublish);
-  let saveLabel = tCommon("saveChanges");
-  if (updatesLinkedPullRequest) {
-    saveLabel = document.isSaving ? t("updatingPr") : t("saveAndUpdatePr");
-  } else if (document.isSaving) {
-    saveLabel = tCommon("saving");
-  }
   return (
     <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-      {document.hasChanges &&
-      (updatesLinkedPullRequest ||
-        document.saveFailed ||
-        document.reviewPreviousMarkdown) ? (
-        <>
-          <Button
-            disabled={document.isSaving}
-            onClick={document.handleDiscard}
-            size="sm"
-            variant="ghost"
-          >
-            {t("discardChanges")}
-          </Button>
-          <Button
-            aria-keyshortcuts="Meta+S Control+S"
-            data-save-bar
-            disabled={document.isSaving}
-            onClick={() => {
-              void document.handleSave();
-            }}
-            size="sm"
-            variant="outline"
-          >
-            {saveLabel}
-          </Button>
-        </>
-      ) : null}
+      <ContentSaveConflict document={document} />
+      <ContentDetailSaveActions {...props} />
       {content.contentType === "image" ? (
         <ContentDetailImageActions {...props} />
       ) : (
@@ -396,6 +337,109 @@ export function ContentDetailToolbar(props: ContentDetailToolbarProps) {
           }
         />
       ) : null}
+    </div>
+  );
+}
+
+function ContentDetailSaveActions({
+  content,
+  document,
+}: Pick<ContentDetailToolbarProps, "content" | "document">) {
+  const t = useTranslations("content.toolbar");
+  const tCommon = useTranslations("common.actions");
+  const updatesLinkedPullRequest = Boolean(content.githubPublish);
+  let saveLabel = tCommon("saveChanges");
+  if (updatesLinkedPullRequest) {
+    saveLabel = document.isSaving ? t("updatingPr") : t("saveAndUpdatePr");
+  } else if (document.isSaving) {
+    saveLabel = tCommon("saving");
+  }
+  if (
+    !document.hasChanges ||
+    document.hasSaveConflict ||
+    !(
+      updatesLinkedPullRequest ||
+      document.saveFailed ||
+      document.reviewPreviousMarkdown
+    )
+  ) {
+    return null;
+  }
+  return (
+    <>
+      {document.hasDocumentChanges ? (
+        <Button
+          disabled={document.isSaving}
+          onClick={document.handleDiscard}
+          size="sm"
+          variant="ghost"
+        >
+          {t("discardChanges")}
+        </Button>
+      ) : null}
+      <Button
+        aria-keyshortcuts="Meta+S Control+S"
+        data-save-bar
+        disabled={document.isSaving}
+        onClick={() => {
+          void document.handleSave();
+        }}
+        size="sm"
+        variant="outline"
+      >
+        {saveLabel}
+      </Button>
+    </>
+  );
+}
+
+function ContentDetailHeaderActions(props: ContentDetailToolbarProps) {
+  const { content, document } = props;
+  const t = useTranslations("content.toolbar");
+  const tActions = useTranslations("common.actions");
+  const tHeader = useTranslations("content.header");
+  const manualSave =
+    document.hasChanges &&
+    Boolean(
+      content.githubPublish ||
+      document.saveFailed ||
+      document.reviewPreviousMarkdown
+    );
+  const blocked = document.isSaving || document.isGeoArticleLoading;
+  let status = tHeader("saved");
+  if (document.isSaving) {
+    status = tActions("saving");
+  } else if (document.hasChanges) {
+    status = tHeader("unsaved");
+  }
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      <ContentSaveConflict document={document} />
+      {!document.hasSaveConflict && manualSave ? (
+        <Button
+          aria-keyshortcuts="Meta+S Control+S"
+          data-save-bar
+          disabled={blocked}
+          onClick={() => {
+            void document.handleSave();
+          }}
+          size="sm"
+          variant="outline"
+        >
+          <HugeiconsIcon aria-hidden="true" icon={FloppyDiskIcon} />
+          <span className="@max-4xl/topbar:sr-only">
+            {content.githubPublish
+              ? t("saveAndUpdatePr")
+              : tActions("saveChanges")}
+          </span>
+        </Button>
+      ) : null}
+      {!document.hasSaveConflict && !manualSave ? (
+        <span aria-live="polite" className="sr-only">
+          {status}
+        </span>
+      ) : null}
+      <ContentDetailPublishActions {...props} videoPending={false} />
     </div>
   );
 }

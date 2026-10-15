@@ -15,6 +15,7 @@ import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
 import { db } from "@notra/db/drizzle";
 import { postCollections, posts } from "@notra/db/schema";
 import { buildPostCollectionName } from "@notra/db/utils/post-collections";
+import { setPostHistoryContext } from "@notra/db/utils/post-history";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { marked } from "marked";
 import { customAlphabet } from "nanoid";
@@ -24,7 +25,7 @@ const generatePostId = customAlphabet(
   16
 );
 
-function isPostSlugConflict(error: unknown): boolean {
+export function isPostSlugConflict(error: unknown): boolean {
   for (let current = error, depth = 0; current && depth < 6; depth++) {
     if (
       typeof current === "object" &&
@@ -112,19 +113,22 @@ export async function updatePostSiteMetadata(
   if (!(tags?.length || excerpt)) {
     return;
   }
-  await db
-    .update(posts)
-    .set({
-      ...(tags?.length ? { tags } : {}),
-      ...(excerpt ? { excerpt } : {}),
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(posts.id, params.postId),
-        eq(posts.organizationId, params.organizationId)
-      )
-    );
+  await db.transaction(async (tx) => {
+    await setPostHistoryContext(tx, { actorUserId: null, source: "ai" });
+    await tx
+      .update(posts)
+      .set({
+        ...(tags?.length ? { tags } : {}),
+        ...(excerpt ? { excerpt } : {}),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(posts.id, params.postId),
+          eq(posts.organizationId, params.organizationId)
+        )
+      );
+  });
 }
 
 export async function createPostRecord(
@@ -142,6 +146,7 @@ export async function createPostRecord(
 
   const insert = async (slug: string | null) =>
     db.transaction(async (tx) => {
+      await setPostHistoryContext(tx, { actorUserId: null, source: "ai" });
       const inserted = await tx
         .insert(posts)
         .values({
@@ -255,6 +260,15 @@ export async function updatePostRecord(
     .returning({ id: posts.id });
 
   return { status: rows.length === 0 ? "not_found" : "updated" };
+}
+
+export async function updateAiPostRecord(
+  params: UpdatePostRecordParams
+): Promise<UpdatePostRecordResult> {
+  return await db.transaction(async (tx) => {
+    await setPostHistoryContext(tx, { actorUserId: null, source: "ai" });
+    return await updatePostRecord(params, tx);
+  });
 }
 
 export async function ensureChatPostCollection(

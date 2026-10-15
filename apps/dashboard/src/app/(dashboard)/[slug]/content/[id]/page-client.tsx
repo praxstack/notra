@@ -7,6 +7,7 @@ import {
   ContentDetailChatPanel,
   ContentDetailFloatingChat,
 } from "@/components/content/content-detail-chat-shell";
+import { ContentDetailDocumentActions } from "@/components/content/content-detail-document-actions";
 import { ContentDetailLoadedView } from "@/components/content/content-detail-loaded-view";
 import { ContentDetailNotFound } from "@/components/content/content-detail-not-found";
 import { ContentOverview } from "@/components/content/overview/content-overview";
@@ -35,7 +36,7 @@ function ContentDetailPage({
   organizationSlug,
   organizationId,
 }: ContentDetailPageClientProps) {
-  const { data, isPending, error } = useContent(organizationId, contentId);
+  const { data, isPending } = useContent(organizationId, contentId);
   const document = useContentDetailDocument({
     organizationId,
     contentId,
@@ -62,7 +63,7 @@ function ContentDetailPage({
     );
   }
 
-  if (error || !data?.content) {
+  if (!data?.content) {
     return (
       <>
         <ContentDetailNotFound organizationSlug={organizationSlug} />
@@ -84,7 +85,15 @@ function ContentDetailPage({
                   content={data.content}
                   contentId={contentId}
                   organizationId={organizationId}
-                />
+                >
+                  <ContentDetailDocumentActions
+                    content={data.content}
+                    contentId={contentId}
+                    document={document}
+                    organizationId={organizationId}
+                    organizationSlug={organizationSlug}
+                  />
+                </ContentOverview>
               ) : undefined
             }
           />

@@ -153,6 +153,12 @@ jobs:
           bun run db:migrate
           bun run db:migrate
 
+      - name: Test post history triggers on migrated schema
+        working-directory: packages/db
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/notra_migrations
+        run: bun test ./tests/post-history.test.ts
+
       - name: Test observability configuration and dashboard regressions
         run: bun test --isolate infra/observability
 

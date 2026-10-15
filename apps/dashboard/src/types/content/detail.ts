@@ -21,6 +21,8 @@ export interface PublishContentToGitHubDialogProps {
   organizationId: string;
   organizationSlug: string;
   title: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export interface GitHubPublishDialogBodyProps {

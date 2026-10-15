@@ -7,15 +7,12 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-  ResponsiveDialogTrigger,
 } from "@notra/ui/components/shared/responsive-dialog";
-import { Github } from "@notra/ui/components/ui/svgs/github";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import { Button } from "@/components/button";
 import { GitHubPublishDialogFooter } from "@/components/content/github-publish-dialog-footer";
 import { GitHubPublishRecoveryAlert } from "@/components/content/github-publish-recovery-alert";
 import { GitHubPublishRepositoryField } from "@/components/content/github-publish-repository-field";
@@ -95,11 +92,12 @@ export function PublishContentToGitHubDialog({
   organizationId,
   organizationSlug,
   title,
+  open,
+  onOpenChange,
 }: PublishContentToGitHubDialogProps) {
   const t = useTranslations("content.githubPublish");
   const tContentShared = useTranslations("content.shared");
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [repositoryId, setRepositoryId] = useState(
     () =>
       githubPublish?.repositoryId ??
@@ -218,13 +216,9 @@ export function PublishContentToGitHubDialog({
       if (publishMutation.isPending) {
         return;
       }
-      setOpen(false);
-      return;
-    }
-    setOpen(true);
-    if (!publishMutation.isPending) {
       publishMutation.reset();
     }
+    onOpenChange(nextOpen);
   };
 
   const rememberRepository = (nextRepositoryId: string) => {
@@ -253,10 +247,6 @@ export function PublishContentToGitHubDialog({
 
   return (
     <ResponsiveDialog onOpenChange={handleOpenChange} open={open}>
-      <ResponsiveDialogTrigger render={<Button size="sm" variant="outline" />}>
-        <Github className="size-4" />
-        {t("trigger")}
-      </ResponsiveDialogTrigger>
       <ResponsiveDialogContent className="min-w-0 sm:max-w-[600px]">
         <form className="contents" onSubmit={handleSubmit}>
           <ResponsiveDialogHeader>

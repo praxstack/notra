@@ -1129,7 +1129,8 @@
       "replyNotAllowed": "Replies are limited to five levels and cannot target deleted comments",
       "notAuthor": "You can only change your own comments",
       "notEditable": "This comment cannot be edited",
-      "deleted": "This comment was deleted"
+      "deleted": "This comment was deleted",
+      "anchorStale": "The document changed before your comment was saved. Your draft is preserved; review the latest version and try again."
     },
     "socialAccounts": {
       "requestRejected": "The social platform rejected this request. Check the account and try again.",
@@ -1169,7 +1170,11 @@
       "authorSlugTaken": "Another author already uses this ID",
       "assetsTooLarge": "The post's images, cover and author avatars are too large for one pull request",
       "existingEntryUnreadable": "Couldn't read the post's current file from GitHub. Try again in a moment.",
-      "invalidFrontmatter": "The frontmatter at the top of this post isn't valid YAML. Fix or remove it, then publish again."
+      "invalidFrontmatter": "The frontmatter at the top of this post isn't valid YAML. Fix or remove it, then publish again.",
+      "concurrentEdit": "This document changed in another editor. Your draft is preserved; load the latest version or explicitly save your draft.",
+      "historyNotFound": "The document or version could not be found.",
+      "historyNotSupported": "Version history is available for articles and changelogs.",
+      "historyUnavailable": "This version cannot be restored because its editable content or metadata is unavailable."
     },
     "iris": {
       "runInProgress": "Iris is already working on a run"
@@ -6225,7 +6230,9 @@
         "insertLink": "Insert link",
         "urlPlaceholder": "Enter URL",
         "applyLink": "Apply link",
-        "apply": "Apply"
+        "apply": "Apply",
+        "comment": "Add comment",
+        "commentTitle": "Comment on selected text (⌘⌥M / Ctrl+Alt+M)"
       },
       "upload": {
         "animatedTooLarge": "GIF and AVIF must be {maxMb}MB or smaller",
@@ -6677,6 +6684,84 @@
         "role": "Role"
       },
       "hintLabel": "About {field}"
+    },
+    "history": {
+      "loading": "Loading saved versions…",
+      "loadingVersion": "Loading version…",
+      "loadFailed": "Could not load history or checkpoint the saved document.",
+      "versionFailed": "Could not load this version.",
+      "empty": "No saved versions yet.",
+      "versions": "Saved versions",
+      "revision": "Version {revision}",
+      "retained": "Saved version",
+      "current": "Current",
+      "currentSelected": "This version matches the current saved document.",
+      "restoreHint": "Restoring creates a new version. Nothing is published.",
+      "unknownActor": "System",
+      "loadMore": "Load more",
+      "retry": "Retry",
+      "saveFirst": "Save or discard your changes and wait for saving to finish before restoring. You can still browse history.",
+      "compare": "Compare with current document",
+      "compareDescription": "Read-only. Removed lines come from the saved version, added lines from your current draft.",
+      "title": "Saved title",
+      "slug": "Saved slug",
+      "metadata": "Saved document settings",
+      "restore": "Restore version",
+      "restoring": "Restoring version…",
+      "restored": "Version restored. Nothing was published or synced to GitHub.",
+      "restoreFailed": "Could not complete the restore. Your draft has not been overwritten. Retry loading the document if the restore already succeeded.",
+      "draftPreserved": "The saved version was restored, but your new draft was preserved. Discard the draft, then load the restored document.",
+      "loadRestored": "Load restored document",
+      "refreshFailed": "The restored document could not be refreshed. Try loading it again.",
+      "confirmTitle": "Restore this saved version?",
+      "confirmDescription": "This replaces the document’s saved text and editorial settings with this version and creates a new history entry. Publication status, schedules and linked pull requests stay unchanged. Nothing is published or synced to GitHub.",
+      "cancel": "Cancel",
+      "sources": {
+        "baseline": "Initial version",
+        "editor_autosave": "Autosave",
+        "editor_save": "Manual save",
+        "checkpoint": "Saved checkpoint",
+        "restore": "Restored version",
+        "ai": "AI edit",
+        "api": "API edit",
+        "system": "System edit"
+      }
+    },
+    "collaboration": {
+      "history": "History",
+      "loading": "Loading panel…",
+      "conflictTitle": "Saving paused",
+      "saveConflict": "This document changed on the server. Your draft is preserved and automatic saving is paused.",
+      "loadLatest": "Discard draft and load latest",
+      "saveMine": "Save my draft",
+      "saveMineTitle": "Replace the latest saved document?",
+      "saveMineDescription": "This saves your draft over the latest server version. The server revision is checked again to prevent overwriting another concurrent edit. Your draft stays intact if saving fails.",
+      "conflictFailed": "Could not resolve the conflict. Your draft is preserved. Try again.",
+      "cancel": "Cancel",
+      "historyDescription": "Compare saved versions and restore a previous version. Nothing is published when restoring.",
+      "loadLatestTitle": "Discard your local draft?",
+      "loadLatestDescription": "Your unsaved changes will be discarded and the latest saved document will be loaded."
+    },
+    "header": {
+      "saved": "Saved",
+      "unsaved": "Unsaved changes",
+      "moreActions": "More actions",
+      "openPullRequest": "Open GitHub pull request",
+      "discardDescription": "Discard your unsaved changes and return to the last saved version?"
+    },
+    "comments": {
+      "unavailable": "Comments are unavailable for this document.",
+      "conflict": "Resolve the save conflict before commenting.",
+      "selectionChanged": "The selected text changed. Your comment draft is preserved; select the passage again.",
+      "saveFailed": "Could not save the document. Your comment draft is preserved.",
+      "submitFailed": "Could not add the comment. Your draft is preserved. Try again.",
+      "threadLabel": "Comment thread by {name}",
+      "textNotFound": "Referenced text changed or was removed.",
+      "detachedThreads": "Comments on changed text",
+      "composerLabel": "Add a comment",
+      "composerPlaceholder": "Add a comment…",
+      "send": "Send comment",
+      "replyFailed": "Could not send the reply. Your draft is preserved."
     }
   },
   "charts": {
@@ -7017,6 +7102,9 @@
     }
   },
   "comments": {
+    "resolveThread": "Resolve thread",
+    "threadResolved": "Thread resolved",
+    "reopenThread": "Reopen thread",
     "title": "Comments",
     "loading": "Loading comments",
     "loadFailed": "Could not load comments.",

@@ -19,6 +19,7 @@ export interface ContentOverviewProps {
   organizationId: string;
   contentId: string;
   content: ContentResponse;
+  children?: ReactNode;
 }
 
 export interface UseContentMetadataParams {
