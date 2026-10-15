@@ -330,13 +330,20 @@ const isMentioned = sql`${geoMentionChecks.mentioned}`;
 const isCited = sql`${geoMentionChecks.ownedSourceCited}`;
 const isVisible = sql`(${geoMentionChecks.mentioned} or ${geoMentionChecks.ownedSourceCited})`;
 
-function mentionOptionFilters(options?: GeoCheckFilterOptions): SQL[] {
+function mentionOptionFilters(
+  options?: GeoCheckFilterOptions,
+  projectId?: string | null
+): SQL[] {
   const parts: SQL[] = [];
   if (options?.trackedPromptsOnly) {
     parts.push(withoutPersonaRows, isNull(geoMentionChecks.sequenceId));
   }
   if (options?.promptLanguageOnly) {
-    parts.push(geoCheckInPromptLanguage);
+    parts.push(
+      projectId
+        ? sql`${normalizedLanguage} = coalesce((select ${geoSettings.promptLanguage} from ${geoSettings} where ${geoSettings.projectId} = ${projectId} limit 1), 'English')`
+        : geoCheckInPromptLanguage
+    );
   }
   return parts;
 }
@@ -349,7 +356,7 @@ function mentionFilters(
   return and(
     scopeWhere(scope),
     ...capturedWithin(window),
-    ...mentionOptionFilters(options)
+    ...mentionOptionFilters(options, scope.projectId)
   ) as SQL;
 }
 
@@ -543,10 +550,12 @@ export async function queryGeoCheckPromptResults(
   limit?: number
 ): Promise<GeoCheckPromptResultRow[]> {
   const latestPromptResults = db
-    .selectDistinctOn(
-      [geoMentionChecks.promptId, geoMentionChecks.engine],
-      promptResultColumns
-    )
+    .selectDistinctOn([geoMentionChecks.promptId, geoMentionChecks.engine], {
+      id: geoMentionChecks.id,
+      promptId: geoMentionChecks.promptId,
+      engine: geoMentionChecks.engine,
+      lastCheckedAt: geoMentionChecks.capturedAt,
+    })
     .from(geoMentionChecks)
     .where(mentionFilters(scope, window, PROMPT_LEVEL_FILTERS))
     .orderBy(
@@ -557,12 +566,16 @@ export async function queryGeoCheckPromptResults(
     .as("latest_geo_prompt_results");
 
   const orderedQuery = db
-    .select()
-    .from(latestPromptResults)
+    .select(promptResultColumns)
+    .from(geoMentionChecks)
+    .innerJoin(
+      latestPromptResults,
+      eq(geoMentionChecks.id, latestPromptResults.id)
+    )
     .orderBy(
-      desc(latestPromptResults.lastCheckedAt),
-      latestPromptResults.promptId,
-      latestPromptResults.engine
+      desc(geoMentionChecks.capturedAt),
+      geoMentionChecks.promptId,
+      geoMentionChecks.engine
     );
   const rows =
     limit === undefined ? await orderedQuery : await orderedQuery.limit(limit);

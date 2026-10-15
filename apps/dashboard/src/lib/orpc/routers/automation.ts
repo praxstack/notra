@@ -485,48 +485,32 @@ export const automationRouter = {
           orderBy: (items, { desc }) => [desc(items.createdAt)],
         });
 
-        const triggerIds = triggers.map((trigger) => trigger.id);
-        const lookbackWindows =
-          triggerIds.length > 0
-            ? await db.query.contentTriggerLookbackWindows.findMany({
-                where: inArray(
-                  contentTriggerLookbackWindows.triggerId,
-                  triggerIds
-                ),
-              })
-            : [];
-
-        const lookbackWindowByTriggerId = new Map(
-          lookbackWindows.map((item) => [
-            item.triggerId,
-            item.window as LookbackWindow,
-          ])
-        );
-
         const filteredTriggers = filterTriggersByRepositoryIds(
           triggers,
           input.repositoryIds
         );
-
-        const triggersWithLookback = filteredTriggers.map((trigger) => ({
-          ...trigger,
-          lookbackWindow: toEffectiveLookbackWindow(
-            lookbackWindowByTriggerId.get(trigger.id)
-          ),
-        }));
-
+        const triggerIds = filteredTriggers.map((trigger) => trigger.id);
         const allRepositoryIds = [
           ...new Set(
-            triggersWithLookback.flatMap((trigger) => {
+            filteredTriggers.flatMap((trigger) => {
               const parsed = triggerTargetsSchema.safeParse(trigger.targets);
               return parsed.success ? parsed.data.repositoryIds : [];
             })
           ),
         ];
 
-        const repositories =
+        const [lookbackWindows, repositories] = await Promise.all([
+          triggerIds.length > 0
+            ? db.query.contentTriggerLookbackWindows.findMany({
+                columns: { triggerId: true, window: true },
+                where: inArray(
+                  contentTriggerLookbackWindows.triggerId,
+                  triggerIds
+                ),
+              })
+            : [],
           allRepositoryIds.length > 0
-            ? await db
+            ? db
                 .select({
                   id: githubIntegrations.id,
                   owner: githubIntegrations.owner,
@@ -535,7 +519,21 @@ export const automationRouter = {
                 })
                 .from(githubIntegrations)
                 .where(inArray(githubIntegrations.id, allRepositoryIds))
-            : [];
+            : [],
+        ]);
+
+        const lookbackWindowByTriggerId = new Map(
+          lookbackWindows.map((item) => [
+            item.triggerId,
+            item.window as LookbackWindow,
+          ])
+        );
+        const triggersWithLookback = filteredTriggers.map((trigger) => ({
+          ...trigger,
+          lookbackWindow: toEffectiveLookbackWindow(
+            lookbackWindowByTriggerId.get(trigger.id)
+          ),
+        }));
 
         const repositoryMap = Object.fromEntries(
           repositories

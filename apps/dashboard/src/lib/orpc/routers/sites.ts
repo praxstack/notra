@@ -7,6 +7,7 @@ import { db } from "@notra/db/drizzle";
 import {
   githubIntegrations,
   projects,
+  siteDeployments,
   siteDomains,
   sites,
 } from "@notra/db/schema";
@@ -281,24 +282,26 @@ export const sitesRouter = {
       if (!isSitesConfigured()) {
         return { configured: false, sites: [] };
       }
-      const rows = await db
-        .select()
-        .from(sites)
-        .where(
-          and(
-            eq(sites.organizationId, input.organizationId),
-            eq(sites.projectId, input.projectId)
-          )
-        )
-        .orderBy(desc(sites.createdAt));
+      const rows = await db.query.sites.findMany({
+        where: and(
+          eq(sites.organizationId, input.organizationId),
+          eq(sites.projectId, input.projectId)
+        ),
+        orderBy: [desc(sites.createdAt)],
+        with: {
+          deployments: {
+            where: eq(siteDeployments.kind, "production"),
+            orderBy: [desc(siteDeployments.createdAt)],
+            limit: 1,
+          },
+        },
+      });
       const details = await Promise.all(
-        rows.map(async (site) => {
-          const [latest, state] = await Promise.all([
-            listSiteDeployments(site.id, 1, [], "production"),
-            servingState(site.id),
-          ]);
-          return { site, latest: latest[0], state };
-        })
+        rows.map(async (site) => ({
+          site,
+          latest: site.deployments[0],
+          state: await servingState(site.id),
+        }))
       );
       return {
         configured: true,

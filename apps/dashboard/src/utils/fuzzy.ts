@@ -2,7 +2,7 @@ const FUZZY_EXACT_SCORE = 1;
 const FUZZY_PREFIX_SCORE = 0.9;
 const FUZZY_CONTAINS_SCORE = 0.75;
 const FUZZY_SUBSEQUENCE_BASE = 0.5;
-const FUZZY_MIN_SCORE = 0.35;
+export const FUZZY_MIN_SCORE = 0.35;
 
 function subsequenceScore(haystack: string, needle: string): number {
   let index = 0;

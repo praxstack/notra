@@ -25,7 +25,7 @@ import type {
   GeoUnifiedSearchGap,
 } from "@/types/components/geo-gaps";
 
-import { bestFuzzyScore, fuzzyMatches } from "./fuzzy";
+import { bestFuzzyScore, FUZZY_MIN_SCORE } from "./fuzzy";
 
 export function unifySearchGaps(
   searchGaps: readonly GeoSearchGapRow[],
@@ -285,15 +285,17 @@ function filterGapsByQuery<T>(
   values: (row: T) => string[]
 ): T[] {
   const trimmed = query.trim();
-  const matched = rows.filter((row) => fuzzyMatches(values(row), trimmed));
   if (trimmed.length === 0) {
-    return matched;
+    return [...rows];
+  }
+  const matched = [];
+  for (const row of rows) {
+    const score = bestFuzzyScore(values(row), trimmed);
+    if (score >= FUZZY_MIN_SCORE) {
+      matched.push({ row, score });
+    }
   }
   return matched
-    .map((row) => ({
-      row,
-      score: bestFuzzyScore(values(row), trimmed),
-    }))
     .sort((left, right) => right.score - left.score)
     .map((entry) => entry.row);
 }

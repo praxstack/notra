@@ -97,6 +97,15 @@ export const commentsRouter = {
               )
             )
         : [];
+      const reactionsByComment = new Map<string, typeof reactions>();
+      for (const reaction of reactions) {
+        const group = reactionsByComment.get(reaction.commentId);
+        if (group) {
+          group.push(reaction);
+        } else {
+          reactionsByComment.set(reaction.commentId, [reaction]);
+        }
+      }
       const items: DiscussionComment[] = rows.map(
         ({ comment, name, image }) => ({
           ...comment,
@@ -105,9 +114,9 @@ export const commentsRouter = {
           createdAt: comment.createdAt.toISOString(),
           editedAt: comment.editedAt?.toISOString() ?? null,
           deletedAt: comment.deletedAt?.toISOString() ?? null,
-          reactions: reactions
-            .filter((reaction) => reaction.commentId === comment.id)
-            .map(({ emoji, userId }) => ({ emoji, userId })),
+          reactions: (reactionsByComment.get(comment.id) ?? []).map(
+            ({ emoji, userId }) => ({ emoji, userId })
+          ),
         })
       );
       return {

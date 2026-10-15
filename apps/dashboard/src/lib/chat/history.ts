@@ -25,17 +25,18 @@ export async function loadChatHistoryPayload(
     return null;
   }
   const { messages, externalChannelId } = snapshot;
-  let slackThreadUrl: string | null = null;
-  if (externalChannelId?.source === "slack" && externalChannelId.id) {
-    const target = parseSlackExternalChannelKey(externalChannelId.id);
-    if (target) {
-      slackThreadUrl = await getSlackThreadPermalink(target);
-    }
-  }
+  const target =
+    externalChannelId?.source === "slack" && externalChannelId.id
+      ? parseSlackExternalChannelKey(externalChannelId.id)
+      : null;
+  const [hydratedMessages, slackThreadUrl] = await Promise.all([
+    hydrateSavedChatPosts(organizationId, chatId, messages),
+    target ? getSlackThreadPermalink(target) : null,
+  ]);
 
   return {
     chatId,
-    messages: await hydrateSavedChatPosts(organizationId, chatId, messages),
+    messages: hydratedMessages,
     lastResponseStopped,
     activeStreamId,
     externalChannelId,
