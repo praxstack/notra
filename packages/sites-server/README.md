@@ -161,8 +161,8 @@ WHERE metrics #>> '{phases,compile}' IS NOT NULL;
 
 **What the builder snapshot is.** Every site build runs in a fresh Upstash Box started from `SITES_BUILDER_SNAPSHOT_ID`: a saved Box with the toolchain (Astro, theme, compiler, `node_modules`) already installed. That is what keeps builds at about 12 s and lets them run with the network denied, so customer code cannot fetch or send anything. Without the variable every build fails. The snapshot belongs to the Upstash account of the key that created it, so build it with the same `UPSTASH_BOX_API_KEY` the dashboard uses.
 
-**Toolchain change (theme, Astro, compiler).** Rebuild the snapshot and roll the env var:
-`cd apps/sites-builder && bun --env-file=../../.env scripts/create-box-snapshot.ts` → set `SITES_BUILDER_SNAPSHOT_ID` (Vercel) → redeploy the dashboard. The deployment records the toolchain `VERSION`.
+**Toolchain change (theme, Astro, compiler, site config schema).** Production is automatic: the release workflow hashes the toolchain, and when it differs from `SITES_BUILDER_TOOLCHAIN_VERSION` it builds a new snapshot, upserts `SITES_BUILDER_SNAPSHOT_ID` + `SITES_BUILDER_TOOLCHAIN_VERSION` on the `notra` Vercel project and redeploys the dashboard. Never ship a site config schema change without it: an old snapshot rejects new settings and every build crashes in `readBuildTarget`. For local or manual rolls:
+`cd apps/sites-builder && bun --env-file=../../.env scripts/create-box-snapshot.ts --write-env ../../.env`. The deployment records the toolchain `VERSION`.
 
 **Reader page actions.** The theme shares `CopyArticle.astro` between blog posts and
 standalone changelog entries, using their generated `.md` files. Blog posts show

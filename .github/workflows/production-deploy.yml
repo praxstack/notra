@@ -80,9 +80,16 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Install sites toolchain
+        if: ${{ !inputs.dry_run }}
+        working-directory: ${{ runner.temp }}/release
+        run: bun install --frozen-lockfile --filter '@notra/sites-builder...'
+
       - name: Deploy checked main commit
         run: node scripts/github/production-deploy.mjs
         env:
+          RELEASE_DIR: ${{ runner.temp }}/release
+          UPSTASH_BOX_API_KEY: ${{ secrets.UPSTASH_BOX_API_KEY }}
           GH_TOKEN: ${{ github.token }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_TEAM_ID: team_J0UtPqQdb8AdDMRkyvJuR8kM

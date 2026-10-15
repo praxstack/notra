@@ -18,7 +18,24 @@ import { Box } from "@upstash/box";
 import { WORKDIR } from "./constants/box-snapshot";
 
 const ROOT = resolve(import.meta.dir, "..");
-const { values } = parseArgs({ options: { "write-env": { type: "string" } } });
+const { values } = parseArgs({
+  options: {
+    "write-env": { type: "string" },
+    // Release automation: skip the Box when this version is already live and
+    // report { version, snapshotId } as JSON instead of parsing stdout.
+    "skip-version": { type: "string" },
+    "result-file": { type: "string" },
+  },
+});
+
+function writeResult(version: string, snapshotId: string | null) {
+  if (values["result-file"]) {
+    writeFileSync(
+      resolve(values["result-file"]),
+      `${JSON.stringify({ version, snapshotId })}\n`
+    );
+  }
+}
 
 function listFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -46,6 +63,12 @@ for (const file of listFiles(stage).sort()) {
   hash.update(readFileSync(file));
 }
 const version = hash.digest("hex").slice(0, 12);
+if (version === values["skip-version"]) {
+  console.log(`toolchain ${version} unchanged, keeping the current snapshot`);
+  writeResult(version, null);
+  rmSync(stage, { recursive: true, force: true });
+  process.exit(0);
+}
 writeFileSync(join(stage, "VERSION"), `${version}\n`);
 const archive = join(stage, "..", `toolchain-${version}.tgz`);
 execFileSync("tar", ["--no-xattrs", "-czf", archive, "-C", stage, "."], {
@@ -88,6 +111,7 @@ try {
     name: `notra-sites-toolchain-${version}`,
   });
   console.log(`SITES_BUILDER_SNAPSHOT_ID=${snapshot.id}`);
+  writeResult(version, snapshot.id);
   if (values["write-env"]) {
     const envPath = resolve(values["write-env"]);
     const text = readFileSync(envPath, "utf8");

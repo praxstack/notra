@@ -1,5 +1,8 @@
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync } from "node:fs";
 import { appendFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
@@ -9,6 +12,9 @@ const projects = [
   {
     name: "notra",
     directory: "apps/dashboard",
+    // Site builds use the snapshot env this deployment pins, so builder
+    // changes redeploy the dashboard until it is live with them.
+    alsoBuilds: ["apps/sites-builder"],
     productionAlias: "notra-notra.vercel.app",
   },
   {
@@ -55,6 +61,15 @@ const railwayServices = [
     serviceId: "2d259982-cccc-488d-b2ba-77b12fd3e854",
   },
 ];
+// Site builds run the toolchain baked into an Upstash Box snapshot, not the
+// dashboard's code. The dashboard must only go live with a snapshot built from
+// the same commit, or new site settings fail validation inside the sandbox.
+const sitesToolchain = {
+  project: "notra",
+  directory: "apps/sites-builder",
+  snapshotKey: "SITES_BUILDER_SNAPSHOT_ID",
+  versionKey: "SITES_BUILDER_TOOLCHAIN_VERSION",
+};
 const railwayActiveStates = [
   "WAITING",
   "QUEUED",
@@ -93,10 +108,29 @@ export function hasBuildChanges(directory, previousSha, sha) {
   }
 }
 
+export function buildSitesToolchain(directory, liveVersion) {
+  const resultFile = join(
+    mkdtempSync(join(tmpdir(), "sites-toolchain-")),
+    "result.json"
+  );
+  execFileSync(
+    "bun",
+    [
+      "scripts/create-box-snapshot.ts",
+      "--result-file",
+      resultFile,
+      ...(liveVersion ? ["--skip-version", liveVersion] : []),
+    ],
+    { cwd: directory, stdio: "inherit" }
+  );
+  return JSON.parse(readFileSync(resultFile, "utf8"));
+}
+
 export async function release({
   env = process.env,
   fetchImpl = fetch,
   buildChanged = hasBuildChanges,
+  buildToolchain = buildSitesToolchain,
   sleep = delay,
 } = {}) {
   for (const key of [
@@ -116,6 +150,13 @@ export async function release({
     env.GITHUB_REPOSITORY !== "usenotra/notra"
   ) {
     throw new Error("Production releases must run from usenotra/notra main");
+  }
+  if (env.DRY_RUN !== "true") {
+    for (const key of ["RELEASE_DIR", "UPSTASH_BOX_API_KEY"]) {
+      if (!env[key]) {
+        throw new Error(`${key} is required to release the sites toolchain`);
+      }
+    }
   }
   // RELEASE_SHA is the commit selectReleaseCommit picked; it may trail main.
   const sha = env.RELEASE_SHA || env.GITHUB_SHA;
@@ -363,7 +404,9 @@ export async function release({
       );
     }
     await assertAheadOf(project.name, previousSha);
-    const changed = buildChanged(project.directory, previousSha, sha);
+    const changed = [project.directory, ...(project.alsoBuilds ?? [])].some(
+      (directory) => buildChanged(directory, previousSha, sha)
+    );
     plans.push({ ...project, changed });
   }
 
@@ -384,6 +427,67 @@ export async function release({
     await assertAheadOf(service.name, previousSha);
     const changed = buildChanged(service.directory, previousSha, sha);
     railwayPlans.push({ ...service, changed });
+  }
+
+  if (env.DRY_RUN === "true") {
+    await report("sites toolchain: snapshot is checked during real releases");
+  } else {
+    const { envs } = await request(
+      "vercel",
+      `/v10/projects/${sitesToolchain.project}/env`
+    );
+    const liveVar = envs.find(
+      (variable) =>
+        variable.key === sitesToolchain.versionKey &&
+        variable.target?.includes("production")
+    );
+    const liveVersion = liveVar
+      ? ((
+          await request(
+            "vercel",
+            `/v1/projects/${sitesToolchain.project}/env/${liveVar.id}`
+          )
+        ).value ?? null)
+      : null;
+    const toolchain = buildToolchain(
+      join(env.RELEASE_DIR, sitesToolchain.directory),
+      liveVersion
+    );
+    if (toolchain.snapshotId) {
+      const result = await request(
+        "vercel",
+        `/v10/projects/${sitesToolchain.project}/env?upsert=true`,
+        [
+          {
+            key: sitesToolchain.snapshotKey,
+            value: toolchain.snapshotId,
+            type: "sensitive",
+            target: ["production"],
+          },
+          {
+            key: sitesToolchain.versionKey,
+            value: toolchain.version,
+            type: "plain",
+            target: ["production"],
+          },
+        ]
+      );
+      if (result.failed?.length > 0) {
+        throw new Error(
+          `sites toolchain: could not update ${sitesToolchain.project} env (${result.failed.map((failure) => failure.error?.code).join(", ")}); no builds started`
+        );
+      }
+      // The new snapshot only reaches site builds through a new deployment.
+      const dashboard = plans.find(
+        (project) => project.name === sitesToolchain.project
+      );
+      dashboard.changed = true;
+      await report(
+        `sites toolchain: snapshot ${toolchain.version} built, ${sitesToolchain.project} will redeploy`
+      );
+    } else {
+      await report(`sites toolchain: ${toolchain.version} unchanged`);
+    }
   }
 
   const failures = [];

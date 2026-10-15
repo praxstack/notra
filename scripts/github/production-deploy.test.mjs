@@ -9,12 +9,15 @@ function fixture({
   override,
   api = false,
   apiStatus = 200,
+  liveToolchain = "toolchain-1",
+  toolchain = { version: "toolchain-1", snapshotId: null },
 } = {}) {
   const sha = "a".repeat(40);
   const previousSha = "b".repeat(40);
   const calls = [];
   const directories = [];
   const published = new Map();
+  const toolchainBuilds = [];
   const env = {
     GH_TOKEN: "test",
     VERCEL_TOKEN: "test",
@@ -25,6 +28,8 @@ function fixture({
     GITHUB_REPOSITORY: "usenotra/notra",
     GITHUB_REF: "refs/heads/main",
     DRY_RUN: String(dryRun),
+    RELEASE_DIR: "/release",
+    UPSTASH_BOX_API_KEY: "test-box",
     ...(api ? { UNKEY_DEPLOY_ROOT_KEY: "test-unkey" } : {}),
   };
   const fetchImpl = async (input, options) => {
@@ -60,6 +65,23 @@ function fixture({
             projectId: project,
             deploymentId: published.get(project) ?? `live-${project}`,
           };
+        } else if (url.pathname === "/v10/projects/notra/env") {
+          data =
+            options.method === "POST"
+              ? { failed: [] }
+              : {
+                  envs: liveToolchain
+                    ? [
+                        {
+                          id: "env-version",
+                          key: "SITES_BUILDER_TOOLCHAIN_VERSION",
+                          target: ["production"],
+                        },
+                      ]
+                    : [],
+                };
+        } else if (url.pathname === "/v1/projects/notra/env/env-version") {
+          data = { value: liveToolchain };
         } else if (url.pathname === "/v13/deployments") {
           const id = `new-${body.project}`;
           published.set(body.project, id);
@@ -158,11 +180,16 @@ function fixture({
     sha,
     calls,
     directories,
+    toolchainBuilds,
     run: () =>
       release({
         env,
         fetchImpl,
         sleep: async () => {},
+        buildToolchain: (directory, liveVersion) => {
+          toolchainBuilds.push({ directory, liveVersion });
+          return toolchain;
+        },
         buildChanged: (directory, previous, current) => {
           assert.equal(previous, previousSha);
           assert.equal(current, sha);
@@ -181,6 +208,74 @@ function builds(calls) {
       body?.query?.includes("serviceInstanceDeployV2")
   );
 }
+
+function toolchainUpserts(calls) {
+  return calls.filter(
+    ({ url, method }) =>
+      url.pathname === "/v10/projects/notra/env" && method === "POST"
+  );
+}
+
+test("unchanged sites toolchain keeps the live snapshot", async () => {
+  const { calls, run, toolchainBuilds } = fixture({ changed: () => false });
+  await run();
+  assert.deepEqual(toolchainBuilds, [
+    { directory: "/release/apps/sites-builder", liveVersion: "toolchain-1" },
+  ]);
+  assert.equal(toolchainUpserts(calls).length, 0);
+  assert.equal(builds(calls).length, 0);
+});
+
+test("new sites toolchain rolls the snapshot and redeploys the dashboard", async () => {
+  const { calls, run, toolchainBuilds } = fixture({
+    changed: () => false,
+    liveToolchain: null,
+    toolchain: { version: "toolchain-2", snapshotId: "snap-2" },
+  });
+  await run();
+  assert.equal(toolchainBuilds[0].liveVersion, null);
+  const [upsert] = toolchainUpserts(calls);
+  assert.equal(upsert.url.searchParams.get("upsert"), "true");
+  assert.deepEqual(
+    upsert.body.map(({ key, value, target }) => [key, value, target]),
+    [
+      ["SITES_BUILDER_SNAPSHOT_ID", "snap-2", ["production"]],
+      ["SITES_BUILDER_TOOLCHAIN_VERSION", "toolchain-2", ["production"]],
+    ]
+  );
+  const started = builds(calls);
+  assert.equal(started.length, 1);
+  assert.equal(started[0].body.project, "notra");
+  assert.ok(
+    calls.indexOf(upsert) < calls.indexOf(started[0]),
+    "env must be updated before the dashboard build starts"
+  );
+});
+
+test("sites-builder changes redeploy the dashboard until it is live with them", async () => {
+  // The snapshot was rolled by an earlier release whose dashboard build failed.
+  const { calls, run } = fixture({
+    changed: (directory) => directory === "apps/sites-builder",
+  });
+  await run();
+  assert.equal(toolchainUpserts(calls).length, 0);
+  assert.deepEqual(
+    builds(calls).map(({ body }) => body.project),
+    ["notra"]
+  );
+});
+
+test("failed toolchain env update prevents every build", async () => {
+  const { calls, run } = fixture({
+    toolchain: { version: "toolchain-2", snapshotId: "snap-2" },
+    override: ({ url, method }) =>
+      url.pathname === "/v10/projects/notra/env" && method === "POST"
+        ? { failed: [{ error: { code: "forbidden" } }] }
+        : undefined,
+  });
+  await assert.rejects(run(), /could not update notra env \(forbidden\)/);
+  assert.equal(builds(calls).length, 0);
+});
 
 test("all five Vercel projects and three Railway services deploy the pinned SHA", async () => {
   const { run, calls, sha, directories } = fixture();
@@ -211,10 +306,13 @@ test("all five Vercel projects and three Railway services deploy the pinned SHA"
 });
 
 test("dry run validates every target without creating any builds", async () => {
-  const { run, calls, directories } = fixture({ dryRun: true });
+  const { run, calls, directories, toolchainBuilds } = fixture({
+    dryRun: true,
+  });
   await run();
   assert.equal(builds(calls).length, 0);
   assert.equal(directories.length, 8);
+  assert.equal(toolchainBuilds.length, 0);
 });
 
 for (const directory of ["apps/agent", "apps/onboarding-agent"]) {
