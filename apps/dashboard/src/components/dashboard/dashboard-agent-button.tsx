@@ -1,11 +1,12 @@
 "use client";
 
-import { Robot01Icon, SidebarRightIcon } from "@hugeicons/core-free-icons";
+import { SidebarRightIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import { useTranslations } from "use-intl";
 
 import { useRightPanel } from "@/components/dashboard/right-panel-context";
+import { AgentIcon } from "@/components/icons/agent-icon";
 import {
   setContentPanelDismissed,
   useContentPanelHasOverview,
@@ -28,7 +29,7 @@ export function DashboardAgentButton() {
   const isDetails = panelId === "content" && hasOverview;
   const label = isDetails
     ? tOverview("detailsButton")
-    : tCommon("labels.agent");
+    : tCommon("labels.askAgent");
 
   return (
     <Button
@@ -45,10 +46,11 @@ export function DashboardAgentButton() {
       title={label}
       variant={open ? "secondary" : "ghost"}
     >
-      <HugeiconsIcon
-        icon={isDetails ? SidebarRightIcon : Robot01Icon}
-        strokeWidth={1.8}
-      />
+      {isDetails ? (
+        <HugeiconsIcon icon={SidebarRightIcon} strokeWidth={1.8} />
+      ) : (
+        <AgentIcon />
+      )}
       <span className="hidden lg:inline">{label}</span>
     </Button>
   );

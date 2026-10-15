@@ -24,11 +24,7 @@ import dynamic from "@/utils/lazy-component";
 import { isNavigation } from "@/utils/sidebar-navigation";
 
 import { ChatHistoryNavLoading } from "./chat-history-nav-loading";
-import {
-  DeferredSidebarStatus,
-  DeferredSidebarUpgrade,
-} from "./deferred-sidebar-status";
-import { NavBrandIdentity } from "./nav-brand-identity";
+import { DeferredSidebarStatus } from "./deferred-sidebar-status";
 import { NavFooter } from "./nav-footer";
 import { NavJobs } from "./nav-jobs";
 import { NavMain } from "./nav-main";
@@ -37,6 +33,7 @@ import { NavUtility } from "./nav-utility";
 import { OrgSelector } from "./org-selector";
 import { SidebarLabel } from "./sidebar-label";
 import { SidebarProjectSwitcher } from "./sidebar-project-switcher";
+import { SidebarTopQuickActions } from "./sidebar-quick-actions";
 import { SidebarResizeHandle } from "./sidebar-resize-handle";
 import { SidebarSwap } from "./sidebar-swap";
 import { SidebarToggle } from "./sidebar-toggle";
@@ -96,7 +93,7 @@ export function DashboardSidebar({
   const siteSegment = section === "sites" ? pathnameSegments[2] : undefined;
   const isSitePage =
     visibility.sites && Boolean(siteSegment) && siteSegment !== "new";
-  let panelId = section === "chat" || section === "brand" ? section : "main";
+  let panelId = section === "chat" ? section : "main";
   if (isSitePage) {
     panelId = "site";
   }
@@ -174,6 +171,7 @@ export function DashboardSidebar({
           <SidebarProjectSwitcher />
         )}
       </SidebarHeader>
+      {jobsSidebar ? <SidebarTopQuickActions /> : null}
       <SidebarContent>
         <SidebarSwap
           activeId={panelId}
@@ -191,16 +189,6 @@ export function DashboardSidebar({
                 <>
                   <SidebarBackButton onBack={handleBack} />
                   <ChatHistoryNav />
-                </>
-              ),
-            },
-            {
-              id: "brand",
-              side: "right",
-              children: (
-                <>
-                  <SidebarBackButton onBack={handleBack} />
-                  <NavBrandIdentity slug={slug} />
                 </>
               ),
             },
@@ -230,7 +218,6 @@ export function DashboardSidebar({
             data-sidebar="scroll-fade"
           />
         )}
-        <DeferredSidebarUpgrade />
       </div>
       <SidebarFooter>
         <OrgSelector />

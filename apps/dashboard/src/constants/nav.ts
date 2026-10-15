@@ -283,6 +283,7 @@ export const NAV_WORKSPACE_GROUP: NavGroup = {
   id: "workspace",
   icon: Settings01Icon,
   labelKey: "workspace",
+  listsOwnPage: true,
   links: [
     BRAND_IDENTITY_NAV_LINK,
     INTEGRATIONS_NAV_LINK,
@@ -290,6 +291,12 @@ export const NAV_WORKSPACE_GROUP: NavGroup = {
     API_KEYS_NAV_LINK,
   ],
 };
+
+/** Where Search sits in the sidebar. */
+export const SIDEBAR_SEARCH_PLACEMENTS = ["bottom", "top-field"] as const;
+
+export const SIDEBAR_SEARCH_PLACEMENT_DEFAULT: (typeof SIDEBAR_SEARCH_PLACEMENTS)[number] =
+  "bottom";
 
 export const DEFAULT_NAV_VISIBILITY: NavVisibility = {
   iris: true,

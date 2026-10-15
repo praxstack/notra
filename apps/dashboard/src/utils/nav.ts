@@ -13,6 +13,8 @@ import {
 } from "@/constants/nav";
 import { SITES_NAV_LINK } from "@/constants/sites";
 import type {
+  NavGroup,
+  NavGroupRowState,
   NavMainItem,
   NavVisibility,
   SidebarMode,
@@ -95,6 +97,25 @@ export function resolveOrgRootRedirect(
  */
 export function canPrefetchSidebarModeHome(next: SidebarMode): boolean {
   return next === "geo";
+}
+
+export function resolveNavGroupRow(
+  group: NavGroup,
+  first: NavMainItem,
+  rest: readonly NavMainItem[],
+  activeLink: string | null
+): NavGroupRowState {
+  const subRows = group.listsOwnPage ? [first, ...rest] : [...rest];
+  const groupActive =
+    first.link === activeLink || rest.some((item) => item.link === activeLink);
+  return {
+    subRows,
+    groupActive,
+    ownPageActive: first.link === activeLink && !group.listsOwnPage,
+    showSubRows: groupActive && subRows.length > 0,
+    // A row with one page is that page, so it carries the page's badge.
+    showOwnBadge: rest.length === 0 && !group.listsOwnPage,
+  };
 }
 
 export function resolveNavItems(

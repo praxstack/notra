@@ -92,7 +92,6 @@ export function BrandTopbarIdentitySelector({ slug }: { slug: string }) {
 
   const { data } = useBrandSettings(organizationId);
   const voices = data?.voices ?? [];
-  const isReferencesView = view === "references";
   const storedVoiceId = useSyncExternalStore(
     subscribeToStoredBrandIdentity,
     () => (organizationId ? readStoredBrandIdentityId(organizationId) : null),
@@ -106,7 +105,7 @@ export function BrandTopbarIdentitySelector({ slug }: { slug: string }) {
   );
 
   const brandBasePath = `/${slug}/brand/identity`;
-  const viewSuffix = isReferencesView ? "&view=references" : "";
+  const viewSuffix = view && view !== "identity" ? `&view=${view}` : "";
 
   function handleSelectVoice(voiceId: string) {
     writeStoredBrandIdentityId(organizationId, voiceId);

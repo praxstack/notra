@@ -2,32 +2,29 @@
 
 import { Add01Icon, Refresh03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PageHeading } from "@notra/ui/components/shared/page-heading";
 import { Kbd } from "@notra/ui/components/ui/kbd";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/button";
-import { BRAND_IDENTITY_TAB_LABEL_KEYS } from "@/constants/brand-identity";
 import type {
-  BrandIdentityHeaderProps,
+  BrandIdentityActionsProps,
   BrandTab,
 } from "@/types/brand-identity";
 
 import { GuidelinesPdfUploadButton } from "./guidelines-pdf-upload-button";
 
-export function BrandIdentityHeader({
+export function BrandIdentityActions({
   activeTab,
   onAddIdentity,
   onAddReference,
   onAddSitemap,
   onRefreshGuidelines,
   isRefreshingGuidelines,
+  menu,
   organizationId,
   voiceId,
-}: BrandIdentityHeaderProps) {
-  const t = useTranslations("brand.identity.header");
+}: BrandIdentityActionsProps) {
   const tBrandShared = useTranslations("brand.shared");
-  const tLabels = useTranslations("common.labels");
   const actionByTab: Partial<
     Record<BrandTab, { label: string; onClick: () => void }>
   > = {
@@ -47,12 +44,9 @@ export function BrandIdentityHeader({
   const action = actionByTab[activeTab];
 
   return (
-    <PageHeading
-      description={t(`tabs.${activeTab}.description`)}
-      title={tLabels(BRAND_IDENTITY_TAB_LABEL_KEYS[activeTab])}
-    >
+    <div className="flex flex-wrap items-center gap-2">
       {activeTab === "guidelines" ? (
-        <div className="flex shrink-0 items-center gap-2">
+        <>
           <GuidelinesPdfUploadButton
             organizationId={organizationId}
             voiceId={voiceId}
@@ -64,7 +58,7 @@ export function BrandIdentityHeader({
             <HugeiconsIcon className="size-4" icon={Refresh03Icon} />
             {tBrandShared("refreshGuidelines")}
           </Button>
-        </div>
+        </>
       ) : null}
       {action ? (
         <Button onClick={action.onClick}>
@@ -73,6 +67,7 @@ export function BrandIdentityHeader({
           <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
         </Button>
       ) : null}
-    </PageHeading>
+      {menu}
+    </div>
   );
 }

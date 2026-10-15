@@ -11,14 +11,6 @@ const SidebarOnboarding = dynamic(
   { ssr: false }
 );
 
-const SidebarUpgrade = dynamic(
-  () =>
-    import("@/components/dashboard/sidebar-upgrade").then(
-      (module) => module.SidebarUpgrade
-    ),
-  { ssr: false }
-);
-
 export function DeferredSidebarStatus() {
   const ready = useDeferredMount();
 
@@ -27,10 +19,4 @@ export function DeferredSidebarStatus() {
   }
 
   return <SidebarOnboarding />;
-}
-
-export function DeferredSidebarUpgrade() {
-  const ready = useDeferredMount();
-
-  return ready ? <SidebarUpgrade /> : null;
 }

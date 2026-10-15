@@ -29,7 +29,11 @@ import type {
   NavVisibility,
 } from "@/types/components/nav";
 import { geoNavHref, isGeoDashboardPath } from "@/utils/geo-paths";
-import { resolveNavItems, sidebarRouteFromPathname } from "@/utils/nav";
+import {
+  resolveNavGroupRow,
+  resolveNavItems,
+  sidebarRouteFromPathname,
+} from "@/utils/nav";
 
 import { NavLockHint } from "./nav-lock-hint";
 import { SidebarLabel } from "./sidebar-label";
@@ -93,12 +97,8 @@ function NavGroupRow({
   }
 
   const label = tLabels(group.labelKey);
-  const ownPageActive = first.link === activeLink;
-  const groupActive =
-    ownPageActive || rest.some((item) => item.link === activeLink);
-  const showSubRows = groupActive && rest.length > 0;
-  // A row with one page is that page, so it carries the page's badge.
-  const showOwnBadge = rest.length === 0;
+  const { subRows, groupActive, ownPageActive, showSubRows, showOwnBadge } =
+    resolveNavGroupRow(group, first, rest, activeLink);
 
   if (state === "collapsed" && !isMobile && rest.length > 0) {
     return (
@@ -166,7 +166,7 @@ function NavGroupRow({
         }
         tooltip={label}
       />
-      {rest.length > 0 ? (
+      {subRows.length > 0 ? (
         <div
           className="duration-normal grid grid-rows-[0fr] opacity-0 transition-[grid-template-rows,opacity] ease-(--sidebar-ease) group-data-[collapsible=icon]:hidden data-[open=true]:grid-rows-[1fr] data-[open=true]:opacity-100 motion-reduce:transition-none"
           data-open={showSubRows}
@@ -174,7 +174,7 @@ function NavGroupRow({
         >
           <div className="min-h-0 overflow-hidden">
             <SidebarMenuSub>
-              {rest.map((item) => (
+              {subRows.map((item) => (
                 <SidebarMenuSubItem key={item.link}>
                   <SidebarMenuSubButton
                     isActive={item.link === activeLink}

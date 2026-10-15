@@ -2,8 +2,6 @@ import type { IconSvgElement } from "@hugeicons/react";
 import type { PostStatus } from "@notra/schemas/dashboard/content";
 import type { ReactNode } from "react";
 
-import type { BrandTab } from "@/types/brand-identity";
-
 export type SidebarMode = "geo" | "studio";
 
 export type NavGroupKey = "visibility" | "improve" | "automation" | "utility";
@@ -54,6 +52,19 @@ export interface NavGroup {
   icon: IconSvgElement;
   labelKey: NavGroupLabelKey;
   links: readonly string[];
+  /**
+   * The row is a heading for its pages rather than a page of its own, so its
+   * first page is listed underneath like the others.
+   */
+  listsOwnPage?: boolean;
+}
+
+export interface NavGroupRowState {
+  subRows: NavMainItem[];
+  groupActive: boolean;
+  ownPageActive: boolean;
+  showSubRows: boolean;
+  showOwnBadge: boolean;
 }
 
 export interface NavItem {
@@ -144,38 +155,6 @@ export interface UseSidebarModeResult {
   setMode: (mode: SidebarMode) => void;
   /** Set while the route has not caught up with the user's pick, else null. */
   pendingMode: SidebarMode | null;
-}
-
-export interface NavBrandIdentityProps {
-  slug: string;
-}
-
-export type BrandIdentityNavCountKey = "references" | "sitemap";
-
-export interface NavBrandIdentityItemConfig {
-  tab: BrandTab;
-  icon: IconSvgElement;
-  countKey?: BrandIdentityNavCountKey;
-}
-
-export interface NavBrandIdentityItem {
-  tab: BrandTab;
-  icon: IconSvgElement;
-  href: string;
-  isActive: boolean;
-  count: number | null;
-}
-
-export interface NavBrandIdentityModel {
-  items: NavBrandIdentityItem[];
-}
-
-export interface NavBrandIdentityLinkProps {
-  item: NavBrandIdentityItem;
-}
-
-export interface NavCountBadgeProps {
-  count: number | null;
 }
 
 export interface NavLockHintProps {
