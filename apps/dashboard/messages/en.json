@@ -2910,11 +2910,8 @@
       "legacyModel": "Legacy",
       "legacyModelDescription": "You can keep using this model. Once you remove it and save, you cannot add it back to this project.",
       "turnOff": "Turn off",
-      "showFewerProviders": "Show fewer providers",
-      "showMoreProviders": "Show {count} more providers",
-      "toggleProvider": "Toggle all {provider} models",
-      "showFewerModels": "Show fewer models",
-      "showMoreModels": "{count, plural, one {Show # other model} other {Show # other models}}"
+      "toggleProvider": "Turn {provider} on or off",
+      "providerOff": "Off"
     },
     "geoIngestSetup": {
       "tokenTitle": "Set your token",
@@ -3027,12 +3024,9 @@
       "dayUnit": "day",
       "dayPluralSuffix": "s",
       "daysSr": "{count, plural, one {day} other {days}}",
-      "summaryEnabled": "Enabled models are checked every <strong>{interval}</strong>.",
-      "summaryPaused": "Automatic checks are paused. You can still run scans manually.",
-      "automaticScans": "Automatic scans"
+      "offHint": "manual only"
     },
     "geoSettingsForm": {
-      "scanSize": "About {count, number} checks per scan, including web-search checks and conversation turns.",
       "description": "How your brand is identified and where prompts are scanned.",
       "brand": {
         "companyNameHint": "The main name we look for in answers.",
@@ -3051,9 +3045,6 @@
       },
       "languages": {
         "description": "Languages your prompts are scanned in. Prompts are written in {language}, other languages are translated."
-      },
-      "models": {
-        "description": "Each enabled provider runs every prompt at the frequency you set here."
       }
     },
     "geoSetupEmpty": {

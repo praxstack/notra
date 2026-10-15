@@ -680,10 +680,6 @@ export const GEO_META_SEARCH_MODEL_IDS: ReadonlySet<string> = new Set([
   "meta/muse-spark-1.2",
   "meta/muse-spark-1.1",
 ]);
-/** Models shown per provider before "Show x other models". */
-export const GEO_PICKER_VISIBLE_MODELS = 3;
-/** Providers shown in the picker before "Show x more providers". */
-export const GEO_PICKER_VISIBLE_PROVIDERS = 7;
 /**
  * Variants kept in the catalog but hidden from the picker: tiers that answer
  * like their base model, dated snapshots, and open-weight families that no

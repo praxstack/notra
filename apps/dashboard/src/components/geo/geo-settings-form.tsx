@@ -26,15 +26,11 @@ import { useTranslations } from "use-intl";
 
 import { GeoEnginePicker } from "@/components/geo/geo-engine-picker";
 import { GeoLanguagePicker } from "@/components/geo/geo-language-picker";
-import {
-  GeoScanFrequencySelect,
-  GeoScanSchedule,
-} from "@/components/geo/geo-scan-schedule";
+import { GeoScanFrequencySelect } from "@/components/geo/geo-scan-schedule";
 import { GeoTagList } from "@/components/geo/geo-tag-list";
 import { GeoProjectBrandSection } from "@/components/geo/project-brand-section";
 import { useGeoSettingsUpsert } from "@/lib/hooks/use-geo";
 import { useGeoActiveProject } from "@/lib/hooks/use-geo-active-project";
-import { useGeoScanEstimate } from "@/lib/hooks/use-geo-scan-estimate";
 import { useLanguageLabel } from "@/lib/hooks/use-language-label";
 import { useHasZdrEntitlement } from "@/lib/hooks/use-plan";
 import type {
@@ -49,7 +45,6 @@ export function GeoSettingsForm({
   organizationId,
   settings,
   catalog,
-  promptCount,
   hideHeader = false,
   section,
 }: GeoSettingsFormProps) {
@@ -107,20 +102,6 @@ export function GeoSettingsForm({
     scanIntervalHours,
     settings,
   });
-
-  const { scanSize } = useGeoScanEstimate({
-    organizationId,
-    promptCount,
-    engines,
-    languages,
-  });
-  const scanSizeNote =
-    scanSize === null
-      ? null
-      : {
-          className: "text-muted-foreground text-xs tabular-nums",
-          text: t("scanSize", { count: scanSize }),
-        };
 
   const showBrand = section === undefined || section === "brand";
   const showLanguages = section === undefined || section === "languages";
@@ -185,7 +166,6 @@ export function GeoSettingsForm({
             onScanIntervalHoursChange={setScanIntervalHours}
             planLoading={planLoading}
             scanIntervalHours={scanIntervalHours}
-            scanSizeNote={scanSizeNote}
           />
         ) : null}
       </div>
@@ -495,16 +475,16 @@ function GeoModelsSection({
   onScanIntervalHoursChange,
   planLoading,
   scanIntervalHours,
-  scanSizeNote,
 }: GeoModelsSectionProps) {
-  const t = useTranslations("geo.geoSettingsForm");
   const tCommon = useTranslations("common");
   return (
     <TitleCard
       action={
         <GeoScanFrequencySelect
+          enabled={enabled}
           id={id}
           intervalHours={scanIntervalHours}
+          onEnabledChange={onEnabledChange}
           onIntervalChange={onScanIntervalHoursChange}
         />
       }
@@ -512,38 +492,18 @@ function GeoModelsSection({
       heading={tCommon("labels.models")}
       headingAs="h2"
     >
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <p className="text-muted-foreground text-sm text-pretty">
-            {t("models.description")}
-          </p>
-          {scanSizeNote ? (
-            <p className={scanSizeNote.className} role="note">
-              {scanSizeNote.text}
-            </p>
-          ) : null}
-        </div>
-        <GeoEnginePicker
-          canEnforceZdr={canEnforceZdr}
-          catalog={catalog}
-          enforceZdr={enforceZdr}
-          labeled={false}
-          nonZdrApproved={nonZdrApproved}
-          onChange={onEnginesChange}
-          onEnforceZdrChange={onEnforceZdrChange}
-          onNonZdrApprovedChange={onNonZdrApprovedChange}
-          planLoading={planLoading}
-          scheduleRow={
-            <GeoScanSchedule
-              enabled={enabled}
-              id={id}
-              intervalHours={scanIntervalHours}
-              onEnabledChange={onEnabledChange}
-            />
-          }
-          selected={engines}
-        />
-      </div>
+      <GeoEnginePicker
+        canEnforceZdr={canEnforceZdr}
+        catalog={catalog}
+        enforceZdr={enforceZdr}
+        labeled={false}
+        nonZdrApproved={nonZdrApproved}
+        onChange={onEnginesChange}
+        onEnforceZdrChange={onEnforceZdrChange}
+        onNonZdrApprovedChange={onNonZdrApprovedChange}
+        planLoading={planLoading}
+        selected={engines}
+      />
     </TitleCard>
   );
 }

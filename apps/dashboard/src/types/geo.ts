@@ -688,16 +688,11 @@ export interface GeoSetupButtonProps {
   size?: ComponentProps<typeof Button>["size"];
 }
 
-export interface GeoScanScheduleProps {
-  id: string;
-  enabled: boolean;
-  onEnabledChange: (enabled: boolean) => void;
-  intervalHours: number;
-}
-
 export interface GeoScanFrequencySelectProps {
   id: string;
+  enabled: boolean;
   intervalHours: number;
+  onEnabledChange: (enabled: boolean) => void;
   onIntervalChange: (hours: number) => void;
   disabled?: boolean;
 }
@@ -1058,12 +1053,6 @@ export interface EngineIconProps {
   darkSurface?: boolean;
 }
 
-export interface GeoProviderWordmarkProps {
-  provider: string;
-  label: string;
-  className?: string;
-}
-
 export interface GeoModeIconProps {
   mode: GeoSparklineMode;
   className?: string;
@@ -1123,7 +1112,6 @@ export interface GeoSettingsFormProps {
   organizationId: string;
   settings: GeoSettings | null;
   catalog: GeoResolvedModelCatalog;
-  promptCount?: number;
   hideHeader?: boolean;
   section?: GeoSettingsFormSection;
 }
@@ -1164,7 +1152,6 @@ export interface GeoModelsSectionProps {
   onEnabledChange: (value: boolean) => void;
   scanIntervalHours: number;
   onScanIntervalHoursChange: (value: number) => void;
-  scanSizeNote: { className: string; text: string } | null;
 }
 
 export interface GeoSettingsAutosaveInput {
@@ -1217,7 +1204,6 @@ export interface GeoEnginePickerProps {
   disabled?: boolean;
   labeled?: boolean;
   /** Rendered as the first row of the options group under the model list. */
-  scheduleRow?: ReactNode;
 }
 
 export interface GeoPendingModelRemoval {
@@ -1236,14 +1222,9 @@ export interface GeoEngineProviderListProps {
   onToggleModel: (model: GeoModelCatalogEntry, checked: boolean) => void;
   onToggleProvider: (
     models: readonly GeoModelCatalogEntry[],
-    visibleModels: readonly GeoModelCatalogEntry[],
     checked: boolean
   ) => void;
-  onToggleShowAllModels: (providerId: string) => void;
-  onToggleShowMore: () => void;
   selected: readonly string[];
-  showAllModels: ReadonlySet<string>;
-  showMore: boolean;
   zdrActive: boolean;
 }
 
@@ -1252,37 +1233,14 @@ export interface GeoEngineProviderRowProps {
   catalog: GeoResolvedModelCatalog;
   disabled: boolean;
   expanded: boolean;
-  hiddenCount: number;
   id: string;
   lastSelected: boolean;
   onToggleExpanded: (providerId: string) => void;
   onToggleModel: (model: GeoModelCatalogEntry, checked: boolean) => void;
   onToggleProvider: GeoEngineProviderListProps["onToggleProvider"];
-  onToggleShowAllModels: (providerId: string) => void;
   provider: GeoModelCatalog["providers"][number];
-  providerIndex: number;
-  reduceMotion: boolean | null;
-  revealIndex: number;
   selectedCount: number;
   selectedIds: ReadonlySet<string>;
-  showAllModels: boolean;
-  showMore: boolean;
-  zdrActive: boolean;
-}
-
-export interface GeoEngineProviderModelsProps {
-  additionalModels: readonly GeoModelCatalogEntry[];
-  approvedNonZdrIds: ReadonlySet<string>;
-  catalog: GeoResolvedModelCatalog;
-  disabled: boolean;
-  id: string;
-  lastSelected: boolean;
-  onToggleModel: (model: GeoModelCatalogEntry, checked: boolean) => void;
-  onToggleShowAllModels: (providerId: string) => void;
-  primaryModels: readonly GeoModelCatalogEntry[];
-  providerId: string;
-  selectedIds: ReadonlySet<string>;
-  showAllModels: boolean;
   zdrActive: boolean;
 }
 

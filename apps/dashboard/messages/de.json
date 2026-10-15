@@ -2910,11 +2910,8 @@
       "legacyModel": "Bisheriges Modell",
       "legacyModelDescription": "Du kannst dieses Modell weiterhin nutzen. Sobald du es entfernst und speicherst, kannst du es diesem Projekt nicht wieder hinzufügen.",
       "turnOff": "Ausschalten",
-      "showFewerProviders": "Weniger Anbieter anzeigen",
-      "showMoreProviders": "{count} weitere Anbieter anzeigen",
-      "toggleProvider": "Alle {provider}-Modelle umschalten",
-      "showFewerModels": "Weniger Modelle anzeigen",
-      "showMoreModels": "{count, plural, one {# weiteres Modell anzeigen} other {# weitere Modelle anzeigen}}"
+      "toggleProvider": "{provider} ein- oder ausschalten",
+      "providerOff": "Aus"
     },
     "geoIngestSetup": {
       "tokenTitle": "Token setzen",
@@ -3027,12 +3024,9 @@
       "dayUnit": "Tag",
       "dayPluralSuffix": "e",
       "daysSr": "{count, plural, one {Tag} other {Tage}}",
-      "summaryEnabled": "Aktivierte Modelle werden <strong>{interval}</strong> geprüft.",
-      "summaryPaused": "Automatische Prüfungen sind pausiert. Du kannst Scans weiterhin manuell starten.",
-      "automaticScans": "Automatische Scans"
+      "offHint": "nur manuell"
     },
     "geoSettingsForm": {
-      "scanSize": "Etwa {count, number} Checks pro Scan, inklusive Websuche-Checks und Gesprächsrunden.",
       "description": "Wie deine Marke erkannt wird und wo Prompts gescannt werden.",
       "brand": {
         "companyNameHint": "Der Hauptname, nach dem wir in Antworten suchen.",
@@ -3051,9 +3045,6 @@
       },
       "languages": {
         "description": "Sprachen, in denen deine Prompts gescannt werden. Die Prompts sind auf {language} geschrieben, weitere Sprachen werden übersetzt."
-      },
-      "models": {
-        "description": "Jeder aktivierte Anbieter führt jeden Prompt in der Häufigkeit aus, die du hier festlegst."
       }
     },
     "geoSetupEmpty": {
