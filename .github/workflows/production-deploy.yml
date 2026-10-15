@@ -37,7 +37,8 @@ jobs:
         with:
           node-version: 24
 
-      - name: Require passing release CI
+      - name: Select release commit
+        id: release
         timeout-minutes: 12
         run: node scripts/github/utils/release-ci.mjs
         env:
@@ -51,7 +52,11 @@ jobs:
 
       - name: Build and boot agents
         if: ${{ !inputs.dry_run }}
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}
         run: |
+          git worktree add --detach "$RUNNER_TEMP/release" "$RELEASE_SHA"
+          cd "$RUNNER_TEMP/release"
           for app in agent onboarding-agent; do
             echo "::group::Build and boot $app"
             (
@@ -84,3 +89,4 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
           UNKEY_DEPLOY_ROOT_KEY: ${{ secrets.UNKEY_DEPLOY_ROOT_KEY }}
           DRY_RUN: ${{ inputs.dry_run || false }}
+          RELEASE_SHA: ${{ steps.release.outputs.sha }}

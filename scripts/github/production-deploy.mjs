@@ -117,7 +117,8 @@ export async function release({
   ) {
     throw new Error("Production releases must run from usenotra/notra main");
   }
-  const sha = env.GITHUB_SHA;
+  // RELEASE_SHA is the commit selectReleaseCommit picked; it may trail main.
+  const sha = env.RELEASE_SHA || env.GITHUB_SHA;
   const repositoryId = Number(env.GITHUB_REPOSITORY_ID);
   if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) {
     throw new Error("GITHUB_REPOSITORY_ID must be a positive safe integer");
@@ -210,7 +211,7 @@ export async function release({
     }
   };
 
-  await requireReleaseCI({ env, fetchImpl, sleep, report });
+  await requireReleaseCI({ env, sha, fetchImpl, sleep, report });
   await report(`Release commit: \`${sha}\``);
 
   const unkey = async (path, body) => {

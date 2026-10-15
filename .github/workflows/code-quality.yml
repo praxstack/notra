@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        check: [lint, tests, builds, typecheck]
+        check: [lint, tests, build-web, build-dashboard, typecheck]
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
@@ -37,16 +37,17 @@ jobs:
         with:
           node-version: 24.11.1
 
+      # Exact key only: restore-keys made every lockfile change re-save the
+      # previous cache plus new packages, so it grew past 1.4 GB.
       - name: Restore Bun package cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        id: bun-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.bun/install/cache
-          key: bun-v1-${{ runner.os }}-${{ runner.arch }}-1.4.0-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            bun-v1-${{ runner.os }}-${{ runner.arch }}-1.4.0-
+          key: bun-v2-${{ runner.os }}-${{ runner.arch }}-1.4.0-${{ hashFiles('bun.lock') }}
 
       - name: Check Vercel installs
-        if: matrix.check == 'builds'
+        if: matrix.check == 'build-web'
         run: |
           for app in dashboard web ui agent onboarding-agent; do
             echo "::group::Check $app Vercel install"
@@ -60,23 +61,40 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      # One writer per lockfile; parallel saves of the same key all but one fail.
+      - name: Save Bun package cache
+        if: matrix.check == 'lint' && steps.bun-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ steps.bun-cache.outputs.cache-primary-key }}
+
       - name: Run ultracite check
         if: matrix.check == 'lint'
         run: bun check
 
+      # PRs test only packages their diff affects (plus dependents); main
+      # pushes still run everything because they gate production releases.
       - name: Run unit and integration tests
         if: matrix.check == 'tests'
-        run: bun run test --force --log-order=stream
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            TURBO_SCM_BASE="$BASE_SHA" bun run test --force --log-order=stream --affected
+          else
+            bun run test --force --log-order=stream
+          fi
 
       - name: Verify production markdown endpoints
-        if: matrix.check == 'builds'
+        if: matrix.check == 'build-web'
         run: |
           bun run build --filter=web
           cd apps/web
           bun run test:production
 
       - name: Verify dashboard Vercel build
-        if: matrix.check == 'builds'
+        if: matrix.check == 'build-dashboard'
         working-directory: apps/dashboard
         env:
           VERCEL: "1"
@@ -131,12 +149,10 @@ jobs:
           node-version: 24.11.1
 
       - name: Restore Bun package cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: ~/.bun/install/cache
-          key: bun-v1-${{ runner.os }}-${{ runner.arch }}-1.4.0-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            bun-v1-${{ runner.os }}-${{ runner.arch }}-1.4.0-
+          key: bun-v2-${{ runner.os }}-${{ runner.arch }}-1.4.0-${{ hashFiles('bun.lock') }}
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
