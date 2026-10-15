@@ -8,7 +8,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
-import { BrailleLoader } from "@notra/ui/components/shared/braille-loader";
 import { TitleCard } from "@notra/ui/components/ui/title-card";
 import {
   TooltipContent,
@@ -21,6 +20,7 @@ import { useTranslations } from "use-intl";
 
 import { SuggestionDetailsSheet } from "@/components/automation/suggestion-details-sheet";
 import { Button } from "@/components/button";
+import { AgentLoader } from "@/components/icons/agent-loader";
 import { EVE_ACCENT_COLOR } from "@/constants/onboarding-agent";
 import { trackEvent } from "@/lib/analytics/posthog-client";
 import {
@@ -99,11 +99,11 @@ export function OnboardingSuggestions({
           <h2 className="text-sm font-medium">
             {tCommon("labels.suggestions")}
           </h2>
+          <span className="sr-only" role="status">
+            {agentRunning ? tCommon("states.loading") : ""}
+          </span>
           {agentRunning && (
-            <BrailleLoader
-              ariaLabel={tCommon("states.loading")}
-              className="text-xs"
-            />
+            <AgentLoader className="text-muted-foreground size-3.5" />
           )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

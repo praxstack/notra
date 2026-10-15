@@ -1,16 +1,6 @@
 import { cn } from "@notra/ui/lib/utils";
 
-const DOTS = [
-  { cx: 12, cy: 12, r: 2.9 },
-  { cx: 12, cy: 5, r: 2.1 },
-  { cx: 19, cy: 12, r: 2.1 },
-  { cx: 12, cy: 19, r: 2.1 },
-  { cx: 5, cy: 12, r: 2.1 },
-  { cx: 5, cy: 5, r: 1.35 },
-  { cx: 19, cy: 5, r: 1.35 },
-  { cx: 19, cy: 19, r: 1.35 },
-  { cx: 5, cy: 19, r: 1.35 },
-];
+import { AGENT_ICON_DOTS } from "@/constants/agent-icon";
 
 export function AgentIcon({ className }: { className?: string }) {
   return (
@@ -21,8 +11,8 @@ export function AgentIcon({ className }: { className?: string }) {
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {DOTS.map((dot) => (
-        <circle key={`${dot.cx}-${dot.cy}`} {...dot} />
+      {AGENT_ICON_DOTS.map(({ cx, cy, r }) => (
+        <circle cx={cx} cy={cy} key={`${cx}-${cy}`} r={r} />
       ))}
     </svg>
   );

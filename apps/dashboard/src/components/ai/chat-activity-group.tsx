@@ -22,6 +22,7 @@ import {
   ACTIVITY_CONTENT_CLASSNAME,
   ACTIVITY_STEP_MIN_VISIBLE_MS,
   ACTIVITY_STEP_SETTLE_MS,
+  ACTIVITY_THINKING_SETTLE_MS,
   VISIBLE_SEARCH_SOURCE_COUNT,
 } from "@/constants/chat-activity";
 import { useSettledValue } from "@/lib/hooks/use-settled-value";
@@ -97,7 +98,10 @@ export function ChatActivityGroup({
   );
   const durationSeconds = measuredSeconds ?? elapsedSeconds ?? null;
   const settledStep = useSettledValue(step, {
-    settleMs: ACTIVITY_STEP_SETTLE_MS,
+    settleMs:
+      step === "thinking"
+        ? ACTIVITY_THINKING_SETTLE_MS
+        : ACTIVITY_STEP_SETTLE_MS,
     minVisibleMs: ACTIVITY_STEP_MIN_VISIBLE_MS,
   });
   const displayedStep =
@@ -162,7 +166,7 @@ export function ChatActivityGroup({
           <HugeiconsIcon
             aria-hidden
             className={cn(
-              "text-muted-foreground/60 size-3.5 shrink-0 transition-transform motion-reduce:transition-none",
+              "text-muted-foreground/60 animate-in fade-in size-3.5 shrink-0 transition-transform duration-300 motion-reduce:animate-none motion-reduce:transition-none",
               isOpen ? "rotate-180" : "rotate-0"
             )}
             icon={ArrowDown01Icon}

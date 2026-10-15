@@ -8,7 +8,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CHAT_PREVIEW_SAVE_TIMEOUT_MS } from "@notra/ai/constants/chat";
-import { BrailleLoader } from "@notra/ui/components/shared/braille-loader";
+import { Shimmer } from "@notra/ui/components/ai-elements/shimmer";
 import { Badge } from "@notra/ui/components/ui/badge";
 import {
   Collapsible,
@@ -27,6 +27,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/button";
 import { PostSocialButton } from "@/components/content/post-social-button";
+import { AgentLoader } from "@/components/icons/agent-loader";
 import { LinkedInPost } from "@/components/linkedin-post";
 import { useOutputTypeLabel } from "@/lib/hooks/use-output-type-label";
 import { useSelectedSocialAccount } from "@/lib/hooks/use-selected-social-account";
@@ -251,13 +252,16 @@ export function LinkedInPreview({
 
           {!isFinished && isOpen && (
             <div className="flex flex-wrap items-center gap-2 px-3 pb-2">
+              <span className="sr-only" role="status">
+                {userAction === "generating" ? t("generatingPost") : ""}
+              </span>
               {userAction === "generating" && (
-                <div className="text-muted-foreground mr-auto flex min-w-0 items-center gap-2 text-xs">
-                  <BrailleLoader
-                    className="text-xs"
-                    ariaLabel={t("generatingPost")}
-                    label={t("generatingPost")}
-                  />
+                <div
+                  aria-hidden="true"
+                  className="text-muted-foreground mr-auto flex min-w-0 items-center gap-2 text-xs"
+                >
+                  <AgentLoader className="size-3" />
+                  <Shimmer as="span">{t("generatingPost")}</Shimmer>
                 </div>
               )}
               {effectiveState === "draft" && (

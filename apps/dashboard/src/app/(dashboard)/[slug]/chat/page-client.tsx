@@ -2946,6 +2946,22 @@ function StandaloneChatPageClient({
   const visibleMessages = messages.filter((message) =>
     hasVisibleChatContent(message)
   );
+  const lastVisibleMessage = visibleMessages.at(-1);
+  // Once the reply is on screen, a pause between steps shows its status inside
+  // the reply, where the next step will render, instead of below it.
+  const isThinkingInline =
+    showThinkingIndicator &&
+    lastVisibleMessage?.role === "assistant" &&
+    lastVisibleMessage.id === lastMessage?.id;
+  const thinkingStatus = (
+    <span className="text-muted-foreground flex items-center gap-2 text-sm leading-5">
+      <ChatActivityStatus
+        active={!isStopping}
+        label={isStopping ? t("stopping") : tCommon("labels.thinkingLabel")}
+        seconds={activitySeconds ?? 0}
+      />
+    </span>
+  );
   const minimapTurns = buildChatMinimapTurns(visibleMessages, (message) =>
     toDisplayText(getUserMessageText(message))
   );
@@ -2976,7 +2992,6 @@ function StandaloneChatPageClient({
                           (m) => m.id === branchSwitchSignal.userMessageId
                         )
                       : -1;
-                    const lastVisibleMessage = visibleMessages.at(-1);
                     const lastAssistantMessageId =
                       lastVisibleMessage?.role === "assistant"
                         ? lastVisibleMessage.id
@@ -3101,6 +3116,10 @@ function StandaloneChatPageClient({
                                     renderPart(part, message.id, index)
                                   }
                                 />
+                                {isThinkingInline &&
+                                message.id === lastAssistantMessageId
+                                  ? thinkingStatus
+                                  : null}
                               </MessageContent>
                             )}
                             {isUser && !isSlackMirrored && (
@@ -3171,25 +3190,10 @@ function StandaloneChatPageClient({
                       </div>
                     </div>
                   )}
-                  {showThinkingIndicator && (
+                  {showThinkingIndicator && !isThinkingInline && (
                     <div className="mx-auto w-full max-w-2xl">
                       <Message from="assistant">
-                        <MessageContent>
-                          <span
-                            className="text-muted-foreground flex items-center gap-2 text-sm leading-5"
-                            role="status"
-                          >
-                            <ChatActivityStatus
-                              active={!isStopping}
-                              label={
-                                isStopping
-                                  ? t("stopping")
-                                  : tCommon("labels.thinkingLabel")
-                              }
-                              seconds={activitySeconds ?? 0}
-                            />
-                          </span>
-                        </MessageContent>
+                        <MessageContent>{thinkingStatus}</MessageContent>
                       </Message>
                     </div>
                   )}

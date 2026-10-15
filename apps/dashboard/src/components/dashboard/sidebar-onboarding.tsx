@@ -1,6 +1,5 @@
 "use client";
 
-import { BrailleLoader } from "@notra/ui/components/shared/braille-loader";
 import {
   OnboardingChecklistItem,
   OnboardingChecklistItems,
@@ -11,6 +10,7 @@ import { cn } from "@notra/ui/lib/utils";
 import { useSyncExternalStore } from "react";
 import { useTranslations } from "use-intl";
 
+import { AgentLoader } from "@/components/icons/agent-loader";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { AGENT_RUN_REFETCH_INTERVAL_MS } from "@/constants/onboarding-agent";
 import { localStorageKeys } from "@/constants/storage";
@@ -139,10 +139,7 @@ export function SidebarOnboarding() {
               : t("title")}
           </span>
           {agentRunning && (
-            <BrailleLoader
-              ariaLabel={tCommon("states.loading")}
-              className="text-xs"
-            />
+            <AgentLoader className="text-muted-foreground size-3.5" />
           )}
           <svg
             aria-hidden="true"
@@ -164,6 +161,9 @@ export function SidebarOnboarding() {
             )}
           </svg>
         </button>
+        <span className="sr-only" role="status">
+          {agentRunning ? tCommon("states.loading") : ""}
+        </span>
 
         <div
           aria-hidden={collapsed}

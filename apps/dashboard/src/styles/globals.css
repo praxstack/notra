@@ -202,6 +202,59 @@
   animation: thinking-letter 1.35s ease-in-out infinite;
 }
 
+@keyframes agent-loader-dot {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.82);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+  40% {
+    opacity: 0.3;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes agent-loader-core {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.86);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.agent-loader-dot,
+.agent-loader-core {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.agent-loader-dot {
+  animation: agent-loader-dot 1.2s ease-in-out infinite;
+  animation-delay: calc(
+    var(--agent-loader-phase, 0ms) + var(--agent-loader-offset, 0ms) - 1.2s
+  );
+}
+
+.agent-loader-core {
+  animation: agent-loader-core 1.2s ease-in-out infinite;
+  animation-delay: var(--agent-loader-phase, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-loader-dot,
+  .agent-loader-core {
+    animation: none;
+  }
+}
+
 @keyframes chat-input-slide-down {
   from {
     transform: translateY(calc(-50dvh + 50% + 1.5rem));

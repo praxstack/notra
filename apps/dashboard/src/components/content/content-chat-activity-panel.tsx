@@ -599,10 +599,7 @@ export function ContentChatActivityPanel(props: ContentChatActivityPanelProps) {
                 messageId="thinking"
                 style={{ contentVisibility: "visible" }}
               >
-                <span
-                  className="text-muted-foreground flex items-center gap-2 text-sm leading-5"
-                  role="status"
-                >
+                <span className="text-muted-foreground flex items-center gap-2 text-sm leading-5">
                   <ChatActivityStatus seconds={activitySeconds ?? 0} />
                 </span>
               </MessageScrollerItem>

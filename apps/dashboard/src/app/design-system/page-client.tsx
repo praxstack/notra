@@ -7,7 +7,6 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { BadgeShowcase } from "@notra/ui/components/badge-showcase";
-import { BrailleLoader } from "@notra/ui/components/shared/braille-loader";
 import {
   ResponsiveAlertDialog,
   ResponsiveAlertDialogAction,
@@ -258,6 +257,7 @@ import { IconTabsSection } from "@/components/design-system/sections/icon-tabs-s
 import { InstrumentModuleSection } from "@/components/design-system/sections/instrument-module-section";
 import { PageHeadingSection } from "@/components/design-system/sections/page-heading-section";
 import { SplitModalSection } from "@/components/design-system/sections/split-modal-section";
+import { AgentLoader } from "@/components/icons/agent-loader";
 import { IntegrationCard } from "@/components/integrations/integration-card";
 import { LinkedInPost } from "@/components/linkedin-post";
 import { cn } from "@/lib/utils";
@@ -1272,37 +1272,33 @@ export default function DesignSystemClientPage() {
           </Card>
         </section>
 
-        <section className="scroll-mt-10 space-y-6" id="braille-loader">
+        <section className="scroll-mt-10 space-y-6" id="agent-loader">
           <DesignSystemSectionHeader
-            description="Braille animation for AI thinking state — spells ⠠⠝⠕⠞⠗⠁ (notra)."
-            id="braille-loader"
-            title="Braille Loader"
+            description="The agent mark with a light running around its ring. Used wherever the agent is working; renders the static mark when inactive."
+            id="agent-loader"
+            title="Agent Loader"
           />
           <Card>
             <CardContent className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+              {(
+                [
+                  ["Small", "size-3.5"],
+                  ["Default", "size-4"],
+                  ["Large", "size-8"],
+                ] as const
+              ).map(([label, size]) => (
+                <div className="space-y-3" key={label}>
+                  <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                    {label}
+                  </p>
+                  <AgentLoader className={size} />
+                </div>
+              ))}
               <div className="space-y-3">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Wave
+                  Inactive
                 </p>
-                <BrailleLoader className="text-lg" variant="wave" />
-              </div>
-              <div className="space-y-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Typewriter
-                </p>
-                <BrailleLoader className="text-lg" variant="typewriter" />
-              </div>
-              <div className="space-y-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Shimmer
-                </p>
-                <BrailleLoader className="text-lg" variant="shimmer" />
-              </div>
-              <div className="space-y-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Pulse
-                </p>
-                <BrailleLoader className="text-lg" variant="pulse" />
+                <AgentLoader active={false} className="size-8" />
               </div>
             </CardContent>
           </Card>

@@ -28,6 +28,9 @@ export function createDevelopmentUiRoutes(parent: AnyRoute) {
   const BreakUi = lazyPage(
     () => import("@/app/design-system/break-ui/page.dev")
   );
+  const ChatLoading = lazyPage(
+    () => import("@/app/design-system/chat-loading/page.dev")
+  );
   const CodeResearch = lazyPage(
     () => import("@/app/design-system/code-research/page.dev")
   );
@@ -118,6 +121,12 @@ export function createDevelopmentUiRoutes(parent: AnyRoute) {
         path: "geo-gaps",
         preload: GeoGaps.preload,
         component: () => <GeoGaps />,
+      }),
+      createUiRoute({
+        parent: preview,
+        path: "chat-loading",
+        preload: ChatLoading.preload,
+        component: () => <ChatLoading />,
       }),
       createUiRoute({
         parent: preview,

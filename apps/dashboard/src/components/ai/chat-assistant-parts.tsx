@@ -35,9 +35,6 @@ export function ChatAssistantParts({
   const lastActivityIndex = segments.findLastIndex(
     (segment) => segment.kind === "activity"
   );
-  const firstActivityIndex = segments.findIndex(
-    (segment) => segment.kind === "activity"
-  );
 
   return segments.map((segment, segmentIndex) => {
     if (segment.kind === "standalone") {
@@ -108,11 +105,7 @@ export function ChatAssistantParts({
           getActivityGroupDuration(segment.items, parts, activityTimings) ??
           (hasSingleActivityGroup ? durationMs : undefined)
         }
-        elapsedSeconds={
-          isStreaming && segmentIndex === firstActivityIndex
-            ? elapsedSeconds
-            : undefined
-        }
+        elapsedSeconds={isStreaming ? elapsedSeconds : undefined}
         forceOpen={forceOpen}
         groupId={`${messageId}-${segment.startIndex}`}
         hasDetails={details.length > 0}
