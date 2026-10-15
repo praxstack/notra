@@ -8,6 +8,7 @@ import {
 
 import { NewSitePageSkeleton as NewSiteLoading } from "@/app/(dashboard)/[slug]/sites/new/skeleton";
 import { SitesPageSkeleton as SitesLoading } from "@/app/(dashboard)/[slug]/sites/skeleton";
+import { SitesLiveProvider } from "@/components/providers/sites-live-provider";
 import { SiteLayout } from "@/components/sites/site-layout";
 import {
   SitePageSkeleton as SiteLoading,
@@ -39,6 +40,15 @@ const DeploymentDetail = lazyPage(() =>
 );
 
 export function createSitesUiRoutes(organization: AnyRoute) {
+  function SitesRouteLayout() {
+    const { slug } = organization.useParams();
+    return (
+      <SitesLiveProvider organizationSlug={slug}>
+        <Outlet />
+      </SitesLiveProvider>
+    );
+  }
+
   const sites = createRoute({
     getParentRoute: () => organization,
     path: "sites",
@@ -50,7 +60,7 @@ export function createSitesUiRoutes(organization: AnyRoute) {
         throw notFound();
       }
     },
-    component: Outlet,
+    component: SitesRouteLayout,
   });
   function SiteRouteLayout() {
     const { slug, siteId } = site.useParams();

@@ -19,6 +19,7 @@ import {
 } from "./constants/smart-deployments";
 import { getDeployment, transitionDeployment } from "./deployments";
 import { getSitesBuilderSnapshotId } from "./env";
+import { publishSiteDeploymentChange } from "./live";
 import { mutateServingState, readServingState } from "./state";
 import type { SiteDeployment } from "./types/deployments";
 import type { SiteRepositoryAccess } from "./types/github";
@@ -186,7 +187,7 @@ export async function skipUnchangedDeployment(
     return false;
   }
   const baseline = comparison.baseline;
-  return withSiteStorageLock(site.id, async (tx) => {
+  const skipped = await withSiteStorageLock(site.id, async (tx) => {
     const [currentSite] = await tx
       .select()
       .from(sites)
@@ -308,4 +309,8 @@ export async function skipUnchangedDeployment(
       )
     );
   });
+  if (skipped) {
+    await publishSiteDeploymentChange(site.organizationId, site.id);
+  }
+  return skipped;
 }

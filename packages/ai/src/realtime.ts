@@ -1,4 +1,4 @@
-import { Realtime } from "@upstash/realtime";
+import { type EventPath, Realtime } from "@upstash/realtime";
 import z from "zod/v4";
 
 import { redis } from "./utils/redis";
@@ -15,6 +15,7 @@ const schema = {
       status: z.enum(["started", "progress", "finished"]),
     }),
   },
+  sites: { deployment: z.object({ siteId: z.string() }) },
   mirror: {
     message: z.any() as z.ZodType<unknown>,
     status: z.any() as z.ZodType<unknown>,
@@ -33,3 +34,4 @@ export const realtime = redis
   : null;
 
 export type RealtimeSchema = typeof schema;
+export type RealtimeEvent = EventPath<{ schema: RealtimeSchema }>;

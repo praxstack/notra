@@ -212,3 +212,5 @@ export const SITE_DEPLOYMENT_LOG_SURFACE_CLASS =
 
 export const SITE_SETTINGS_PANEL_CLASSNAME =
   "h-[var(--collapsible-panel-height)] overflow-hidden outline-none transition-[height,opacity] duration-normal ease-emphasized motion-reduce:transition-none data-[ending-style]:h-0 data-[ending-style]:opacity-0 data-[starting-style]:h-0 data-[starting-style]:opacity-0";
+/** Coalesces bursts of deployment events (enqueue, start, finish) per tab. */
+export const SITES_LIVE_INVALIDATE_THROTTLE_MS = 1000;

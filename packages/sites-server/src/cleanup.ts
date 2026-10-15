@@ -9,6 +9,7 @@ import {
   getSite,
   transitionDeployment,
 } from "./deployments";
+import { publishSiteDeploymentChange } from "./live";
 import { r2DeletePrefix, r2ListPrefixes } from "./r2";
 import type { SiteStorageTransaction } from "./types/deployments";
 import type { SiteCleanupResult } from "./types/sites";
@@ -46,10 +47,10 @@ async function listUnsettledDeploymentIds(
 export async function cleanupSiteDeployments(
   siteId: string
 ): Promise<SiteCleanupResult> {
-  return await withSiteStorageLock(siteId, async (tx) => {
+  const cleanup = await withSiteStorageLock(siteId, async (tx) => {
     const site = await getSite(siteId, tx);
     if (!site) {
-      return { deleted: [] };
+      return { deleted: [], organizationId: null };
     }
     const [unsettled, history] = await Promise.all([
       listUnsettledDeploymentIds(site.id, tx),
@@ -75,6 +76,10 @@ export async function cleanupSiteDeployments(
       await transitionDeployment(deploymentId, "expired", {}, tx);
       deleted.push(deploymentId);
     }
-    return { deleted };
+    return { deleted, organizationId: site.organizationId };
   });
+  if (cleanup.organizationId && cleanup.deleted.length > 0) {
+    await publishSiteDeploymentChange(cleanup.organizationId, siteId);
+  }
+  return { deleted: cleanup.deleted };
 }

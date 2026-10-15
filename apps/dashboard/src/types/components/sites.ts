@@ -718,3 +718,8 @@ export interface SiteRootDirectoryToggleProps {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }
+
+export interface SitesLiveProviderProps {
+  organizationSlug: string;
+  children: ReactNode;
+}

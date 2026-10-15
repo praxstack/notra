@@ -193,3 +193,4 @@ export const SITE_ANALYTICS_EVENT_FILE = "_notra/e";
 /** Longer visible times are capped: a tab left open overnight is not reading. */
 export const SITE_ENGAGEMENT_MAX_VISIBLE_MS = 30 * 60 * 1000;
 export const SITE_ENGAGEMENT_VIEW_ID_PATTERN = /^[a-z0-9]{16,32}$/;
+export const SITES_LIVE_CHANNEL_PREFIX = "sites";

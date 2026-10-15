@@ -21,6 +21,7 @@ import {
 
 import { ROLLBACK_HISTORY } from "./constants/deployments";
 import { SiteNotBuildableError } from "./errors";
+import { publishSiteDeploymentChange } from "./live";
 import type {
   DeploymentExecutor,
   DeploymentTransitionValues,
@@ -92,8 +93,16 @@ export async function transitionDeployment(
         inArray(siteDeployments.status, [...SITE_DEPLOYMENT_TRANSITIONS[to]])
       )
     )
-    .returning({ id: siteDeployments.id });
-  return updated.length > 0;
+    .returning({
+      siteId: siteDeployments.siteId,
+      organizationId: siteDeployments.organizationId,
+    });
+  const [row] = updated;
+  // Inside a transaction the caller announces the change once it committed.
+  if (row && executor === db) {
+    await publishSiteDeploymentChange(row.organizationId, row.siteId);
+  }
+  return Boolean(row);
 }
 
 export async function cancelPreviewBuilds(
@@ -102,7 +111,7 @@ export async function cancelPreviewBuilds(
   generation: number,
   executor: DeploymentExecutor = db
 ): Promise<void> {
-  await executor
+  const canceled = await executor
     .update(siteDeployments)
     .set({ status: "canceled", finishedAt: new Date() })
     .where(
@@ -114,19 +123,29 @@ export async function cancelPreviewBuilds(
           ...SITE_DEPLOYMENT_TRANSITIONS.canceled,
         ])
       )
-    );
+    )
+    .returning({ organizationId: siteDeployments.organizationId });
+  const [row] = canceled;
+  if (row && executor === db) {
+    await publishSiteDeploymentChange(row.organizationId, siteId);
+  }
 }
 
 export async function enqueueSiteDeployment(
   input: EnqueueDeploymentInput
 ): Promise<EnqueuedDeployment> {
-  return await db.transaction(async (tx) => {
+  const enqueued = await db.transaction(async (tx) => {
     const organizationId = await lockSiteOrganization(tx, input.siteId);
     if (!organizationId) {
       throw new SiteNotBuildableError("Site workspace not found");
     }
     return await insertDeployment(tx, input, organizationId);
   });
+  await publishSiteDeploymentChange(
+    enqueued.deployment.organizationId,
+    enqueued.deployment.siteId
+  );
+  return enqueued;
 }
 
 async function insertDeployment(
@@ -232,7 +251,7 @@ export async function startDeploymentBuild(
   deployment: SiteDeployment,
   startedAt: Date
 ): Promise<boolean> {
-  return db.transaction(async (tx) => {
+  const started = await db.transaction(async (tx) => {
     const organizationId = await lockSiteOrganization(tx, deployment.siteId);
     if (!organizationId) {
       return false;
@@ -291,13 +310,18 @@ export async function startDeploymentBuild(
       tx
     );
   });
+  await publishSiteDeploymentChange(
+    deployment.organizationId,
+    deployment.siteId
+  );
+  return started;
 }
 
 export async function enqueueSettingsDeployment(
   input: EnqueueDeploymentInput,
   attempt: SettingsJobAttempt
 ): Promise<string | null> {
-  return await db.transaction(async (tx) => {
+  const enqueued = await db.transaction(async (tx) => {
     const organizationId = await lockSiteOrganization(tx, input.siteId);
     if (!organizationId) {
       return null;
@@ -325,7 +349,7 @@ export async function enqueueSettingsDeployment(
       .from(siteJobs)
       .where(eq(siteJobs.dedupeKey, dedupeKey));
     if (existing) {
-      return existing.id;
+      return { jobId: existing.id, organizationId: null };
     }
     const [site] = await tx
       .select()
@@ -354,15 +378,18 @@ export async function enqueueSettingsDeployment(
         .for("key share");
       requestedByUserId = user?.id ?? null;
     }
-    return (
-      await insertDeployment(
-        tx,
-        { ...input, requestedByUserId },
-        organizationId,
-        dedupeKey
-      )
-    ).jobId;
+    const { jobId } = await insertDeployment(
+      tx,
+      { ...input, requestedByUserId },
+      organizationId,
+      dedupeKey
+    );
+    return { jobId, organizationId };
   });
+  if (enqueued?.organizationId) {
+    await publishSiteDeploymentChange(enqueued.organizationId, input.siteId);
+  }
+  return enqueued?.jobId ?? null;
 }
 
 export async function enqueuePreviewRemoval(

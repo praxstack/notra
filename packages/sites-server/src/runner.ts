@@ -17,6 +17,7 @@ import {
   failSiteJob,
   takeExhaustedSiteJobs,
 } from "./jobs";
+import { publishSiteDeploymentChange } from "./live";
 import { failDeployment, runDeploymentPipeline } from "./pipeline";
 import { SandboxRequestError } from "./schemas/sandbox";
 import {
@@ -122,6 +123,9 @@ async function runSettingsJob(job: SiteJob): Promise<SiteJobOutcome> {
   });
   if (!site) {
     return { status: "skipped" };
+  }
+  if (removePreviewsThrough !== null) {
+    await publishSiteDeploymentChange(site.organizationId, site.id);
   }
   await invalidateSiteIngestCaches(site);
   if (rebuild && site.status === "active") {

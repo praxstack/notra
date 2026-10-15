@@ -1,18 +1,13 @@
 "use client";
 
-import type { RealtimeSchema } from "@notra/ai/realtime";
-import {
-  GEO_LIVE_INVALIDATE_THROTTLE_MS,
-  GEO_LIVE_MAX_FAILED_CONNECTS,
-  GEO_LIVE_PAUSE_AFTER_FAILURES_MS,
-} from "@notra/geo-core/constants/geo";
+import { GEO_LIVE_INVALIDATE_THROTTLE_MS } from "@notra/geo-core/constants/geo";
 import { geoLiveChannel } from "@notra/geo-core/utils/geo-live";
 import { useThrottledCallback } from "@tanstack/react-pacer";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRealtime } from "@upstash/realtime/client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext } from "react";
 
 import { useGeoProjectScope } from "@/components/providers/geo-project-provider";
+import { useGuardedRealtime } from "@/lib/hooks/use-guarded-realtime";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import type { GeoLiveProviderProps } from "@/types/geo";
 import {
@@ -29,13 +24,6 @@ export function GeoLiveProvider({
 }: GeoLiveProviderProps) {
   const queryClient = useQueryClient();
   const { projectId } = useGeoProjectScope();
-  // @upstash/realtime 1.x resets its retry counter inside every reconnect, so
-  // `maxReconnectAttempts` never trips and a failing /api/realtime (expired
-  // session, outage) is retried every second for as long as the tab is open.
-  // Count connects that never opened and step back for a while instead:
-  // dropping the last subscription is the one thing that stops its loop.
-  const [failedConnects, setFailedConnects] = useState(0);
-  const paused = failedConnects >= GEO_LIVE_MAX_FAILED_CONNECTS;
   const throttle = {
     wait: GEO_LIVE_INVALIDATE_THROTTLE_MS,
     leading: true,
@@ -63,13 +51,10 @@ export function GeoLiveProvider({
     ]).catch(() => undefined);
   }, throttle);
 
-  const { status } = useRealtime<
-    RealtimeSchema,
-    "geo.traffic" | "geo.visibility"
-  >({
+  const status = useGuardedRealtime({
     channels: [geoLiveChannel(organizationId)],
     events: ["geo.traffic", "geo.visibility"],
-    enabled: organizationId.length > 0 && !paused,
+    enabled: organizationId.length > 0,
     onData: (payload) => {
       if (payload.event === "geo.traffic") {
         if (isGeoLiveEventInScope(payload.data.projectIds, projectId)) {
@@ -82,27 +67,6 @@ export function GeoLiveProvider({
       }
     },
   });
-
-  const [previousStatus, setPreviousStatus] = useState(status);
-  if (status !== previousStatus) {
-    setPreviousStatus(status);
-    if (status === "connected") {
-      setFailedConnects(0);
-    } else if (previousStatus === "connecting" && status !== "connecting") {
-      setFailedConnects((count) => count + 1);
-    }
-  }
-
-  useEffect(() => {
-    if (!paused) {
-      return;
-    }
-    const resume = setTimeout(
-      () => setFailedConnects(0),
-      GEO_LIVE_PAUSE_AFTER_FAILURES_MS
-    );
-    return () => clearTimeout(resume);
-  }, [paused]);
 
   return (
     <GeoLiveContext.Provider value={status === "connected"}>

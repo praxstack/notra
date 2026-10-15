@@ -9,6 +9,7 @@ import { assertDiscussionTarget } from "@/utils/discussion-access";
 const CHAT_CHANNEL_PREFIX = "chat";
 const DEMO_CHANNEL_PATTERN = /^demo:([^:*?\s]+)$/;
 const GEO_LIVE_CHANNEL_PATTERN = /^geo:([^:*?\s]+)$/;
+const SITES_LIVE_CHANNEL_PATTERN = /^sites:([^:*?\s]+)$/;
 const CHAT_CHANNEL_SEGMENT_COUNT = 4;
 const FORBIDDEN_CHANNEL_CHARS = /[*?\s]/;
 
@@ -72,6 +73,14 @@ export async function authorizeRealtimeChannels({
     const geo = GEO_LIVE_CHANNEL_PATTERN.exec(channel);
     if (geo?.[1]) {
       parsed = { organizationId: geo[1], chatId: "geo", streamId: "geo" };
+    }
+    const sitesLive = SITES_LIVE_CHANNEL_PATTERN.exec(channel);
+    if (sitesLive?.[1]) {
+      parsed = {
+        organizationId: sitesLive[1],
+        chatId: "sites",
+        streamId: "sites",
+      };
     }
     if (!parsed) {
       return jsonResponse(403, { error: "Forbidden channel" });
