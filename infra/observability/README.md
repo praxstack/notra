@@ -2,6 +2,83 @@
 
 Internal monitoring in the existing Railway **notra-prod / production** project.
 
+## Current production audit · 15 October 2026
+
+Read-only checks on 15 October supersede the pre-activation notes below:
+
+- All 11 live Prometheus targets were up. The Vercel exporter is deployed and
+  fresh, with 108 catalog metrics and 22 successful query groups in each of six
+  observed polls. A dedicated-token activation is no longer an outstanding step.
+- Production dashboard events, including `monitoring.sweep.completed`, reach
+  Loki. The previous projection stripped sweep counts, coverage flags and workflow
+  identifiers. This patch retains reviewed event-specific fields and adds global
+  monitoring/delivery panels to Operations. It also lets the monitoring cron run
+  with an active OTLP drain when Axiom is absent. These changes need an application
+  release and Grafana deployment; this audit did not deploy them.
+- The collector had zero queued batches and zero refused records at the observed
+  instant. That does not establish end-to-end losslessness: the bounded Vercel
+  error/warning log sample contained four application delivery-failure messages;
+  Railway ingest logged two delivery failures involving three events.
+- Ingest HTTP p95 was 30–32 ms across the last 24 hours' buckets. CPU averaged
+  0.0113 cores and memory peaked at 0.310 GB; there is no evidence here to scale it
+  up. Two ingest shutdowns exceeded the 35-second drain deadline and need a
+  separate shutdown/active-connection investigation.
+- For exactly 14 October 07:00 to 15 October 07:00 UTC, Vercel reported 33 dashboard
+  function 5xx responses: 24 HTTP 500 and nine HTTP 504. The team-wide 5xx query
+  attributed all 33 to the dashboard. The route breakdown placed them on workflow
+  steps. The bounded runtime sample included OOM and 800-second timeout messages;
+  message counts are not unique affected runs. Frontend-server p95 TTFB was
+  438 ms; workflow-step p95 TTFB was 121 seconds. Background step duration is not
+  interactive page latency.
+
+### Operational source of truth and remaining work
+
+Use the source-controlled Grafana dashboards as the common operational view, with
+Loki for reviewed application events and Prometheus for platform/probe/delivery
+health. The new Vercel 5xx panel covers failures that can precede application
+logging. Monitoring cards use the latest observed bounded sweep in 15 minutes;
+missing or invalid counters in the newest sweep stay unknown, even when an older
+successful sweep included those counters. Snapshots repeat across sweeps and
+must not be counted as new jobs. Customer selection intentionally does not filter
+global monitoring or collector health.
+
+Keep Vercel/Railway runtime logs for crash and transport diagnosis. Do not retire
+them or Axiom based on this audit. Loki is best-effort operational history, not an
+authoritative billing ledger. Provider usage, confirmed customer charges and
+invoices require separate durable reconciliation.
+
+Prioritized follow-ups from the observed logs:
+
+1. Verify the next production application release includes the existing Sites
+   upload fixes (`7e54dbd1d4`, `3219c20cfa`, `336d5ef5d5`). The inspected deployment
+   was `d13cd08804`; its upload-size errors predate those fixes. Re-check OOM and
+   timeout incidence after that release before attributing them to one cause.
+2. Investigate seven observed GEO billing-confirmation failures with insufficient
+   credits. Runs still reported completion. Trace reservation, final usage and
+   reconciliation before changing charging semantics or retrying deductions.
+3. Resolve Box's reported $10 managed-agent monthly limit. This is a provider
+   capacity/configuration issue, not an application retry fix.
+4. Investigate the two `workflow.runs.list` monitoring timeouts, the two ingest
+   drain timeouts and application telemetry delivery failures. Do not hide these
+   by increasing timeouts or showing missing samples as zero.
+5. Complete the staged regional/authenticated API probe rollout. The observed
+   production target inventory had the five original public probes, with no EU
+   probe or authenticated workspace target. Source configuration alone does not
+   establish that those checks are running.
+6. Define and provision notification destinations, missing-signal alerts and a
+   durable billing ledger before treating Grafana as complete incident/accounting
+   coverage. Browser Web Vitals and distributed traces remain separate gaps.
+   See [Grafana's missing-data guidance](https://grafana.com/docs/grafana/latest/alerting/guides/missing-data/).
+
+The public Grafana browser stopped at Cloudflare Access login. Internal data was
+checked through Railway SSH; authenticated production browser rendering was not
+verified. No production settings, tokens, subscriptions or services were changed.
+
+## Historical rollout notes
+
+The dated sections below retain the original rollout evidence. Statements that
+collection was not activated describe that earlier rollout, not the current audit.
+
 Region update: the approved migration to US East/Virginia (`us-east4-eqdc4a`)
 completed on **2026-10-10**, matching production ingest. All six runnable services
 reached `SUCCESS`, all four active volumes are `READY` in US East, historical

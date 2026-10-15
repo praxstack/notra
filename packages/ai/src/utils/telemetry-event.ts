@@ -7,7 +7,9 @@ import {
   TELEMETRY_PROVIDER_ALIASES,
   TELEMETRY_UPSTREAM_PROVIDER_ALIASES,
 } from "@notra/ai/constants/telemetry";
+import { WORKFLOW_TELEMETRY_FIELDS } from "@notra/ai/constants/workflow-telemetry";
 import { telemetryValue } from "@notra/ai/utils/telemetry-value";
+import { workflowTelemetryValue } from "@notra/ai/utils/workflow-telemetry-value";
 import type { WideEvent } from "evlog";
 
 /** A second telemetry destination gets an explicit, content-free field set. */
@@ -53,6 +55,17 @@ export function telemetryEvent(event: WideEvent): WideEvent {
           Number.isSafeInteger(value))
       ) {
         safe[key] = value;
+      }
+    }
+  }
+  if (
+    typeof event.event === "string" &&
+    Object.hasOwn(WORKFLOW_TELEMETRY_FIELDS, event.event)
+  ) {
+    for (const key of WORKFLOW_TELEMETRY_FIELDS[event.event] ?? []) {
+      delete safe[key];
+      if (workflowTelemetryValue(key, event[key])) {
+        safe[key] = event[key];
       }
     }
   }

@@ -10,7 +10,7 @@ export const fixtureCounts = {
 export const windowFixtureDimensions = {
   projectId: "prj_fixture",
   environment: "production",
-  httpStatus: "200",
+  httpStatus: "500",
   requestMethod: "GET",
   cacheResult: "HIT",
   runtime: "nodejs24.x",
@@ -21,6 +21,9 @@ export const windowFixtureDimensions = {
 export const windowFixtures = [
   ["vercel.request.count", "count", "project", 230, "count"],
   ["vercel.function_invocation.count", "count", "project", 170, "count"],
+  ["vercel.function_invocation.count", "count", "http", 3, "count"],
+  ["vercel.function_invocation.ttfb_ms", "p95", "project", 100, "milliseconds"],
+  ["vercel.function_invocation.ttfb_ms", "p99", "project", 150, "milliseconds"],
   [
     "vercel.function_invocation.function_duration_ms",
     "p95",

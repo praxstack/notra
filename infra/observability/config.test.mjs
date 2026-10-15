@@ -101,7 +101,7 @@ test("dashboards keep pending data distinct from zero, customer filters and nati
         }
         if (
           !target.expr.includes("notra-history-axiom") &&
-          ![12, 19, 20].includes(panel.id)
+          ![12, 19, 20, 231, 232, 233, 234].includes(panel.id)
         ) {
           assert.match(target.expr, /organizationId=~"\$\{organization:raw\}"/);
         }

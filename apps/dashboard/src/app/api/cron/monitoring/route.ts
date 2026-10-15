@@ -1,4 +1,5 @@
 import { flushLogs } from "@notra/ai/evlog";
+import { getEvlogRuntime } from "@notra/ai/utils/evlog-runtime";
 import { isDemoMode } from "@notra/utils/demo-mode";
 import { Effect, Result } from "effect";
 
@@ -35,7 +36,8 @@ export async function GET(request: Request) {
       errorName: error instanceof Error ? error.name : "UnknownError",
     });
   }
-  if (!process.env.AXIOM_TOKEN) {
+  const telemetry = getEvlogRuntime();
+  if (!telemetry.aiDrain && !telemetry.otlpDrain) {
     scheduleRequestErrorTelemetry(flushLogs);
     return Response.json({ skipped: "telemetry_not_configured" });
   }

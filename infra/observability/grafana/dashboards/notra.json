@@ -56,7 +56,7 @@
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 4 },
       "options": {
         "mode": "markdown",
-        "content": "**GEO history: selected-range intersection with the frozen 3–10 Oct 2026 snapshot.** [View the full snapshot](/d/notra-overview?from=2026-10-03T11:35:08.391Z&to=2026-10-10T11:35:08.391Z&var-environment=${environment}&var-organization=${organization:percentencode}). Live AI spend and API latency await telemetry activation. Costs are reported usage values, not invoices. Missing data is not zero. Click a customer bar to drill down; configured organization names are display-only, with IDs as fallback."
+        "content": "**GEO history: selected-range intersection with the frozen 3–10 Oct 2026 snapshot.** [View the full snapshot](/d/notra-overview?from=2026-10-03T11:35:08.391Z&to=2026-10-10T11:35:08.391Z&var-environment=${environment}&var-organization=${organization:percentencode}). Live AI spend and API latency show received application events; empty panels have no matching observations. Costs are reported usage values, not invoices. Missing data is not zero. Click a customer bar to drill down; configured organization names are display-only, with IDs as fallback."
       }
     },
     {
@@ -780,6 +780,244 @@
               "refId": "A",
               "instant": true,
               "expr": "sum(max by (callId) (max_over_time({service_name=~\"notra-history-axiom-.+\", deployment_environment_name=\"${environment}\", history_snapshot=\"20261010T113508391Z\"} | json event=\"event\", callId=\"callId\", estimatedRequests=\"estimatedRequests\" | event=\"history.ingest.day\" | unwrap estimatedRequests | __error__=\"\" [$__range])))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 230,
+      "title": "Workflow and telemetry delivery health \u00b7 global observations",
+      "type": "row",
+      "collapsed": true,
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 24,
+        "h": 1
+      },
+      "panels": [
+        {
+          "id": 231,
+          "title": "Sweep errors \u00b7 latest",
+          "description": "Latest bounded monitoring sweep in the last 15 minutes. Global operational scope; organization selection does not apply. Missing or invalid counters in the newest sweep stay unknown; older sweeps are not a fallback. Five checked statuses are complete status coverage, not an unbounded job inventory.",
+          "type": "stat",
+          "gridPos": {
+            "x": 0,
+            "y": 49,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "notra-loki"
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "text": {
+              "valueSize": 32,
+              "titleSize": 14
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "noValue": "Unknown",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "text"
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "last_over_time({service_name=~\".+\", deployment_environment_name=\"${environment}\"} | json event=\"event\", errors=\"errors\" | event=\"monitoring.sweep.completed\" | label_format errors=\"{{if eq (count \\\"^[0-9]+$\\\" .errors) 1}}{{.errors}}{{else}}-1{{end}}\" | unwrap errors | __error__=\"\" [15m]) by (service_name) >= 0",
+              "instant": true,
+              "legendFormat": "{{service_name}}"
+            }
+          ]
+        },
+        {
+          "id": 232,
+          "title": "Statuses checked \u00b7 latest",
+          "description": "Latest bounded monitoring sweep in the last 15 minutes. Global operational scope; organization selection does not apply. Missing or invalid counters in the newest sweep stay unknown; older sweeps are not a fallback. Five checked statuses are complete status coverage, not an unbounded job inventory.",
+          "type": "stat",
+          "gridPos": {
+            "x": 8,
+            "y": 49,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "notra-loki"
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "text": {
+              "valueSize": 32,
+              "titleSize": 14
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "noValue": "Unknown",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "text"
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "last_over_time({service_name=~\".+\", deployment_environment_name=\"${environment}\"} | json event=\"event\", statusesChecked=\"statusesChecked\" | event=\"monitoring.sweep.completed\" | label_format statusesChecked=\"{{if eq (count \\\"^[0-9]+$\\\" .statusesChecked) 1}}{{.statusesChecked}}{{else}}-1{{end}}\" | unwrap statusesChecked | __error__=\"\" [15m]) by (service_name) >= 0",
+              "instant": true,
+              "legendFormat": "{{service_name}}"
+            }
+          ]
+        },
+        {
+          "id": 233,
+          "title": "Pending runs \u00b7 latest",
+          "description": "Latest bounded monitoring sweep in the last 15 minutes. Global operational scope; organization selection does not apply. Missing or invalid counters in the newest sweep stay unknown; older sweeps are not a fallback. Five checked statuses are complete status coverage, not an unbounded job inventory.",
+          "type": "stat",
+          "gridPos": {
+            "x": 16,
+            "y": 49,
+            "w": 8,
+            "h": 5
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "notra-loki"
+          },
+          "options": {
+            "reduceOptions": {
+              "calcs": ["lastNotNull"],
+              "values": false
+            },
+            "colorMode": "value",
+            "graphMode": "none",
+            "text": {
+              "valueSize": 32,
+              "titleSize": 14
+            }
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "noValue": "Unknown",
+              "color": {
+                "mode": "fixed",
+                "fixedColor": "text"
+              }
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "last_over_time({service_name=~\".+\", deployment_environment_name=\"${environment}\"} | json event=\"event\", pendingRuns=\"pendingRuns\" | event=\"monitoring.sweep.completed\" | label_format pendingRuns=\"{{if eq (count \\\"^[0-9]+$\\\" .pendingRuns) 1}}{{.pendingRuns}}{{else}}-1{{end}}\" | unwrap pendingRuns | __error__=\"\" [15m]) by (service_name) >= 0",
+              "instant": true,
+              "legendFormat": "{{service_name}}"
+            }
+          ]
+        },
+        {
+          "id": 235,
+          "title": "Collector log queue \u00b7 batches",
+          "description": "Collector-side delivery signal. Application events lost before collector acceptance are not counted. Global infrastructure scope; customer filters do not apply. Missing data is unknown.",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 54,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "notra-prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "noValue": "No observations"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "otelcol_exporter_queue_size{job=\"collector\",data_type=\"logs\"}",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 236,
+          "title": "Collector refused logs / second",
+          "description": "Collector-side delivery signal. Application events lost before collector acceptance are not counted. Global infrastructure scope; customer filters do not apply. Missing data is unknown.",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 54,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "notra-prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "noValue": "No observations"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "rate(otelcol_receiver_refused_log_records{job=\"collector\"}[5m])",
+              "legendFormat": "{{instance}}"
+            }
+          ]
+        },
+        {
+          "id": 234,
+          "title": "Workflow monitoring details",
+          "description": "Global operational events. Snapshots can repeat across sweeps; do not count them as new jobs. Inspect truncation and budget flags before treating a sweep as complete. Unknown workflow names and free-text errors are excluded by the telemetry projection.",
+          "type": "logs",
+          "gridPos": {
+            "x": 0,
+            "y": 62,
+            "w": 24,
+            "h": 10
+          },
+          "datasource": {
+            "type": "loki",
+            "uid": "notra-loki"
+          },
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{service_name=~\".+\", deployment_environment_name=\"${environment}\"} | json | surface=\"workflow-monitoring\" | __error__=\"\""
             }
           ]
         }

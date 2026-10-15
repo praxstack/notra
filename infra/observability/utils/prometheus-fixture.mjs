@@ -49,6 +49,11 @@ for (const [job, count] of Object.entries(fixtureCounts)) {
         samples.push(`notra_vercel_metric_query_success{metric="${id}"} 1`);
       }
     }
+  } else if (job === "collector") {
+    samples.push(
+      'otelcol_exporter_queue_size{data_type="logs",exporter="otlp_http/loki"} 0',
+      'otelcol_receiver_refused_log_records{receiver="otlp",transport="http"} 0'
+    );
   } else if (job === "http-probes") {
     samples.push(
       "probe_success 1",

@@ -309,6 +309,8 @@ export async function checkPrometheusResources(
         "Process memory supplement unavailable; cgroup gate remains required"
       );
     }
+    const [collectorScrape] = await waitTargets("collector", "up");
+    await waitTargets("collector", "up", null, collectorScrape.lastScrape);
     const targets = [
       "notra",
       "notra-accounting",

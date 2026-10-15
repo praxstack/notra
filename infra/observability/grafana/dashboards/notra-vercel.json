@@ -1,6 +1,6 @@
 {
   "uid": "notra-vercel",
-  "title": "Notra · Vercel connection pending",
+  "title": "Notra · Vercel platform",
   "schemaVersion": 39,
   "version": 1,
   "editable": false,
@@ -58,30 +58,37 @@
   "panels": [
     {
       "id": 1,
-      "title": "Not connected · separate Vercel token required",
+      "title": "Vercel platform telemetry",
       "type": "text",
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 5 },
       "options": {
         "mode": "markdown",
-        "content": "**The Vercel exporter has not been deployed.** A separate 90-day Notra-team token is required; no personal CLI credential is used. Empty charts mean no collection, not no traffic. Missing data is not zero. Once connected, values represent completed five-minute windows, delayed by at least ten minutes. They are not cumulative counters, customer-level usage or invoices."
+        "content": "Connection health below reflects the exporter scrape, catalog API and snapshot freshness. Missing data is not zero. Values represent completed five-minute windows, delayed by at least ten minutes. They are not cumulative counters, customer-level usage or invoices. Function failures can precede application log emission, so compare this dashboard with application events. Empty analytics or Web Vitals charts do not establish collection coverage."
       }
     },
     {
       "id": 2,
-      "title": "Connection · waiting for dedicated token",
+      "title": "Vercel collection health",
       "type": "stat",
       "gridPos": { "x": 0, "y": 5, "w": 12, "h": 5 },
       "datasource": { "type": "prometheus", "uid": "notra-prometheus" },
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
         "graphMode": "none",
-        "colorMode": "value"
+        "colorMode": "value",
+        "text": { "valueSize": 32, "titleSize": 14 }
       },
       "fieldConfig": {
-        "defaults": { "noValue": "Not connected" },
+        "defaults": {
+          "noValue": "Unknown",
+          "color": { "mode": "fixed", "fixedColor": "text" }
+        },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Scrape" },
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^(Scrape|Fresh snapshot|Catalog API)$"
+            },
             "properties": [
               {
                 "id": "mappings",
@@ -89,8 +96,8 @@
                   {
                     "type": "value",
                     "options": {
-                      "0": { "text": "Not connected", "color": "orange" },
-                      "1": { "text": "Connected", "color": "green" }
+                      "0": { "text": "Unhealthy", "color": "red" },
+                      "1": { "text": "Healthy", "color": "green" }
                     }
                   }
                 ]
@@ -103,27 +110,32 @@
         {
           "refId": "A",
           "expr": "up{job=\"vercel\"}",
-          "legendFormat": "Scrape"
+          "legendFormat": "Scrape",
+          "instant": true
         },
         {
           "refId": "B",
           "expr": "notra_vercel_snapshot_fresh",
-          "legendFormat": "Fresh snapshot"
+          "legendFormat": "Fresh snapshot",
+          "instant": true
         },
         {
           "refId": "C",
           "expr": "notra_vercel_catalog_success",
-          "legendFormat": "Catalog API"
+          "legendFormat": "Catalog API",
+          "instant": true
         },
         {
           "refId": "D",
           "expr": "notra_vercel_catalog_metrics",
-          "legendFormat": "Catalog metrics"
+          "legendFormat": "Catalog metrics",
+          "instant": true
         },
         {
           "refId": "E",
           "expr": "notra_vercel_supported_metrics",
-          "legendFormat": "Supported metrics"
+          "legendFormat": "Supported metrics",
+          "instant": true
         }
       ]
     },
@@ -144,7 +156,7 @@
     },
     {
       "id": 200,
-      "title": "Vercel metrics · token and exporter deployment required",
+      "title": "Vercel metrics · completed five-minute windows",
       "type": "row",
       "collapsed": true,
       "gridPos": { "x": 0, "y": 10, "w": 24, "h": 1 },
@@ -320,6 +332,64 @@
               "expr": "notra_vercel_metric_query_success",
               "instant": true,
               "format": "table"
+            }
+          ]
+        },
+        {
+          "id": 16,
+          "title": "Function 5xx per completed five-minute window",
+          "description": "Platform-reported function invocations with HTTP 5xx, including failures before application logging. An empty series is unknown or has no matching observations. Values are window gauges; do not sum repeated scrapes.",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 64,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "notra-prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "min": 0,
+              "noValue": "No observations"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "notra_vercel_metric_window{metric=\"vercel.function_invocation.count\",aggregation=\"count\",breakdown=\"http\",http_status=~\"5..\",environment=\"${environment}\",project_id=~\"${project:regex}\"}",
+              "legendFormat": "{{project_id}} \u00b7 HTTP {{http_status}}"
+            }
+          ]
+        },
+        {
+          "id": 17,
+          "title": "Function time to first byte \u00b7 p95 / p99",
+          "description": "Platform TTFB includes background workflow steps and streaming requests. It is not browser performance or authenticated API latency.",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 64,
+            "w": 12,
+            "h": 8
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "notra-prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "min": 0
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "notra_vercel_metric_window{metric=\"vercel.function_invocation.ttfb_ms\",aggregation=~\"p95|p99\",breakdown=\"project\",environment=\"${environment}\",project_id=~\"${project:regex}\"}",
+              "legendFormat": "{{project_id}} \u00b7 {{aggregation}}"
             }
           ]
         }
