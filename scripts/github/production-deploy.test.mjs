@@ -30,6 +30,8 @@ function fixture({
     DRY_RUN: String(dryRun),
     RELEASE_DIR: "/release",
     UPSTASH_BOX_API_KEY: "test-box",
+    CLOUDFLARE_API_TOKEN: "test-cloudflare",
+    CLOUDFLARE_ACCOUNT_ID: "test-account",
     ...(api ? { UNKEY_DEPLOY_ROOT_KEY: "test-unkey" } : {}),
   };
   const fetchImpl = async (input, options) => {
@@ -186,6 +188,7 @@ function fixture({
         env,
         fetchImpl,
         sleep: async () => {},
+        execFile: () => {},
         buildToolchain: (directory, liveVersion) => {
           toolchainBuilds.push({ directory, liveVersion });
           return toolchain;

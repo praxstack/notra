@@ -131,6 +131,7 @@ export async function release({
   fetchImpl = fetch,
   buildChanged = hasBuildChanges,
   buildToolchain = buildSitesToolchain,
+  execFile = execFileSync,
   sleep = delay,
 } = {}) {
   for (const key of [
@@ -152,7 +153,12 @@ export async function release({
     throw new Error("Production releases must run from usenotra/notra main");
   }
   if (env.DRY_RUN !== "true") {
-    for (const key of ["RELEASE_DIR", "UPSTASH_BOX_API_KEY"]) {
+    for (const key of [
+      "RELEASE_DIR",
+      "UPSTASH_BOX_API_KEY",
+      "CLOUDFLARE_API_TOKEN",
+      "CLOUDFLARE_ACCOUNT_ID",
+    ]) {
       if (!env[key]) {
         throw new Error(`${key} is required to release the sites toolchain`);
       }
@@ -488,6 +494,32 @@ export async function release({
     } else {
       await report(`sites toolchain: ${toolchain.version} unchanged`);
     }
+  }
+
+  if (env.DRY_RUN === "true") {
+    await report(`sites worker: would deploy ${sha}`);
+  } else {
+    execFile(
+      "bun",
+      [
+        "run",
+        "deploy",
+        "--env",
+        "",
+        "--keep-vars",
+        "--tag",
+        `prod-${sha.slice(0, 12)}`,
+        "--message",
+        `Production release ${sha}`,
+      ],
+      {
+        cwd: join(env.RELEASE_DIR, "apps/sites"),
+        env,
+        stdio: "inherit",
+        timeout: 5 * 60_000,
+      }
+    );
+    await report(`sites worker: deployed ${sha}`);
   }
 
   const failures = [];

@@ -164,6 +164,8 @@ WHERE metrics #>> '{phases,compile}' IS NOT NULL;
 **Toolchain change (theme, Astro, compiler, site config schema).** Production is automatic: the release workflow hashes the toolchain, and when it differs from `SITES_BUILDER_TOOLCHAIN_VERSION` it builds a new snapshot, upserts `SITES_BUILDER_SNAPSHOT_ID` + `SITES_BUILDER_TOOLCHAIN_VERSION` on the `notra` Vercel project and redeploys the dashboard. Never ship a site config schema change without it: an old snapshot rejects new settings and every build crashes in `readBuildTarget`. For local or manual rolls:
 `cd apps/sites-builder && bun --env-file=../../.env scripts/create-box-snapshot.ts --write-env ../../.env`. The deployment records the toolchain `VERSION`.
 
+**Sites worker release.** The production release script deploys `apps/sites` from the same CI-checked release commit after all production-target and commit-ancestry checks, but before the dashboard rollout. It requires the GitHub repository secret `CLOUDFLARE_API_TOKEN`, scoped to the production account and `notra.site` zone; the account ID is set in the workflow. Dry runs skip the deployment, older releases are rejected before changing the worker, and a failed worker deployment prevents the dashboard rollout. Existing variables and secrets are preserved. Keep manifest schemas backward-compatible because the worker goes live before new site builds and still serves older deployments.
+
 **Reader page actions.** The theme shares `CopyArticle.astro` between blog posts and
 standalone changelog entries, using their generated `.md` files. Blog posts show
 actions by default; changelog entries require `changelog.pageActions: true`
