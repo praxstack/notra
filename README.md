@@ -72,7 +72,7 @@ cp .env.example .env
 
 Configure the root `.env` before starting the dashboard. Set `DATABASE_URL`, the WorkOS AuthKit credentials, `INTEGRATION_ENCRYPTION_KEY`, and the application URLs. Add provider credentials for the features you want to exercise; see [`.env.example`](.env.example) and [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The dashboard needs an initialized database. The committed migration chain assumes existing base tables, so `bun run db:migrate` is not a complete bootstrap for an empty database. Schema push also has a foreign-key ordering caveat on fresh databases; the repository's [environment notes](AGENTS.md) describe the initialization workaround.
+Initialize the database with `bun run db:migrate`. The committed migration journal starts with `0000_baseline`, which creates the base tables. See [Database Workflow](CONTRIBUTING.md#database-workflow) for migration validation and append-only history requirements.
 
 ```bash
 # Main product, http://localhost:3000

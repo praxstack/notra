@@ -334,12 +334,20 @@ hashes recorded by the [skills.sh CLI](https://skills.sh/) in `skills-lock.json`
 Refresh them with `bunx skills update --project --yes`. This does not update
 native plugins: rerun the setup script after changing the Codex pin, update
 Claude's marketplace plugin through `/plugin`, and change OpenCode's version
-in `opencode.jsonc` when upgrading it. The current refresh migrates the retired
-Autumn skills to `autumn-catalog`, `autumn-concepts`, `autumn-integrate`, and
-`autumn-setup`; Next's `next-cache-components` to its `-adoption` and `-optimizer`
-successors; and our `using-effect` alias to the upstream `effect` name.
+in `opencode.jsonc` when upgrading it. Keep skills relevant to the current stack
+or explicitly invoked workflows. Next.js Cache Components skills are not needed
+for the TanStack Start apps; the incomplete `grill-me` redirect was also removed
+because its target skill was not installed. Remove a retired skill's directory,
+its `skills-lock.json` entry, and any `.claude/skills/` symlink together.
+Review updates before committing, including references to other required skills.
 Upstream email skill test scenarios are omitted. `.vercelignore` excludes
 agent files and setup tooling from deployment uploads.
+
+`AGENTS.md` holds shared, repository-specific guidance; `.claude/CLAUDE.md`
+imports it rather than duplicating general coding rules. Keep setup instructions
+in this guide and use the committed lint configuration as the style authority.
+Do not add cloud-image assumptions or pre-provisioned database credentials to
+shared agent instructions.
 
 ### Conventions
 

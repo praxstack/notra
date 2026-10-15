@@ -67,12 +67,6 @@
       "skillPath": "skills/eve/SKILL.md",
       "computedHash": "4833349453c45c606f79202e495b7bbc42ea380f329f3beee36b9927763f19ef"
     },
-    "grill-me": {
-      "source": "mattpocock/skills",
-      "sourceType": "github",
-      "skillPath": "skills/productivity/grill-me/SKILL.md",
-      "computedHash": "9cdbb4b8f7a3aeaef82e6230c9e823500d4a8a1214c726cf342cf9829d34fc7d"
-    },
     "humanizer": {
       "source": "blader/humanizer",
       "sourceType": "github",
@@ -84,18 +78,6 @@
       "sourceType": "github",
       "skillPath": "skills/neon-postgres/SKILL.md",
       "computedHash": "0941735544b720425bca22e203eee0dcffcf8d4a48e42b9cc31eeaf9545e2e78"
-    },
-    "next-cache-components-adoption": {
-      "source": "vercel/next.js",
-      "sourceType": "github",
-      "skillPath": "skills/next-cache-components-adoption/SKILL.md",
-      "computedHash": "e8048c51a37d8973349477c9bb0a32d9f5f796a70ebaa10c89b59ac8015b9c55"
-    },
-    "next-cache-components-optimizer": {
-      "source": "vercel/next.js",
-      "sourceType": "github",
-      "skillPath": "skills/next-cache-components-optimizer/SKILL.md",
-      "computedHash": "c62f6c13119c4e9027268edaa07291c33d74a676e1bd93583349c07efd990f6b"
     },
     "openlogs-server-logs": {
       "source": "charlietlamb/openlogs",
