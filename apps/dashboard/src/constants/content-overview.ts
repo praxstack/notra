@@ -9,6 +9,7 @@ export const CONTENT_COVER_WIDTH = 1200;
 export const CONTENT_COVER_HEIGHT = 630;
 
 export const TAG_SUGGESTION_COUNT = 6;
+export const AUTHOR_AVATAR_STACK_MAX = 3;
 export const TAG_SUGGESTIONS_LIMIT = 50;
 
 export const CONTENT_AUTHOR_LINK_FIELDS = [

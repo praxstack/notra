@@ -2,12 +2,17 @@ import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
 import type { posts } from "@notra/db/schema";
 import { postMetadataUpdateData } from "@notra/db/utils/post-metadata";
 import type {
+  ContentHistoryChange,
   ContentHistoryEntry,
   ContentHistoryVersion,
 } from "@notra/schemas/types/dashboard/content-history";
 import { marked } from "marked";
 
-import type { ContentHistoryRow } from "@/types/content/history-server";
+import { CONTENT_HISTORY_METADATA_CHANGES } from "@/constants/content-history";
+import type {
+  ContentHistoryListRow,
+  ContentHistoryRow,
+} from "@/types/content/history-server";
 
 export function serializeContentHistoryEntry(
   row: ContentHistoryRow
@@ -44,4 +49,41 @@ export async function contentHistoryRestoreData(
     }),
     updatedAt: new Date(),
   };
+}
+
+function metadataRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+/** Lists what changed in `row` compared with the version saved before it. */
+export function contentHistoryChanges(
+  row: ContentHistoryListRow,
+  previous: ContentHistoryListRow | undefined
+): ContentHistoryChange[] {
+  if (!previous) {
+    return [];
+  }
+  const changes = new Set<ContentHistoryChange>();
+  if (row.markdownHash !== previous.markdownHash) {
+    changes.add("text");
+  }
+  if (row.title !== previous.title) {
+    changes.add("title");
+  }
+  if (row.slug !== previous.slug) {
+    changes.add("slug");
+  }
+  const current = metadataRecord(row.metadata);
+  const before = metadataRecord(previous.metadata);
+  for (const key of new Set([
+    ...Object.keys(current),
+    ...Object.keys(before),
+  ])) {
+    if (JSON.stringify(current[key]) !== JSON.stringify(before[key])) {
+      changes.add(CONTENT_HISTORY_METADATA_CHANGES[key] ?? "settings");
+    }
+  }
+  return [...changes];
 }

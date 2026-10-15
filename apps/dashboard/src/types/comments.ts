@@ -50,6 +50,7 @@ export type CommentActionsProps = Pick<
 
 export interface CommentBodyProps {
   body: string;
+  className?: string;
 }
 
 export interface CommentTimestampProps {

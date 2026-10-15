@@ -1,14 +1,15 @@
+import { COMMENT_MAX_DEPTH } from "@/constants/comments";
 import { badRequest, forbidden } from "@/lib/orpc/utils/errors";
 import type { CommentResolutionState } from "@/types/comments";
 
 export function replyDepth(
   parent: { depth: number; deletedAt: Date | null } | null,
-  rejectedMessage = "Replies are limited to five levels and cannot target deleted comments"
+  rejectedMessage = "Replies are limited to three levels and cannot target deleted comments"
 ) {
   if (!parent) {
     return 0;
   }
-  if (parent.depth >= 5 || parent.deletedAt) {
+  if (parent.depth >= COMMENT_MAX_DEPTH || parent.deletedAt) {
     throw badRequest(rejectedMessage);
   }
   return parent.depth + 1;

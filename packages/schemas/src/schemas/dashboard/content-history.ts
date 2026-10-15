@@ -10,6 +10,7 @@ import {
 import { z } from "zod";
 
 import {
+  CONTENT_HISTORY_CHANGES,
   CONTENT_HISTORY_MAX_PAGE_SIZE,
   CONTENT_HISTORY_PAGE_SIZE,
   CONTENT_REVISION_MAX,
@@ -85,6 +86,9 @@ export const contentHistoryEntrySchema = z.object({
   source: z.enum(POST_HISTORY_SOURCES),
   retained: z.boolean().optional(),
   actor: contentHistoryActorSchema,
+  changes: z.array(z.enum(CONTENT_HISTORY_CHANGES)).optional(),
+  /** Position in the saved history, oldest = 1. */
+  number: z.number().int().positive().optional(),
 });
 
 export const contentHistoryVersionSchema = contentHistoryEntrySchema.extend({

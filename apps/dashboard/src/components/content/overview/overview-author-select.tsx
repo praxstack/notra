@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/button";
+import { AUTHOR_AVATAR_STACK_MAX } from "@/constants/content-overview";
 import { useContentAuthors } from "@/lib/hooks/use-content-authors";
 import type {
   ContentAuthorAvatarProps,
@@ -41,7 +42,6 @@ export function ContentAuthorAvatar({
         "size-[18px] shrink-0 rounded-full after:rounded-full",
         className
       )}
-      size="sm"
     >
       {author.avatarUrl ? <AvatarImage alt="" src={author.avatarUrl} /> : null}
       <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
@@ -86,18 +86,22 @@ export function OverviewAuthorSelect({
       >
         <SelectTrigger aria-label={t("label")} className="w-full">
           {selected.length > 0 ? (
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="flex shrink-0 -space-x-1">
-                {selected.map((author) => (
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="flex shrink-0 -space-x-1.5">
+                {selected.slice(0, AUTHOR_AVATAR_STACK_MAX).map((author) => (
                   <ContentAuthorAvatar
                     author={author}
-                    className="ring-background ring-2"
+                    className={cn(
+                      selected.length > 1 && "ring-background ring-2"
+                    )}
                     key={author.id}
                   />
                 ))}
               </span>
               <span className="truncate">
-                {selected.map((author) => author.name).join(", ")}
+                {selected.length > 2
+                  ? `${selected[0]?.name}, +${selected.length - 1}`
+                  : selected.map((author) => author.name).join(", ")}
               </span>
             </span>
           ) : (

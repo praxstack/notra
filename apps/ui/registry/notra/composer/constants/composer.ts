@@ -15,13 +15,12 @@ export const COMPOSER_TOOLBAR_BUTTON =
 export const COMPOSER_TOOLBAR_BUTTON_LABEL = "px-2 text-sm";
 
 export const COMPOSER_SEND_BUTTON =
-  "size-8 rounded-[10px] active:scale-[0.96] data-disabled:opacity-100";
+  "size-8 data-disabled:not-aria-busy:opacity-100";
 
-export const COMPOSER_SEND_ACTIVE =
-  "bg-foreground text-background hover:bg-foreground/85 hover:text-background dark:hover:bg-foreground/85";
+export const COMPOSER_SEND_ACTIVE = "";
 
 export const COMPOSER_SEND_INERT =
-  "bg-foreground/[0.08] text-muted-foreground/70 hover:bg-foreground/[0.08] hover:text-muted-foreground/70 dark:hover:bg-foreground/[0.08] data-disabled:cursor-default";
+  "text-muted-foreground/70 hover:brightness-100 data-disabled:not-aria-busy:cursor-default";
 
 export const COMPOSER_CHIP_ACTION =
   "size-4 rounded text-muted-foreground hover:bg-accent";

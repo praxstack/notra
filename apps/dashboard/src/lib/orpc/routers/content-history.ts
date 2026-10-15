@@ -15,7 +15,7 @@ import {
   contentHistoryRestoreInputSchema,
   contentHistoryVersionInputSchema,
 } from "@notra/schemas/dashboard/content-history";
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, count, desc, eq, lt, sql } from "drizzle-orm";
 
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
@@ -23,6 +23,7 @@ import { getTranslations } from "@/lib/i18n/server";
 import { baseProcedure } from "@/lib/orpc/base";
 import { badRequest, conflict, notFound } from "@/lib/orpc/utils/errors";
 import {
+  contentHistoryChanges,
   contentHistoryRestoreData,
   serializeContentHistoryEntry,
 } from "@/utils/content-history-server";
@@ -53,33 +54,41 @@ export const contentHistoryRouter = {
       if (!supportsPostHistory(document.contentType)) {
         throw badRequest(t("historyNotSupported"));
       }
-      const rows = await db
-        .select({
-          id: postVersions.id,
-          revision: postVersions.revision,
-          title: postVersions.title,
-          createdAt: postVersions.createdAt,
-          source: postVersions.source,
-          retained: postVersions.retained,
-          actorUserId: postVersions.actorUserId,
-          actorName: users.name,
-        })
-        .from(postVersions)
-        .leftJoin(users, eq(users.id, postVersions.actorUserId))
-        .where(
-          and(
-            eq(postVersions.organizationId, input.organizationId),
-            eq(postVersions.postId, input.contentId),
-            input.cursor === undefined
-              ? undefined
-              : lt(postVersions.revision, input.cursor)
-          )
-        )
-        .orderBy(desc(postVersions.revision))
-        .limit(input.limit + 1);
-      const items = rows
-        .slice(0, input.limit)
-        .map(serializeContentHistoryEntry);
+      const scope = and(
+        eq(postVersions.organizationId, input.organizationId),
+        eq(postVersions.postId, input.contentId),
+        input.cursor === undefined
+          ? undefined
+          : lt(postVersions.revision, input.cursor)
+      );
+      const [rows, [counted]] = await Promise.all([
+        db
+          .select({
+            id: postVersions.id,
+            revision: postVersions.revision,
+            title: postVersions.title,
+            slug: postVersions.slug,
+            metadata: postVersions.metadata,
+            markdownHash: sql<string>`md5(coalesce(${postVersions.markdown}, ''))`,
+            createdAt: postVersions.createdAt,
+            source: postVersions.source,
+            retained: postVersions.retained,
+            actorUserId: postVersions.actorUserId,
+            actorName: users.name,
+          })
+          .from(postVersions)
+          .leftJoin(users, eq(users.id, postVersions.actorUserId))
+          .where(scope)
+          .orderBy(desc(postVersions.revision))
+          .limit(input.limit + 1),
+        db.select({ total: count() }).from(postVersions).where(scope),
+      ]);
+      const total = counted?.total ?? rows.length;
+      const items = rows.slice(0, input.limit).map((row, index) => ({
+        ...serializeContentHistoryEntry(row),
+        changes: contentHistoryChanges(row, rows[index + 1]),
+        number: total - index,
+      }));
       return {
         items,
         nextCursor:

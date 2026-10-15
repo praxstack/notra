@@ -38,6 +38,13 @@ export function OverviewTagsInput({
     .filter((tag) => tag.toLowerCase().includes(query))
     .slice(0, TAG_SUGGESTION_COUNT);
   const full = tags.length >= POST_TAGS_MAX;
+  const draftTag = draft.trim().slice(0, POST_TAG_MAX_LENGTH);
+  const canCreate =
+    draftTag.length > 0 &&
+    !taken.has(draftTag.toLowerCase()) &&
+    !suggestions.some((tag) => tag.toLowerCase() === query);
+  const options = canCreate ? [...suggestions, draftTag] : suggestions;
+  const listOpen = open && options.length > 0;
 
   const add = (value: string) => {
     const tag = value.trim().slice(0, POST_TAG_MAX_LENGTH);
@@ -76,13 +83,13 @@ export function OverviewTagsInput({
         {full ? null : (
           <input
             aria-activedescendant={
-              open && navigated && suggestions[highlighted]
+              listOpen && navigated && options[highlighted]
                 ? `${listId}-${highlighted}`
                 : undefined
             }
             aria-autocomplete="list"
             aria-controls={listId}
-            aria-expanded={open && suggestions.length > 0}
+            aria-expanded={listOpen}
             aria-label={t("add")}
             className="placeholder:text-muted-foreground h-6 min-w-24 flex-1 bg-transparent px-1.5 text-sm outline-none"
             maxLength={POST_TAG_MAX_LENGTH}
@@ -97,20 +104,19 @@ export function OverviewTagsInput({
             onKeyDown={(event) => {
               if (
                 (event.key === "ArrowDown" || event.key === "ArrowUp") &&
-                suggestions.length > 0
+                options.length > 0
               ) {
                 event.preventDefault();
                 if (!navigated) {
                   setNavigated(true);
                   setHighlighted(
-                    event.key === "ArrowDown" ? 0 : suggestions.length - 1
+                    event.key === "ArrowDown" ? 0 : options.length - 1
                   );
                   return;
                 }
                 const step = event.key === "ArrowDown" ? 1 : -1;
                 setHighlighted(
-                  (index) =>
-                    (index + step + suggestions.length) % suggestions.length
+                  (index) => (index + step + options.length) % options.length
                 );
                 return;
               }
@@ -123,7 +129,7 @@ export function OverviewTagsInput({
                   (tag) => tag.toLowerCase() === query
                 );
                 const picked =
-                  open && navigated ? suggestions[highlighted] : undefined;
+                  listOpen && navigated ? options[highlighted] : undefined;
                 add(picked ?? exact ?? draft);
                 return;
               }
@@ -141,16 +147,16 @@ export function OverviewTagsInput({
           />
         )}
       </div>
-      {open && suggestions.length > 0 ? (
+      {listOpen ? (
         <div
-          className="bg-popover text-popover-foreground ring-foreground/10 absolute top-full left-0 z-30 mt-1 flex w-full flex-col rounded-lg p-1 shadow-md ring-1"
+          className="bg-popover text-popover-foreground ring-foreground/10 animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 absolute top-full left-0 z-30 mt-1 flex w-full origin-top flex-col rounded-lg p-1 shadow-md ring-1 duration-100 motion-reduce:animate-none"
           id={listId}
           role="listbox"
         >
-          {suggestions.map((tag, index) => (
+          {options.map((tag, index) => (
             <button
               aria-selected={navigated && index === highlighted}
-              className="data-[highlighted=true]:bg-accent cursor-pointer rounded-md px-2 py-1 text-left text-sm"
+              className="data-[highlighted=true]:bg-accent cursor-pointer truncate rounded-md px-2 py-1 text-left text-sm"
               data-highlighted={navigated && index === highlighted}
               id={`${listId}-${index}`}
               key={tag}
@@ -166,7 +172,9 @@ export function OverviewTagsInput({
               tabIndex={-1}
               type="button"
             >
-              {tag}
+              {canCreate && index === suggestions.length
+                ? t("create", { tag })
+                : tag}
             </button>
           ))}
         </div>

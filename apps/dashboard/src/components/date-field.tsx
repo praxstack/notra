@@ -37,7 +37,7 @@ export function DateField({
         render={
           <Button
             aria-labelledby={ariaLabelledBy}
-            className="w-full justify-start gap-2 font-normal"
+            className="w-full justify-start gap-2 font-normal active:scale-100"
             disabled={disabled}
             id={id}
             type="button"

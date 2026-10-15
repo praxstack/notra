@@ -1126,7 +1126,7 @@
       "unavailable": "PDF-Upload ist gerade nicht verfügbar"
     },
     "comments": {
-      "replyNotAllowed": "Antworten sind auf fünf Ebenen begrenzt und können sich nicht auf gelöschte Kommentare beziehen",
+      "replyNotAllowed": "Antworten sind auf drei Ebenen begrenzt und können sich nicht auf gelöschte Kommentare beziehen",
       "notAuthor": "Du kannst nur deine eigenen Kommentare ändern",
       "notEditable": "Dieser Kommentar kann nicht bearbeitet werden",
       "deleted": "Dieser Kommentar wurde gelöscht",
@@ -6173,7 +6173,28 @@
         "numberedList": "Nummerierte Liste",
         "quote": "Zitat",
         "codeBlock": "Codeblock",
-        "divider": "Trennlinie"
+        "divider": "Trennlinie",
+        "groups": {
+          "basic": "Grundlagen",
+          "lists": "Listen",
+          "media": "Medien",
+          "advanced": "Erweitert"
+        },
+        "descriptions": {
+          "paragraph": "Normaler Text für den Inhalt deines Posts",
+          "heading1": "Große Abschnittsüberschrift",
+          "heading2": "Mittlere Abschnittsüberschrift",
+          "heading3": "Kleine Abschnittsüberschrift",
+          "bulletedList": "Eine einfache Liste mit Aufzählungspunkten",
+          "numberedList": "Eine Liste mit fortlaufenden Nummern",
+          "quote": "Ein Zitat oder eine Kernaussage hervorheben",
+          "codeBlock": "Code mit Syntax-Highlighting",
+          "table": "Zeilen und Spalten für strukturierte Daten",
+          "image": "Ein Bild hochladen oder einfügen",
+          "video": "Einen Videoclip hochladen",
+          "divider": "Eine Linie, um Abschnitte zu trennen"
+        },
+        "empty": "Keine passenden Blöcke"
       },
       "media": {
         "addMedia": "Bild oder Video hinzufügen",
@@ -6624,7 +6645,8 @@
         "hint": "Tags bekommen eigene Übersichtsseiten auf der Site und landen im RSS-Feed.",
         "placeholder": "Tags hinzufügen",
         "remove": "{tag} entfernen",
-        "add": "Tag hinzufügen"
+        "add": "Tag hinzufügen",
+        "create": "„{tag}“ hinzufügen"
       },
       "date": {
         "label": "Veröffentlicht am",
@@ -6678,6 +6700,8 @@
       "versionFailed": "Diese Version konnte nicht geladen werden.",
       "empty": "Noch keine gespeicherten Versionen.",
       "versions": "Gespeicherte Versionen",
+      "today": "Heute",
+      "yesterday": "Gestern",
       "revision": "Version {revision}",
       "retained": "Gespeicherte Version",
       "current": "Aktuell",
@@ -6687,7 +6711,8 @@
       "loadMore": "Mehr laden",
       "retry": "Erneut versuchen",
       "saveFirst": "Speichere oder verwirf deine Änderungen und warte, bis das Speichern abgeschlossen ist, bevor du eine Version wiederherstellst. Du kannst den Verlauf weiterhin ansehen.",
-      "compare": "Mit aktuellem Dokument vergleichen",
+      "compareWith": "Änderungen seit {version}",
+      "noChanges": "Der Text ist identisch mit dem aktuellen Entwurf. Nur Einstellungen können abweichen.",
       "compareDescription": "Schreibgeschützt. Entfernte Zeilen stammen aus der gespeicherten Version, hinzugefügte aus deinem aktuellen Entwurf.",
       "title": "Gespeicherter Titel",
       "slug": "Gespeicherter Slug",
@@ -6702,6 +6727,19 @@
       "confirmTitle": "Diese gespeicherte Version wiederherstellen?",
       "confirmDescription": "Der gespeicherte Text und die redaktionellen Einstellungen werden durch diese Version ersetzt. Dabei entsteht ein neuer Verlaufseintrag. Veröffentlichungsstatus, Zeitpläne und verknüpfte Pull Requests bleiben unverändert. Es wird nichts veröffentlicht oder mit GitHub synchronisiert.",
       "cancel": "Abbrechen",
+      "changes": {
+        "text": "Text",
+        "title": "Titel",
+        "slug": "URL",
+        "cover": "Cover",
+        "description": "Beschreibung",
+        "tags": "Tags",
+        "authors": "Autoren",
+        "date": "Veröffentlichungsdatum",
+        "featured": "Hervorgehoben",
+        "visibility": "Sichtbarkeit in der Suche",
+        "settings": "Einstellungen"
+      },
       "sources": {
         "baseline": "Ausgangsversion",
         "editor_autosave": "Automatisch gespeichert",
@@ -6747,7 +6785,9 @@
       "composerLabel": "Kommentar hinzufügen",
       "composerPlaceholder": "Kommentar hinzufügen…",
       "send": "Kommentar senden",
-      "replyFailed": "Die Antwort konnte nicht gesendet werden. Dein Entwurf bleibt erhalten."
+      "replyFailed": "Die Antwort konnte nicht gesendet werden. Dein Entwurf bleibt erhalten.",
+      "peekReplies": "{count, plural, one {# Antwort} other {# Antworten}}",
+      "peekOpen": "Kommentar-Thread öffnen"
     }
   },
   "charts": {

@@ -1126,7 +1126,7 @@
       "unavailable": "PDF upload isn't available right now"
     },
     "comments": {
-      "replyNotAllowed": "Replies are limited to five levels and cannot target deleted comments",
+      "replyNotAllowed": "Replies are limited to three levels and cannot target deleted comments",
       "notAuthor": "You can only change your own comments",
       "notEditable": "This comment cannot be edited",
       "deleted": "This comment was deleted",
@@ -6173,7 +6173,28 @@
         "numberedList": "Numbered List",
         "quote": "Quote",
         "codeBlock": "Code Block",
-        "divider": "Divider"
+        "divider": "Divider",
+        "groups": {
+          "basic": "Basic blocks",
+          "lists": "Lists",
+          "media": "Media",
+          "advanced": "Advanced"
+        },
+        "descriptions": {
+          "paragraph": "Plain text for the body of your post",
+          "heading1": "Big section heading",
+          "heading2": "Medium section heading",
+          "heading3": "Small section heading",
+          "bulletedList": "A simple list with bullet points",
+          "numberedList": "A list with numbers in order",
+          "quote": "Highlight a quote or a key statement",
+          "codeBlock": "Code with syntax highlighting",
+          "table": "Rows and columns for structured data",
+          "image": "Upload or paste an image",
+          "video": "Upload a video clip",
+          "divider": "A line to separate sections"
+        },
+        "empty": "No matching blocks"
       },
       "media": {
         "addMedia": "Add image or video",
@@ -6624,7 +6645,8 @@
         "hint": "Tags get their own listing pages on the site and show up in the RSS feed.",
         "placeholder": "Add tags",
         "remove": "Remove {tag}",
-        "add": "Add tag"
+        "add": "Add tag",
+        "create": "Add “{tag}”"
       },
       "date": {
         "label": "Publish date",
@@ -6678,6 +6700,8 @@
       "versionFailed": "Could not load this version.",
       "empty": "No saved versions yet.",
       "versions": "Saved versions",
+      "today": "Today",
+      "yesterday": "Yesterday",
       "revision": "Version {revision}",
       "retained": "Saved version",
       "current": "Current",
@@ -6687,7 +6711,8 @@
       "loadMore": "Load more",
       "retry": "Retry",
       "saveFirst": "Save or discard your changes and wait for saving to finish before restoring. You can still browse history.",
-      "compare": "Compare with current document",
+      "compareWith": "Changes since {version}",
+      "noChanges": "The text is the same as the current draft. Only settings may differ.",
       "compareDescription": "Read-only. Removed lines come from the saved version, added lines from your current draft.",
       "title": "Saved title",
       "slug": "Saved slug",
@@ -6702,6 +6727,19 @@
       "confirmTitle": "Restore this saved version?",
       "confirmDescription": "This replaces the document’s saved text and editorial settings with this version and creates a new history entry. Publication status, schedules and linked pull requests stay unchanged. Nothing is published or synced to GitHub.",
       "cancel": "Cancel",
+      "changes": {
+        "text": "Text",
+        "title": "Title",
+        "slug": "URL",
+        "cover": "Cover",
+        "description": "Description",
+        "tags": "Tags",
+        "authors": "Authors",
+        "date": "Publish date",
+        "featured": "Featured",
+        "visibility": "Search visibility",
+        "settings": "Settings"
+      },
       "sources": {
         "baseline": "Initial version",
         "editor_autosave": "Autosave",
@@ -6747,7 +6785,9 @@
       "composerLabel": "Add a comment",
       "composerPlaceholder": "Add a comment…",
       "send": "Send comment",
-      "replyFailed": "Could not send the reply. Your draft is preserved."
+      "replyFailed": "Could not send the reply. Your draft is preserved.",
+      "peekReplies": "{count, plural, one {# reply} other {# replies}}",
+      "peekOpen": "Open comment thread"
     }
   },
   "charts": {

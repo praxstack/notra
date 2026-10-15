@@ -8,8 +8,7 @@ export function ContentCommentAvatar({
   return (
     <span
       aria-hidden="true"
-      className="bg-foreground/10 text-foreground relative inline-flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-sm text-sm"
-      data-comment-avatar="square"
+      className="bg-muted text-muted-foreground relative inline-flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-medium"
     >
       {name.slice(0, 1).toUpperCase()}
       {image ? (

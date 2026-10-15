@@ -11,7 +11,7 @@ import {
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import { COMMENT_REACTIONS } from "@/constants/comments";
+import { COMMENT_MAX_DEPTH, COMMENT_REACTIONS } from "@/constants/comments";
 import type { CommentItemMenuProps } from "@/types/comments";
 
 export function CommentItemMenu({
@@ -27,7 +27,7 @@ export function CommentItemMenu({
   const tCommon = useTranslations("common.actions");
   return (
     <ContextMenuContent>
-      {comment.depth < 5 ? (
+      {comment.depth < COMMENT_MAX_DEPTH ? (
         <ContextMenuItem disabled={disabled} onClick={() => onReply(comment)}>
           {t("reply")}
         </ContextMenuItem>

@@ -17,6 +17,7 @@ export function useContentHistory({
   contentId,
   document,
   organizationId,
+  recovery,
   onRestoreBusyChange,
   active = true,
 }: ContentHistoryProps) {
@@ -24,9 +25,7 @@ export function useContentHistory({
   const client = useQueryClient();
   const input = { organizationId, contentId };
   const [versionId, setVersionId] = useState<string | null>(null);
-  const [needsRefresh, setNeedsRefresh] = useState(false);
-  const restoredRevision = useRef<number | null>(null);
-  const checkpointAttempted = useRef<number | null>(null);
+  const { needsRefresh, setNeedsRefresh, restoredRevision } = recovery;
   const latestDocument = useRef(document);
   const mounted = useRef(true);
   useLayoutEffect(() => {
@@ -46,24 +45,12 @@ export function useContentHistory({
       initialPageParam: undefined as number | undefined,
     }),
     initialPageParam: undefined as number | undefined,
-    queryFn: async ({ pageParam }) => {
-      if (
-        pageParam === undefined &&
-        checkpointAttempted.current !== revision &&
-        !document.hasChanges &&
-        !document.isSaving
-      ) {
-        checkpointAttempted.current = revision;
-        await dashboardOrpc.content.history.checkpoint
-          .call({ ...input, expectedRevision: revision })
-          .catch(() => null);
-      }
-      return dashboardOrpc.content.history.list.call({
+    queryFn: ({ pageParam }) =>
+      dashboardOrpc.content.history.list.call({
         ...input,
         cursor: pageParam,
         limit: 20,
-      });
-    },
+      }),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     refetchOnWindowFocus: false,
   });
@@ -97,7 +84,6 @@ export function useContentHistory({
           expectedRevision: revision,
         });
         restoredRevision.current = result.revision;
-        checkpointAttempted.current = result.revision;
         setNeedsRefresh(true);
       }
       await client.cancelQueries(

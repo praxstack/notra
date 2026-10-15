@@ -10,3 +10,8 @@ export type ContentHistoryRow = Pick<
   | "actorUserId"
   | "retained"
 > & { actorName: string | null };
+
+export type ContentHistoryListRow = ContentHistoryRow &
+  Pick<typeof postVersions.$inferSelect, "slug" | "metadata"> & {
+    markdownHash: string;
+  };

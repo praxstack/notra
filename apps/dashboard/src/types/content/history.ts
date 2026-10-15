@@ -1,3 +1,6 @@
+import type { ContentHistoryEntry } from "@notra/schemas/types/dashboard/content-history";
+import type { MutableRefObject } from "react";
+
 import type { useContentHistory } from "@/lib/hooks/use-content-history";
 import type { ContentDetailToolbarProps } from "@/types/components/content-detail-toolbar";
 
@@ -11,7 +14,15 @@ export type ContentCollaborationProps = ContentDocumentProps & {
   onOpenChange: (open: boolean) => void;
 };
 
+/** Restore recovery state; owned by the dialog so closing History keeps the retry. */
+export interface ContentHistoryRecovery {
+  restoredRevision: MutableRefObject<number | null>;
+  needsRefresh: boolean;
+  setNeedsRefresh: (needsRefresh: boolean) => void;
+}
+
 export type ContentHistoryProps = ContentDocumentProps & {
+  recovery: ContentHistoryRecovery;
   onRestoreBusyChange: (busy: boolean) => void;
   active?: boolean;
 };
@@ -33,6 +44,7 @@ export type ContentHistoryComparisonProps = Pick<
   version: NonNullable<
     ReturnType<typeof useContentHistory>["selected"]["data"]
   >["version"];
+  versionNumber: number | undefined;
   fetching: boolean;
   highlighterReady: boolean;
   currentRevision: number;
@@ -42,3 +54,10 @@ export type ContentHistoryComparisonProps = Pick<
 };
 
 export type ContentSaveConflictResolution = "saveMine" | "loadLatest";
+
+export interface ContentHistoryDay {
+  key: string;
+  date: Date;
+  daysAgo: number;
+  items: ContentHistoryEntry[];
+}

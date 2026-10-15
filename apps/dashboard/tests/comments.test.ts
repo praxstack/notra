@@ -59,7 +59,7 @@ describe("discussion boundaries", () => {
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     );
   });
-  test("inline replies stay in their thread and fall back to a live parent below the depth limit", () => {
+  test("inline replies stay in their thread and attach to the deepest live ancestor below the depth limit", () => {
     const root: DiscussionComment = {
       id: "root",
       parentId: null,
@@ -86,10 +86,11 @@ describe("discussion boundaries", () => {
     );
 
     expect(entries).toEqual([deleted, child, nested, limit]);
-    expect(getContentCommentReplyParent(entries, nested.id)).toBe(nested);
+    expect(getContentCommentReplyParent(entries, child.id)).toBe(child);
     for (const selectedId of [
       undefined,
       root.id,
+      nested.id,
       limit.id,
       unrelated.id,
       "gone",

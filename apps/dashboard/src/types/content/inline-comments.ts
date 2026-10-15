@@ -77,6 +77,47 @@ export interface ContentCommentThreadCardProps {
   thread: ContentCommentThread;
 }
 
+export interface ContentCommentFieldProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  canSubmit: boolean;
+  busy: boolean;
+  readOnly?: boolean;
+  label: string;
+  placeholder: string;
+  sendLabel: string;
+  error?: string | null;
+  nudge?: ReactNode;
+  textarea: RefObject<HTMLTextAreaElement | null>;
+  onFocus?: () => void;
+  className?: string;
+  /** Single-row field for thread replies; the full composer has a toolbar row. */
+  compact?: boolean;
+}
+
+export interface ContentCommentPeekProps {
+  comment: DiscussionComment;
+  replyCount: number;
+  onOpen: () => void;
+}
+
+export type ContentCommentConnector = "middle" | "last";
+
+export type ContentInlineCommentProps = CommentItemProps & {
+  replies?: ReactNode;
+  hasReplies?: boolean;
+  /** Draws the line from the parent's avatar to this reply. */
+  connector?: ContentCommentConnector;
+};
+
+export interface ContentCommentEntryProps {
+  comment: DiscussionComment;
+  entries: DiscussionComment[];
+  itemProps: Omit<CommentItemProps, "comment">;
+  connector?: ContentCommentConnector;
+}
+
 export interface ContentCommentReplyFormProps {
   comments: ContentCommentsContextValue;
   comment: DiscussionComment;

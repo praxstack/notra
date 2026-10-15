@@ -155,7 +155,7 @@ export function OverviewCoverField({ api, markdown }: OverviewCoverFieldProps) {
         onValueChange={(value) => setSource(value as CoverSource)}
         value={source}
       >
-        <TabsList className="w-full" variant="line">
+        <TabsList aria-label={t("label")} className="w-full">
           <TabsTrigger value="upload">{t("upload")}</TabsTrigger>
           <TabsTrigger value="link">{t("link")}</TabsTrigger>
           <TabsTrigger value="post">{t("fromPost")}</TabsTrigger>

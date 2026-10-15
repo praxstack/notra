@@ -9,6 +9,11 @@ export const COMMENT_REACTIONS = [
 
 export const COMMENT_REPLY_PREVIEW_COUNT = 3;
 
+/** Deepest reply level; root comments are depth 0, so threads show three levels. */
+export const COMMENT_MAX_DEPTH = 2;
+export const CONTENT_COMMENT_PEEK_OPEN_DELAY = 150;
+export const CONTENT_COMMENT_PEEK_CLOSE_DELAY = 200;
+
 export const INLINE_COMMENT_REACTIONS = COMMENT_REACTIONS.slice(0, 5);
 
 export const COMMENT_ANCHOR_MAX_EXACT_LENGTH = 10000;

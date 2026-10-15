@@ -112,7 +112,10 @@ function ComposerFrame({
         className={cn(
           "border-border/70 bg-background min-w-0 overflow-hidden border",
           flat
-            ? "rounded-lg"
+            ? // pill input with a round send button
+              showTray
+              ? "rounded-lg"
+              : "rounded-3xl **:data-[slot=composer-send]:[corner-shape:round] **:data-[slot=composer-send]:rounded-full **:data-[slot=composer-send]:supports-[corner-shape:squircle]:rounded-full"
             : "rounded-[14px] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_0_6px_rgba(255,255,255,0.8),0_1px_2px_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.07),inset_0_0_6px_rgba(255,255,255,0.03)]",
           connectedTop && !hasNudge && "rounded-t-none border-t-0"
         )}
@@ -307,7 +310,7 @@ function ComposerSend({
     focusableWhenDisabled: true,
     onClick,
     size: "icon",
-    variant: "ghost",
+    variant: isInert ? "secondary" : "default",
   } satisfies ButtonProps;
 
   const content = busy ? <Spinner className="size-3.5" /> : children;

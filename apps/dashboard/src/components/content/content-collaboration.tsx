@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@notra/ui/components/ui/sheet";
-import { useState } from "react";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@notra/ui/components/ui/dialog";
+import { useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ContentCollaborationProps } from "@/types/content/history";
@@ -16,7 +16,7 @@ import lazyComponent from "@/utils/lazy-component";
 function CollaborationLoading() {
   const t = useTranslations("content.collaboration");
   return (
-    <p className="text-muted-foreground py-2 text-sm" role="status">
+    <p className="text-muted-foreground px-5 py-4 text-sm" role="status">
       {t("loading")}
     </p>
   );
@@ -32,39 +32,36 @@ const ContentHistory = lazyComponent(
 
 export function ContentCollaboration(props: ContentCollaborationProps) {
   const t = useTranslations("content.collaboration");
-  const [hasOpened, setHasOpened] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
+  const restoredRevision = useRef<number | null>(null);
   const open = props.open;
   return (
-    <Sheet
+    <Dialog
       open={open}
       onOpenChange={(value) => {
         if (!restoring) {
-          setHasOpened(true);
           props.onOpenChange(value);
         }
       }}
     >
-      <SheetContent
-        keepMounted
-        variant="inset"
-        className="data-[side=right]:sm:max-w-3xl"
-      >
-        <SheetHeader>
-          <SheetTitle>{t("history")}</SheetTitle>
-          <SheetDescription>{t("historyDescription")}</SheetDescription>
-        </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
-          {hasOpened || open ? (
+      <DialogContent className="flex h-[min(88dvh,52rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl">
+        <DialogHeader className="border-b px-5 py-4 pr-12">
+          <DialogTitle>{t("history")}</DialogTitle>
+          <DialogDescription>{t("historyDescription")}</DialogDescription>
+        </DialogHeader>
+        <div className="min-h-0 flex-1">
+          {open ? (
             <ContentHistory
               {...props}
               active={open}
               onRestoreBusyChange={setRestoring}
+              recovery={{ restoredRevision, needsRefresh, setNeedsRefresh }}
               key={props.contentId}
             />
           ) : null}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

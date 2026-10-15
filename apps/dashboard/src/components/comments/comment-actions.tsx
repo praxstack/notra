@@ -30,7 +30,7 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/button";
-import { COMMENT_REACTIONS } from "@/constants/comments";
+import { COMMENT_MAX_DEPTH, COMMENT_REACTIONS } from "@/constants/comments";
 import type { CommentActionsProps } from "@/types/comments";
 export function CommentActions({
   comment,
@@ -149,7 +149,7 @@ export function CommentActions({
             ))}
           </PopoverContent>
         </Popover>
-        {comment.depth < 5 ? (
+        {comment.depth < COMMENT_MAX_DEPTH ? (
           <Button
             aria-label={t("replyToComment")}
             disabled={disabled}
