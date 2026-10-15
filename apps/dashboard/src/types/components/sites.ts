@@ -20,6 +20,7 @@ import type {
   SiteCreateSectionPlan,
   SiteCreateStepId,
   SiteDeployment,
+  SiteDiagnostic,
   SiteDeploymentRecord,
   SiteDeploymentStatus,
   SiteDetail,
@@ -425,6 +426,21 @@ export interface SiteDeploymentExternalLinkProps {
 
 export interface SiteDeploymentRecordProps {
   deployment: SiteDeploymentRecord;
+}
+
+export interface SiteDiagnosticItemProps {
+  diagnostic: SiteDiagnostic;
+  failed: boolean;
+}
+
+export interface SiteFailureChipProps {
+  failed: boolean;
+}
+
+export interface SiteFailureBodyProps {
+  errorMessage: string | null;
+  diagnostics: Array<{ diagnostic: SiteDiagnostic; key: string }>;
+  failed: boolean;
 }
 
 export interface SiteDeploymentFailureProps extends SiteDeploymentRecordProps {

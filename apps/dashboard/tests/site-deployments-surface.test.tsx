@@ -201,7 +201,7 @@ if (!process.env.NOTRA_DEPLOYMENTS_SURFACE_TEST_WORKER) {
       expect(html).toContain(messages.sites.deploymentPage.notice.failed);
       expect(html).toContain(messages.common.labels.copyAgentPrompt);
       expect(html).toContain(
-        "flex flex-wrap items-center justify-between gap-2"
+        "flex min-h-6 flex-wrap items-center justify-between gap-2"
       );
       expect(html).toContain('type="button"');
       expect(copiedPrompt).toBe(
@@ -258,4 +258,33 @@ if (!process.env.NOTRA_DEPLOYMENTS_SURFACE_TEST_WORKER) {
       ).toBe("");
     }
   );
+  test("failed notices with mixed severities show one status icon and label warnings", () => {
+    const deployment = {
+      status: "failed",
+      branch: "main",
+      commitSha: "abc123",
+      errorMessage: "Build failed",
+      diagnostics: [
+        { severity: "error", code: "slug_duplicate", message: "Same URL" },
+        { severity: "warning", code: "image_missing", message: "No image" },
+      ],
+    } as SiteDeploymentRecord;
+    const html = renderToStaticMarkup(
+      <IntlProvider locale="en" messages={messages} timeZone="UTC">
+        <SiteDeploymentFailure
+          deployment={deployment}
+          log={null}
+          site={{
+            name: "Example blog",
+            repository: null,
+            productionBranch: "main",
+            rootDirectory: "",
+          }}
+        />
+      </IntlProvider>
+    );
+    expect(html.match(/<svg/g)).toHaveLength(1);
+    expect(html).toContain(`>${messages.sites.diagnostics.warning}</span>`);
+    expect(html).toContain("image_missing");
+  });
 }
