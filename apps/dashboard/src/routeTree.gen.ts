@@ -66,6 +66,7 @@ import { Route as ApiInternalContentScheduledPublicationAttemptRouteImport } fro
 import { Route as ApiInternalContentSyncGithubRouteImport } from './routes/api.internal.content.sync-github'
 import { Route as ApiInternalGeoSequenceRunRouteImport } from './routes/api.internal.geo.sequence-run'
 import { Route as ApiInternalGeoWriterPlanRouteImport } from './routes/api.internal.geo.writer-plan'
+import { Route as ApiInternalSitesAdminRouteImport } from './routes/api.internal.sites.admin'
 import { Route as ApiInternalWorkflowsAgentReadinessRouteImport } from './routes/api.internal.workflows.agent-readiness'
 import { Route as ApiInternalWorkflowsBrandAnalysisRouteImport } from './routes/api.internal.workflows.brand-analysis'
 import { Route as ApiInternalWorkflowsContentPublicationSyncRepairRouteImport } from './routes/api.internal.workflows.content-publication-sync-repair'
@@ -393,6 +394,11 @@ const ApiInternalGeoWriterPlanRoute =
     path: '/api/internal/geo/writer-plan',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalSitesAdminRoute = ApiInternalSitesAdminRouteImport.update({
+  id: '/api/internal/sites/admin',
+  path: '/api/internal/sites/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiInternalWorkflowsAgentReadinessRoute =
   ApiInternalWorkflowsAgentReadinessRouteImport.update({
     id: '/api/internal/workflows/agent-readiness',
@@ -584,6 +590,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/content/sync-github': typeof ApiInternalContentSyncGithubRoute
   '/api/internal/geo/sequence-run': typeof ApiInternalGeoSequenceRunRoute
   '/api/internal/geo/writer-plan': typeof ApiInternalGeoWriterPlanRoute
+  '/api/internal/sites/admin': typeof ApiInternalSitesAdminRoute
   '/api/internal/workflows/agent-readiness': typeof ApiInternalWorkflowsAgentReadinessRoute
   '/api/internal/workflows/brand-analysis': typeof ApiInternalWorkflowsBrandAnalysisRoute
   '/api/internal/workflows/content-publication-sync-repair': typeof ApiInternalWorkflowsContentPublicationSyncRepairRoute
@@ -665,6 +672,7 @@ export interface FileRoutesByTo {
   '/api/internal/content/sync-github': typeof ApiInternalContentSyncGithubRoute
   '/api/internal/geo/sequence-run': typeof ApiInternalGeoSequenceRunRoute
   '/api/internal/geo/writer-plan': typeof ApiInternalGeoWriterPlanRoute
+  '/api/internal/sites/admin': typeof ApiInternalSitesAdminRoute
   '/api/internal/workflows/agent-readiness': typeof ApiInternalWorkflowsAgentReadinessRoute
   '/api/internal/workflows/brand-analysis': typeof ApiInternalWorkflowsBrandAnalysisRoute
   '/api/internal/workflows/content-publication-sync-repair': typeof ApiInternalWorkflowsContentPublicationSyncRepairRoute
@@ -747,6 +755,7 @@ export interface FileRoutesById {
   '/api/internal/content/sync-github': typeof ApiInternalContentSyncGithubRoute
   '/api/internal/geo/sequence-run': typeof ApiInternalGeoSequenceRunRoute
   '/api/internal/geo/writer-plan': typeof ApiInternalGeoWriterPlanRoute
+  '/api/internal/sites/admin': typeof ApiInternalSitesAdminRoute
   '/api/internal/workflows/agent-readiness': typeof ApiInternalWorkflowsAgentReadinessRoute
   '/api/internal/workflows/brand-analysis': typeof ApiInternalWorkflowsBrandAnalysisRoute
   '/api/internal/workflows/content-publication-sync-repair': typeof ApiInternalWorkflowsContentPublicationSyncRepairRoute
@@ -830,6 +839,7 @@ export interface FileRouteTypes {
     | '/api/internal/content/sync-github'
     | '/api/internal/geo/sequence-run'
     | '/api/internal/geo/writer-plan'
+    | '/api/internal/sites/admin'
     | '/api/internal/workflows/agent-readiness'
     | '/api/internal/workflows/brand-analysis'
     | '/api/internal/workflows/content-publication-sync-repair'
@@ -911,6 +921,7 @@ export interface FileRouteTypes {
     | '/api/internal/content/sync-github'
     | '/api/internal/geo/sequence-run'
     | '/api/internal/geo/writer-plan'
+    | '/api/internal/sites/admin'
     | '/api/internal/workflows/agent-readiness'
     | '/api/internal/workflows/brand-analysis'
     | '/api/internal/workflows/content-publication-sync-repair'
@@ -992,6 +1003,7 @@ export interface FileRouteTypes {
     | '/api/internal/content/sync-github'
     | '/api/internal/geo/sequence-run'
     | '/api/internal/geo/writer-plan'
+    | '/api/internal/sites/admin'
     | '/api/internal/workflows/agent-readiness'
     | '/api/internal/workflows/brand-analysis'
     | '/api/internal/workflows/content-publication-sync-repair'
@@ -1068,6 +1080,7 @@ export interface RootRouteChildren {
   ApiInternalContentSyncGithubRoute: typeof ApiInternalContentSyncGithubRoute
   ApiInternalGeoSequenceRunRoute: typeof ApiInternalGeoSequenceRunRoute
   ApiInternalGeoWriterPlanRoute: typeof ApiInternalGeoWriterPlanRoute
+  ApiInternalSitesAdminRoute: typeof ApiInternalSitesAdminRoute
   ApiInternalWorkflowsAgentReadinessRoute: typeof ApiInternalWorkflowsAgentReadinessRoute
   ApiInternalWorkflowsBrandAnalysisRoute: typeof ApiInternalWorkflowsBrandAnalysisRoute
   ApiInternalWorkflowsContentPublicationSyncRepairRoute: typeof ApiInternalWorkflowsContentPublicationSyncRepairRoute
@@ -1486,6 +1499,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalGeoWriterPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/sites/admin': {
+      id: '/api/internal/sites/admin'
+      path: '/api/internal/sites/admin'
+      fullPath: '/api/internal/sites/admin'
+      preLoaderRoute: typeof ApiInternalSitesAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/workflows/agent-readiness': {
       id: '/api/internal/workflows/agent-readiness'
       path: '/api/internal/workflows/agent-readiness'
@@ -1802,6 +1822,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiInternalContentSyncGithubRoute: ApiInternalContentSyncGithubRoute,
   ApiInternalGeoSequenceRunRoute: ApiInternalGeoSequenceRunRoute,
   ApiInternalGeoWriterPlanRoute: ApiInternalGeoWriterPlanRoute,
+  ApiInternalSitesAdminRoute: ApiInternalSitesAdminRoute,
   ApiInternalWorkflowsAgentReadinessRoute:
     ApiInternalWorkflowsAgentReadinessRoute,
   ApiInternalWorkflowsBrandAnalysisRoute:
