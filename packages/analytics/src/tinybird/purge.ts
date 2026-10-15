@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Duration, Effect, Schedule } from "effect";
 
 import {
   bumpAnalyticsVersions,
@@ -57,40 +57,66 @@ function isRetryableJobPollError(error: unknown): boolean {
   );
 }
 
-async function waitForJob(jobId: string): Promise<void> {
-  for (let attempt = 0; attempt < JOB_POLL_MAX_ATTEMPTS; attempt += 1) {
-    try {
+type TinybirdJobPoll = "done" | "pending";
+
+function toError(cause: unknown): Error {
+  return cause instanceof Error ? cause : new Error(String(cause));
+}
+
+/**
+ * One job status read. Timed-out or aborted reads count as "still pending" so
+ * a slow poll costs an attempt instead of failing the purge.
+ */
+function pollJob(jobId: string): Effect.Effect<TinybirdJobPoll, Error> {
+  return Effect.tryPromise({
+    try: async (signal): Promise<TinybirdJobPoll> => {
       const response = await fetch(`${tinybirdBaseUrl()}/v0/jobs/${jobId}`, {
         headers: { Authorization: `Bearer ${process.env.TINYBIRD_TOKEN}` },
-        signal: AbortSignal.timeout(TINYBIRD_READ_TIMEOUT_MS),
+        signal: AbortSignal.any([
+          signal,
+          AbortSignal.timeout(TINYBIRD_READ_TIMEOUT_MS),
+        ]),
       });
       if (!response.ok) {
         throw new Error(`Tinybird job poll failed (${response.status})`);
       }
       const job: { status?: string; error?: string } = await response.json();
-      if (job.status === "done") {
-        return;
-      }
       if (job.status === "error") {
         throw new Error(
           `Tinybird delete job failed: ${job.error ?? "unknown"}`
         );
       }
-    } catch (error) {
-      if (!isRetryableJobPollError(error)) {
-        throw error;
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
-  }
-  throw new Error("Tinybird delete job timed out");
+      return job.status === "done" ? "done" : "pending";
+    },
+    catch: (cause) => cause,
+  }).pipe(
+    Effect.catchIf(isRetryableJobPollError, () =>
+      Effect.succeed<TinybirdJobPoll>("pending")
+    ),
+    Effect.mapError(toError)
+  );
 }
 
-async function runDelete(
+/** Polls the job every second, up to {@link JOB_POLL_MAX_ATTEMPTS} reads. */
+function waitForJob(jobId: string): Effect.Effect<void, Error> {
+  return pollJob(jobId).pipe(
+    Effect.repeat({
+      schedule: Schedule.spaced(Duration.millis(JOB_POLL_INTERVAL_MS)),
+      times: JOB_POLL_MAX_ATTEMPTS - 1,
+      until: (status) => status === "done",
+    }),
+    Effect.flatMap((status) =>
+      status === "done"
+        ? Effect.void
+        : Effect.fail(new Error("Tinybird delete job timed out"))
+    )
+  );
+}
+
+async function submitDelete(
   datasource: string,
-  condition: string,
-  waitForCompletion = true
-): Promise<void> {
+  condition: string
+): Promise<string | undefined> {
   const response = await fetch(
     `${tinybirdBaseUrl()}/v0/datasources/${datasource}/delete`,
     {
@@ -110,10 +136,7 @@ async function runDelete(
     );
   }
   const payload: { job_id?: string; id?: string } = await response.json();
-  const jobId = payload.job_id ?? payload.id;
-  if (jobId && waitForCompletion) {
-    await waitForJob(jobId);
-  }
+  return payload.job_id ?? payload.id;
 }
 
 function deleteFromDatasource(
@@ -122,10 +145,13 @@ function deleteFromDatasource(
   waitForCompletion = true
 ): Effect.Effect<void, Error> {
   return Effect.tryPromise({
-    try: () => runDelete(datasource, condition, waitForCompletion),
-    catch: (cause) =>
-      cause instanceof Error ? cause : new Error(String(cause)),
-  });
+    try: () => submitDelete(datasource, condition),
+    catch: toError,
+  }).pipe(
+    Effect.flatMap((jobId) =>
+      jobId && waitForCompletion ? waitForJob(jobId) : Effect.void
+    )
+  );
 }
 
 export function purgeSocialAccountData(
@@ -136,9 +162,11 @@ export function purgeSocialAccountData(
   }
   const condition = `organization_id = '${sanitize(input.organizationId)}' AND provider = '${sanitize(input.provider)}' AND provider_account_id = '${sanitize(input.providerAccountId)}'`;
   const program = Effect.gen(function* () {
-    for (const datasource of ACCOUNT_SCOPED_DATASOURCES) {
-      yield* deleteFromDatasource(datasource, condition);
-    }
+    yield* Effect.forEach(
+      ACCOUNT_SCOPED_DATASOURCES,
+      (datasource) => deleteFromDatasource(datasource, condition),
+      { discard: true }
+    );
     yield* Effect.tryPromise(() =>
       bumpAnalyticsVersions("social", [input.organizationId])
     );
@@ -154,9 +182,11 @@ export function purgeGeoProjectData(
   }
   const condition = `organization_id = '${sanitize(input.organizationId)}' AND project_id = '${sanitize(input.projectId)}'`;
   const program = Effect.gen(function* () {
-    for (const datasource of GEO_DATASOURCES) {
-      yield* deleteFromDatasource(datasource, condition);
-    }
+    yield* Effect.forEach(
+      GEO_DATASOURCES,
+      (datasource) => deleteFromDatasource(datasource, condition),
+      { discard: true }
+    );
     yield* Effect.tryPromise(() =>
       advancePurgeGeneration("geo", input.organizationId)
     );

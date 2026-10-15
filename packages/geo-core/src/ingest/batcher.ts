@@ -1,6 +1,7 @@
 import { geoLog } from "@notra/ai/evlog";
 import { ingestGeoTrafficEvents } from "@notra/analytics/tinybird/client";
 import type { GeoTrafficEventRow } from "@notra/analytics/tinybird/datasources";
+import { Duration, Effect } from "effect";
 
 import {
   GEO_INGEST_FLUSH_MAX_ROWS,
@@ -53,22 +54,27 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () =>
-          reject(
+/**
+ * Rejects with a retryable error when `write` takes longer than `timeoutMs`;
+ * the timer is gone as soon as either side settles.
+ */
+function withTimeout<T>(
+  write: () => Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  return Effect.runPromise(
+    Effect.tryPromise({ try: () => write(), catch: (cause) => cause }).pipe(
+      Effect.timeoutOrElse({
+        duration: Duration.millis(timeoutMs),
+        orElse: () =>
+          Effect.fail(
             new RetryableWriteError(
               `Tinybird write timed out after ${timeoutMs}ms`
             )
           ),
-        timeoutMs
-      );
-    }),
-  ]).finally(() => clearTimeout(timer));
+      })
+    )
+  );
 }
 
 /**
@@ -129,7 +135,7 @@ export function createEventBatcher<R extends BatchedRow>(
   ): Promise<GeoChunkResult<R>> {
     try {
       const result = await withTimeout(
-        write(chunk),
+        () => write(chunk),
         GEO_INGEST_FLUSH_TIMEOUT_MS
       );
       if (!result) {

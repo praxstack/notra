@@ -17,11 +17,13 @@ import type {
   GeoOpenCodeBoxRetryOptions,
   GeoOpenCodeStaleBoxCandidate,
 } from "@notra/ai/types/geo-opencode";
+import {
+  isTransientBoxNetworkError,
+  linearRetrySchedule,
+  runBoxEffect,
+} from "@notra/ai/utils/box-retry";
 import { Agent, Box, BoxError, type BoxData } from "@upstash/box";
-
-function sleep(milliseconds: number) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
+import { Duration, Effect, Schedule } from "effect";
 
 function isNotFoundBoxError(error: unknown) {
   return error instanceof BoxError && error.statusCode === 404;
@@ -35,14 +37,7 @@ function isRetryableBoxError(error: unknown) {
       error.statusCode >= 500
     );
   }
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  return (
-    error.message.includes("fetch failed") ||
-    error.message.includes("ECONNRESET") ||
-    error.message.includes("UND_ERR")
-  );
+  return isTransientBoxNetworkError(error);
 }
 
 function abortReason(signal: AbortSignal) {
@@ -51,35 +46,23 @@ function abortReason(signal: AbortSignal) {
     : new Error("OpenCode box operation was cancelled");
 }
 
-function geoOpenCodeBoxOperation(timeoutMs: number) {
-  const timeoutController = new AbortController();
-  const timeout = setTimeout(() => {
-    timeoutController.abort(
-      new DOMException("The box operation timed out", "TimeoutError")
-    );
-  }, timeoutMs);
-  return {
-    signal: timeoutController.signal,
-    dispose: () => clearTimeout(timeout),
-  };
-}
-
-function waitForGeoOpenCodeBoxDelay(signal: AbortSignal, milliseconds: number) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(abortReason(signal));
-      return;
-    }
-    const onAbort = () => {
-      clearTimeout(timeout);
-      reject(abortReason(signal));
-    };
-    const timeout = setTimeout(() => {
-      signal.removeEventListener("abort", onAbort);
-      resolve();
-    }, milliseconds);
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
+/**
+ * Bounds a management call (including its retry backoff) by `timeoutMs`. The
+ * pending request's signal is aborted when the deadline passes.
+ */
+function withGeoOpenCodeBoxDeadline<T>(
+  effect: Effect.Effect<T, unknown>,
+  timeoutMs: number
+) {
+  return effect.pipe(
+    Effect.timeoutOrElse({
+      duration: Duration.millis(timeoutMs),
+      orElse: () =>
+        Effect.fail(
+          new DOMException("The box operation timed out", "TimeoutError")
+        ),
+    })
+  );
 }
 
 export async function geoOpenCodeBoxErrorMessage(response: Response) {
@@ -146,6 +129,51 @@ async function requestGeoOpenCodeBoxDeletion(
   });
 }
 
+/**
+ * Polls a box until it leaves "creating", first after one interval and then
+ * every interval. Not-found and transient poll errors keep waiting; any other
+ * error stops the poll. Unbounded by design: the caller's signal is the
+ * deadline.
+ */
+function pollGeoOpenCodeBoxCreation(
+  boxId: string,
+  headers: Record<string, string>,
+  creating: BoxData
+) {
+  const poll = Effect.tryPromise({
+    try: async (signal) => {
+      const response = await fetch(
+        `${GEO_OPENCODE_BOX_API_BASE_URL}/v2/box/${boxId}`,
+        { headers, signal }
+      );
+      if (response.ok) {
+        return (await response.json()) as BoxData;
+      }
+      const pollError = new BoxError(
+        await geoOpenCodeBoxErrorMessage(response),
+        response.status
+      );
+      if (!isRetryableBoxError(pollError) && !isNotFoundBoxError(pollError)) {
+        throw pollError;
+      }
+      return creating;
+    },
+    catch: (cause) => cause,
+  });
+  return Effect.sleep(Duration.millis(GEO_OPENCODE_BOX_POLL_INTERVAL_MS)).pipe(
+    Effect.andThen(
+      poll.pipe(
+        Effect.repeat({
+          schedule: Schedule.spaced(
+            Duration.millis(GEO_OPENCODE_BOX_POLL_INTERVAL_MS)
+          ),
+          while: (data) => data.status === "creating",
+        })
+      )
+    )
+  );
+}
+
 export async function createGeoOpenCodeBox(
   name: string,
   apiKey: string,
@@ -201,26 +229,12 @@ export async function createGeoOpenCodeBox(
       throw new BoxError("Box creation returned no box ID");
     }
     boxId = data.id;
-    while (data.status === "creating") {
-      await waitForGeoOpenCodeBoxDelay(
+    if (data.status === "creating") {
+      data = await runBoxEffect(
+        pollGeoOpenCodeBoxCreation(boxId, headers, data),
         signal,
-        GEO_OPENCODE_BOX_POLL_INTERVAL_MS
+        abortReason
       );
-      const pollResponse = await fetch(
-        `${GEO_OPENCODE_BOX_API_BASE_URL}/v2/box/${boxId}`,
-        { headers, signal }
-      );
-      if (pollResponse.ok) {
-        data = (await pollResponse.json()) as BoxData;
-      } else {
-        const pollError = new BoxError(
-          await geoOpenCodeBoxErrorMessage(pollResponse),
-          pollResponse.status
-        );
-        if (!isRetryableBoxError(pollError) && !isNotFoundBoxError(pollError)) {
-          throw pollError;
-        }
-      }
     }
     if (data.status === "error") {
       throw new BoxError("Box creation failed");
@@ -263,82 +277,84 @@ export function createGeoOpenCodeBoxName() {
   return `${GEO_OPENCODE_BOX_NAME_PREFIX}${crypto.randomUUID()}`;
 }
 
-export async function withGeoOpenCodeBoxRetry<T>(
-  callback: () => Promise<T>,
+/**
+ * Retries `callback` with linear backoff (`retryDelayMs * n` before retry n).
+ * The callback receives the attempt's signal, aborted when the surrounding
+ * effect is interrupted (cancellation or a deadline).
+ */
+function retryGeoOpenCodeBoxEffect<T>(
+  callback: (signal: AbortSignal) => Promise<T>,
   options: GeoOpenCodeBoxRetryOptions = {}
-) {
+): Effect.Effect<T, unknown> {
   const attempts = options.attempts ?? GEO_OPENCODE_BOX_DELETE_ATTEMPTS;
   const retryDelayMs = options.retryDelayMs ?? GEO_OPENCODE_BOX_RETRY_DELAY_MS;
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    if (options.signal?.aborted) {
-      throw abortReason(options.signal);
-    }
-    try {
-      return await callback();
-    } catch (error) {
-      lastError = error;
-      const retryable =
-        isRetryableBoxError(error) ||
-        (options.retryNotFound === true && isNotFoundBoxError(error));
-      if (attempt === attempts || !retryable) {
-        break;
-      }
-      const delayMs = retryDelayMs * attempt;
-      if (options.signal) {
-        await waitForGeoOpenCodeBoxDelay(options.signal, delayMs);
-      } else {
-        await sleep(delayMs);
-      }
-    }
-  }
-
-  throw lastError;
+  const { signal } = options;
+  const attempt = Effect.suspend(() =>
+    signal?.aborted
+      ? Effect.fail(abortReason(signal))
+      : Effect.tryPromise({
+          try: (attemptSignal) => callback(attemptSignal),
+          catch: (cause) => cause,
+        })
+  );
+  return attempt.pipe(
+    Effect.retry({
+      schedule: linearRetrySchedule(attempts, retryDelayMs),
+      while: (error) =>
+        signal?.aborted !== true &&
+        (isRetryableBoxError(error) ||
+          (options.retryNotFound === true && isNotFoundBoxError(error))),
+    })
+  );
 }
 
-export async function deleteGeoOpenCodeBox(boxId: string, apiKey: string) {
-  const operation = geoOpenCodeBoxOperation(
-    GEO_OPENCODE_BOX_MANAGEMENT_TIMEOUT_MS
+export function withGeoOpenCodeBoxRetry<T>(
+  callback: () => Promise<T>,
+  options: GeoOpenCodeBoxRetryOptions = {}
+): Promise<T> {
+  return runBoxEffect(
+    retryGeoOpenCodeBoxEffect(() => callback(), options),
+    options.signal,
+    abortReason
   );
-  try {
-    await withGeoOpenCodeBoxRetry(
-      () => requestGeoOpenCodeBoxDeletion(boxId, apiKey, operation.signal),
-      { signal: operation.signal }
-    );
-  } catch (error) {
-    if (!isNotFoundBoxError(error)) {
-      throw error;
-    }
-  } finally {
-    operation.dispose();
-  }
+}
+
+export function deleteGeoOpenCodeBox(
+  boxId: string,
+  apiKey: string
+): Promise<void> {
+  return runBoxEffect(
+    withGeoOpenCodeBoxDeadline(
+      retryGeoOpenCodeBoxEffect((signal) =>
+        requestGeoOpenCodeBoxDeletion(boxId, apiKey, signal)
+      ),
+      GEO_OPENCODE_BOX_MANAGEMENT_TIMEOUT_MS
+    ).pipe(Effect.catchIf(isNotFoundBoxError, () => Effect.void)),
+    undefined,
+    abortReason
+  );
 }
 
 export async function recoverAndDeleteGeoOpenCodeBox(
   name: string,
   apiKey: string
 ) {
-  const operation = geoOpenCodeBoxOperation(
-    GEO_OPENCODE_BOX_RECOVERY_TIMEOUT_MS
+  const box = await runBoxEffect(
+    withGeoOpenCodeBoxDeadline(
+      retryGeoOpenCodeBoxEffect(
+        (signal) => getGeoOpenCodeBoxByName(name, apiKey, signal),
+        {
+          attempts: GEO_OPENCODE_BOX_RECOVERY_ATTEMPTS,
+          retryNotFound: true,
+        }
+      ),
+      GEO_OPENCODE_BOX_RECOVERY_TIMEOUT_MS
+    ).pipe(Effect.catchIf(isNotFoundBoxError, () => Effect.succeed(null))),
+    undefined,
+    abortReason
   );
-  let box: BoxData;
-  try {
-    box = await withGeoOpenCodeBoxRetry(
-      () => getGeoOpenCodeBoxByName(name, apiKey, operation.signal),
-      {
-        attempts: GEO_OPENCODE_BOX_RECOVERY_ATTEMPTS,
-        retryNotFound: true,
-        signal: operation.signal,
-      }
-    );
-  } catch (error) {
-    if (isNotFoundBoxError(error)) {
-      return false;
-    }
-    throw error;
-  } finally {
-    operation.dispose();
+  if (!box) {
+    return false;
   }
   await deleteGeoOpenCodeBox(box.id, apiKey);
   return true;
@@ -385,18 +401,16 @@ export async function deleteStaleGeoOpenCodeBoxes() {
   if (!apiKey) {
     return 0;
   }
-  const operation = geoOpenCodeBoxOperation(
-    GEO_OPENCODE_BOX_MANAGEMENT_TIMEOUT_MS
+  const boxes = await runBoxEffect(
+    withGeoOpenCodeBoxDeadline(
+      retryGeoOpenCodeBoxEffect((signal) =>
+        listGeoOpenCodeBoxes(apiKey, signal)
+      ),
+      GEO_OPENCODE_BOX_MANAGEMENT_TIMEOUT_MS
+    ),
+    undefined,
+    abortReason
   );
-  let boxes: BoxData[];
-  try {
-    boxes = await withGeoOpenCodeBoxRetry(
-      () => listGeoOpenCodeBoxes(apiKey, operation.signal),
-      { signal: operation.signal }
-    );
-  } finally {
-    operation.dispose();
-  }
   const staleBoxes = boxes.filter((box) => isStaleGeoOpenCodeBox(box));
   return deleteStaleGeoOpenCodeBoxIds(
     staleBoxes.map((box) => box.id),

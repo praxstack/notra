@@ -69,11 +69,18 @@ describe("assertRouteHasCredits", () => {
       now: () => now,
       creditCheckTtlMs: CREDIT_TTL_MS,
     });
-    const first = await router.assertRouteHasCredits({
-      modelId: MODEL,
-      organizationId: FREE_ORG,
-    });
-    assert.equal(first.gateway, "openrouter");
+    const concurrent = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        router.assertRouteHasCredits({
+          modelId: MODEL,
+          organizationId: FREE_ORG,
+        })
+      )
+    );
+    assert.deepEqual(
+      concurrent.map((decision) => decision.gateway),
+      ["openrouter", "openrouter", "openrouter"]
+    );
     await router.assertRouteHasCredits({
       modelId: MODEL,
       organizationId: FREE_ORG,

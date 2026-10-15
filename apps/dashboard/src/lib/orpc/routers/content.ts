@@ -27,6 +27,7 @@ import {
   posts,
 } from "@notra/db/schema";
 import type { BlogPostSubtype } from "@notra/db/types/content";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { buildPostCollectionName } from "@notra/db/utils/post-collections";
 import {
   checkpointPostHistory,
@@ -104,7 +105,6 @@ import { getEnabledDataPoints } from "@/lib/analytics/studio-events";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { getUtcDayRange } from "@/lib/content/content-calendar";
 import { getContentPublishingMetrics } from "@/lib/content/content-publishing-metrics.server";
-import { isUniqueConstraintError } from "@/lib/db/errors";
 import { afterResponse } from "@/lib/framework/after-response";
 import {
   addActiveGeneration,
@@ -322,7 +322,7 @@ function isCollectionGenerating(collection: {
 }
 
 async function toSlugConflict(error: unknown) {
-  if (isUniqueConstraintError(error)) {
+  if (isPgUniqueViolation(error)) {
     const tErrors = await getTranslations("errors.content");
     return conflict(tErrors("slugTaken"));
   }

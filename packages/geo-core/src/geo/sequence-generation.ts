@@ -40,6 +40,7 @@ import { lockGeoProject } from "./lock";
 import { toGeoSequence } from "./mappers";
 import { requireGeoProject } from "./projects";
 import { buildBrandTerms, promptMentionsBrand } from "./suggestion-keywords";
+import { geoTransaction } from "./transaction";
 
 /**
  * Keeps conversations with enough valid turns. Turns that are out of range or
@@ -229,29 +230,31 @@ export const generateGeoSequences = Effect.fn("geo.sequencesGenerate")(
       );
     }
 
-    const rows = yield* geoDb("sequences insert failed", () =>
-      db.transaction(async (tx) => {
-        await Effect.runPromise(lockGeoProject(tx, scope.projectId));
-        const current = await tx
-          .select({ count: count() })
-          .from(geoPromptSequences)
-          .where(eq(geoPromptSequences.projectId, scope.projectId));
-        const remaining = GEO_MAX_SEQUENCES - (current.at(0)?.count ?? 0);
-        if (remaining <= 0) {
-          return [];
-        }
-        return await tx
-          .insert(geoPromptSequences)
-          .values(
-            conversations.slice(0, remaining).map((conversation) => ({
-              id: crypto.randomUUID(),
-              organizationId: scope.organizationId,
-              projectId: scope.projectId,
-              name: conversation.name,
-              steps: conversation.steps,
-            }))
-          )
-          .returning();
+    const rows = yield* geoTransaction("sequences insert failed", (tx) =>
+      Effect.gen(function* () {
+        yield* lockGeoProject(tx, scope.projectId);
+        return yield* geoDb("sequences insert failed", async () => {
+          const current = await tx
+            .select({ count: count() })
+            .from(geoPromptSequences)
+            .where(eq(geoPromptSequences.projectId, scope.projectId));
+          const remaining = GEO_MAX_SEQUENCES - (current.at(0)?.count ?? 0);
+          if (remaining <= 0) {
+            return [];
+          }
+          return await tx
+            .insert(geoPromptSequences)
+            .values(
+              conversations.slice(0, remaining).map((conversation) => ({
+                id: crypto.randomUUID(),
+                organizationId: scope.organizationId,
+                projectId: scope.projectId,
+                name: conversation.name,
+                steps: conversation.steps,
+              }))
+            )
+            .returning();
+        });
       })
     );
     if (rows.length === 0) {

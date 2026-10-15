@@ -27,7 +27,8 @@ const grounded = gateway("openai/gpt-5.4", { organizationId, gateway: "vercel" }
 | free plan                   | openrouter             |
 
 The plan is resolved once per organization through `resolvePlan`
-(`@notra/ai/billing/plan` → Autumn) and cached for 60 s.
+(`@notra/ai/billing/plan` → Autumn) and cached for 60 s. Concurrent misses
+share one lookup; failed lookups are retried after 5 s.
 The policy is defined in `@notra/ai/constants/router` and applies to all
 organizations immediately. Development omits ZDR flags unless a caller sets
 one explicitly; other environments enforce ZDR.

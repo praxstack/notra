@@ -8,8 +8,10 @@ import { redis } from "@notra/ai/utils/redis";
 import { logError } from "@notra/ai/utils/server-log";
 import { db } from "@notra/db/drizzle";
 import { brandSettings } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { eq } from "drizzle-orm";
 
+import { DEFAULT_BRAND_CONSTRAINT } from "@/constants/brand";
 import { afterResponse } from "@/lib/framework/after-response";
 import { getTranslations } from "@/lib/i18n/server";
 import { startBrandAnalysisRun } from "@/lib/workflows/start";
@@ -19,7 +21,6 @@ import type {
   QueueBrandAnalysisInput,
   QueueBrandAnalysisResult,
 } from "@/types/brand-analysis";
-import { isDefaultBrandConstraintViolation } from "@/utils/brand-settings";
 
 async function insertBrandIdentity({
   organizationId,
@@ -47,7 +48,7 @@ async function insertBrandIdentity({
       return row;
     }
   } catch (error) {
-    if (!isDefaultBrandConstraintViolation(error)) {
+    if (!isPgUniqueViolation(error, DEFAULT_BRAND_CONSTRAINT)) {
       throw error;
     }
   }

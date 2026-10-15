@@ -26,6 +26,7 @@ import {
   contentTriggers,
 } from "@notra/db/schema";
 import type { BrandReferenceMemoryLink } from "@notra/db/types/supermemory";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { deleteBrandReferenceMemory } from "@notra/db/utils/supermemory";
 import { invalidateGeoIngestHostsCacheForBrand } from "@notra/geo-core/geo/ingest";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
@@ -77,7 +78,6 @@ import {
   startBrandGuidelineGeneration,
 } from "@/lib/brand-guidelines";
 import { countBrandVoices } from "@/lib/brand-voice-count";
-import { isUniqueConstraintError } from "@/lib/db/errors";
 import { getTranslations } from "@/lib/i18n/server";
 import { baseProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import {
@@ -421,7 +421,7 @@ export const brandRouter = {
 
           return { voice: serializeBrandVoice(createdVoice) };
         } catch (error) {
-          if (isUniqueConstraintError(error)) {
+          if (isPgUniqueViolation(error)) {
             throw await voiceNameTakenError();
           }
 
@@ -473,7 +473,7 @@ export const brandRouter = {
 
           return await listBrandVoices(input.organizationId);
         } catch (error) {
-          if (isUniqueConstraintError(error)) {
+          if (isPgUniqueViolation(error)) {
             throw await voiceNameTakenError();
           }
 
@@ -904,7 +904,7 @@ export const brandRouter = {
 
           return await getBrandGuidelines(input.voiceId);
         } catch (error) {
-          if (isUniqueConstraintError(error)) {
+          if (isPgUniqueViolation(error)) {
             const tErrors = await getTranslations("errors.brand");
             throw conflict(tErrors("screenshotTypeTaken"));
           }

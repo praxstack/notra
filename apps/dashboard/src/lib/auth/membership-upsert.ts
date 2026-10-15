@@ -1,6 +1,7 @@
 import { logWarn } from "@notra/ai/utils/server-log";
 import { db } from "@notra/db/drizzle";
 import { members } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { and, eq, sql } from "drizzle-orm";
 
 import { MEMBERSHIP_CONFLICT_TARGET_RETRY_MS } from "@/constants/auth/membership";
@@ -8,8 +9,6 @@ import type { MembershipUpsertInput } from "@/types/auth/membership";
 
 /** Postgres `invalid_column_reference`: no unique index matches ON CONFLICT. */
 const MISSING_CONFLICT_TARGET_CODE = "42P10";
-/** Postgres `unique_violation`: concurrent insert for the same membership key. */
-const UNIQUE_VIOLATION_CODE = "23505";
 
 let conflictTargetRetryAt = 0;
 
@@ -100,7 +99,7 @@ async function upsertMembershipReadThenWrite(
         await tx.execute(sql`RELEASE SAVEPOINT membership_insert`);
       } catch (error) {
         await tx.execute(sql`ROLLBACK TO SAVEPOINT membership_insert`);
-        if (!hasPostgresErrorCode(error, UNIQUE_VIOLATION_CODE)) {
+        if (!isPgUniqueViolation(error)) {
           throw error;
         }
         const raced = await tx.query.members.findFirst({

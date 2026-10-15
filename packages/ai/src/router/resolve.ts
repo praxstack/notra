@@ -22,22 +22,11 @@ async function lookupPlan(
   context: ResolverContext,
   organizationId: string
 ): Promise<PlanLookup> {
-  const cached = await context.planCache.get(organizationId);
-  if (cached) {
-    return { plan: cached, source: "cache" };
-  }
-
-  try {
-    const plan = await context.resolvePlan(organizationId);
-    await context.planCache.set(organizationId, plan, context.planCacheTtlMs);
-    return { plan, source: "resolver" };
-  } catch (error) {
-    context.logger.warn("ai.router.plan_lookup_failed", {
-      organizationId,
-      error: error instanceof Error ? error.message : String(error),
-    });
+  const result = await context.lookupPlan(organizationId);
+  if (!result) {
     return { plan: "free", source: "default" };
   }
+  return { plan: result.value, source: result.source };
 }
 
 /**
@@ -56,21 +45,8 @@ async function lookupZdrMode(
   if (!organizationId) {
     return "required";
   }
-  const cached = await context.zdrCache.get(organizationId);
-  if (cached) {
-    return cached;
-  }
-  try {
-    const mode = await context.resolveZdr(organizationId);
-    await context.zdrCache.set(organizationId, mode, context.planCacheTtlMs);
-    return mode;
-  } catch (error) {
-    context.logger.warn("ai.router.zdr_lookup_failed", {
-      organizationId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return "required";
-  }
+  const result = await context.lookupZdr(organizationId);
+  return result?.value ?? "required";
 }
 
 function getUsableAdapter(

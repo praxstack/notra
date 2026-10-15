@@ -6,6 +6,7 @@ import {
   mcpSessionToolActivations,
   mcpToolIndex,
 } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
 import { captureServerEvent, flushPostHogServer } from "@notra/posthog/server";
 import { assertPublicHttpUrlResolution } from "@notra/utils/url";
@@ -49,7 +50,6 @@ import { createMcpRuntimeToolName } from "./mcp-tool-name";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 16);
 const LIKE_SPECIAL_CHARS_REGEX = /[%_\\]/g;
-const UNIQUE_VIOLATION_CODE = "23505";
 const RUNTIME_TOOL_NAME_CONSTRAINT = "mcpToolIndex_org_runtime_tool_uidx";
 
 const indexedToolColumns = {
@@ -876,7 +876,7 @@ async function upsertIndexedTool({
       })
     );
   } catch (error) {
-    if (!isRuntimeToolNameConflict(error)) {
+    if (!isPgUniqueViolation(error, RUNTIME_TOOL_NAME_CONSTRAINT)) {
       throw error;
     }
 
@@ -1120,23 +1120,4 @@ function schemaPropertyNames(inputSchema: unknown) {
 
 function sanitizeErrorMessage(message: string) {
   return message.replace(/\s+/g, " ").trim().slice(0, 1000);
-}
-
-function isRuntimeToolNameConflict(error: unknown): boolean {
-  for (let current = error, depth = 0; current && depth < 6; depth++) {
-    if (typeof current === "object") {
-      const record = current as { code?: unknown; constraint?: unknown };
-      if (
-        record.code === UNIQUE_VIOLATION_CODE &&
-        record.constraint === RUNTIME_TOOL_NAME_CONSTRAINT
-      ) {
-        return true;
-      }
-    }
-    current =
-      typeof current === "object" && "cause" in current
-        ? current.cause
-        : undefined;
-  }
-  return false;
 }

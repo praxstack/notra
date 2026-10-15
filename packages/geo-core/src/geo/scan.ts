@@ -739,8 +739,11 @@ export const prepareGeoScanProject = Effect.fn("geo.prepareScanProject")(
       })
       .pipe(
         Effect.mapError(
-          (cause) =>
-            new GeoScanError({ message: "Failed to reserve AI answers", cause })
+          (error) =>
+            new GeoScanError({
+              message: "Failed to reserve AI answers",
+              cause: error.cause,
+            })
         ),
         Effect.tapError(() =>
           releaseClaim.pipe(Effect.andThen(failHandedScanRow))

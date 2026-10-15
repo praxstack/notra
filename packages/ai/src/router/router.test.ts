@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import {
+  ORGANIZATION_LOOKUP_FAILURE_TTL_MS,
   ROUTER_METADATA_KEY,
   ROUTER_PROVIDER_OPTIONS_KEY,
 } from "@notra/ai/constants/router";
@@ -92,9 +93,11 @@ describe("resolveRoute", () => {
     assert.deepEqual(lookups, [PAID_ORG, FREE_ORG, FREE_ORG]);
   });
 
-  test("ZDR lookup failures fail closed without caching the failure; explicit modes bypass lookup", async () => {
+  test("ZDR lookup failures fail closed, are retried after the short failure TTL; explicit modes bypass lookup", async () => {
+    let now = 0;
     let lookups = 0;
     const { router, logger } = createTestRouter({
+      now: () => now,
       resolveZdr: () => {
         lookups += 1;
         return lookups === 1
@@ -118,8 +121,34 @@ describe("resolveRoute", () => {
         (entry) => entry.event === "ai.router.zdr_lookup_failed"
       )
     );
+    now = ORGANIZATION_LOOKUP_FAILURE_TTL_MS - 1;
+    assert.equal((await router.resolveRoute(request)).zdr, "required");
+    assert.equal(lookups, 1);
+    now = ORGANIZATION_LOOKUP_FAILURE_TTL_MS;
     assert.equal((await router.resolveRoute(request)).zdr, "none");
     assert.equal(lookups, 2);
+  });
+
+  test("concurrent routes for one organization share a single plan and ZDR lookup", async () => {
+    let zdrLookups = 0;
+    const { router, planLookups } = createTestRouter({
+      plans,
+      resolveZdr: () => {
+        zdrLookups += 1;
+        return Promise.resolve("required");
+      },
+    });
+    const decisions = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        router.resolveRoute({ modelId: MODEL, organizationId: PAID_ORG })
+      )
+    );
+    assert.deepEqual(planLookups, [PAID_ORG]);
+    assert.equal(zdrLookups, 1);
+    assert.deepEqual(
+      decisions.map((decision) => decision.planSource),
+      ["resolver", "cache", "cache", "cache", "cache"]
+    );
   });
 
   test("missing openrouter key: free org falls back to vercel with reason", async () => {

@@ -81,6 +81,7 @@ import { logError } from "@notra/ai/utils/server-log";
 import { getAppUrl } from "@notra/ai/utils/url";
 import { db } from "@notra/db/drizzle";
 import { contentTriggers, repositoryOutputs } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
 import { organizationIdInputSchema } from "@notra/schemas/dashboard/auth/organization";
 import {
@@ -139,7 +140,6 @@ import {
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
-import { isUniqueConstraintError } from "@/lib/db/errors";
 import { getTranslations } from "@/lib/i18n/server";
 import { toMcpIntegrationAuthKind } from "@/lib/integrations/auth-kind";
 import { clearGitHubPublishFailures } from "@/lib/integrations/github/github-publish-failure-state";
@@ -1821,12 +1821,12 @@ export const integrationsRouter = {
                 ? INTEGRATION_PROVIDERS.MCP_STORE
                 : INTEGRATION_PROVIDERS.MCP,
               auth_kind: toMcpIntegrationAuthKind(input.authType),
-              error_code: isUniqueConstraintError(error)
+              error_code: isPgUniqueViolation(error)
                 ? "name_conflict"
                 : "create_failed",
             },
           });
-          if (isUniqueConstraintError(error)) {
+          if (isPgUniqueViolation(error)) {
             const tErrors = await getTranslations("errors.integrations");
             throw conflict(tErrors("mcpNameTaken"));
           }
@@ -1872,7 +1872,7 @@ export const integrationsRouter = {
             }
           );
         } catch (error) {
-          if (isUniqueConstraintError(error)) {
+          if (isPgUniqueViolation(error)) {
             const tErrors = await getTranslations("errors.integrations");
             throw conflict(tErrors("mcpNameTaken"));
           }
@@ -1956,7 +1956,7 @@ export const integrationsRouter = {
               )
             );
           }
-          if (isUniqueConstraintError(error)) {
+          if (isPgUniqueViolation(error)) {
             const tErrors = await getTranslations("errors.integrations");
             throw conflict(tErrors("mcpNameTaken"));
           }

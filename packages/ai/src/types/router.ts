@@ -251,9 +251,24 @@ export interface UnavailableMark {
   until: number;
 }
 
-export interface TtlCacheEntry<T> {
+export interface OrganizationLookupResult<T> {
   value: T;
-  expiresAt: number;
+  source: "resolver" | "cache";
+}
+
+/** Resolves to `undefined` when the lookup failed; callers pick a fallback. */
+export type OrganizationLookup<T> = (
+  organizationId: string
+) => Promise<OrganizationLookupResult<T> | undefined>;
+
+export interface OrganizationLookupOptions<T> {
+  resolve: (organizationId: string) => Promise<T>;
+  store?: TtlCacheStore<T>;
+  ttlMs: number;
+  failureTtlMs: number;
+  capacity: number;
+  now: () => number;
+  onFailure: (organizationId: string, error: unknown) => void;
 }
 
 export interface ModelRouterConfig {
@@ -307,11 +322,8 @@ export interface GatewayDecision {
 export interface ResolverContext {
   adapters: Partial<Record<GatewayId, GatewayAdapter>>;
   policy: ModelRouterConfig["policy"];
-  resolvePlan: ModelRouterConfig["resolvePlan"];
-  resolveZdr: NonNullable<ModelRouterConfig["resolveZdr"]>;
-  planCache: PlanCacheStore;
-  zdrCache: ZdrCacheStore;
-  planCacheTtlMs: number;
+  lookupPlan: OrganizationLookup<Plan>;
+  lookupZdr: OrganizationLookup<ZdrMode>;
   logger: RouterLogger;
   credits: CreditTracker;
 }

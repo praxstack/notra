@@ -28,6 +28,10 @@ import {
   GeoWorkflowService,
 } from "../src/deps";
 import { GeoScanError } from "../src/geo/errors";
+import {
+  GeoBillingError,
+  GeoWorkflowStartError,
+} from "../src/schemas/host-service-errors";
 import type { FinalizeContentBillingInput } from "../src/types/content-billing";
 import type {
   GeoEntitlementServiceShape,
@@ -376,7 +380,9 @@ describe("scheduled GEO scans", () => {
     try {
       await seedProject("null-retry", { nextScanAt: null });
       startWorkflow.mockImplementationOnce(() =>
-        Effect.fail(new Error("Request timed out"))
+        Effect.fail(
+          new GeoWorkflowStartError({ cause: new Error("Request timed out") })
+        )
       );
       expect((await sweep()).failed).toBe(1);
       const settings = await settingsFor("null-retry");
@@ -439,7 +445,11 @@ describe("scheduled GEO scans", () => {
     await seedProject("start-failure", { nextScanAt: anchor });
     startWorkflow.mockImplementationOnce(() =>
       Effect.fail(
-        Object.assign(new Error("503"), { name: "InternalDashboardError" })
+        new GeoWorkflowStartError({
+          cause: Object.assign(new Error("503"), {
+            name: "InternalDashboardError",
+          }),
+        })
       )
     );
     const before = Date.now();
@@ -489,7 +499,11 @@ describe("scheduled GEO scans", () => {
     await seedProject("healthy", { nextScanAt: new Date(1) });
     startWorkflow.mockImplementationOnce(() =>
       Effect.fail(
-        Object.assign(new Error("503"), { name: "InternalDashboardError" })
+        new GeoWorkflowStartError({
+          cause: Object.assign(new Error("503"), {
+            name: "InternalDashboardError",
+          }),
+        })
       )
     );
     expect(await sweep()).toEqual({
@@ -535,7 +549,11 @@ describe("scheduled GEO scans", () => {
     await seedProject("refusing", { nextScanAt: anchor });
     startWorkflow.mockImplementation(() =>
       Effect.fail(
-        Object.assign(new Error("503"), { name: "InternalDashboardError" })
+        new GeoWorkflowStartError({
+          cause: Object.assign(new Error("503"), {
+            name: "InternalDashboardError",
+          }),
+        })
       )
     );
 
@@ -580,7 +598,11 @@ describe("scheduled GEO scans", () => {
     await seedProject("exhausted", { nextScanAt: anchor });
     startWorkflow.mockImplementation(() =>
       Effect.fail(
-        Object.assign(new Error("503"), { name: "InternalDashboardError" })
+        new GeoWorkflowStartError({
+          cause: Object.assign(new Error("503"), {
+            name: "InternalDashboardError",
+          }),
+        })
       )
     );
     try {
@@ -639,7 +661,11 @@ describe("scheduled GEO scans", () => {
     });
     startWorkflow.mockImplementationOnce(() =>
       Effect.fail(
-        Object.assign(new Error("503"), { name: "InternalDashboardError" })
+        new GeoWorkflowStartError({
+          cause: Object.assign(new Error("503"), {
+            name: "InternalDashboardError",
+          }),
+        })
       )
     );
 
@@ -655,7 +681,9 @@ describe("scheduled GEO scans", () => {
   test("an ambiguous timeout holds the claim and running row to prevent duplicate billing", async () => {
     await seedProject("timeout");
     startWorkflow.mockImplementationOnce(() =>
-      Effect.fail(new Error("Request timed out"))
+      Effect.fail(
+        new GeoWorkflowStartError({ cause: new Error("Request timed out") })
+      )
     );
     expect((await sweep()).failed).toBe(1);
     expect((await settingsFor("timeout"))?.scanStartedAt).toBeInstanceOf(Date);
@@ -756,7 +784,9 @@ describe("scheduled GEO scans", () => {
   test("a failing billing check still starts the scan", async () => {
     await seedProject("billing-outage");
     checkScanBilling.mockImplementation(() =>
-      Effect.fail(new Error("Autumn unavailable"))
+      Effect.fail(
+        new GeoBillingError({ cause: new Error("Autumn unavailable") })
+      )
     );
 
     expect(await sweep()).toMatchObject({ started: 1, billingDenied: 0 });

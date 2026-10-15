@@ -42,7 +42,7 @@ import { logGeoFailure } from "../utils/geo-log";
 import { geoEnginesForAudience } from "../utils/geo-model-catalog";
 import { readGeoCache, writeGeoCache } from "./cache";
 import { competitorKey, normalizeCompetitorDomain } from "./domain";
-import { geoSkip } from "./effect";
+import { geoDb, geoSkip } from "./effect";
 import { GeoDiscoveryError } from "./errors";
 import { invalidateGeoIngestHostsCache } from "./ingest-hosts-cache";
 import { toGeoProject } from "./mappers";
@@ -59,6 +59,7 @@ import {
   normalizeGeneratedConversations,
 } from "./sequence-generation";
 import { buildBrandTerms, promptMentionsBrand } from "./suggestion-keywords";
+import { geoTransaction } from "./transaction";
 
 function buildDiscoveryPrompt(
   url: string,
@@ -462,29 +463,28 @@ export const generateGeoFromWebsite = Effect.fn("geo.generateFromWebsite")(
 
     const seedEngines = yield* resolveSeedEngines(organizationId, discovery);
 
-    const summary = yield* Effect.tryPromise({
-      try: () =>
-        db.transaction((tx) =>
-          Effect.runPromise(
-            persistGeoWebsiteGeneration(tx, {
-              organizationId,
-              projectId,
-              companyName,
-              aliases,
-              entries,
-              conversations,
-              discoveredCompetitors: discovery.competitors,
-              seedEngines,
-              seedLanguages: null,
-            })
-          )
-        ),
-      catch: (cause) =>
-        new GeoDiscoveryError({
-          message: "Failed to save GEO tracking",
-          cause,
-        }),
-    });
+    const summary = yield* geoTransaction("save GEO tracking failed", (tx) =>
+      persistGeoWebsiteGeneration(tx, {
+        organizationId,
+        projectId,
+        companyName,
+        aliases,
+        entries,
+        conversations,
+        discoveredCompetitors: discovery.competitors,
+        seedEngines,
+        seedLanguages: null,
+      })
+    ).pipe(
+      Effect.catchTag("GeoDatabaseError", (cause) =>
+        Effect.fail(
+          new GeoDiscoveryError({
+            message: "Failed to save GEO tracking",
+            cause,
+          })
+        )
+      )
+    );
 
     yield* startGeoScanAfterWebsiteGeneration(
       organizationId,
@@ -518,10 +518,10 @@ export const createGeoProjectFromWebsite = Effect.fn(
     yield* prepareGeoWebsiteGeneration(discovery);
   const seedEngines = yield* resolveSeedEngines(organizationId, discovery);
 
-  const project = yield* Effect.tryPromise({
-    try: () =>
-      db.transaction(async (tx) => {
-        const rows = await tx
+  const project = yield* geoTransaction("project create failed", (tx) =>
+    Effect.gen(function* () {
+      const rows = yield* geoDb("project insert failed", () =>
+        tx
           .insert(projects)
           .values({
             id: crypto.randomUUID(),
@@ -529,33 +529,41 @@ export const createGeoProjectFromWebsite = Effect.fn(
             name: name.trim(),
             brandSettingsId,
           })
-          .returning();
-        const row = rows.at(0);
-        if (!row) {
-          throw new Error("Project insert returned no row");
-        }
-
-        await Effect.runPromise(
-          persistGeoWebsiteGeneration(tx, {
-            organizationId,
-            projectId: row.id,
-            companyName,
-            aliases,
-            entries,
-            conversations,
-            discoveredCompetitors: discovery.competitors,
-            seedEngines,
-            seedLanguages,
+          .returning()
+      );
+      const row = rows.at(0);
+      if (!row) {
+        return yield* Effect.fail(
+          new GeoDiscoveryError({
+            message: "Failed to create and configure the project",
+            cause: new Error("Project insert returned no row"),
           })
         );
-        return toGeoProject(row);
-      }),
-    catch: (cause) =>
-      new GeoDiscoveryError({
-        message: "Failed to create and configure the project",
-        cause,
-      }),
-  });
+      }
+
+      yield* persistGeoWebsiteGeneration(tx, {
+        organizationId,
+        projectId: row.id,
+        companyName,
+        aliases,
+        entries,
+        conversations,
+        discoveredCompetitors: discovery.competitors,
+        seedEngines,
+        seedLanguages,
+      });
+      return toGeoProject(row);
+    })
+  ).pipe(
+    Effect.catchTag("GeoDatabaseError", (cause) =>
+      Effect.fail(
+        new GeoDiscoveryError({
+          message: "Failed to create and configure the project",
+          cause,
+        })
+      )
+    )
+  );
 
   yield* Effect.promise(() =>
     invalidateGeoIngestHostsCache(organizationId, project.id)

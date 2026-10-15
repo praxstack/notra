@@ -1,4 +1,5 @@
 import { logError } from "@notra/ai/utils/server-log";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import type { GeoScopeInput } from "@notra/geo-core/types/geo";
 import { geoShelfSourceSchema } from "@notra/schemas/dashboard/geo-shelf";
 import {
@@ -7,7 +8,6 @@ import {
 } from "@notra/schemas/utils/dashboard/shelf-url";
 
 import { GEO_SHELF_OPEN_STATUSES } from "@/constants/geo-shelf";
-import { isUniqueConstraintError } from "@/lib/db/errors";
 import { afterResponse } from "@/lib/framework/after-response";
 import { emptyShelfCitations } from "@/lib/geo-shelf/citations";
 import { assertGeoShelfOpportunityMembers } from "@/lib/geo-shelf/members";
@@ -116,7 +116,7 @@ export async function createGeoShelfSource(
   try {
     return await insertGeoShelfSource(key, source);
   } catch (error) {
-    if (isUniqueConstraintError(error)) {
+    if (isPgUniqueViolation(error)) {
       throw conflict(t("common.messages.thisPageIsAlreadyOn"));
     }
     throw error;

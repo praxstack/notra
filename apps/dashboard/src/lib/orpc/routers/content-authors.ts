@@ -1,5 +1,6 @@
 import { db } from "@notra/db/drizzle";
 import { contentAuthors, posts, users } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { CONTENT_AUTHOR_SLUG_MAX_LENGTH } from "@notra/schemas/constants/dashboard/post-metadata";
 import {
   contentOrganizationIdInputSchema,
@@ -11,7 +12,6 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { CONTENT_AUTHOR_ENSURE_SELF_ATTEMPTS } from "@/constants/content-overview";
-import { isUniqueConstraintError } from "@/lib/db/errors";
 import { getTranslations } from "@/lib/i18n/server";
 import { baseProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import {
@@ -49,7 +49,7 @@ async function freeAuthorSlug(organizationId: string, name: string) {
 }
 
 async function toAuthorSlugConflict(error: unknown) {
-  if (!isUniqueConstraintError(error)) {
+  if (!isPgUniqueViolation(error)) {
     return error;
   }
   const t = await getTranslations("errors.content");
@@ -113,7 +113,7 @@ export const contentAuthorsRouter = {
           }
           return { author: serializeContentAuthor(created) };
         } catch (error) {
-          if (!isUniqueConstraintError(error)) {
+          if (!isPgUniqueViolation(error)) {
             throw error;
           }
           const raced = await findOwn();

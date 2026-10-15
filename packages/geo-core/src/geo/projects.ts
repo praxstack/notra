@@ -33,6 +33,7 @@ import {
 import { invalidateGeoIngestHostsCache } from "./ingest-hosts-cache";
 import { lockGeoOrganization, lockGeoProject } from "./lock";
 import { toGeoProject } from "./mappers";
+import { geoTransaction } from "./transaction";
 
 export const listGeoProjects = Effect.fn("geo.projectsList")(function* (
   organizationId: string
@@ -247,57 +248,58 @@ export const deleteGeoProject = Effect.fn("geo.projectDelete")(function* (
     );
   }
 
-  const outcome = yield* geoDb("project delete failed", () =>
-    db.transaction(async (tx) => {
-      await Effect.runPromise(lockGeoOrganization(tx, organizationId));
-      await Effect.runPromise(lockGeoProject(tx, projectId));
-
-      const target = await tx
-        .select({ id: projects.id })
-        .from(projects)
-        .where(
-          and(
-            eq(projects.id, projectId),
-            eq(projects.organizationId, organizationId)
+  const outcome = yield* geoTransaction("project delete failed", (tx) =>
+    Effect.gen(function* () {
+      yield* lockGeoOrganization(tx, organizationId);
+      yield* lockGeoProject(tx, projectId);
+      return yield* geoDb("project delete failed", async () => {
+        const target = await tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(
+            and(
+              eq(projects.id, projectId),
+              eq(projects.organizationId, organizationId)
+            )
           )
-        )
-        .limit(1)
-        .for("update");
-      if (!target.length) {
-        return "not_found" as const;
-      }
+          .limit(1)
+          .for("update");
+        if (!target.length) {
+          return "not_found" as const;
+        }
 
-      const remaining = await tx
-        .select({ count: count() })
-        .from(projects)
-        .where(eq(projects.organizationId, organizationId));
-      if ((remaining.at(0)?.count ?? 0) <= 1) {
-        return "last_project" as const;
-      }
+        const remaining = await tx
+          .select({ count: count() })
+          .from(projects)
+          .where(eq(projects.organizationId, organizationId));
+        if ((remaining.at(0)?.count ?? 0) <= 1) {
+          return "last_project" as const;
+        }
 
-      const currentSites = await tx
-        .select({ id: sites.id })
-        .from(sites)
-        .where(
-          and(
-            eq(sites.organizationId, organizationId),
-            eq(sites.projectId, projectId)
+        const currentSites = await tx
+          .select({ id: sites.id })
+          .from(sites)
+          .where(
+            and(
+              eq(sites.organizationId, organizationId),
+              eq(sites.projectId, projectId)
+            )
           )
-        )
-        .limit(1);
-      if (currentSites.length) {
-        return "has_sites" as const;
-      }
-      const deleted = await tx
-        .delete(projects)
-        .where(
-          and(
-            eq(projects.id, projectId),
-            eq(projects.organizationId, organizationId)
+          .limit(1);
+        if (currentSites.length) {
+          return "has_sites" as const;
+        }
+        const deleted = await tx
+          .delete(projects)
+          .where(
+            and(
+              eq(projects.id, projectId),
+              eq(projects.organizationId, organizationId)
+            )
           )
-        )
-        .returning({ id: projects.id });
-      return deleted.length ? ("deleted" as const) : ("not_found" as const);
+          .returning({ id: projects.id });
+        return deleted.length ? ("deleted" as const) : ("not_found" as const);
+      });
     })
   );
 

@@ -2,9 +2,12 @@ import type { SharedV4ProviderMetadata } from "@ai-sdk/provider";
 import {
   DEFAULT_CREDIT_CHECK_TTL_MS,
   DEFAULT_PLAN_CACHE_TTL_MS,
+  ORGANIZATION_LOOKUP_CACHE_CAPACITY,
+  ORGANIZATION_LOOKUP_FAILURE_TTL_MS,
   ROUTER_METADATA_KEY,
 } from "@notra/ai/constants/router";
 import type {
+  GatewayId,
   ModelRouter,
   ModelRouterConfig,
   ResolverContext,
@@ -15,19 +18,26 @@ import type {
 } from "@notra/ai/types/router";
 import { getOperationalContext } from "@notra/ai/utils/operational-context";
 import { recordRequestAICost } from "@notra/ai/utils/request-ai-usage";
+import { Cache, Effect } from "effect";
 
 import { createCreditTracker } from "./credits";
 import { GatewayCreditBalanceError } from "./errors";
 import { RoutedLanguageModel } from "./lazy-model";
+import { createOrganizationLookup } from "./organization-cache";
 import { otherGateway } from "./policy";
 import { resolveRoute } from "./resolve";
-import { createMemoryTtlCache } from "./ttl-cache";
 
 const noopLogger: RouterLogger = {
   info: () => undefined,
   warn: () => undefined,
   error: () => undefined,
 };
+
+const GATEWAY_COUNT = 2;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function isRouteMetadata(value: unknown): value is RouteMetadata {
   if (typeof value !== "object" || value === null) {
@@ -50,39 +60,82 @@ export function createModelRouter(config: ModelRouterConfig): ModelRouter {
     now
   );
 
+  const planCacheTtlMs = config.planCacheTtlMs ?? DEFAULT_PLAN_CACHE_TTL_MS;
+  const resolveZdr =
+    config.resolveZdr ?? (() => Promise.resolve("required" as const));
+
   const context: ResolverContext = {
     adapters: config.adapters,
     policy: config.policy,
-    resolvePlan: config.resolvePlan,
-    resolveZdr: config.resolveZdr ?? (() => Promise.resolve("required")),
-    planCache: config.planCache ?? createMemoryTtlCache(now),
-    zdrCache: config.zdrCache ?? createMemoryTtlCache(now),
-    planCacheTtlMs: config.planCacheTtlMs ?? DEFAULT_PLAN_CACHE_TTL_MS,
+    lookupPlan: createOrganizationLookup({
+      resolve: config.resolvePlan,
+      store: config.planCache,
+      ttlMs: planCacheTtlMs,
+      failureTtlMs: ORGANIZATION_LOOKUP_FAILURE_TTL_MS,
+      capacity: ORGANIZATION_LOOKUP_CACHE_CAPACITY,
+      now,
+      onFailure: (organizationId, error) =>
+        logger.warn("ai.router.plan_lookup_failed", {
+          organizationId,
+          error: errorMessage(error),
+        }),
+    }),
+    lookupZdr: createOrganizationLookup({
+      resolve: resolveZdr,
+      store: config.zdrCache,
+      ttlMs: planCacheTtlMs,
+      failureTtlMs: ORGANIZATION_LOOKUP_FAILURE_TTL_MS,
+      capacity: ORGANIZATION_LOOKUP_CACHE_CAPACITY,
+      now,
+      onFailure: (organizationId, error) =>
+        logger.warn("ai.router.zdr_lookup_failed", {
+          organizationId,
+          error: errorMessage(error),
+        }),
+    }),
     logger,
     credits,
   };
 
   const resolve = (request: RouteRequest) => resolveRoute(context, request);
 
+  const fetchBalance = (gateway: GatewayId) =>
+    Effect.promise(async () => {
+      const adapter = config.adapters[gateway];
+      if (!adapter) {
+        return;
+      }
+      try {
+        const { balance } = await adapter.getBalance();
+        credits.record(gateway, balance);
+        logger.info("ai.router.credits", { gateway, balance });
+      } catch (error) {
+        logger.warn("ai.router.credits_check_failed", {
+          gateway,
+          error: errorMessage(error),
+        });
+        credits.record(gateway, null);
+      }
+    });
+
+  // Shares one in-flight balance check per gateway between concurrent
+  // requests. Freshness stays with the credit tracker, so nothing is kept
+  // once the check settles.
+  const balanceChecks = Effect.runSync(
+    Cache.makeWith(fetchBalance, {
+      capacity: GATEWAY_COUNT,
+      timeToLive: () => 0,
+    })
+  );
+
   const refreshBalance = async (decision: RouteDecision): Promise<void> => {
-    const adapter = config.adapters[decision.gateway];
-    if (!adapter || !credits.isStale(decision.gateway)) {
+    if (
+      !config.adapters[decision.gateway] ||
+      !credits.isStale(decision.gateway)
+    ) {
       return;
     }
-    try {
-      const { balance } = await adapter.getBalance();
-      credits.record(decision.gateway, balance);
-      logger.info("ai.router.credits", {
-        gateway: decision.gateway,
-        balance,
-      });
-    } catch (error) {
-      logger.warn("ai.router.credits_check_failed", {
-        gateway: decision.gateway,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      credits.record(decision.gateway, null);
-    }
+    await Effect.runPromise(Cache.get(balanceChecks, decision.gateway));
   };
 
   const assertRouteHasCredits = async (

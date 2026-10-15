@@ -9,6 +9,7 @@ import {
   updateContentGenerationJob,
 } from "@notra/content-generation/jobs";
 import { contentAuthors, postCollections, posts } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { buildPostCollectionName } from "@notra/db/utils/post-collections";
 import { setPostHistoryContext } from "@notra/db/utils/post-history";
 import {
@@ -69,7 +70,6 @@ import {
   extractTitleFromMarkdown,
   renderMarkdownToHtml,
 } from "../utils/markdown";
-import { isConstraintViolation, isPgUniqueViolation } from "../utils/pg-errors";
 import {
   matchesPostUpdatedAt,
   normalizePostUpdatedAt,
@@ -208,8 +208,7 @@ const releaseBeforeWorkflowAccepted = () => true;
 const keepAfterWorkflowAccepted = () => false;
 
 const mapPostWriteError = (cause: unknown) =>
-  isPgUniqueViolation(cause) &&
-  isConstraintViolation(cause, "posts_org_slug_uidx")
+  isPgUniqueViolation(cause, "posts_org_slug_uidx")
     ? new PostSlugDuplicateError()
     : new PostDatabaseError({ cause });
 

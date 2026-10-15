@@ -104,7 +104,9 @@ export const startClaimedGeoScanRun = Effect.fn("geo.startClaimedScanRun")(
         ...(engines ? { engines: [...engines] } : {}),
       })
       .pipe(
-        Effect.mapError((cause) => new GeoScanStartError({ cause })),
+        Effect.mapError(
+          (error) => new GeoScanStartError({ cause: error.cause })
+        ),
         Effect.tapError((error) => {
           if (isDefiniteGeoScanHandoffRejection(error.cause)) {
             return Effect.all(

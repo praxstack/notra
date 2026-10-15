@@ -1,5 +1,6 @@
 import { currentSkillContent } from "@notra/ai/skills/functions/current-content";
 import { skills } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { and, asc, eq } from "drizzle-orm";
 import { DateTime, Effect } from "effect";
 import { nanoid } from "nanoid";
@@ -17,7 +18,6 @@ import type {
   PatchSkillProgramInput,
   SkillProgramInput,
 } from "../types/skills";
-import { isPgUniqueViolation } from "../utils/pg-errors";
 
 const database = <A>(operation: () => Promise<A>) =>
   Effect.tryPromise({

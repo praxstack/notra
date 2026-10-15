@@ -195,6 +195,7 @@ import {
 } from "./scan-handoff";
 import { rearmedGeoScanAt } from "./scan-schedule";
 import { claimGeoScanRun, sweepStaleGeoScanRows } from "./scan-status";
+import { geoTransaction } from "./transaction";
 import { geoTrafficWindowParams } from "./window";
 
 function mergeLegacyCompetitors(
@@ -378,17 +379,13 @@ const reconcileCompetitorsInTransaction = Effect.fn(
 export const reconcileGeoCompetitors = Effect.fn("geo.competitorsReconcile")(
   function* (input: GeoScopeInput, merge: GeoCompetitorMerge, limit?: number) {
     const scope = yield* requireGeoProject(input);
-    const outcome = yield* geoDb("competitors sync failed", () =>
-      db.transaction((tx) =>
-        Effect.runPromise(
-          reconcileCompetitorsInTransaction(
-            tx,
-            scope.organizationId,
-            scope.projectId,
-            merge,
-            limit
-          )
-        )
+    const outcome = yield* geoTransaction("competitors sync failed", (tx) =>
+      reconcileCompetitorsInTransaction(
+        tx,
+        scope.organizationId,
+        scope.projectId,
+        merge,
+        limit
       )
     );
 
@@ -1682,18 +1679,14 @@ export const createGeoPrompt = Effect.fn("geo.promptsCreate")(function* (
   tags: readonly string[] = []
 ) {
   const scope = yield* requireGeoProject(input);
-  const row = yield* geoDb("prompt create failed", () =>
-    db.transaction((tx) =>
-      Effect.runPromise(
-        createPromptInTransaction(
-          tx,
-          scope.organizationId,
-          scope.projectId,
-          prompt,
-          id,
-          tags
-        )
-      )
+  const row = yield* geoTransaction("prompt create failed", (tx) =>
+    createPromptInTransaction(
+      tx,
+      scope.organizationId,
+      scope.projectId,
+      prompt,
+      id,
+      tags
     )
   );
 
@@ -1761,16 +1754,12 @@ export const insertGeoPrompts = Effect.fn("geo.promptsInsert")(function* (
   entries: readonly GeoPromptInsert[]
 ) {
   const scope = yield* requireGeoProject(input);
-  return yield* geoDb("prompts insert failed", () =>
-    db.transaction((tx) =>
-      Effect.runPromise(
-        insertPromptsInTransaction(
-          tx,
-          scope.organizationId,
-          scope.projectId,
-          entries
-        )
-      )
+  return yield* geoTransaction("prompts insert failed", (tx) =>
+    insertPromptsInTransaction(
+      tx,
+      scope.organizationId,
+      scope.projectId,
+      entries
     )
   );
 });
@@ -1899,18 +1888,14 @@ const patchAutoPromptSettings = Effect.fn("geo.promptsPatchAuto")(function* (
   promptId: string,
   change: "pause" | "resume" | "remove"
 ) {
-  const outcome = yield* geoDb("auto prompt update failed", () =>
-    db.transaction((tx) =>
-      Effect.runPromise(
-        patchAutoPromptInTransaction(
-          tx,
-          organizationId,
-          projectId,
-          brandSettingsId,
-          promptId,
-          change
-        )
-      )
+  const outcome = yield* geoTransaction("auto prompt update failed", (tx) =>
+    patchAutoPromptInTransaction(
+      tx,
+      organizationId,
+      projectId,
+      brandSettingsId,
+      promptId,
+      change
     )
   );
   if (outcome.status === "missing-settings") {

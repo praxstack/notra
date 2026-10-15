@@ -358,7 +358,9 @@ export const startAgentReadinessScan = Effect.fn("geo.agentReadiness.start")(
         targetUrl: claim.targetUrl,
       })
       .pipe(
-        Effect.mapError((cause) => new AgentReadinessStartError({ cause })),
+        Effect.mapError(
+          (error) => new AgentReadinessStartError({ cause: error.cause })
+        ),
         Effect.map(() => response),
         Effect.catch((error) =>
           geoDb("stamp failed readiness handoff", () =>

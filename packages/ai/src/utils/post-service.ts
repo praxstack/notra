@@ -14,6 +14,7 @@ import type {
 import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
 import { db } from "@notra/db/drizzle";
 import { postCollections, posts } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { buildPostCollectionName } from "@notra/db/utils/post-collections";
 import { setPostHistoryContext } from "@notra/db/utils/post-history";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
@@ -26,24 +27,7 @@ const generatePostId = customAlphabet(
 );
 
 export function isPostSlugConflict(error: unknown): boolean {
-  for (let current = error, depth = 0; current && depth < 6; depth++) {
-    if (
-      typeof current === "object" &&
-      (("code" in current &&
-        current.code === "23505" &&
-        "constraint" in current &&
-        current.constraint === "posts_org_slug_uidx") ||
-        (current instanceof Error &&
-          current.message.includes("posts_org_slug_uidx")))
-    ) {
-      return true;
-    }
-    current =
-      typeof current === "object" && "cause" in current
-        ? current.cause
-        : undefined;
-  }
-  return false;
+  return isPgUniqueViolation(error, "posts_org_slug_uidx");
 }
 
 function uniquifySlug(slug: string, n: number) {
@@ -195,7 +179,13 @@ export async function createPostRecord(
       deduplicated = await insert(slug);
       break;
     } catch (error) {
-      if (!(baseSlug && isPostSlugConflict(error) && attempt < 5)) {
+      if (
+        !(
+          baseSlug &&
+          isPgUniqueViolation(error, "posts_org_slug_uidx") &&
+          attempt < 5
+        )
+      ) {
         throw error;
       }
       slug = uniquifySlug(baseSlug, attempt + 2);

@@ -6,6 +6,11 @@ import type {
 import type { Effect } from "effect";
 
 import type { GeoCodingAgentAccessError } from "../geo/errors";
+import type {
+  GeoBillingError,
+  GeoGenerationTrackingError,
+  GeoWorkflowStartError,
+} from "../schemas/host-service-errors";
 import type { GeoSearchConsoleError } from "../schemas/search-console-errors";
 import type { AgentReadinessWorkflowPayload } from "./agent-readiness";
 import type {
@@ -30,22 +35,22 @@ export interface GeoWorkflowServiceShape {
     scanId?: string;
     promptIds?: string[];
     engines?: string[];
-  }) => Effect.Effect<{ runId: string }, unknown>;
+  }) => Effect.Effect<{ runId: string }, GeoWorkflowStartError>;
   readonly startGeoWriterRun: (
     payload: GeoWriterPayload
-  ) => Effect.Effect<{ runId: string }, unknown>;
+  ) => Effect.Effect<{ runId: string }, GeoWorkflowStartError>;
   readonly startAgentReadinessRun: (
     payload: AgentReadinessWorkflowPayload
-  ) => Effect.Effect<{ runId: string }, unknown>;
+  ) => Effect.Effect<{ runId: string }, GeoWorkflowStartError>;
 }
 
 export interface GeoContentBillingServiceShape {
   readonly gateContentBilling: (
     input: GateContentBillingInput
-  ) => Effect.Effect<ContentBillingReservation, unknown>;
+  ) => Effect.Effect<ContentBillingReservation, GeoBillingError>;
   readonly finalizeContentBilling: (
     input: FinalizeContentBillingInput
-  ) => Effect.Effect<void, unknown>;
+  ) => Effect.Effect<void, GeoBillingError>;
 }
 
 export interface GeoEntitlementServiceShape {
@@ -58,7 +63,7 @@ export interface GeoEntitlementServiceShape {
    */
   readonly checkScanBilling: (
     organizationId: string
-  ) => Effect.Effect<ContentBillingReservation, unknown>;
+  ) => Effect.Effect<ContentBillingReservation, GeoBillingError>;
 }
 
 export interface GeoCodingAgentAccessServiceShape {
@@ -71,6 +76,6 @@ export interface GeoGenerationServiceShape {
   readonly addActiveGeneration: (
     organizationId: string,
     generation: ActiveGeneration
-  ) => Effect.Effect<void, unknown>;
+  ) => Effect.Effect<void, GeoGenerationTrackingError>;
   readonly generateRunId: (triggerId: string) => Effect.Effect<string>;
 }

@@ -10,10 +10,14 @@ import { isServedBySite } from "../src/utils/ingest-sites";
 const postgres = new PGlite();
 const database = drizzle(postgres, { schema: { sites, siteDeployments } });
 const cache = new Map<string, unknown>();
+const redisReads: string[] = [];
 mock.module("@notra/db/drizzle", () => ({ db: database }));
 mock.module("@notra/ai/utils/redis", () => ({
   redis: {
-    get: async (key: string) => cache.get(key) ?? null,
+    get: async (key: string) => {
+      redisReads.push(key);
+      return cache.get(key) ?? null;
+    },
     set: async (key: string, value: unknown) => {
       cache.set(key, value);
     },
@@ -153,4 +157,17 @@ test("turning analytics off invalidates the site token right away", async () => 
   );
   await invalidateIngestSiteCaches("site-b", "org-b");
   expect(await loadIngestSite("site-b")).toBeNull();
+});
+
+test("concurrent ingest requests for an uncached site share one lookup", async () => {
+  await postgres.exec(
+    "UPDATE sites SET analytics_enabled = true WHERE id = 'site-b'"
+  );
+  await invalidateIngestSiteCaches("site-b", "org-b");
+  redisReads.length = 0;
+  const loaded = await Promise.all(
+    Array.from({ length: 5 }, () => loadIngestSite("site-b"))
+  );
+  expect(loaded.every((site) => site?.id === "site-b")).toBe(true);
+  expect(redisReads).toEqual([`${GEO_INGEST_SITE_CACHE_PREFIX}:site-b`]);
 });

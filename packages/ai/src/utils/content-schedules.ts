@@ -24,6 +24,7 @@ import {
   contentTriggers,
   githubIntegrations,
 } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { and, eq, inArray } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
 
@@ -206,7 +207,7 @@ export async function createContentSchedule(
       });
     }
 
-    if (isDedupeConflict(error)) {
+    if (isPgUniqueViolation(error, DEDUPE_CONSTRAINT)) {
       const raced = await findScheduleByHash(organizationId, dedupeHash);
       if (raced) {
         const [schedule] = await summarizeRows(organizationId, [raced]);
@@ -463,25 +464,4 @@ function isLookbackWindow(
       value as (typeof SCHEDULE_LOOKBACK_WINDOWS)[number]
     )
   );
-}
-
-function isDedupeConflict(error: unknown): boolean {
-  for (let current = error, depth = 0; current && depth < 6; depth++) {
-    if (typeof current === "object") {
-      const record = current as { code?: unknown; constraint?: unknown };
-      if (record.code === "23505" && record.constraint === DEDUPE_CONSTRAINT) {
-        return true;
-      }
-      if (
-        current instanceof Error &&
-        current.message.includes(DEDUPE_CONSTRAINT)
-      ) {
-        return true;
-      }
-      current = "cause" in current ? current.cause : undefined;
-      continue;
-    }
-    return false;
-  }
-  return false;
 }

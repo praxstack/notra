@@ -15,6 +15,11 @@ import {
   geoCodingAgentAccessLayer,
 } from "@notra/geo-core/geo/host-layers";
 import { geoSearchConsoleLive } from "@notra/geo-core/geo/search-console-live";
+import {
+  GeoBillingError,
+  GeoGenerationTrackingError,
+  GeoWorkflowStartError,
+} from "@notra/geo-core/schemas/host-service-errors";
 import type { GeoZdrEntitlement } from "@notra/geo-core/types/geo";
 import { Redis } from "@upstash/redis";
 import { Effect, Layer } from "effect";
@@ -38,7 +43,10 @@ function startWorkflowRun(spanName: string, path: string) {
     const runId = yield* startDashboardWorkflowEffect(
       getInternalWorkflowUrl(process.env, path),
       payload
-    ).pipe(Effect.provide(internalDashboardLive));
+    ).pipe(
+      Effect.provide(internalDashboardLive),
+      Effect.mapError((cause) => new GeoWorkflowStartError({ cause }))
+    );
     return { runId };
   });
 }
@@ -92,7 +100,7 @@ const entitlementLayer = Layer.succeed(GeoEntitlementService, {
             outputType: null,
             quotaFeatureId: FEATURES.AI_ANSWERS,
           }),
-        catch: (cause) => cause,
+        catch: (cause) => new GeoBillingError({ cause }),
       })
   ),
 });
@@ -102,7 +110,7 @@ const generationLayer = Layer.succeed(GeoGenerationService, {
     (organizationId, generation) =>
       Effect.tryPromise({
         try: () => addActiveGeneration(redis, organizationId, generation),
-        catch: (cause) => cause,
+        catch: (cause) => new GeoGenerationTrackingError({ cause }),
       })
   ),
   generateRunId: Effect.fn("GeoApiGeneration.generateRunId")((triggerId) =>

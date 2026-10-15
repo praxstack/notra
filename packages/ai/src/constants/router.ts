@@ -5,6 +5,9 @@ export const ROUTER_METADATA_KEY = "notraRouter";
 export const ROUTED_MODEL_PROVIDER = "notra-router";
 
 export const DEFAULT_PLAN_CACHE_TTL_MS = 60_000;
+/** Plan/ZDR lookup failures are retried after this instead of the full TTL. */
+export const ORGANIZATION_LOOKUP_FAILURE_TTL_MS = 5000;
+export const ORGANIZATION_LOOKUP_CACHE_CAPACITY = 10_000;
 export const DEFAULT_CREDIT_CHECK_TTL_MS = 30_000;
 export const DEFAULT_UNAVAILABLE_TTL_MS = 5 * 60_000;
 export const ROUTE_USAGE_LOOKUP_CONCURRENCY = 4;

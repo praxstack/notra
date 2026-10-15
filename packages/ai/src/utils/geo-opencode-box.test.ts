@@ -97,6 +97,25 @@ describe("GEO Box creation and recovery", () => {
     expect(requests[1]?.url).toEndWith("/v2/box/box-1");
   });
 
+  test("stops waiting for a creating box as soon as the caller cancels", async () => {
+    const controller = new AbortController();
+    const failure = new Error("cancelled while creating");
+    responses = [
+      () => Response.json({ id: "box-1", status: "creating" }),
+      () => new Response(null, { status: 204 }),
+    ];
+    const pending = create(controller.signal);
+    await setImmediate();
+    const abortedAt = performance.now();
+    controller.abort(failure);
+    await expect(pending).rejects.toBe(failure);
+    expect(performance.now() - abortedAt).toBeLessThan(500);
+    expect(requests.map((request) => request.init?.method)).toEqual([
+      "POST",
+      "DELETE",
+    ]);
+  });
+
   test("cleans up a box that enters the error state", async () => {
     responses = [
       () => Response.json({ id: "box-1", status: "error" }),

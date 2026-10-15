@@ -5,6 +5,7 @@ import {
   normalizeTriggerConfig,
 } from "@notra/ai/utils/trigger-hash";
 import { contentTriggers } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { DateTime, Effect } from "effect";
 
@@ -24,7 +25,6 @@ import {
   filterEventTriggersByRepositoryIds,
   safeSerializeEventTrigger,
 } from "../utils/event-triggers";
-import { isPgUniqueViolation } from "../utils/pg-errors";
 import {
   ensureTriggerTargetsExist,
   getRepositoryLabels,

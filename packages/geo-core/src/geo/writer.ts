@@ -584,7 +584,9 @@ const approveAndStartGeoWriterInScope = Effect.fn("geo.writer.startInScope")(
         runId,
       })
       .pipe(
-        Effect.mapError((cause) => new GeoWriterStartError({ cause })),
+        Effect.mapError(
+          (error) => new GeoWriterStartError({ cause: error.cause })
+        ),
         Effect.catch((error) =>
           markBriefFailed(
             scope,
@@ -735,10 +737,10 @@ export const planGeoContentBrief = Effect.fn("geo.writer.plan")(function* (
     })
     .pipe(
       Effect.mapError(
-        (cause) =>
+        (error) =>
           new GeoWriterPlanError({
             message: "Failed to reserve AI credits for planning",
-            cause,
+            cause: error.cause,
           })
       )
     );

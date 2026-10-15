@@ -17,14 +17,31 @@ import type {
 import { urlHost } from "@notra/geo-core/utils/url-host";
 import { listMountedAreas } from "@notra/sites-core/utils/mounts";
 import { and, eq } from "drizzle-orm";
+import { Cache, Effect, Exit } from "effect";
 
-const memory = new Map<string, { site: GeoIngestSite | null; until: number }>();
+/**
+ * In-process layer in front of Redis on the hot ingest path. Concurrent
+ * misses for one site share a single lookup; the oldest entries are evicted
+ * at capacity; failed lookups are not kept.
+ */
+const memory = Effect.runSync(
+  Cache.makeWith(
+    // Callers sit behind a Promise boundary; a rejected lookup surfaces to
+    // them unchanged and is not cached.
+    (siteId: string) => Effect.promise(() => lookupIngestSite(siteId)),
+    {
+      capacity: GEO_INGEST_SITE_MEMORY_MAX_ENTRIES,
+      timeToLive: (exit) =>
+        Exit.isSuccess(exit) ? GEO_INGEST_SITE_MEMORY_TTL_MS : 0,
+    }
+  )
+);
 
 export async function invalidateIngestSiteCaches(
   siteId: string,
   organizationId: string
 ): Promise<void> {
-  memory.delete(siteId);
+  await Effect.runPromise(Cache.invalidate(memory, siteId));
   const client = redis;
   if (client) {
     await client.del(
@@ -63,20 +80,8 @@ async function cached<T>(
   return value;
 }
 
-export async function loadIngestSite(
-  siteId: string
-): Promise<GeoIngestSite | null> {
-  const now = Date.now();
-  const hit = memory.get(siteId);
-  if (hit && hit.until > now) {
-    return hit.site;
-  }
-  const site = await lookupIngestSite(siteId);
-  if (memory.size >= GEO_INGEST_SITE_MEMORY_MAX_ENTRIES) {
-    memory.clear();
-  }
-  memory.set(siteId, { site, until: now + GEO_INGEST_SITE_MEMORY_TTL_MS });
-  return site;
+export function loadIngestSite(siteId: string): Promise<GeoIngestSite | null> {
+  return Effect.runPromise(Cache.get(memory, siteId));
 }
 
 function lookupIngestSite(siteId: string): Promise<GeoIngestSite | null> {

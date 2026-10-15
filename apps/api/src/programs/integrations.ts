@@ -3,6 +3,7 @@ import {
   linearIntegrations,
   repositoryOutputs,
 } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { and, asc, eq } from "drizzle-orm";
 import { Effect } from "effect";
 
@@ -32,7 +33,6 @@ import {
   generateGitHubWebhookSecret,
   validateGitHubRepositoryAccess,
 } from "../utils/github-integrations";
-import { isConstraintViolation, isPgUniqueViolation } from "../utils/pg-errors";
 import {
   deleteQstashSchedulesForTriggers,
   disableTriggersAndDelete,
@@ -52,13 +52,7 @@ const write = <A>(operation: () => Promise<A>) =>
   Effect.tryPromise({
     try: operation,
     catch: (cause) => {
-      if (
-        isPgUniqueViolation(cause) ||
-        isConstraintViolation(
-          cause,
-          "githubIntegrations_organization_owner_repo_uidx"
-        )
-      ) {
+      if (isPgUniqueViolation(cause)) {
         return new IntegrationDuplicateError();
       }
 

@@ -6,6 +6,7 @@ import {
   updateBrandAnalysisJob,
 } from "@notra/ai/jobs/brand-analysis";
 import { brandSettings, geoContentBriefs, projects } from "@notra/db/schema";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { invalidateGeoIngestHostsCacheForBrand } from "@notra/geo-core/geo/ingest";
 import { isSameUrl } from "@notra/utils/url";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
@@ -44,7 +45,6 @@ import {
   brandIdentityQueryColumns,
   selectBrandIdentityColumns,
 } from "../utils/brand-identities";
-import { isConstraintViolation, isPgUniqueViolation } from "../utils/pg-errors";
 import {
   deleteQstashSchedulesForTriggers,
   disableTriggersAndDelete,
@@ -70,7 +70,7 @@ const brandIdentityInOrganization = (input: {
 
 const mapCreateInsertError = (cause: unknown) => {
   if (isPgUniqueViolation(cause)) {
-    if (isConstraintViolation(cause, "brandSettings_org_name_uidx")) {
+    if (isPgUniqueViolation(cause, "brandSettings_org_name_uidx")) {
       return new BrandIdentityNameDuplicateError();
     }
 
@@ -96,7 +96,7 @@ async function insertBrandIdentity(
       .values(values)
       .returning(selectBrandIdentityColumns());
   } catch (error) {
-    if (!isConstraintViolation(error, "brandSettings_org_default_uidx")) {
+    if (!isPgUniqueViolation(error, "brandSettings_org_default_uidx")) {
       throw error;
     }
 
@@ -435,10 +435,7 @@ export const patchBrandIdentity = Effect.fn("brandIdentities.patch")(function* (
     catch: (cause) => {
       // A concurrent default switch also violates a unique index
       // (brandSettings_org_default_uidx); only the name index is a duplicate.
-      if (
-        isPgUniqueViolation(cause) &&
-        isConstraintViolation(cause, "brandSettings_org_name_uidx")
-      ) {
+      if (isPgUniqueViolation(cause, "brandSettings_org_name_uidx")) {
         return new BrandIdentityNameDuplicateError();
       }
 

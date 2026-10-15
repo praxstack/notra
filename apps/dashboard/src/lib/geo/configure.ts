@@ -12,6 +12,11 @@ import {
   geoCodingAgentAccessLayer,
 } from "@notra/geo-core/geo/host-layers";
 import { geoSearchConsoleLive } from "@notra/geo-core/geo/search-console-live";
+import {
+  GeoBillingError,
+  GeoGenerationTrackingError,
+  GeoWorkflowStartError,
+} from "@notra/geo-core/schemas/host-service-errors";
 import { Effect, Layer } from "effect";
 
 import { addActiveGeneration, generateRunId } from "@/lib/generations/tracking";
@@ -23,7 +28,7 @@ const workflowLayer = Layer.succeed(GeoWorkflowService, {
       Effect.tryPromise({
         try: async () =>
           (await import("@/lib/workflows/start")).startGeoScanRun(payload),
-        catch: (cause) => cause,
+        catch: (cause) => new GeoWorkflowStartError({ cause }),
       })
   ),
   startGeoWriterRun: Effect.fn("GeoDashboardWorkflow.startGeoWriterRun")(
@@ -31,7 +36,7 @@ const workflowLayer = Layer.succeed(GeoWorkflowService, {
       Effect.tryPromise({
         try: async () =>
           (await import("@/lib/workflows/start")).startGeoWriterRun(payload),
-        catch: (cause) => cause,
+        catch: (cause) => new GeoWorkflowStartError({ cause }),
       })
   ),
   startAgentReadinessRun: Effect.fn(
@@ -40,7 +45,7 @@ const workflowLayer = Layer.succeed(GeoWorkflowService, {
     Effect.tryPromise({
       try: async () =>
         (await import("@/lib/workflows/start")).startAgentReadinessRun(payload),
-      catch: (cause) => cause,
+      catch: (cause) => new GeoWorkflowStartError({ cause }),
     })
   ),
 });
@@ -52,7 +57,7 @@ const billingLayer = Layer.succeed(GeoContentBillingService, {
         (
           await import("@/workflows/steps/content-generation-steps")
         ).gateContentBilling(input),
-      catch: (cause) => cause,
+      catch: (cause) => new GeoBillingError({ cause }),
     })
   ),
   finalizeContentBilling: Effect.fn("GeoDashboardBilling.finalize")((input) =>
@@ -61,7 +66,7 @@ const billingLayer = Layer.succeed(GeoContentBillingService, {
         (
           await import("@/workflows/steps/content-generation-steps")
         ).finalizeContentBilling(input),
-      catch: (cause) => cause,
+      catch: (cause) => new GeoBillingError({ cause }),
     })
   ),
 });
@@ -80,7 +85,7 @@ const entitlementLayer = Layer.succeed(GeoEntitlementService, {
             outputType: null,
             quotaFeatureId: FEATURES.AI_ANSWERS,
           }),
-        catch: (cause) => cause,
+        catch: (cause) => new GeoBillingError({ cause }),
       })
   ),
 });
@@ -90,7 +95,7 @@ const generationLayer = Layer.succeed(GeoGenerationService, {
     (organizationId, generation) =>
       Effect.tryPromise({
         try: () => addActiveGeneration(organizationId, generation),
-        catch: (cause) => cause,
+        catch: (cause) => new GeoGenerationTrackingError({ cause }),
       })
   ),
   generateRunId: Effect.fn("GeoDashboardGeneration.generateRunId")(

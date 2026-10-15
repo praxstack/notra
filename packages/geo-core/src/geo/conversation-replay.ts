@@ -43,8 +43,11 @@ export const runGeoConversationReplay = Effect.fn("geo.runConversationReplay")(
       })
       .pipe(
         Effect.mapError(
-          (cause) =>
-            new GeoScanError({ message: "Failed to reserve AI credits", cause })
+          (error) =>
+            new GeoScanError({
+              message: "Failed to reserve AI credits",
+              cause: error.cause,
+            })
         )
       );
     if (!gate.allowed) {

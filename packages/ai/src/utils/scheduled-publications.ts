@@ -9,6 +9,7 @@ import type {
   ScheduledPublicationDestinationConfig,
   ScheduledPublicationResult,
 } from "@notra/db/types/scheduled-publications";
+import { isPgUniqueViolation } from "@notra/db/utils/pg-errors";
 import { isDemoMode } from "@notra/utils/demo-mode";
 import {
   and,
@@ -71,17 +72,6 @@ export const scheduledPublicationViewColumns = {
   publishedAt: scheduledPublications.publishedAt,
   createdAt: scheduledPublications.createdAt,
 };
-
-/** Drizzle wraps driver errors in DrizzleQueryError, so walk the cause chain. */
-function isUniqueViolation(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-  if ("code" in error && error.code === "23505") {
-    return true;
-  }
-  return "cause" in error && isUniqueViolation(error.cause);
-}
 
 function toScheduledPublicationView(
   row: ScheduledPublicationRowForView
@@ -399,7 +389,7 @@ export async function schedulePostPublication(
       return outcome;
     }
   } catch (error) {
-    if (isUniqueViolation(error)) {
+    if (isPgUniqueViolation(error)) {
       return { ok: false, reason: "conflict" };
     }
     throw error;
@@ -543,7 +533,7 @@ export async function retryScheduledPublication(params: {
     await wakeScheduledPublications(row.postId, now);
     return { ok: true, postId: row.postId };
   } catch (error) {
-    if (isUniqueViolation(error)) {
+    if (isPgUniqueViolation(error)) {
       return { ok: false, reason: "conflict" };
     }
     throw error;
