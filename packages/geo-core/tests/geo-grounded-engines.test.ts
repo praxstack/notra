@@ -10,6 +10,8 @@ import {
   isGeoWebSearchEngine,
   isPartialGeoScanEngineScope,
   resolveGeoGroundedZdrMode,
+  resolveTrackedEngines,
+  scopeGeoScanEngines,
 } from "../src/utils/geo-engines";
 import {
   hasGroundedVariant,
@@ -18,8 +20,11 @@ import {
 } from "../src/utils/geo-grounded-engines";
 import {
   buildGeoModelCatalogFromFeed,
+  geoDefaultEngines,
+  geoEnginesForAudience,
   seedGeoModelCatalog,
 } from "../src/utils/geo-model-catalog";
+import { isGeoOlostepEngine } from "../src/utils/geo-olostep";
 
 const catalog: GeoModelCatalog = {
   providers: [...GEO_MODEL_PROVIDERS],
@@ -363,6 +368,78 @@ describe("selected grounded engines", () => {
         delete process.env.PERPLEXITY_API_KEY;
       } else {
         process.env.PERPLEXITY_API_KEY = previous;
+      }
+    }
+  });
+});
+
+describe("released consumer apps", () => {
+  const unreleased = [
+    "perplexity/perplexity",
+    "google/ai-mode",
+    "microsoft/copilot",
+  ];
+
+  test("only ChatGPT and Gemini ship, even from stale settings", () => {
+    const previous = {
+      olostep: process.env.GEO_OLOSTEP_API_KEY_ENV,
+      serpapi: process.env.SERPAPI_API_KEY,
+    };
+    try {
+      process.env.GEO_OLOSTEP_API_KEY_ENV = "test-key";
+      process.env.SERPAPI_API_KEY = "test-key";
+      const feed = unreleased.map((id) => ({
+        id,
+        name: id,
+        owned_by: id.split("/")[0] ?? "",
+        type: "language",
+        zdr: "none" as const,
+      }));
+      for (const available of [
+        seedGeoModelCatalog(),
+        buildGeoModelCatalogFromFeed(feed),
+      ]) {
+        const ids = available.models.map((model) => model.id);
+        expect(ids.filter(isGeoOlostepEngine)).toEqual([
+          "openai/chatgpt",
+          "google/gemini",
+        ]);
+        expect(ids).toContain("google/ai-overview");
+        expect(
+          resolveTrackedEngines(available, [...unreleased, "openai/chatgpt"])
+        ).toEqual(["openai/chatgpt"]);
+        expect(resolveTrackedEngines(available, unreleased)).toEqual(
+          geoDefaultEngines(available)
+        );
+        expect(
+          scopeGeoScanEngines(available, ["openai/chatgpt"], unreleased)
+        ).toEqual([]);
+      }
+      const seeded = seedGeoModelCatalog();
+      expect(seeded.models.map((model) => model.id)).toContain(
+        "perplexity/sonar"
+      );
+      expect(geoEnginesForAudience(seeded, "general")).toEqual([
+        "anthropic/claude-opus-5.5",
+        "openai/chatgpt",
+        "google/gemini",
+      ]);
+      expect(geoEnginesForAudience(seeded, "commerce")).toEqual([
+        "anthropic/claude-opus-5.5",
+        "openai/chatgpt",
+        "google/gemini",
+        "google/ai-overview",
+      ]);
+    } finally {
+      for (const [key, value] of [
+        ["GEO_OLOSTEP_API_KEY_ENV", previous.olostep],
+        ["SERPAPI_API_KEY", previous.serpapi],
+      ] as const) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
       }
     }
   });

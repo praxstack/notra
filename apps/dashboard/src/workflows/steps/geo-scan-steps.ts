@@ -1,6 +1,11 @@
 import "@/workflows/runtime";
 import { flushGeoLog } from "@notra/ai/evlog";
 import { publishGeoVisibilityChange } from "@notra/geo-core/geo/live";
+import {
+  collectGeoOlostepResults,
+  pendingGeoOlostepBatches,
+  submitGeoOlostepBatches,
+} from "@notra/geo-core/geo/olostep";
 import { runGeoScanPersonaBatch } from "@notra/geo-core/geo/persona-scan";
 import {
   finalizeGeoScanProject,
@@ -20,6 +25,10 @@ import type {
   GeoScanProjectPlanResult,
   GeoScanProjectTotals,
 } from "@notra/geo-core/types/geo";
+import type {
+  GeoOlostepQuery,
+  GeoOlostepResults,
+} from "@notra/geo-core/types/geo-olostep";
 import { flushPostHogServer } from "@notra/posthog/server";
 import { Effect } from "effect";
 
@@ -75,7 +84,12 @@ async function runScanBatch<E>(
 
 export async function listGeoScanProjectsStep(
   organizationId: string,
-  options: { projectId?: string; claimedAt?: string }
+  options: {
+    projectId?: string;
+    projectIds?: string[];
+    claimedAt?: string;
+    manual?: boolean;
+  }
 ): Promise<string[]> {
   "use step";
   try {
@@ -83,6 +97,7 @@ export async function listGeoScanProjectsStep(
       listGeoScanProjects(organizationId, {
         projectId: options.projectId,
         claimedAt: parseClaimedAt(options.claimedAt),
+        manual: options.manual,
       }).pipe(Effect.provide(geoCoreDashboardLayer))
     );
   } finally {
@@ -99,6 +114,7 @@ export async function prepareGeoScanProjectStep(
     retried: boolean;
     promptIds?: string[];
     engines?: string[];
+    manual?: boolean;
   }
 ): Promise<GeoScanProjectPlanResult> {
   "use step";
@@ -111,6 +127,7 @@ export async function prepareGeoScanProjectStep(
         promptIds: options.promptIds,
         engines: options.engines,
         retried: options.retried,
+        manual: options.manual,
       }).pipe(Effect.provide(geoCoreDashboardLayer))
     );
     if (result.status === "planned") {
@@ -164,6 +181,29 @@ export async function runGeoScanTaskBatchStep(
 ): Promise<GeoScanBatchOutcome> {
   "use step";
   return await runScanBatch(context, runGeoScanTaskBatch(context, tasks));
+}
+
+/** Submits the queries at `indexes`; returns the created batch ids. */
+export async function submitGeoOlostepBatchesStep(
+  queries: GeoOlostepQuery[],
+  indexes: number[]
+): Promise<string[]> {
+  "use step";
+  return await Effect.runPromise(submitGeoOlostepBatches(queries, indexes));
+}
+
+export async function pendingGeoOlostepBatchesStep(
+  batchIds: string[]
+): Promise<string[]> {
+  "use step";
+  return await Effect.runPromise(pendingGeoOlostepBatches(batchIds));
+}
+
+export async function collectGeoOlostepResultsStep(
+  batchIds: string[]
+): Promise<GeoOlostepResults> {
+  "use step";
+  return await Effect.runPromise(collectGeoOlostepResults(batchIds));
 }
 
 export async function runGeoScanSequenceBatchStep(

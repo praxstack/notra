@@ -9,6 +9,7 @@ import {
   sortKnownEngines,
 } from "@notra/geo-core/utils/geo-engines";
 import { geoModelsForProvider } from "@notra/geo-core/utils/geo-model-catalog";
+import { isGeoOlostepEngine } from "@notra/geo-core/utils/geo-olostep";
 import { ConfirmDialog } from "@notra/ui/components/shared/confirm-dialog";
 import { Badge } from "@notra/ui/components/ui/badge";
 import { Label } from "@notra/ui/components/ui/label";
@@ -245,18 +246,53 @@ export function GeoEnginePicker({
     setPendingApproval(null);
   };
 
+  // Enforcing ZDR turns off models without a ZDR host and, when nothing is
+  // left, turns on the default ZDR models. Say which, since it changes what a
+  // scan runs and costs.
+  const announceZdrModelChanges = useCallback(
+    (nextSelected: readonly string[]) => {
+      const labelsFor = (ids: readonly string[]) =>
+        ids
+          .map(
+            (engine) =>
+              catalog.models.find((model) => model.id === engine)?.label ??
+              engine
+          )
+          .join(", ");
+      const before = new Set(selected);
+      const after = new Set(nextSelected);
+      const removed = selected.filter((engine) => !after.has(engine));
+      const added = nextSelected.filter((engine) => !before.has(engine));
+      if (removed.length === 0 && added.length === 0) {
+        return;
+      }
+      const description = [
+        removed.length > 0
+          ? t("zdrModelsRemoved", { models: labelsFor(removed) })
+          : null,
+        added.length > 0
+          ? t("zdrModelsAdded", { models: labelsFor(added) })
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
+      toast.info(t("zdrModelsChanged"), { description });
+    },
+    [catalog, selected, t]
+  );
+
   const confirmDisable = () => {
     if (!pendingDisable) {
       return;
     }
     if (pendingDisable.enforceZdr) {
       onEnforceZdrChange(true);
-      onChange(
-        applyGeoZdrEngineFallback(catalog, selected, {
-          enforceZdr: true,
-          nonZdrApprovedEngines: nonZdrApproved,
-        })
-      );
+      const nextSelected = applyGeoZdrEngineFallback(catalog, selected, {
+        enforceZdr: true,
+        nonZdrApprovedEngines: nonZdrApproved,
+      });
+      onChange(nextSelected);
+      announceZdrModelChanges(nextSelected);
       const removedIds = new Set(pendingDisable.ids);
       onNonZdrApprovedChange(
         nonZdrApproved.filter((id) => !removedIds.has(id))
@@ -284,10 +320,18 @@ export function GeoEnginePicker({
           return;
         }
         onChange(nextSelected);
+        announceZdrModelChanges(nextSelected);
       }
       onEnforceZdrChange(next);
     },
-    [catalog, nonZdrApproved, onChange, onEnforceZdrChange, selected]
+    [
+      announceZdrModelChanges,
+      catalog,
+      nonZdrApproved,
+      onChange,
+      onEnforceZdrChange,
+      selected,
+    ]
   );
 
   useEffect(() => {
@@ -437,7 +481,11 @@ export function GeoEnginePicker({
 
       <ConfirmDialog
         confirmLabel={t("enableWithoutZdr")}
-        description={t("noZdrDescription")}
+        description={
+          pendingApproval && isGeoOlostepEngine(pendingApproval.id)
+            ? t("noZdrDescriptionConsumerApp", { model: pendingApproval.label })
+            : t("noZdrDescription")
+        }
         onConfirm={approvePending}
         onOpenChange={(open) => {
           if (!open) {

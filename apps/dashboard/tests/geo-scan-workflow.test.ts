@@ -1,4 +1,12 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  setSystemTime,
+  test,
+} from "bun:test";
 
 import { createPersonaSnapshot } from "@notra/db/utils/persona-snapshot";
 import {
@@ -8,6 +16,11 @@ import {
   GEO_SCAN_SEQUENCE_BATCH_SIZE,
   GEO_SCAN_TASK_BATCH_SIZE,
 } from "@notra/geo-core/constants/geo";
+import {
+  GEO_OLOSTEP_MAX_WAIT_MS,
+  GEO_OLOSTEP_RESULT_GRACE_MS,
+} from "@notra/geo-core/constants/geo-olostep";
+import type { GeoOlostepResults } from "@notra/geo-core/types/geo-olostep";
 import { EMPTY_AGENT_TOKEN_USAGE } from "@notra/geo-core/utils/token-usage";
 import { FatalError } from "workflow";
 
@@ -23,6 +36,9 @@ const personaBatch = mock<typeof Steps.runGeoScanPersonaBatchStep>();
 const renewClaim = mock<typeof Steps.renewGeoScanClaimStep>();
 const finalize = mock<typeof Steps.finalizeGeoScanProjectStep>();
 const trackRetry = mock<typeof Steps.trackGeoScanRetryScheduledStep>();
+const submitOlostep = mock<typeof Steps.submitGeoOlostepBatchesStep>();
+const pendingOlostep = mock<typeof Steps.pendingGeoOlostepBatchesStep>();
+const collectOlostep = mock<typeof Steps.collectGeoOlostepResultsStep>();
 const sleep = mock(async (_delay: string) => undefined);
 const appendLog = mock(async (_input: AppendAutomationLogInput) => undefined);
 const fetchRetention = mock(async () => 30 as const);
@@ -68,6 +84,9 @@ mock.module("../src/workflows/steps/geo-scan-steps", () => ({
   renewGeoScanClaimStep: renewClaim,
   finalizeGeoScanProjectStep: finalize,
   trackGeoScanRetryScheduledStep: trackRetry,
+  submitGeoOlostepBatchesStep: submitOlostep,
+  pendingGeoOlostepBatchesStep: pendingOlostep,
+  collectGeoOlostepResultsStep: collectOlostep,
 }));
 const { geoScanWorkflow } = await import("../src/workflows/geo-scan");
 
@@ -92,6 +111,9 @@ beforeEach(() => {
     renewClaim,
     finalize,
     trackRetry,
+    submitOlostep,
+    pendingOlostep,
+    collectOlostep,
     sleep,
     appendLog,
     fetchRetention,
@@ -139,6 +161,9 @@ beforeEach(() => {
   }));
   trackRetry.mockResolvedValue(undefined);
   sleep.mockResolvedValue(undefined);
+  submitOlostep.mockResolvedValue([]);
+  pendingOlostep.mockResolvedValue([]);
+  collectOlostep.mockResolvedValue({});
 });
 
 function personaOnlyPlan() {
@@ -639,5 +664,185 @@ describe("GEO scan workflow orchestration", () => {
       "failed",
       "failed",
     ]);
+  });
+});
+
+describe("Olostep late results", () => {
+  beforeEach(() => {
+    setSystemTime(new Date("2026-10-15T09:00:00Z"));
+    const plan = scanPlan("project-test", 2, 0);
+    plan.claimedAt = new Date().toISOString();
+    for (const task of plan.tasks) {
+      task.engine = "microsoft/copilot";
+    }
+    prepare.mockResolvedValue({ status: "planned", plan });
+    submitOlostep.mockImplementation(async () =>
+      submitOlostep.mock.calls.length === 1
+        ? ["original-batch"]
+        : ["retry-batch"]
+    );
+    pendingOlostep.mockResolvedValue([]);
+    sleep.mockImplementation(async () => {
+      setSystemTime(Date.now() + 30_000);
+    });
+    renewClaim.mockImplementation(
+      async (_projectId, _oldToken, newToken) => newToken
+    );
+    taskBatch.mockImplementation(async (_context, batch) => {
+      const checks = batch.filter(
+        (task) => task.engine !== "microsoft/copilot" || task.olostepRetrieveId
+      ).length;
+      return {
+        checks,
+        mentions: 0,
+        dropped: batch.length - checks,
+        usage: EMPTY_AGENT_TOKEN_USAGE,
+      };
+    });
+  });
+
+  afterEach(() => setSystemTime());
+
+  test("a result arriving after completed does not start a paid retry", async () => {
+    const startedAt = Date.now();
+    collectOlostep.mockImplementation(async (): Promise<GeoOlostepResults> =>
+      Date.now() > startedAt
+        ? { "0": "first-answer", "1": "late-answer" }
+        : { "0": "first-answer" }
+    );
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(submitOlostep).toHaveBeenCalledTimes(1);
+    expect(sleep).toHaveBeenCalled();
+    expect(
+      taskBatch.mock.calls[0]?.[1].map((task) => task.olostepRetrieveId)
+    ).toEqual(["first-answer", "late-answer"]);
+  });
+
+  test("an original batch can recover a result while its retry has none", async () => {
+    collectOlostep.mockImplementation(
+      async (batchIds): Promise<GeoOlostepResults> => {
+        if (!batchIds.includes("original-batch")) {
+          return {};
+        }
+        return submitOlostep.mock.calls.length === 2
+          ? { "0": "first-answer", "1": "late-original-answer" }
+          : { "0": "first-answer" };
+      }
+    );
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(submitOlostep).toHaveBeenCalledTimes(2);
+    expect(submitOlostep.mock.calls[1]?.[1]).toEqual([1]);
+    expect(
+      taskBatch.mock.calls[0]?.[1].map((task) => task.olostepRetrieveId)
+    ).toEqual(["first-answer", "late-original-answer"]);
+  });
+
+  test("already available answers need no polling delay or retry", async () => {
+    collectOlostep.mockResolvedValue({
+      "0": "first-answer",
+      "1": "second-answer",
+    });
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(submitOlostep).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  test("a last check before resubmission catches a just-published result", async () => {
+    const startedAt = Date.now();
+    let readsAtDeadline = 0;
+    collectOlostep.mockImplementation(async (): Promise<GeoOlostepResults> => {
+      if (Date.now() - startedAt >= GEO_OLOSTEP_RESULT_GRACE_MS) {
+        readsAtDeadline += 1;
+      }
+      return readsAtDeadline >= 2
+        ? { "0": "first-answer", "1": "just-published-answer" }
+        : { "0": "first-answer" };
+    });
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(submitOlostep).toHaveBeenCalledTimes(1);
+    expect(
+      taskBatch.mock.calls[0]?.[1].map((task) => task.olostepRetrieveId)
+    ).toEqual(["first-answer", "just-published-answer"]);
+  });
+
+  test("retains an earlier handle across temporarily empty result listings", async () => {
+    const startedAt = Date.now();
+    collectOlostep.mockImplementation(async (): Promise<GeoOlostepResults> => {
+      if (Date.now() === startedAt) {
+        return { "0": "first-answer" };
+      }
+      return Date.now() - startedAt >= 60_000 ? { "1": "late-answer" } : {};
+    });
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(submitOlostep).toHaveBeenCalledTimes(1);
+    expect(
+      taskBatch.mock.calls[0]?.[1].map((task) => task.olostepRetrieveId)
+    ).toEqual(["first-answer", "late-answer"]);
+  });
+
+  test("permanently missing items get only one retry and a bounded grace period", async () => {
+    const startedAt = Date.now();
+    collectOlostep.mockResolvedValue({ "0": "first-answer" });
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(submitOlostep).toHaveBeenCalledTimes(2);
+    expect(submitOlostep.mock.calls.map(([, indexes]) => indexes)).toEqual([
+      [0, 1],
+      [1],
+    ]);
+    expect(Date.now() - startedAt).toBe(2 * GEO_OLOSTEP_RESULT_GRACE_MS);
+    expect(
+      taskBatch.mock.calls[0]?.[1].map((task) => task.olostepRetrieveId)
+    ).toEqual(["first-answer", undefined]);
+  });
+
+  test("a provider that stays pending cannot extend the wait indefinitely", async () => {
+    const startedAt = Date.now();
+    collectOlostep.mockResolvedValue({ "0": "first-answer" });
+    pendingOlostep.mockImplementation(async (batchIds) => batchIds);
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(submitOlostep).toHaveBeenCalledTimes(2);
+    expect(Date.now() - startedAt).toBe(
+      2 * (GEO_OLOSTEP_MAX_WAIT_MS + GEO_OLOSTEP_RESULT_GRACE_MS)
+    );
+    expect(renewClaim).toHaveBeenCalledTimes(2);
+    expect(finalize.mock.calls[0]?.[3]).toBe(renewClaim.mock.calls.at(-1)?.[2]);
+  });
+
+  test("losing the claim during the grace period prevents a paid retry", async () => {
+    const plan = scanPlan("project-test", 3, 0);
+    plan.claimedAt = new Date(
+      Date.now() - GEO_SCAN_CLAIM_RENEW_AFTER_MS + 30_000
+    ).toISOString();
+    for (const task of plan.tasks.slice(0, 2)) {
+      task.engine = "microsoft/copilot";
+    }
+    prepare.mockResolvedValue({ status: "planned", plan });
+    collectOlostep.mockResolvedValue({ "0": "first-answer" });
+    renewClaim.mockRejectedValue(new Error("Scan claim lost"));
+
+    expect(await geoScanWorkflow({ organizationId: "org-test" })).toMatchObject(
+      {
+        checks: 1,
+      }
+    );
+
+    expect(submitOlostep).toHaveBeenCalledTimes(1);
+    expect(renewClaim).toHaveBeenCalledTimes(1);
+    expect(finalize.mock.calls[0]?.[2]).toBe("failed");
+    expect(taskBatch).toHaveBeenCalledTimes(1);
   });
 });

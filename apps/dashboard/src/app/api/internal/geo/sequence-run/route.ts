@@ -19,8 +19,11 @@ const GEO_FAILURE_STATUS = 422;
  * process — so the work has to happen here, exactly as it does for the
  * dashboard's own `geo.sequenceRun` procedure.
  *
- * There is no GEO sequence workflow to hand off to, so this runs the sequence
- * to completion and only then answers, with the run's real result.
+ * API engines run to completion here and the answer carries their real
+ * result. Consumer apps are handed to a scoped GEO scan instead, whose id
+ * comes back as `queuedScanId` for the caller to poll. It used to answer
+ * `{ runId }` with a freshly minted id that identified nothing, which told a
+ * caller neither what happened nor what to poll.
  *
  * TODO(Phase 6 — durable workflow): move this onto a real GEO sequence
  * workflow so the API can hand off and return a run id a client can follow,

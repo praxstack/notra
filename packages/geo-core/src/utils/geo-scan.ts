@@ -17,6 +17,7 @@ import type {
   GeoScanSizeInput,
 } from "../types/geo";
 import { isGeoBoxCodingAgent } from "./geo-coding-agents";
+import { isGeoOlostepEngine } from "./geo-olostep";
 
 function toTimestamp(value: Date | string | null | undefined): number | null {
   if (!value) {
@@ -244,7 +245,9 @@ export function calcGeoScanSize(input: GeoScanSizeInput): number {
     groundedCount +
     engines.filter(
       (engine) =>
-        engine === GEO_OPENCODE_ENGINE_ID || isGeoBoxCodingAgent(engine)
+        engine === GEO_OPENCODE_ENGINE_ID ||
+        isGeoBoxCodingAgent(engine) ||
+        isGeoOlostepEngine(engine)
     ).length;
   const sequenceTurns = scanSourceLanguage
     ? input.sequences

@@ -21,6 +21,7 @@ import {
   getGeoModelCatalogEntry,
   isGeoEngineZdrCapable,
 } from "./geo-model-catalog";
+import { isGeoOlostepEngine } from "./geo-olostep";
 
 /** Known catalog ids, in catalog order. Unknown ids are dropped. */
 export function sortKnownEngines(
@@ -89,15 +90,16 @@ export function isPartialGeoScanEngineScope(
 }
 
 /**
- * Bare catalog calls that still search the web: Google AI Overview (SerpApi)
- * and Box coding agents. Cursor is excluded — it runs with no tools.
+ * Bare catalog calls that still search the web: Google AI Overview (SerpApi),
+ * consumer apps scraped through Olostep, and Box coding agents. Cursor is
+ * excluded — it runs with no tools.
  */
 export function isGeoNativeSearchEngine(
   catalog: GeoModelCatalog,
   engine: string
 ): boolean {
   const gateway = resolveGeoEngineGateway(catalog, engine);
-  return gateway === "serpapi" || gateway === "box";
+  return gateway === "serpapi" || gateway === "box" || gateway === "olostep";
 }
 
 /** Whether a catalog model runs with web search: grounded route or native search. */
@@ -117,6 +119,7 @@ export function geoEngineUsedWebSearch(engine: string): boolean {
   return (
     engineModelOf(engine) !== engine ||
     engine === GEO_AI_OVERVIEW_ENGINE_ID ||
+    isGeoOlostepEngine(engine) ||
     engine === GEO_OPENCODE_ENGINE_ID ||
     isGeoBoxCodingAgent(GEO_MODEL_REPLACED_IDS[engine] ?? engine)
   );

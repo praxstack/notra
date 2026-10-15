@@ -48,6 +48,7 @@ import { ConversationResultsDialog } from "@/components/geo/conversation-results
 import { TABLE_ROW_HEIGHT } from "@/constants/table";
 import {
   useGeoRunSequence,
+  useIsGeoConsumerRunBlocked,
   useGeoSequencesGenerate,
 } from "@/lib/hooks/use-geo";
 import { useGeoSequencesDb } from "@/lib/hooks/use-geo-db";
@@ -76,6 +77,12 @@ function ConversationRowActions({
   const tCommon = useTranslations("common.actions");
   const stop = (event: { stopPropagation: () => void }) =>
     event.stopPropagation();
+  let runTooltip = t("runThis");
+  if (isRunning) {
+    runTooltip = tGeoShared("playingAgainstTheEngines");
+  } else if (isRunPending) {
+    runTooltip = tGeoShared("scanInProgress");
+  }
   return (
     <div className="flex items-center justify-end gap-1">
       <Tooltip>
@@ -84,6 +91,7 @@ function ConversationRowActions({
             <Button
               aria-label={t("runNamed", { name: sequence.name })}
               disabled={isRunPending}
+              focusableWhenDisabled
               loading={isRunning}
               onClick={(event) => {
                 event.stopPropagation();
@@ -97,9 +105,7 @@ function ConversationRowActions({
           <HugeiconsIcon icon={PlayIcon} size={14} />
           {t("run")}
         </TooltipTrigger>
-        <TooltipContent>
-          {isRunning ? tGeoShared("playingAgainstTheEngines") : t("runThis")}
-        </TooltipContent>
+        <TooltipContent>{runTooltip}</TooltipContent>
       </Tooltip>
       <Tooltip>
         <TooltipTrigger
@@ -181,6 +187,8 @@ export function ConversationsCard({
     removeSequence,
   } = useGeoSequencesDb(organizationId);
   const runSequence = useGeoRunSequence(organizationId);
+  const consumerRunBlocked = useIsGeoConsumerRunBlocked(organizationId);
+  const runBlocked = runSequence.isPending || consumerRunBlocked;
   const t = useTranslations("geo.conversationsCard");
   const tCommon3 = useTranslations("common");
   const tGeoShared = useTranslations("geo.shared");
@@ -237,7 +245,7 @@ export function ConversationsCard({
           <ConversationRowActions
             isPending={pendingSequenceIds.has(row.id)}
             isRunning={runningSequenceId === row.id}
-            isRunPending={runSequence.isPending}
+            isRunPending={runBlocked}
             onDelete={() => removeSequence(row.id)}
             onEdit={() => {
               setEditing(row);
@@ -253,6 +261,7 @@ export function ConversationsCard({
     [
       pendingSequenceIds,
       removeSequence,
+      runBlocked,
       runSequence,
       runningSequenceId,
       t,
@@ -355,13 +364,14 @@ export function ConversationsCard({
       />
       <ConversationResultsDialog
         isRunning={viewing !== null && runningSequenceId === viewing.id}
+        runDisabled={runBlocked}
         onOpenChange={(next) => {
           if (!next) {
             setViewing(null);
           }
         }}
         onRun={() => {
-          if (viewing && !runSequence.isPending) {
+          if (viewing && !runBlocked) {
             runSequence.mutate(viewing.id);
           }
         }}

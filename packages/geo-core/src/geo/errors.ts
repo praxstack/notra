@@ -10,6 +10,18 @@ export class GeoScanError extends Data.TaggedError("GeoScanError")<{
   readonly usage?: LanguageModelUsage;
 }> {}
 
+/** A manual conversation replay in which no engine produced an answer. */
+export class GeoConversationNoAnswersError extends Data.TaggedError(
+  "GeoConversationNoAnswersError"
+)<{
+  readonly message: string;
+}> {}
+
+export class GeoOlostepError extends Data.TaggedError("GeoOlostepError")<{
+  readonly message: string;
+  readonly cause?: unknown;
+}> {}
+
 export class GeoCodingAgentAccessError extends Data.TaggedError(
   "GeoCodingAgentAccessError"
 )<{

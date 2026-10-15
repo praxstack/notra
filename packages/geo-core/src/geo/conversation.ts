@@ -13,6 +13,7 @@ import type {
   GeoZdrMode,
 } from "../types/geo";
 import type {
+  GeoConversationEngine,
   GeoConversationOutcome,
   GeoConversationSource,
 } from "../types/geo-conversations";
@@ -27,12 +28,17 @@ import {
 } from "../utils/token-usage";
 import { judgeAnswer, requireAnswerText } from "./check-evaluation";
 import { GeoScanError } from "./errors";
+import { askGeoOlostepAnswer } from "./olostep";
 
-/** Owns the transcript, deadline and partial results for both kinds of conversation. */
+/**
+ * Owns the transcript, deadline and partial results for both kinds of
+ * conversation. Olostep engines read each turn from its batch result instead
+ * of continuing the transcript, since every scraped prompt is a fresh chat.
+ */
 export const runGeoConversation = Effect.fn("geo.runConversation")(function* (
   context: GeoCheckContext,
   source: GeoConversationSource,
-  engine: GeoGroundedEngine,
+  engine: GeoConversationEngine,
   zdr: GeoZdrMode
 ) {
   const models = yield* GeoModelService;
@@ -65,14 +71,29 @@ export const runGeoConversation = Effect.fn("geo.runConversation")(function* (
         promptId: source.promptId,
         turn: index + 1,
       };
-      const answer = yield* models.groundedAnswer({
-        organizationId: context.organizationId,
-        engine,
-        messages,
-        zdr,
-        logContext,
-      });
-      engineUsage = addAgentTokenUsage(engineUsage, answer.usage);
+      const olostep = "retrieveIds" in engine;
+      const olostepRetrieveId = olostep ? engine.retrieveIds[index] : null;
+      if (olostep && !olostepRetrieveId) {
+        logGeoSkip(
+          "olostep turn has no result",
+          { ...fields, turn: index + 1 },
+          null
+        );
+        continue;
+      }
+      const answer = olostep
+        ? yield* askGeoOlostepAnswer(engine.key, olostepRetrieveId)
+        : yield* models.groundedAnswer({
+            organizationId: context.organizationId,
+            engine,
+            messages,
+            zdr,
+            logContext,
+          });
+      engineUsage = addAgentTokenUsage(
+        engineUsage,
+        agentTokenUsageFrom(answer.usage)
+      );
       if (zdr !== "none" && answer.zdrEnforced === false) {
         yield* geoLogWarn({
           ...fields,

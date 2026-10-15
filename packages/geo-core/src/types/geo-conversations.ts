@@ -1,6 +1,11 @@
 import type { GeoPersonaSnapshot } from "@notra/db/types/geo-personas";
 
-import type { GeoCheckContext, GeoSequenceCheckOutcome } from "./geo";
+import type {
+  GeoCheckContext,
+  GeoGroundedEngine,
+  GeoSequenceCheckOutcome,
+} from "./geo";
+import type { GeoOlostepConversationEngine } from "./geo-olostep";
 
 export interface GeoConversationReplayInput {
   context: Omit<GeoCheckContext, "scanId" | "capturedAt">;
@@ -34,3 +39,8 @@ export type GeoConversationOutcome = GeoSequenceCheckOutcome;
 export interface GeoPlannedPersonaOutcome extends GeoConversationOutcome {
   omitted?: boolean;
 }
+
+/** What a conversation talks to: a search-grounded route or Olostep results. */
+export type GeoConversationEngine =
+  | GeoGroundedEngine
+  | GeoOlostepConversationEngine;

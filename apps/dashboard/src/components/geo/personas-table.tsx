@@ -42,12 +42,14 @@ import {
 } from "@/constants/geo-personas";
 import { TABLE_ROW_HEIGHT } from "@/constants/table";
 import { trackEvent } from "@/lib/analytics/posthog-client";
+import { useIsGeoConsumerRunBlocked } from "@/lib/hooks/use-geo";
 import {
   useGeoPersonaDelete,
   useGeoPersonaRestore,
   useGeoPersonaRun,
   useGeoPersonasGenerate,
   useGeoPersonaUpdate,
+  useIsGeoPersonaRunPending,
 } from "@/lib/hooks/use-geo-personas";
 import { cn } from "@/lib/utils";
 import type { PersonaTableProps } from "@/types/geo-personas-ui";
@@ -70,6 +72,9 @@ export function PersonasTable({
   const generatePersona = useGeoPersonasGenerate(organizationId);
   const restorePersona = useGeoPersonaRestore(organizationId);
   const runPersona = useGeoPersonaRun(organizationId);
+  const personaRunPending = useIsGeoPersonaRunPending(organizationId);
+  const consumerRunBlocked = useIsGeoConsumerRunBlocked(organizationId);
+  const runBlocked = personaRunPending || consumerRunBlocked;
   const activePersonaCount = personas.filter(
     (persona) => !persona.archivedAt
   ).length;
@@ -299,7 +304,7 @@ export function PersonasTable({
             scanDisabled={
               !row.enabled ||
               row.conversationPrompts.length === 0 ||
-              runPersona.isPending ||
+              runBlocked ||
               generationPending ||
               deletePersona.isPending ||
               pendingPersonaIds.includes(row.id)

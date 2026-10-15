@@ -52,6 +52,7 @@ import type {
   GscSitesResponse,
   GscSyncResult,
 } from "@notra/geo-core/types/google-search-console";
+import { isGeoOlostepEngine } from "@notra/geo-core/utils/geo-olostep";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
 import type { QueryClient } from "@tanstack/react-query";
 import {
@@ -879,6 +880,18 @@ export function useIsGeoScanning(organizationId: string) {
   return pendingCount > 0 || Boolean(data?.settings?.isScanning);
 }
 
+/**
+ * Manual conversation and persona runs hand tracked consumer apps to a scan,
+ * and a project runs one scan at a time. While one is in flight, another run
+ * would be refused or would quietly skip its consumer apps, so the run
+ * controls wait for it.
+ */
+export function useIsGeoConsumerRunBlocked(organizationId: string) {
+  const { data } = useGeoSettings(organizationId);
+  const isScanning = useIsGeoScanning(organizationId);
+  return isScanning && (data?.settings?.engines ?? []).some(isGeoOlostepEngine);
+}
+
 export function useAgentReadiness(organizationId: string) {
   const tToast = useTranslations("geo.toasts");
   const { projectId } = useGeoProjectScope();
@@ -1147,7 +1160,10 @@ export function useGeoRunSequence(organizationId: string) {
   const tToast = useTranslations("geo.toasts");
   const { projectId } = useGeoProjectScope();
   const queryClient = useQueryClient();
-  return useMutation({
+  // isPending only disables the run controls after a re-render, so two clicks
+  // in the same frame would both fire. Claim the run synchronously instead.
+  const inFlight = useRef(false);
+  const mutation = useMutation({
     mutationFn: (sequenceId: string) =>
       dashboardOrpc.geo.sequenceRun.call({
         organizationId,
@@ -1159,12 +1175,33 @@ export function useGeoRunSequence(organizationId: string) {
         queryKey: dashboardOrpc.geo.sequenceResults.key(),
       });
       const engineCount = result.engines.length;
-      toast.success(tToast("conversationPlayed", { count: engineCount }));
+      if (engineCount > 0) {
+        toast.success(tToast("conversationPlayed", { count: engineCount }));
+      }
+      if (result.queuedScanId) {
+        toast.success(tToast("consumerAppsQueued"));
+        await refreshSettingsAfterScanStart(
+          queryClient,
+          organizationId,
+          projectId
+        );
+      }
     },
     onError: (error) => {
       toast.error(toErrorMessage(error, tToast("runConversationFailed")));
     },
+    onSettled: () => {
+      inFlight.current = false;
+    },
   });
+  const mutate: typeof mutation.mutate = (sequenceId, options) => {
+    if (inFlight.current) {
+      return;
+    }
+    inFlight.current = true;
+    mutation.mutate(sequenceId, options);
+  };
+  return { ...mutation, mutate };
 }
 
 export function useGeoSequenceResults(

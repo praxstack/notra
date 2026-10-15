@@ -1,4 +1,4 @@
-import { array, iso, object, string } from "zod";
+import { array, boolean, iso, object, string } from "zod";
 
 import { GEO_MAX_ENGINES, GEO_SHORT_FIELD_MAX_LENGTH } from "../constants/geo";
 import { geoOrganizationInputSchema } from "./geo-scope";
@@ -15,6 +15,12 @@ import { geoOrganizationInputSchema } from "./geo-scope";
  * could be handed a pollable id. The run adopts it instead of creating a row
  * of its own. Optional: the scheduled sweep starts a run with nobody waiting
  * on an id, and so does any workflow queued before this field existed.
+ *
+ * `manual` marks a run someone started by hand for one conversation or
+ * persona. Pausing automatic scans does not stop those, so the run skips the
+ * schedule's enabled check. It is only accepted on a run scoped to one
+ * project and an explicit prompt list, so it can never turn into a full scan
+ * of a paused project.
  */
 export const geoScanWorkflowPayloadSchema = geoOrganizationInputSchema
   .extend({
@@ -25,7 +31,14 @@ export const geoScanWorkflowPayloadSchema = geoOrganizationInputSchema
       .min(1)
       .max(GEO_MAX_ENGINES)
       .optional(),
+    manual: boolean().optional(),
   })
+  .refine(
+    (value) =>
+      value.manual !== true ||
+      (value.projectId !== undefined && value.promptIds !== undefined),
+    { message: "A manual scan requires projectId and promptIds" }
+  )
   .refine(
     (value) =>
       value.projectId !== undefined ||

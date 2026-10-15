@@ -44,14 +44,22 @@ function latestCheckAt(threads: GeoSequenceEngineThread[]): string | null {
 function RunConversationButton({
   onRun,
   isRunning,
+  disabled,
   label,
 }: {
   onRun: () => void;
   isRunning: boolean;
+  disabled: boolean;
   label: string;
 }) {
   return (
-    <Button loading={isRunning} onClick={onRun} size="sm">
+    <Button
+      disabled={disabled}
+      focusableWhenDisabled
+      loading={isRunning}
+      onClick={onRun}
+      size="sm"
+    >
       <HugeiconsIcon icon={PlayIcon} size={14} />
       {label}
     </Button>
@@ -65,6 +73,7 @@ export function ConversationResultsDialog({
   sequence: selectedSequence,
   onRun,
   isRunning,
+  runDisabled,
 }: ConversationResultsDialogProps) {
   const [sequence, releaseSequence] = useRetainedValue(selectedSequence);
   const { data, isLoading } = useGeoSequenceResults(
@@ -180,6 +189,7 @@ export function ConversationResultsDialog({
                 {t("empty")}
               </p>
               <RunConversationButton
+                disabled={runDisabled}
                 isRunning={isRunning}
                 label={t("runNow")}
                 onRun={onRun}

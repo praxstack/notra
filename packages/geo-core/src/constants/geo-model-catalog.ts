@@ -1,4 +1,5 @@
 import type { GeoModelCatalogEntry, GeoModelProvider } from "../types/geo";
+import { GEO_OLOSTEP_API_KEY_ENV } from "./geo-olostep";
 
 /**
  * Providers surfaced in the GEO model picker, in display order. The live model
@@ -66,6 +67,12 @@ export const GEO_MODEL_PROVIDERS: readonly GeoModelProvider[] = [
     id: "perplexity",
     label: "Perplexity",
     brand: "perplexity",
+    featured: true,
+  },
+  {
+    id: "microsoft",
+    label: "Microsoft",
+    brand: "copilot",
     featured: true,
   },
   {
@@ -430,7 +437,7 @@ export const GEO_MODEL_CATALOG_SEED: readonly GeoModelCatalogEntry[] = [
 /**
  * Models that do not run through the Notra AI router. They are appended to the
  * catalog instead of coming from the gateway feed. `zdr: "none"` because
- * neither Cursor, Box, nor SerpApi exposes an enforceable ZDR route to GEO;
+ * neither Cursor, Box, SerpApi, nor Olostep exposes an enforceable ZDR route;
  * under enforced ZDR each engine therefore needs explicit approval before it
  * is scanned. Google AI Overview is fetched through SerpApi and is also
  * non-ZDR.
@@ -554,6 +561,51 @@ export const GEO_MODEL_CATALOG_STATIC: readonly GeoModelCatalogEntry[] = [
     gateways: ["serpapi"],
   },
   {
+    id: "openai/chatgpt",
+    provider: "openai",
+    label: "ChatGPT",
+    zdr: "none",
+    released: "2026-10-11",
+    default: false,
+    gateways: ["olostep"],
+  },
+  {
+    id: "perplexity/perplexity",
+    provider: "perplexity",
+    label: "Perplexity",
+    zdr: "none",
+    released: "2026-10-11",
+    default: false,
+    gateways: ["olostep"],
+  },
+  {
+    id: "google/gemini",
+    provider: "google",
+    label: "Gemini",
+    zdr: "none",
+    released: "2026-10-11",
+    default: false,
+    gateways: ["olostep"],
+  },
+  {
+    id: "google/ai-mode",
+    provider: "google",
+    label: "AI Mode",
+    zdr: "none",
+    released: "2026-10-11",
+    default: false,
+    gateways: ["olostep"],
+  },
+  {
+    id: "microsoft/copilot",
+    provider: "microsoft",
+    label: "Copilot",
+    zdr: "none",
+    released: "2026-10-11",
+    default: false,
+    gateways: ["olostep"],
+  },
+  {
     id: "fx/gpt-6.1-sol",
     provider: "fx",
     label: "GPT-6.1 Sol",
@@ -641,6 +693,11 @@ export const GEO_STATIC_ENGINE_ENV: Readonly<
   "fx/kimi-k3": GEO_FX_ENGINE_ENV,
   "fx/grok-4.7": GEO_FX_ENGINE_ENV,
   "google/ai-overview": ["SERPAPI_API_KEY"],
+  "openai/chatgpt": [GEO_OLOSTEP_API_KEY_ENV],
+  "perplexity/perplexity": [GEO_OLOSTEP_API_KEY_ENV],
+  "google/gemini": [GEO_OLOSTEP_API_KEY_ENV],
+  "google/ai-mode": [GEO_OLOSTEP_API_KEY_ENV],
+  "microsoft/copilot": [GEO_OLOSTEP_API_KEY_ENV],
 };
 
 /** Engines scanned when a project has not picked its own set. */
@@ -654,8 +711,8 @@ export const GEO_AUDIENCE_TYPES = ["technical", "general", "commerce"] as const;
 /** Engines seeded for a brand whose buyers never pick a model themselves. */
 export const GEO_GENERAL_AUDIENCE_ENGINE_IDS: readonly string[] = [
   "anthropic/claude-opus-5.5",
-  "openai/gpt-5.6-sol",
-  "google/gemini-3.8-flash",
+  "openai/chatgpt",
+  "google/gemini",
 ];
 
 /**
@@ -706,6 +763,10 @@ export const GEO_MODEL_EXCLUDED_IDS: ReadonlySet<string> = new Set([
   "meta/muse-glimmer-30b",
   "meta/muse-spark-1.1",
   "spacexai/grok-4.6",
+  // Olostep consumer apps not released yet; only ChatGPT and Gemini ship.
+  "perplexity/perplexity",
+  "google/ai-mode",
+  "microsoft/copilot",
 ]);
 /** Optional replacements for retired ids in saved selections and scans. */
 export const GEO_MODEL_REPLACED_IDS: Readonly<Record<string, string>> = {

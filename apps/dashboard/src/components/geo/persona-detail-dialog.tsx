@@ -51,8 +51,14 @@ import { PersonaPrompts } from "@/components/geo/persona-prompts";
 import { PromptEngineSwitcher } from "@/components/geo/prompt-engine-switcher";
 import { GeoConversationSkeleton } from "@/components/geo/skeleton-parts";
 import { GEO_PERSONA_DIALOG_VIEWS } from "@/constants/geo-personas";
-import { useIsGeoScanning } from "@/lib/hooks/use-geo";
-import { useGeoPersonasGenerate } from "@/lib/hooks/use-geo-personas";
+import {
+  useIsGeoConsumerRunBlocked,
+  useIsGeoScanning,
+} from "@/lib/hooks/use-geo";
+import {
+  useGeoPersonasGenerate,
+  useIsGeoPersonaRunPending,
+} from "@/lib/hooks/use-geo-personas";
 import { usePersonaConversation } from "@/lib/hooks/use-persona-conversation";
 import type { GeoSequenceEngineThread } from "@/types/geo";
 import type {
@@ -89,6 +95,7 @@ function PersonaDetailHeader({
   selectedScanId,
   view,
   isRunning,
+  runDisabled,
   onRun,
   onSelectScan,
   onEngineChange,
@@ -123,7 +130,8 @@ function PersonaDetailHeader({
                     className="shrink-0"
                     disabled={
                       !persona.enabled ||
-                      persona.conversationPrompts.length === 0
+                      persona.conversationPrompts.length === 0 ||
+                      (runDisabled && !isRunning)
                     }
                     focusableWhenDisabled
                     loading={isRunning}
@@ -345,6 +353,9 @@ export function PersonaDetailDialog({
   } = usePersonaConversation(organizationId, persona, open, showConversation);
 
   const isProjectScanning = useIsGeoScanning(organizationId);
+  const personaRunPending = useIsGeoPersonaRunPending(organizationId);
+  const consumerRunBlocked = useIsGeoConsumerRunBlocked(organizationId);
+  const runBlocked = personaRunPending || consumerRunBlocked;
 
   if (!persona) {
     return null;
@@ -393,6 +404,7 @@ export function PersonaDetailDialog({
         <PersonaDetailHeader
           active={active}
           isRunning={runPersona.isPending}
+          runDisabled={runBlocked}
           onEngineChange={setEngine}
           onRun={onRun}
           onSelectScan={selectScan}
@@ -417,9 +429,7 @@ export function PersonaDetailDialog({
                   isProjectScanning)
               }
               enabled={persona.enabled}
-              canRun={
-                persona.conversationPrompts.length > 0 && !runPersona.isPending
-              }
+              canRun={persona.conversationPrompts.length > 0 && !runBlocked}
               onRun={onRun}
             />
           ) : null}

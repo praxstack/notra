@@ -24,6 +24,8 @@ export async function invalidateGeoScanResultQueries(
       dashboardOrpc.geo.competitorEngineMatrix.key({ input }),
       dashboardOrpc.geo.competitorDetail.key({ input }),
       dashboardOrpc.geo.languageShare.key({ input }),
+      dashboardOrpc.geo.sequenceResults.key({ input }),
+      dashboardOrpc.geo.personaResults.key({ input }),
     ].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
   );
 }

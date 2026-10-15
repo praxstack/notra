@@ -55,7 +55,10 @@ import {
   GEO_MAX_ENGINES,
   GEO_MAX_LANGUAGES,
 } from "../constants/geo";
-import { GEO_MODEL_CATALOG_STATIC } from "../constants/geo-model-catalog";
+import {
+  GEO_MODEL_CATALOG_STATIC,
+  GEO_MODEL_EXCLUDED_IDS,
+} from "../constants/geo-model-catalog";
 import { GeoEntitlementService } from "../deps";
 import type { DbTransaction } from "../types/db";
 import type {
@@ -742,7 +745,10 @@ export const upsertGeoSettings = Effect.fn("geo.settingsUpsert")(function* (
   const catalog = yield* loadGeoModelCatalog(input.organizationId);
   const unavailableStaticEngines = new Set<string>();
   for (const entry of GEO_MODEL_CATALOG_STATIC) {
-    if (!getGeoModelCatalogEntry(catalog, entry.id)) {
+    if (
+      !GEO_MODEL_EXCLUDED_IDS.has(entry.id) &&
+      !getGeoModelCatalogEntry(catalog, entry.id)
+    ) {
       unavailableStaticEngines.add(entry.id);
     }
   }
@@ -2049,10 +2055,17 @@ export const toggleGeoPrompt = Effect.fn("geo.promptsToggle")(function* (
   return trackedAutoPrompt(promptId, enabled);
 });
 
+/**
+ * `manual` is for a hand-started conversation or persona run: those stay
+ * runnable while automatic scans are paused, so the enabled check is skipped.
+ * Everything else (claim, billing, engine scoping, ZDR at planning) still
+ * applies.
+ */
 export const startGeoScanScoped = Effect.fn("geo.startScanScoped")(function* (
   input: GeoScopeInput,
   promptIds?: readonly string[],
-  engines?: readonly string[]
+  engines?: readonly string[],
+  manual = false
 ) {
   const scope = yield* requireGeoProject(input);
   const projectId = scope.projectId;
@@ -2069,7 +2082,8 @@ export const startGeoScanScoped = Effect.fn("geo.startScanScoped")(function* (
     );
   }
 
-  if (!row.enabled) {
+  const manualScope = manual && promptIds !== undefined;
+  if (!(row.enabled || manualScope)) {
     return yield* Effect.fail(new GeoSettingsDisabledError({ projectId }));
   }
 
@@ -2102,7 +2116,8 @@ export const startGeoScanScoped = Effect.fn("geo.startScanScoped")(function* (
     projectId,
     claim.claimedAt,
     promptIds,
-    engines
+    engines,
+    manualScope
   );
 });
 

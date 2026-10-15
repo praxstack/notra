@@ -47,6 +47,7 @@ import { MAX_JUDGE_COMPETITORS } from "../constants/geo-conversations";
 import {
   GEO_PERSONA_MAX_COUNT,
   GEO_PERSONA_MAX_TURNS,
+  GEO_PERSONA_PROMPT_ID_PREFIX,
 } from "../constants/geo-personas";
 import { GeoContentBillingService, GeoModelService } from "../deps";
 import type { GeoContentBillingServiceShape } from "../types/deps";
@@ -75,12 +76,14 @@ import type {
   GeoSkipFields,
   GeoZdrMode,
 } from "../types/geo";
+import type { GeoConversationEngine } from "../types/geo-conversations";
 import { logGeoBillingFailure } from "../utils/geo-billing-log";
 import { normalizePosition } from "../utils/geo-check-evaluation";
 import {
   geoBoxAgentForEngine,
   isGeoBoxCodingAgent,
 } from "../utils/geo-coding-agents";
+import { resolveGeoConversationEngine } from "../utils/geo-conversation-engine";
 import { engineModelOf } from "../utils/geo-engine-family";
 import {
   geoScanEmptyEngineSkipReason,
@@ -101,6 +104,7 @@ import {
   geoLogWarn,
   logGeoSkip,
 } from "../utils/geo-log";
+import { isGeoOlostepEngine } from "../utils/geo-olostep";
 import { hasOwnedSourceCitation } from "../utils/geo-owned-source";
 import {
   interleaveGeoScanItemsByKey,
@@ -145,6 +149,11 @@ import {
 import { extractGrounding } from "./grounding";
 import { toGeoSettings } from "./mappers";
 import { loadGeoModelCatalog } from "./model-catalog";
+import { askGeoOlostepAnswer } from "./olostep";
+import {
+  queueGeoOlostepConversationScan,
+  resolveGeoManualOlostepEngines,
+} from "./olostep-conversation-scan";
 import { loadGeoProjectBrand } from "./project-brand";
 import { requireGeoProject } from "./projects";
 import { syncGeoPromptTranslations } from "./prompt-translations";
@@ -167,12 +176,24 @@ import {
 } from "./scan-task-status";
 import { resolveScanZdrPolicy } from "./zdr-policy";
 
+const SEQUENCE_PROMPT_ID_PREFIX = "sequence-";
+
 function skippedPlan(reason: GeoScanSkipReason): GeoScanProjectPlanResult {
   return { status: "skipped", reason };
 }
 
 function sequencePromptId(sequenceId: string): string {
-  return `sequence-${sequenceId}`;
+  return `${SEQUENCE_PROMPT_ID_PREFIX}${sequenceId}`;
+}
+
+/** Ids of the conversations a manual run scoped a scan to, by prompt id. */
+function scopedConversationIds(
+  promptIds: readonly string[] | undefined,
+  prefix: string
+): string[] {
+  return (promptIds ?? []).flatMap((promptId) =>
+    promptId.startsWith(prefix) ? [promptId.slice(prefix.length)] : []
+  );
 }
 
 function sequenceTurnCount(sequence: GeoSequenceDefinition): number {
@@ -426,8 +447,12 @@ const askEngine = Effect.fn("geo.askEngine")(function* (
   zdr: GeoZdrMode,
   gatewayPin: GeoModelGateway | undefined,
   language: string,
-  logContext: GatewayModelOptions["logContext"]
+  logContext: GatewayModelOptions["logContext"],
+  olostepRetrieveId?: string
 ) {
+  if (gatewayPin === "olostep") {
+    return yield* askGeoOlostepAnswer(engine, olostepRetrieveId);
+  }
   if (GEO_PAID_CODING_AGENT_ENGINE_IDS.includes(engine)) {
     yield* requireGeoCodingAgentAccess(organizationId);
   }
@@ -481,7 +506,8 @@ const runGeoCheck = Effect.fn("geo.runCheck")(function* (
       task.zdr,
       resolveGeoEngineGateway(context.catalog, task.engine),
       task.language,
-      logContext
+      logContext,
+      task.olostepRetrieveId
     ));
   const baseRow = {
     organizationId: context.organizationId,
@@ -579,8 +605,8 @@ const runGeoCheck = Effect.fn("geo.runCheck")(function* (
 
 /**
  * Loads the settings rows a scan run covers and returns the enabled project
- * ids in creation order. Also releases the phantom "scanning" stamp of rows
- * that were disabled while a scan was running.
+ * ids in creation order. A scoped run also releases its own claim when its
+ * project was paused before it started planning.
  */
 export const listGeoScanProjects = Effect.fn("geo.listScanProjects")(function* (
   organizationId: string,
@@ -588,6 +614,7 @@ export const listGeoScanProjects = Effect.fn("geo.listScanProjects")(function* (
     projectId?: string;
     projectIds?: readonly string[];
     claimedAt?: Date;
+    manual?: boolean;
   } = {}
 ) {
   const scopedProjectIds =
@@ -613,20 +640,26 @@ export const listGeoScanProjects = Effect.fn("geo.listScanProjects")(function* (
       new GeoScanError({ message: "Failed to load GEO settings", cause }),
   });
 
+  // A manual run of a paused project scans that one project anyway.
+  const includes = (row: (typeof settingsRows)[number]) =>
+    row.enabled ||
+    (options.manual === true && row.projectId === options.projectId);
+
   for (const row of settingsRows) {
-    if (row.enabled || !isGeoScanRunning(row.scanStartedAt, row.lastScanAt)) {
+    if (includes(row) || !isGeoScanRunning(row.scanStartedAt, row.lastScanAt)) {
       continue;
     }
-    const releaseToken =
-      row.projectId === options.projectId && options.claimedAt
-        ? options.claimedAt
-        : (row.scanStartedAt ?? undefined);
-    yield* releaseGeoScanRun(row.projectId, releaseToken).pipe(
+    // A legacy workflow without a claim token must not adopt and release
+    // the claim of a manual run that started after it was queued.
+    if (row.projectId !== options.projectId || !options.claimedAt) {
+      continue;
+    }
+    yield* releaseGeoScanRun(row.projectId, options.claimedAt).pipe(
       geoSkip("scan claim release failed")
     );
   }
 
-  const enabledRows = settingsRows.filter((row) => row.enabled);
+  const enabledRows = settingsRows.filter(includes);
   if (enabledRows.length === 0) {
     yield* geoLogWarn({
       event: "geo.scan.skipped",
@@ -657,6 +690,7 @@ export const prepareGeoScanProject = Effect.fn("geo.prepareScanProject")(
       promptIds?: string[];
       engines?: string[];
       retried?: boolean;
+      manual?: boolean;
     } = {}
   ) {
     const billing = yield* GeoContentBillingService;
@@ -679,7 +713,11 @@ export const prepareGeoScanProject = Effect.fn("geo.prepareScanProject")(
         ).pipe(geoSkip("scan row fail stamp failed"))
       : Effect.void;
 
-    if (!settingsRow?.enabled) {
+    // A manual conversation or persona run is scoped to explicit prompt ids
+    // and runs while automatic scans are paused.
+    const manualScope =
+      options.manual === true && options.promptIds !== undefined;
+    if (!(settingsRow && (settingsRow.enabled || manualScope))) {
       if (options.claimedAt) {
         yield* releaseGeoScanRun(projectId, options.claimedAt).pipe(
           geoSkip("scan claim release failed")
@@ -847,7 +885,19 @@ const buildGeoScanProjectPlan = Effect.fn("geo.buildScanProjectPlan")(
     const prompts = promptIds
       ? scopeGeoPrompts(allPrompts, promptIds)
       : allPrompts;
-    if (promptIds && prompts.length === 0) {
+    const scopedSequenceIds = scopedConversationIds(
+      promptIds,
+      SEQUENCE_PROMPT_ID_PREFIX
+    );
+    const scopedPersonaIds = scopedConversationIds(
+      promptIds,
+      GEO_PERSONA_PROMPT_ID_PREFIX
+    );
+    if (
+      promptIds &&
+      prompts.length === 0 &&
+      scopedSequenceIds.length + scopedPersonaIds.length === 0
+    ) {
       yield* geoLogWarn({
         event: "geo.scan.skipped",
         reason: "scoped_prompts_missing",
@@ -1007,93 +1057,125 @@ const buildGeoScanProjectPlan = Effect.fn("geo.buildScanProjectPlan")(
       }
     }
 
-    const sequenceRows = promptIds
-      ? []
-      : yield* Effect.tryPromise({
-          try: () =>
-            db.query.geoPromptSequences.findMany({
-              columns: { id: true, steps: true },
-              where: and(
-                eq(geoPromptSequences.projectId, settingsRow.projectId),
-                eq(geoPromptSequences.enabled, true)
-              ),
-              orderBy: [asc(geoPromptSequences.createdAt)],
-              limit: GEO_MAX_SEQUENCES,
-            }),
-          catch: (cause) =>
-            new GeoScanError({
-              message: "Failed to load GEO sequences",
-              cause,
-            }),
-        });
+    const sequenceRows =
+      promptIds && scopedSequenceIds.length === 0
+        ? []
+        : yield* Effect.tryPromise({
+            try: () =>
+              db.query.geoPromptSequences.findMany({
+                columns: { id: true, steps: true },
+                where: and(
+                  eq(geoPromptSequences.projectId, settingsRow.projectId),
+                  scopedSequenceIds.length > 0
+                    ? inArray(geoPromptSequences.id, scopedSequenceIds)
+                    : eq(geoPromptSequences.enabled, true)
+                ),
+                orderBy: [asc(geoPromptSequences.createdAt)],
+                limit: GEO_MAX_SEQUENCES,
+              }),
+            catch: (cause) =>
+              new GeoScanError({
+                message: "Failed to load GEO sequences",
+                cause,
+              }),
+          });
     const trackedCodingAgents = trackedEngines.filter(
       ({ engine }) =>
         engine === GEO_OPENCODE_ENGINE_ID || isGeoBoxCodingAgent(engine)
     );
-    const sequences: GeoScanPlannedSequence[] = scanSourceLanguage
-      ? sequenceRows.flatMap((sequence) => [
-          ...groundedEngines.map(({ grounded, zdr }) => ({
-            sequenceId: sequence.id,
-            steps: sequence.steps,
-            language: sourceLanguage,
-            engine: grounded.key,
-            groundedKey: grounded.key,
-            zdr,
-          })),
-          ...trackedCodingAgents.map((tracked) => ({
-            sequenceId: sequence.id,
-            steps: sequence.steps,
-            language: sourceLanguage,
-            engine: tracked.engine,
-            groundedKey: null,
-            zdr: tracked.zdr,
-          })),
-        ])
-      : [];
+    const olostepEngines = rawEngines.filter(({ engine }) =>
+      isGeoOlostepEngine(engine)
+    );
+    const sequences: GeoScanPlannedSequence[] =
+      scanSourceLanguage || scopedSequenceIds.length > 0
+        ? sequenceRows.flatMap((sequence) => [
+            ...groundedEngines.map(({ grounded, zdr }) => ({
+              sequenceId: sequence.id,
+              steps: sequence.steps,
+              language: sourceLanguage,
+              engine: grounded.key,
+              groundedKey: grounded.key,
+              zdr,
+            })),
+            ...olostepEngines.map(({ engine, zdr }) => ({
+              sequenceId: sequence.id,
+              steps: sequence.steps,
+              language: sourceLanguage,
+              engine,
+              groundedKey: null,
+              zdr,
+            })),
+            ...trackedCodingAgents.map((tracked) => ({
+              sequenceId: sequence.id,
+              steps: sequence.steps,
+              language: sourceLanguage,
+              engine: tracked.engine,
+              groundedKey: null,
+              zdr: tracked.zdr,
+            })),
+          ])
+        : [];
 
-    const personaRows = promptIds
-      ? []
-      : yield* Effect.tryPromise({
-          try: () =>
-            db.query.geoPersonas.findMany({
-              with: {
-                memories: {
-                  orderBy: [
-                    asc(geoPersonaMemories.createdAt),
-                    asc(geoPersonaMemories.id),
-                  ],
+    const personaRows =
+      promptIds && scopedPersonaIds.length === 0
+        ? []
+        : yield* Effect.tryPromise({
+            try: () =>
+              db.query.geoPersonas.findMany({
+                with: {
+                  memories: {
+                    orderBy: [
+                      asc(geoPersonaMemories.createdAt),
+                      asc(geoPersonaMemories.id),
+                    ],
+                  },
                 },
-              },
-              where: and(
-                eq(geoPersonas.projectId, settingsRow.projectId),
-                eq(geoPersonas.enabled, true),
-                isNull(geoPersonas.archivedAt)
-              ),
-              orderBy: [asc(geoPersonas.createdAt)],
-              limit: GEO_PERSONA_MAX_COUNT,
-            }),
-          catch: (cause) =>
-            new GeoScanError({ message: "Failed to load GEO personas", cause }),
-        });
-    const personas: GeoScanPlannedPersona[] = scanEnglish
-      ? personaRows.flatMap((persona) => {
-          const snapshot = createPersonaSnapshot(
-            persona,
-            persona.memories,
-            persona.conversationPrompts.slice(0, GEO_PERSONA_MAX_TURNS)
-          );
-          return snapshot.conversationPrompts.length > 0
-            ? groundedEngines.map(({ grounded, zdr }) => ({
-                personaId: persona.id,
-                prompts: snapshot.conversationPrompts,
-                snapshot,
-                engine: grounded.key,
-                groundedKey: grounded.key,
-                zdr,
-              }))
-            : [];
-        })
-      : [];
+                where: and(
+                  eq(geoPersonas.projectId, settingsRow.projectId),
+                  scopedPersonaIds.length > 0
+                    ? inArray(geoPersonas.id, scopedPersonaIds)
+                    : eq(geoPersonas.enabled, true),
+                  isNull(geoPersonas.archivedAt)
+                ),
+                orderBy: [asc(geoPersonas.createdAt)],
+                limit: GEO_PERSONA_MAX_COUNT,
+              }),
+            catch: (cause) =>
+              new GeoScanError({
+                message: "Failed to load GEO personas",
+                cause,
+              }),
+          });
+    const personas: GeoScanPlannedPersona[] =
+      scanEnglish || scopedPersonaIds.length > 0
+        ? personaRows.flatMap((persona) => {
+            const snapshot = createPersonaSnapshot(
+              persona,
+              persona.memories,
+              persona.conversationPrompts.slice(0, GEO_PERSONA_MAX_TURNS)
+            );
+            return snapshot.conversationPrompts.length > 0
+              ? [
+                  ...groundedEngines.map(({ grounded, zdr }) => ({
+                    personaId: persona.id,
+                    prompts: snapshot.conversationPrompts,
+                    snapshot,
+                    engine: grounded.key,
+                    groundedKey: grounded.key,
+                    zdr,
+                  })),
+                  ...olostepEngines.map(({ engine, zdr }) => ({
+                    personaId: persona.id,
+                    prompts: snapshot.conversationPrompts,
+                    snapshot,
+                    engine,
+                    groundedKey: null,
+                    zdr,
+                  })),
+                ]
+              : [];
+          })
+        : [];
 
     const engines = [
       ...rawEngines.map((entry) => entry.engine),
@@ -1408,9 +1490,7 @@ const runGeoScanSequenceBatchBody = Effect.fn("geo.runScanSequenceBatch.body")(
           for (const task of geoScanSequenceTasks(planned)) {
             yield* updateGeoScanAnswerStatus(context, task, "running");
           }
-          const grounded = planned.groundedKey
-            ? resolveGroundedEngineByKey(planned.groundedKey)
-            : null;
+          const grounded = resolveGeoConversationEngine(planned);
           if (planned.groundedKey && !grounded) {
             return { sequence, result: null };
           }
@@ -1647,7 +1727,7 @@ const finalizeGeoScanProjectBody = Effect.fn("geo.finalizeScanProject.body")(
 const runGeoSequenceCheck = Effect.fn("geo.runSequenceCheck")(function* (
   context: GeoCheckContext,
   sequence: GeoSequenceDefinition,
-  grounded: GeoGroundedEngine,
+  grounded: GeoConversationEngine,
   zdr: GeoZdrMode
 ) {
   return yield* runGeoConversation(
@@ -1882,7 +1962,8 @@ const runGeoOpenCodeSequenceCheck = Effect.fn("geo.runOpenCodeSequenceCheck")(
  * Plays a single conversation against every available replay engine right
  * away, outside the scheduled scan. The run is recorded as a regular
  * `geo_scans` row so its checks show up alongside scan results, and it is
- * charged against the organization's AI credits.
+ * charged against the organization's AI credits. Consumer-app engines go to
+ * a scan scoped to this conversation instead.
  */
 const runGeoSequenceNowProgram = Effect.fn("geo.runSequenceNow")(function* (
   input: GeoScopeInput,
@@ -1990,8 +2071,36 @@ const runGeoSequenceNowProgram = Effect.fn("geo.runSequenceNow")(function* (
       ...pair,
     })),
   ];
-  if (replayEngines.length === 0) {
+  const skipFields = {
+    organizationId: scope.organizationId,
+    projectId,
+    sequenceId,
+  };
+  const olostepEngines = yield* resolveGeoManualOlostepEngines(
+    catalog,
+    settings.engines,
+    zdrPolicy,
+    skipFields
+  );
+  if (replayEngines.length === 0 && olostepEngines.length === 0) {
     return yield* Effect.fail(new GeoSequenceRunUnavailableError({}));
+  }
+  const queued = yield* queueGeoOlostepConversationScan(
+    input,
+    sequencePromptId(sequenceId),
+    olostepEngines,
+    skipFields,
+    replayEngines.length === 0
+  );
+  if (replayEngines.length === 0) {
+    const response: GeoSequenceRunResponse = {
+      checks: 0,
+      mentions: 0,
+      engines: [],
+      queuedScanId: queued?.scanId ?? null,
+      queuedEngines: olostepEngines,
+    };
+    return response;
   }
 
   const runId = `geo-sequence-${sequenceId}-${crypto.randomUUID()}`;
@@ -2054,6 +2163,11 @@ const runGeoSequenceNowProgram = Effect.fn("geo.runSequenceNow")(function* (
       );
     }
   ).pipe(
+    // The consumer apps are already queued and billed on their own scan, so
+    // the run still succeeds when no API engine answered.
+    Effect.catchTag("GeoConversationNoAnswersError", (error) =>
+      queued ? Effect.succeed(null) : Effect.fail(error)
+    ),
     Effect.mapError((error) =>
       error._tag === "GeoWriterCreditsExhaustedError"
         ? error
@@ -2062,9 +2176,11 @@ const runGeoSequenceNowProgram = Effect.fn("geo.runSequenceNow")(function* (
   );
 
   const response: GeoSequenceRunResponse = {
-    checks: result.rows.length,
-    mentions: result.rows.filter((row) => row.mentioned).length,
-    engines: replayEngines.map((replayEngine) => replayEngine.id),
+    checks: result?.rows.length ?? 0,
+    mentions: result?.rows.filter((row) => row.mentioned).length ?? 0,
+    engines: result ? replayEngines.map((replayEngine) => replayEngine.id) : [],
+    queuedScanId: queued?.scanId ?? null,
+    queuedEngines: queued ? olostepEngines : [],
   };
   return response;
 });

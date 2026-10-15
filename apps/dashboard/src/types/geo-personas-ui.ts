@@ -60,6 +60,7 @@ export interface PersonaDetailHeaderProps {
   selectedScanId: string | null;
   view: PersonaDialogView;
   isRunning: boolean;
+  runDisabled: boolean;
   onRun: () => void;
   onSelectScan: (scanId: string | null) => void;
   onEngineChange: (engine: string) => void;

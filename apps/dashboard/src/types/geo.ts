@@ -375,6 +375,7 @@ export interface ConversationResultsDialogProps {
   sequence: GeoPromptSequence | null;
   onRun: () => void;
   isRunning: boolean;
+  runDisabled: boolean;
 }
 
 export interface GeoSequenceEngineThread {

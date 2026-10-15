@@ -660,6 +660,9 @@ export interface GeoSequenceRunResponse {
   checks: number;
   mentions: number;
   engines: string[];
+  /** Scoped scan running the consumer-app engines in the background. */
+  queuedScanId: string | null;
+  queuedEngines: string[];
 }
 
 export interface GeoSequenceResultsResponse {
@@ -679,6 +682,8 @@ export interface GeoScanPlannedTask {
   prompt: GeoPromptDefinition;
   language: string;
   zdr: GeoZdrMode;
+  /** Olostep result handle, attached once the engine's batch has completed. */
+  olostepRetrieveId?: string;
 }
 
 export interface GeoScanPlannedSequence {
@@ -689,6 +694,8 @@ export interface GeoScanPlannedSequence {
   engine: string;
   groundedKey: string | null;
   zdr: GeoZdrMode;
+  /** Olostep result handle per step; null where the item never finished. */
+  olostepRetrieveIds?: (string | null)[];
 }
 
 export interface GeoScanPlannedPersona {
@@ -696,8 +703,11 @@ export interface GeoScanPlannedPersona {
   prompts: string[];
   snapshot: GeoPersonaSnapshotV2;
   engine: string;
-  groundedKey: string;
+  /** Null for consumer apps scraped through Olostep. */
+  groundedKey: string | null;
   zdr: GeoZdrMode;
+  /** Olostep result handle per prompt; null where the item never finished. */
+  olostepRetrieveIds?: (string | null)[];
 }
 
 export interface GeoScanProjectContext {
@@ -790,6 +800,7 @@ export interface GeoCheckTask {
   prompt: GeoPromptDefinition;
   language: string;
   zdr: GeoZdrMode;
+  olostepRetrieveId?: string;
 }
 
 /** Log context for the scan-time ZDR entitlement re-check. */
@@ -1452,6 +1463,7 @@ export type GeoModelProviderId =
   | "opencode"
   | "claude-code"
   | "codex"
+  | "microsoft"
   | "fx";
 
 /** Zero-data-retention coverage as reported by the Vercel AI Gateway feed. */
@@ -1468,7 +1480,8 @@ export type GeoModelGateway =
   | "openrouter"
   | "cursor"
   | "box"
-  | "serpapi";
+  | "serpapi"
+  | "olostep";
 
 export interface GeoModelProvider {
   id: GeoModelProviderId;

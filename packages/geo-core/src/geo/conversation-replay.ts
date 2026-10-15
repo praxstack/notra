@@ -17,7 +17,11 @@ import {
   scaleAgentTokenUsage,
 } from "../utils/token-usage";
 import { geoSkip } from "./effect";
-import { GeoScanError, GeoWriterCreditsExhaustedError } from "./errors";
+import {
+  GeoConversationNoAnswersError,
+  GeoScanError,
+  GeoWriterCreditsExhaustedError,
+} from "./errors";
 import {
   claimGeoScanRun,
   releaseGeoScanRun,
@@ -109,7 +113,9 @@ export const runGeoConversationReplay = Effect.fn("geo.runConversationReplay")(
             if (rows.length === 0) {
               emptyUsage = usage;
               return yield* Effect.fail(
-                new GeoScanError({ message: input.emptyMessage })
+                new GeoConversationNoAnswersError({
+                  message: input.emptyMessage,
+                })
               );
             }
             const inserted = yield* Effect.tryPromise({
