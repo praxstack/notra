@@ -38,8 +38,6 @@ export const postCoverImageSchema = z.object({
   alt: z.string().trim().max(POST_COVER_ALT_MAX_LENGTH).default(""),
 });
 
-export const postTagSchema = z.string().trim().min(1).max(POST_TAG_MAX_LENGTH);
-
 /** Trims, drops empties and case-insensitive duplicates, keeps first spelling. */
 export const postTagsSchema = z
   .array(z.string().trim().max(POST_TAG_MAX_LENGTH))

@@ -125,6 +125,15 @@ const persistSocialConnection = Effect.fn("auth.sync.persistSocialConnection")(
       provider === "github"
         ? yield* fetchGitHubAccountId(tokens.accessToken)
         : "";
+    const connection = {
+      providerAccountId,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken ?? null,
+      scope: tokens.scopes?.join(" ") ?? null,
+      accessTokenExpiresAt: tokens.expiresAt
+        ? new Date(tokens.expiresAt * 1000)
+        : null,
+    };
 
     yield* Effect.tryPromise({
       try: () =>
@@ -134,25 +143,11 @@ const persistSocialConnection = Effect.fn("auth.sync.persistSocialConnection")(
             id: crypto.randomUUID(),
             userId,
             provider,
-            providerAccountId,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken ?? null,
-            scope: tokens.scopes?.join(" ") ?? null,
-            accessTokenExpiresAt: tokens.expiresAt
-              ? new Date(tokens.expiresAt * 1000)
-              : null,
+            ...connection,
           })
           .onConflictDoUpdate({
             target: [socialConnections.userId, socialConnections.provider],
-            set: {
-              providerAccountId,
-              accessToken: tokens.accessToken,
-              refreshToken: tokens.refreshToken ?? null,
-              scope: tokens.scopes?.join(" ") ?? null,
-              accessTokenExpiresAt: tokens.expiresAt
-                ? new Date(tokens.expiresAt * 1000)
-                : null,
-            },
+            set: connection,
           }),
       catch: (cause) =>
         new SocialConnectionError({

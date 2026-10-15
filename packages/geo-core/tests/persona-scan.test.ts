@@ -382,6 +382,8 @@ describe("planned persona snapshots", () => {
       )
     );
     expect(paused.checks).toBe(0);
+    expect(paused.dropped).toBe(0);
+    expect(paused.omitted).toBe(plan.personas.length);
     expect(await testDb.select().from(geoMentionChecks)).toHaveLength(
       checksBeforeArchivedReplay
     );

@@ -31,8 +31,11 @@ import {
   LAST_VISITED_ORGANIZATION_COOKIE,
   LAST_VISITED_ORGANIZATION_COOKIE_MAX_AGE,
 } from "@/constants/cookies";
-import { DEMO_DISABLED_MESSAGE } from "@/constants/demo";
-import { ActionFailure } from "@/lib/actions/errors";
+import {
+  ActionFailure,
+  failDemoDisabled,
+  tryAction,
+} from "@/lib/actions/errors";
 import { runAction } from "@/lib/actions/run-action";
 import { validateActionInput } from "@/lib/actions/validate-input";
 import {
@@ -42,7 +45,7 @@ import {
 import { readRequestHeaders } from "@/lib/analytics/request-headers";
 import { readWorkOSError } from "@/lib/auth/workos-error";
 import { getTranslations } from "@/lib/i18n/server";
-import { organizationActionMessage } from "@/lib/organizations/action-messages";
+import { failWithOrganizationMessage } from "@/lib/organizations/action-messages";
 import {
   requireManagerMembership,
   requireMembership,
@@ -90,12 +93,8 @@ const enforceTeamMembersLimit = Effect.fn(
   });
 
   if (status === "check-unavailable") {
-    return yield* Effect.fail(
-      new ActionFailure({
-        message: yield* organizationActionMessage(
-          "actions.organizations.teamMemberLimitCheckUnavailable"
-        ),
-      })
+    return yield* failWithOrganizationMessage(
+      "actions.organizations.teamMemberLimitCheckUnavailable"
     );
   }
 
@@ -111,10 +110,10 @@ const enforceTeamMembersLimit = Effect.fn(
   }
 });
 
-const tryDb = <T>(run: () => Promise<T>, message: string) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) => new ActionFailure({ message, cause }),
+const rememberOrganization = (slug: string) =>
+  setCookie(LAST_VISITED_ORGANIZATION_COOKIE, slug, {
+    path: "/",
+    maxAge: LAST_VISITED_ORGANIZATION_COOKIE_MAX_AGE,
   });
 
 const trackOrganizationEvent = Effect.fn(
@@ -135,16 +134,13 @@ const trackOrganizationEvent = Effect.fn(
 const countOrganizationMembers = Effect.fn(
   "organizations.actions.countOrganizationMembers"
 )(function* (organizationId: string) {
-  return yield* Effect.tryPromise({
-    try: async () => {
-      const [row] = await db
-        .select({ value: count() })
-        .from(members)
-        .where(eq(members.organizationId, organizationId));
-      return row?.value ?? null;
-    },
-    catch: () => null,
-  }).pipe(Effect.catch(() => Effect.succeed(null)));
+  return yield* Effect.tryPromise(async () => {
+    const [row] = await db
+      .select({ value: count() })
+      .from(members)
+      .where(eq(members.organizationId, organizationId));
+    return row?.value ?? null;
+  }).pipe(Effect.orElseSucceed(() => null));
 });
 
 const mapMemberRows = (
@@ -181,7 +177,7 @@ const mapMemberRows = (
 
 const tryWorkOS = <T>(run: () => Promise<T>, fallbackMessage: string) =>
   isDemoMode()
-    ? Effect.fail(new ActionFailure({ message: DEMO_DISABLED_MESSAGE }))
+    ? failDemoDisabled
     : Effect.tryPromise({
         try: run,
         catch: (cause) =>
@@ -204,9 +200,7 @@ const requireWorkOSOrganizationId = Effect.fn(
   "organizations.actions.requireWorkOSOrganizationId"
 )(function* (organizationId: string) {
   if (isDemoMode()) {
-    return yield* Effect.fail(
-      new ActionFailure({ message: DEMO_DISABLED_MESSAGE })
-    );
+    return yield* failDemoDisabled;
   }
   return yield* ensureWorkOSOrganizationWithMembers(organizationId).pipe(
     Effect.catch((error) =>
@@ -231,16 +225,12 @@ const requireInvitationManagement = Effect.fn(
   );
 
   if (!invitation.organizationId) {
-    return yield* Effect.fail(
-      new ActionFailure({
-        message: yield* organizationActionMessage(
-          "actions.organizations.invitationNotFound"
-        ),
-      })
+    return yield* failWithOrganizationMessage(
+      "actions.organizations.invitationNotFound"
     );
   }
 
-  const organization = yield* tryDb(
+  const organization = yield* tryAction(
     () =>
       db.query.organizations.findFirst({
         where: eq(organizations.workosOrgId, invitation.organizationId ?? ""),
@@ -250,12 +240,8 @@ const requireInvitationManagement = Effect.fn(
   );
 
   if (!organization) {
-    return yield* Effect.fail(
-      new ActionFailure({
-        message: yield* organizationActionMessage(
-          "actions.organizations.organizationNotFound"
-        ),
-      })
+    return yield* failWithOrganizationMessage(
+      "actions.organizations.organizationNotFound"
     );
   }
 
@@ -273,9 +259,7 @@ export async function createOrganization(
   return runAction(
     Effect.gen(function* () {
       if (isDemoMode()) {
-        return yield* Effect.fail(
-          new ActionFailure({ message: DEMO_DISABLED_MESSAGE })
-        );
+        return yield* failDemoDisabled;
       }
       const session = yield* requireSession();
       const input = yield* validateActionInput(
@@ -284,7 +268,7 @@ export async function createOrganization(
       );
       const { slug, websiteUrl } = input;
 
-      const existing = yield* tryDb(
+      const existing = yield* tryAction(
         () =>
           db.query.organizations.findFirst({
             where: eq(organizations.slug, slug),
@@ -320,7 +304,7 @@ export async function createOrganization(
       const organizationId = crypto.randomUUID();
       const now = new Date();
 
-      const [organization] = yield* tryDb(
+      const [organization] = yield* tryAction(
         () =>
           db.transaction(async (tx) => {
             const inserted = await tx
@@ -359,7 +343,7 @@ export async function createOrganization(
 
       yield* ensureWorkOSOrganizationWithMembers(organizationId).pipe(
         Effect.catch((error) =>
-          tryDb(
+          tryAction(
             () =>
               db
                 .delete(organizations)
@@ -435,10 +419,7 @@ export async function createOrganization(
       });
 
       if (!input.keepCurrentActiveOrganization) {
-        setCookie(LAST_VISITED_ORGANIZATION_COOKIE, slug, {
-          path: "/",
-          maxAge: LAST_VISITED_ORGANIZATION_COOKIE_MAX_AGE,
-        });
+        rememberOrganization(slug);
       }
 
       return organization;
@@ -476,7 +457,7 @@ export async function updateOrganization(
         updates.slug = input.data.slug;
       }
 
-      const [organization] = yield* tryDb(
+      const [organization] = yield* tryAction(
         () =>
           db
             .update(organizations)
@@ -487,12 +468,8 @@ export async function updateOrganization(
       );
 
       if (!organization) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.organizationNotFound"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.organizationNotFound"
         );
       }
 
@@ -514,10 +491,7 @@ export async function updateOrganization(
         updates.slug &&
         getCookie(LAST_VISITED_ORGANIZATION_COOKIE) !== organization.slug
       ) {
-        setCookie(LAST_VISITED_ORGANIZATION_COOKIE, organization.slug, {
-          path: "/",
-          maxAge: LAST_VISITED_ORGANIZATION_COOKIE_MAX_AGE,
-        });
+        rememberOrganization(organization.slug);
       }
 
       return organization;
@@ -532,7 +506,7 @@ export async function listOrganizations(): Promise<
     Effect.gen(function* () {
       const session = yield* requireSession();
 
-      const rows = yield* tryDb(
+      const rows = yield* tryAction(
         () =>
           db.query.members.findMany({
             where: eq(members.userId, session.user.id),
@@ -576,27 +550,20 @@ export async function setActiveOrganization(
         rawInput
       );
 
-      const organization = yield* tryDb(
+      const organization = yield* tryAction(
         () => findOrganizationForSelection(input),
         "Failed to load organization"
       );
 
       if (!organization) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.organizationNotFound"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.organizationNotFound"
         );
       }
 
       yield* requireMembership(session, organization.id);
 
-      setCookie(LAST_VISITED_ORGANIZATION_COOKIE, organization.slug, {
-        path: "/",
-        maxAge: LAST_VISITED_ORGANIZATION_COOKIE_MAX_AGE,
-      });
+      rememberOrganization(organization.slug);
 
       return organization;
     })
@@ -614,7 +581,7 @@ export async function getOrganizationSummary(
         rawSlug
       );
 
-      const organization = yield* tryDb(
+      const organization = yield* tryAction(
         () =>
           db.query.organizations.findFirst({
             where: eq(organizations.slug, slug),
@@ -623,12 +590,8 @@ export async function getOrganizationSummary(
       );
 
       if (!organization) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.organizationNotFound"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.organizationNotFound"
         );
       }
 
@@ -653,7 +616,7 @@ export async function getFullOrganization(
       let organizationId = input?.query?.organizationId;
 
       if (!organizationId && input?.query?.organizationSlug) {
-        const bySlug = yield* tryDb(
+        const bySlug = yield* tryAction(
           () =>
             db.query.organizations.findFirst({
               where: eq(
@@ -677,7 +640,7 @@ export async function getFullOrganization(
 
       yield* requireMembership(session, organizationId);
 
-      const organization = yield* tryDb(
+      const organization = yield* tryAction(
         () =>
           db.query.organizations.findFirst({
             where: eq(organizations.id, organizationId ?? ""),
@@ -726,7 +689,7 @@ export async function listMembers(
       );
       yield* requireMembership(session, organizationId);
 
-      const rows = yield* tryDb(
+      const rows = yield* tryAction(
         () =>
           db.query.members.findMany({
             where: eq(members.organizationId, organizationId),
@@ -757,7 +720,7 @@ export async function updateMemberRole(
         rawInput
       );
 
-      const member = yield* tryDb(
+      const member = yield* tryAction(
         () =>
           db.query.members.findFirst({
             where: eq(members.id, input.memberId),
@@ -766,12 +729,8 @@ export async function updateMemberRole(
       );
 
       if (!member) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.memberNotFound"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.memberNotFound"
         );
       }
 
@@ -781,26 +740,18 @@ export async function updateMemberRole(
       );
 
       if (input.role === "owner" && callerMembership.role !== "owner") {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.ownerRoleOwnerOnly"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.ownerRoleOwnerOnly"
         );
       }
 
       if (member.role === "owner" && input.role !== "owner") {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.ownerRoleLocked"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.ownerRoleLocked"
         );
       }
 
-      yield* tryDb(
+      yield* tryAction(
         () =>
           db
             .update(members)
@@ -829,7 +780,7 @@ export async function updateMemberRole(
         },
       });
 
-      const updated = yield* tryDb(
+      const updated = yield* tryAction(
         () =>
           db.query.members.findFirst({
             where: eq(members.id, input.memberId),
@@ -865,7 +816,7 @@ export async function removeMember(
 
       const isEmail = input.memberIdOrEmail.includes("@");
 
-      const member = yield* tryDb(
+      const member = yield* tryAction(
         () =>
           isEmail
             ? db
@@ -894,12 +845,8 @@ export async function removeMember(
       );
 
       if (!member) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.memberNotFound"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.memberNotFound"
         );
       }
 
@@ -910,16 +857,12 @@ export async function removeMember(
       }
 
       if (member.role === "owner") {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.ownerNotRemovable"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.ownerNotRemovable"
         );
       }
 
-      yield* tryDb(
+      yield* tryAction(
         () => db.delete(members).where(eq(members.id, member.id)),
         "Failed to remove member"
       );
@@ -986,9 +929,7 @@ export async function inviteMember(
   return runAction(
     Effect.gen(function* () {
       if (isDemoMode()) {
-        return yield* Effect.fail(
-          new ActionFailure({ message: DEMO_DISABLED_MESSAGE })
-        );
+        return yield* failDemoDisabled;
       }
       const session = yield* requireSession();
       const input = yield* validateActionInput(
@@ -1005,22 +946,14 @@ export async function inviteMember(
       );
 
       if (input.role === "owner" && callerMembership.role !== "owner") {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.ownerRoleOwnerOnly"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.ownerRoleOwnerOnly"
         );
       }
 
       if (!isNotDisposableEmail(input.email)) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.disposableEmail"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.disposableEmail"
         );
       }
 

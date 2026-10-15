@@ -179,16 +179,15 @@ function resolveStoredAssetPath(
   return `${base}-${stem}${extension}`;
 }
 
+function encodeRfc3986(value: string) {
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+}
+
 function encodeMarkdownPath(path: string) {
-  return path
-    .split("/")
-    .map((segment) =>
-      encodeURIComponent(segment).replace(
-        /[!'()*]/g,
-        (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`
-      )
-    )
-    .join("/");
+  return path.split("/").map(encodeRfc3986).join("/");
 }
 
 function sourceFragment(sourceUrl: string) {
@@ -218,10 +217,7 @@ function appendSourceFragment(destination: string, sourceUrl: string) {
       break;
     }
     const character = String.fromCodePoint(codePoint);
-    encodedFragment += encodeURIComponent(character).replace(
-      /[!'()*]/g,
-      (value) => `%${value.charCodeAt(0).toString(16).toUpperCase()}`
-    );
+    encodedFragment += encodeRfc3986(character);
     index += character.length;
   }
   return `${destination}#${encodedFragment}`;
@@ -347,12 +343,10 @@ export async function prepareGitHubContentAssets(
 export async function prepareR2GitHubContentAssets(
   params: PrepareR2GitHubContentAssetsParams
 ) {
-  const publicUrl = getOptionalR2PublicUrl();
-
   return prepareGitHubContentAssets({
     ...params,
     appOrigin: readAppOrigin(),
-    publicUrl,
+    publicUrl: getOptionalR2PublicUrl(),
     loadImage: async (key, maxBytes) => {
       const stored = await readContentImage(key, maxBytes);
       if (!stored) {

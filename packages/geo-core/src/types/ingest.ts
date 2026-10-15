@@ -141,7 +141,7 @@ export interface BatchedRow {
 
 export type GeoIngestPayload = z.infer<typeof geoRequestPayloadSchema>;
 
-export type WebEngagementPayload = z.infer<typeof webEngagementPayloadSchema>;
+type WebEngagementPayload = z.infer<typeof webEngagementPayloadSchema>;
 
 export interface WebPageViewInput {
   identity: GeoIngestIdentity;

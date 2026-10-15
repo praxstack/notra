@@ -1,7 +1,7 @@
-import { GITHUB_API_VERSION_HEADER } from "@notra/ai/constants/autonomy-poll";
 import {
   GITHUB_CONTENT_POST_TRAILER,
   GITHUB_CREATE_COMMIT_ON_BRANCH_MUTATION,
+  GITHUB_API_VERSION_HEADERS,
 } from "@notra/ai/constants/github";
 import { GITHUB_MENTION_FILE_CONTENT_MAX_BYTES } from "@notra/ai/constants/github-mention";
 import { getGitHubAppBotLogin } from "@notra/ai/integrations/github";
@@ -9,10 +9,6 @@ import type {
   CommitFilesToPullRequestParams,
   GitHubCreateCommitOnBranchResult,
 } from "@notra/ai/types/github-mention";
-
-const GITHUB_API_VERSION_HEADERS = {
-  "X-GitHub-Api-Version": GITHUB_API_VERSION_HEADER,
-} as const;
 
 async function getTrustedParentCommitBody(
   params: CommitFilesToPullRequestParams
@@ -155,7 +151,6 @@ export async function getRepositoryFileContents(params: {
   return Buffer.from(data.content, "base64").toString("utf8");
 }
 
-/** Files changed between two commits, with GitHub's unified patch per file. */
 export async function getGitHubChangedFiles(params: {
   octokit: CommitFilesToPullRequestParams["octokit"];
   owner: string;
@@ -207,10 +202,9 @@ export async function getGitHubPullRequestFilePatch(params: {
   }
 }
 
-function githubStatus(error: unknown) {
+export function githubStatus(error: unknown) {
   if (typeof error === "object" && error !== null && "status" in error) {
-    const status = (error as { status?: unknown }).status;
-    return typeof status === "number" ? status : null;
+    return typeof error.status === "number" ? error.status : null;
   }
   return null;
 }

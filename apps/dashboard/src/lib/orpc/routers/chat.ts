@@ -24,10 +24,9 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { marked } from "marked";
 import { nanoid } from "nanoid";
 
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { loadChatHistoryPayload } from "@/lib/chat/history";
 import { afterResponse } from "@/lib/framework/after-response";
-import { authorizedProcedure } from "@/lib/orpc/base";
+import { authorizedProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import { internalServerError, notFound } from "@/lib/orpc/utils/errors";
 
 const CHAT_NOT_FOUND_MESSAGE = "Chat not found";
@@ -36,13 +35,9 @@ export const chatRouter = {
   sessions: {
     list: authorizedProcedure
       .input(listChatSessionsInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const { organizationId } = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-          user: context.user,
-        });
-
+        const { organizationId } = context.auth;
         const sessions = await listChatSessions(organizationId, {
           projectId: input.projectId ?? null,
         });
@@ -51,13 +46,9 @@ export const chatRouter = {
 
     get: authorizedProcedure
       .input(chatSessionInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const { organizationId } = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-          user: context.user,
-        });
-
+        const { organizationId } = context.auth;
         const history = await loadChatHistoryPayload(
           organizationId,
           input.chatId
@@ -70,13 +61,9 @@ export const chatRouter = {
 
     update: authorizedProcedure
       .input(updateChatSessionInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const { organizationId } = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-          user: context.user,
-        });
-
+        const { organizationId } = context.auth;
         const session =
           input.title !== undefined
             ? await renameChatSession(organizationId, input.chatId, input.title)
@@ -94,13 +81,9 @@ export const chatRouter = {
 
     delete: authorizedProcedure
       .input(chatSessionInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const { organizationId } = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-          user: context.user,
-        });
-
+        const { organizationId } = context.auth;
         const deleted = await deleteChatSession(organizationId, input.chatId);
         if (!deleted) {
           throw notFound(CHAT_NOT_FOUND_MESSAGE);
@@ -112,13 +95,9 @@ export const chatRouter = {
   posts: {
     create: authorizedProcedure
       .input(createChatPostInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const { organizationId } = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-          user: context.user,
-        });
-
+        const { organizationId } = context.auth;
         const { chatId, toolCallId, title, contentType, markdown, status } =
           input;
         const slug =

@@ -1,3 +1,5 @@
+import { readEnvSwitch } from "@notra/ai/utils/env-switch";
+
 import {
   OFFERING_CHECK_INVALID_REQUEST_MESSAGE,
   OFFERING_CHECK_KILL_SWITCH_ENV,
@@ -36,7 +38,7 @@ function isSameOriginRequest(request: Request): boolean {
 export async function readOfferingCheckRequest(
   request: Request
 ): Promise<OfferingCheckInput | Response> {
-  if (process.env[OFFERING_CHECK_KILL_SWITCH_ENV] === "off") {
+  if (!readEnvSwitch(OFFERING_CHECK_KILL_SWITCH_ENV, { defaultOn: true })) {
     return jsonError("The checker is paused", 503);
   }
   if (!isSameOriginRequest(request)) {

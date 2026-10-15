@@ -10,7 +10,7 @@ import type { SupermemoryOptions } from "@notra/ai/types/model";
 import { withSupermemory } from "@supermemory/tools/ai-sdk";
 import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
 
-export interface CreateModelOptions {
+interface CreateModelOptions {
   supermemory?: Omit<SupermemoryOptions, "mode" | "addMemory">;
   disableMemory?: boolean;
 }
@@ -26,12 +26,8 @@ export function createModel(
 ): GatewayResult {
   const base = gateway(modelId, { organizationId });
 
-  if (!organizationId || options?.disableMemory) {
-    return wrapModelForDevTools(wrapModelWithObservability(base, log));
-  }
-
   const supermemoryApiKey = process.env.SUPERMEMORY_API_KEY?.trim();
-  if (!supermemoryApiKey) {
+  if (!(organizationId && supermemoryApiKey) || options?.disableMemory) {
     return wrapModelForDevTools(wrapModelWithObservability(base, log));
   }
 
@@ -66,11 +62,7 @@ function wrapModelForDevTools(model: GatewayResult): GatewayResult {
 function createLazyDevToolsMiddleware(): LanguageModelMiddleware {
   let middlewarePromise: Promise<LanguageModelMiddleware> | undefined;
 
-  const getMiddleware = async () => {
-    if (process.env.NODE_ENV !== "development") {
-      return undefined;
-    }
-
+  const getMiddleware = () => {
     middlewarePromise ??= import("@ai-sdk/devtools").then(
       ({ devToolsMiddleware }: { devToolsMiddleware: DevToolsMiddleware }) =>
         devToolsMiddleware()
@@ -82,19 +74,19 @@ function createLazyDevToolsMiddleware(): LanguageModelMiddleware {
     specificationVersion: "v4",
     async transformParams(options) {
       const middleware = await getMiddleware();
-      return middleware?.transformParams
+      return middleware.transformParams
         ? middleware.transformParams(options)
         : options.params;
     },
     async wrapGenerate(options) {
       const middleware = await getMiddleware();
-      return middleware?.wrapGenerate
+      return middleware.wrapGenerate
         ? middleware.wrapGenerate(options)
         : options.doGenerate();
     },
     async wrapStream(options) {
       const middleware = await getMiddleware();
-      return middleware?.wrapStream
+      return middleware.wrapStream
         ? middleware.wrapStream(options)
         : options.doStream();
     },

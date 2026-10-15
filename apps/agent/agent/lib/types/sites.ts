@@ -1,7 +1,7 @@
 import type { createGetSiteContentTool } from "@notra/tools/assistant/get-site-content";
 import type { createGetSitesTool } from "@notra/tools/assistant/get-sites";
 
-export interface SiteToolActivityLabel {
+interface SiteToolActivityLabel {
   label: { start: () => string };
 }
 

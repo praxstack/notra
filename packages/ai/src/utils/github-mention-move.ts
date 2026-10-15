@@ -7,7 +7,10 @@ import {
 import type { GitHubMentionMoveParams } from "@notra/ai/types/github-mention-move";
 import { findNewActiveContent } from "@notra/ai/utils/github-mention-content-policy";
 import { partitionGitHubMentionPaths } from "@notra/ai/utils/github-mention-path-policy";
-import { commitFilesToPullRequest } from "@notra/ai/utils/github-pr-commit";
+import {
+  commitFilesToPullRequest,
+  githubStatus,
+} from "@notra/ai/utils/github-pr-commit";
 import { syncPublishedPostAfterCommit } from "@notra/ai/utils/update-published-content";
 
 export async function moveGitHubMentionContent(
@@ -32,12 +35,7 @@ export async function moveGitHubMentionContent(
       path: toPath,
     })
     .catch((error: unknown) => {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "status" in error &&
-        error.status === 404
-      ) {
+      if (githubStatus(error) === 404) {
         return null;
       }
       throw error;

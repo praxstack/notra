@@ -21,6 +21,12 @@ const BUDGETED_ACTION_STATUSES = [
   "failed",
 ] as const;
 
+const budgetWindowStart = () =>
+  new Date(
+    Date.now() -
+      ACTION_BUDGET_WINDOW_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND
+  );
+
 export const evaluateGate = Effect.fn("iris.gate.evaluate")(function* (
   input: GateEvaluationInput
 ) {
@@ -80,10 +86,7 @@ export const evaluateGate = Effect.fn("iris.gate.evaluate")(function* (
 
 export const countActionsInLast24h = Effect.fn("iris.gate.countActions")(
   function* (organizationId: string) {
-    const since = new Date(
-      Date.now() -
-        ACTION_BUDGET_WINDOW_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND
-    );
+    const since = budgetWindowStart();
 
     const rows = yield* Effect.tryPromise({
       try: () =>
@@ -116,10 +119,7 @@ export const countActionsInLast24h = Effect.fn("iris.gate.countActions")(
 
 export const sumRunCostCentsInLast24h = Effect.fn("iris.gate.sumCost")(
   function* (organizationId: string) {
-    const since = new Date(
-      Date.now() -
-        ACTION_BUDGET_WINDOW_HOURS * SECONDS_PER_HOUR * MILLISECONDS_PER_SECOND
-    );
+    const since = budgetWindowStart();
 
     const rows = yield* Effect.tryPromise({
       try: () =>

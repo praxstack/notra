@@ -22,7 +22,8 @@ import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import { trimTrailingSlash } from "hono/trailing-slash";
 
-import { DEMO_API_MAX_BODY_BYTES, DEMO_API_URL } from "./constants/demo";
+import { DEMO_API_URL } from "./constants/demo";
+import { API_MAX_BODY_BYTES } from "./constants/request-limits";
 import { apiAnalyticsMiddleware } from "./middleware/analytics";
 import { authMiddleware } from "./middleware/auth";
 import { demoRequestLogMiddleware } from "./middleware/demo-request-log";
@@ -69,7 +70,6 @@ import {
   buildAuthorizationServerMetadata,
   buildProtectedResourceMetadata,
   RESOURCE_METADATA_URL,
-  SITE_URL,
 } from "./utils/agent-discovery";
 import { trackApiException } from "./utils/analytics";
 import { assertDedicatedDemoDatabase } from "./utils/demo-database-guard";
@@ -205,13 +205,14 @@ const databaseMiddleware = async (c: Context, next: () => Promise<void>) => {
 app.use("/v1/*", databaseMiddleware);
 app.use("/v2/*", databaseMiddleware);
 
+const apiBodyLimit = bodyLimit({
+  maxSize: API_MAX_BODY_BYTES,
+  onError: (c) => c.json({ error: "Payload too large" }, 413),
+});
+app.use("/v1/*", apiBodyLimit);
+app.use("/v2/*", apiBodyLimit);
+
 if (IS_DEMO) {
-  const demoBodyLimit = bodyLimit({
-    maxSize: DEMO_API_MAX_BODY_BYTES,
-    onError: (c) => c.json({ error: "Payload too large" }, 413),
-  });
-  app.use("/v1/*", demoBodyLimit);
-  app.use("/v2/*", demoBodyLimit);
   app.use("/v1/*", demoRequestLogMiddleware);
   app.use("/v2/*", demoRequestLogMiddleware);
 }

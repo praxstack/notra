@@ -210,13 +210,11 @@ export function respondToPostFailure(c: Context, failure: PostDomainError) {
     return c.json({ error: failure.message }, 400);
   }
 
-  if (failure._tag === "PostGenerationQueueFailedError") {
-    return c.json(
-      {
-        error: "Failed to queue content generation",
-        ...(failure.jobId ? { jobId: failure.jobId } : {}),
-      },
-      503
-    );
-  }
+  return c.json(
+    {
+      error: "Failed to queue content generation",
+      ...(failure.jobId ? { jobId: failure.jobId } : {}),
+    },
+    503
+  );
 }

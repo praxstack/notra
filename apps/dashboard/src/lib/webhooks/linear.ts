@@ -11,7 +11,10 @@ import {
 
 import { checkLogRetention } from "@/lib/billing/check-log-retention";
 import { appendWebhookLog } from "@/lib/webhooks/logging";
-import type { WebhookContext } from "@/types/webhooks/webhooks";
+import type {
+  WebhookContext,
+  WebhookLogInput,
+} from "@/types/webhooks/webhooks";
 import { authorizeWebhookIntegration } from "@/utils/webhook-integration";
 
 export async function handleLinearWebhook(
@@ -26,18 +29,26 @@ export async function handleLinearWebhook(
     return integration;
   }
   const rawBody = await request.text();
-
   const signature = request.headers.get("linear-signature");
-
-  if (!signature) {
-    await appendWebhookLog({
+  const log = (
+    entry: Omit<
+      WebhookLogInput,
+      "organizationId" | "integrationId" | "integrationType" | "referenceId"
+    >
+  ) =>
+    appendWebhookLog({
       organizationId,
       integrationId,
       integrationType: "linear",
+      referenceId: null,
+      ...entry,
+    });
+
+  if (!signature) {
+    await log({
       title: "Missing Linear signature",
       status: "failed",
       statusCode: 400,
-      referenceId: null,
       errorMessage: "Missing Linear-Signature header",
     });
 
@@ -64,14 +75,10 @@ export async function handleLinearWebhook(
     timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 
   if (!isValid) {
-    await appendWebhookLog({
-      organizationId,
-      integrationId,
-      integrationType: "linear",
+    await log({
       title: "Invalid webhook signature",
       status: "failed",
       statusCode: 401,
-      referenceId: null,
       errorMessage: "Linear webhook signature verification failed",
     });
 
@@ -85,14 +92,10 @@ export async function handleLinearWebhook(
   try {
     parsedBody = JSON.parse(rawBody);
   } catch {
-    await appendWebhookLog({
-      organizationId,
-      integrationId,
-      integrationType: "linear",
+    await log({
       title: "Invalid webhook payload",
       status: "failed",
       statusCode: 400,
-      referenceId: null,
       errorMessage: "Could not parse webhook payload",
     });
 
@@ -101,14 +104,10 @@ export async function handleLinearWebhook(
 
   const validation = linearWebhookPayloadSchema.safeParse(parsedBody);
   if (!validation.success) {
-    await appendWebhookLog({
-      organizationId,
-      integrationId,
-      integrationType: "linear",
+    await log({
       title: "Invalid webhook payload structure",
       status: "failed",
       statusCode: 400,
-      referenceId: null,
       errorMessage: `Payload validation failed: ${validation.error.issues.map((issue) => issue.message).join(", ")}`,
     });
 
@@ -126,14 +125,10 @@ export async function handleLinearWebhook(
     ? `Linear ${payload.type} ${payload.action ?? "event"}`
     : "Linear webhook received";
 
-  await appendWebhookLog({
-    organizationId,
-    integrationId,
-    integrationType: "linear",
+  await log({
     title: eventTitle,
     status: "success",
     statusCode: 200,
-    referenceId: null,
     payload: {
       action: payload.action,
       type: payload.type,

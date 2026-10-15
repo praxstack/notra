@@ -65,6 +65,17 @@ function toPublication(
   };
 }
 
+function findPublicationPost(postId: string, organizationId: string) {
+  return db.query.posts.findFirst({
+    where: and(eq(posts.id, postId), eq(posts.organizationId, organizationId)),
+    columns: {
+      contentType: true,
+      title: true,
+      markdown: true,
+    },
+  });
+}
+
 export async function recordContentPublication(
   params: RecordContentPublicationParams,
   publishedAt: string
@@ -396,17 +407,10 @@ export async function findOpenContentPublicationByPullRequest(params: {
   if (!publication) {
     return null;
   }
-  const post = await db.query.posts.findFirst({
-    where: and(
-      eq(posts.id, publication.postId),
-      eq(posts.organizationId, publication.organizationId)
-    ),
-    columns: {
-      contentType: true,
-      title: true,
-      markdown: true,
-    },
-  });
+  const post = await findPublicationPost(
+    publication.postId,
+    publication.organizationId
+  );
   return {
     ...toPublication(publication, post),
     organizationId: publication.organizationId,
@@ -432,17 +436,10 @@ export async function findContentPublicationForPullRequest(params: {
   if (!publication) {
     return null;
   }
-  const post = await db.query.posts.findFirst({
-    where: and(
-      eq(posts.id, publication.postId),
-      eq(posts.organizationId, params.organizationId)
-    ),
-    columns: {
-      contentType: true,
-      title: true,
-      markdown: true,
-    },
-  });
+  const post = await findPublicationPost(
+    publication.postId,
+    params.organizationId
+  );
   return toPublication(publication, post);
 }
 
@@ -460,16 +457,9 @@ export async function findOpenContentPublicationForPost(params: {
   if (!publication) {
     return null;
   }
-  const post = await db.query.posts.findFirst({
-    where: and(
-      eq(posts.id, publication.postId),
-      eq(posts.organizationId, params.organizationId)
-    ),
-    columns: {
-      contentType: true,
-      title: true,
-      markdown: true,
-    },
-  });
+  const post = await findPublicationPost(
+    publication.postId,
+    params.organizationId
+  );
   return toPublication(publication, post);
 }

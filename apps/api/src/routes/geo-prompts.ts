@@ -1,6 +1,5 @@
 import { createRoute } from "@hono/zod-openapi";
 import { parsePromptsCsv } from "@notra/geo-core/geo/csv-import";
-import { refreshGeoContentGapsBestEffort } from "@notra/geo-core/geo/gaps";
 import {
   createGeoPrompt,
   deleteGeoPrompt,
@@ -29,20 +28,17 @@ import {
   GEO_OPENAPI_TAG,
 } from "../constants/geo-openapi";
 import { runGeoEffect } from "../runtime/geo";
-import { geoErrorResponse } from "../utils/geo";
+import { geoOutcomeResponse, refreshGeoGapsAfter } from "../utils/geo";
 import { createOpenApiApp } from "../utils/openapi-app";
 import { rateLimitResponse } from "../utils/openapi-responses";
 import { enforceRatelimit, RATE_LIMITS, ratelimit } from "../utils/ratelimit";
 
 export const geoPromptsRoutes = createOpenApiApp();
 
-const GEO_TAG = GEO_OPENAPI_TAG;
-const commonErrors = GEO_COMMON_ERROR_RESPONSES;
-
 const listPromptsRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/geo/prompts",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "listGeoPrompts",
   summary: "List tracked GEO prompts",
   description:
@@ -53,14 +49,14 @@ const listPromptsRoute = createRoute({
       description: "Prompts fetched successfully",
       content: { "application/json": { schema: listPromptsResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
 const createPromptRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/geo/prompts",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "createGeoPrompt",
   summary: "Track a new GEO prompt",
   request: {
@@ -75,14 +71,14 @@ const createPromptRoute = createRoute({
       description: "Prompt created successfully",
       content: { "application/json": { schema: promptResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
 const patchPromptRoute = createRoute({
   method: "patch",
   path: "/projects/{projectId}/geo/prompts/{promptId}",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "updateGeoPrompt",
   summary: "Update a tracked GEO prompt",
   description:
@@ -99,14 +95,14 @@ const patchPromptRoute = createRoute({
       description: "Prompt updated successfully",
       content: { "application/json": { schema: promptResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
 const deletePromptRoute = createRoute({
   method: "delete",
   path: "/projects/{projectId}/geo/prompts/{promptId}",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "deleteGeoPrompt",
   summary: "Stop tracking a GEO prompt",
   request: { params: promptParamsSchema },
@@ -115,14 +111,14 @@ const deletePromptRoute = createRoute({
       description: "Prompt deleted successfully",
       content: { "application/json": { schema: deletePromptResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
 const importPromptsRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/geo/prompts/import",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "importGeoPrompts",
   summary: "Bulk import GEO prompts",
   description:
@@ -139,7 +135,7 @@ const importPromptsRoute = createRoute({
       description: "Prompts imported successfully",
       content: { "application/json": { schema: importPromptsResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
     429: rateLimitResponse(
       RATE_LIMITS.promptImport.requests,
       RATE_LIMITS.promptImport.window
@@ -152,105 +148,55 @@ geoPromptsRoutes.openapi(listPromptsRoute, async (c) => {
   const { projectId } = c.req.valid("param");
   const outcome = await runGeoEffect(
     "promptsList",
-    listGeoPrompts({ organizationId: base.organizationId, projectId })
+    listGeoPrompts({ organizationId: base.organizationId, projectId }).pipe(
+      Effect.map(({ configured, prompts }) => ({ configured, prompts }))
+    )
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(
-    {
-      configured: outcome.value.configured,
-      prompts: outcome.value.prompts,
-      organization: base.organization,
-    },
-    200
-  );
+  return geoOutcomeResponse(c, outcome, 200);
 });
 
 geoPromptsRoutes.openapi(createPromptRoute, async (c) => {
   const base = c.get("geo");
   const { projectId } = c.req.valid("param");
   const { prompt, tags } = c.req.valid("json");
+  const scope = { organizationId: base.organizationId, projectId };
   const outcome = await runGeoEffect(
     "promptsCreate",
-    createGeoPrompt(
-      { organizationId: base.organizationId, projectId },
-      prompt,
-      undefined,
-      tags ?? []
-    ).pipe(
-      Effect.tap(() =>
-        refreshGeoContentGapsBestEffort({
-          organizationId: base.organizationId,
-          projectId,
-        })
-      )
+    createGeoPrompt(scope, prompt, undefined, tags ?? []).pipe(
+      refreshGeoGapsAfter(scope),
+      Effect.map((created) => ({ prompt: created }))
     )
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(
-    { prompt: outcome.value, organization: base.organization },
-    201
-  );
+  return geoOutcomeResponse(c, outcome, 201);
 });
 
 geoPromptsRoutes.openapi(patchPromptRoute, async (c) => {
   const base = c.get("geo");
   const { projectId, promptId } = c.req.valid("param");
   const { enabled, tags } = c.req.valid("json");
-
+  const scope = { organizationId: base.organizationId, projectId };
   const outcome = await runGeoEffect(
     "promptsUpdate",
-    updateGeoPrompt(
-      { organizationId: base.organizationId, projectId },
-      promptId,
-      { enabled, tags }
-    ).pipe(
-      Effect.tap(() =>
-        refreshGeoContentGapsBestEffort({
-          organizationId: base.organizationId,
-          projectId,
-        })
-      )
+    updateGeoPrompt(scope, promptId, { enabled, tags }).pipe(
+      refreshGeoGapsAfter(scope),
+      Effect.map((prompt) => ({ prompt }))
     )
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(
-    { prompt: outcome.value, organization: base.organization },
-    200
-  );
+  return geoOutcomeResponse(c, outcome, 200);
 });
 
 geoPromptsRoutes.openapi(deletePromptRoute, async (c) => {
   const base = c.get("geo");
   const { projectId, promptId } = c.req.valid("param");
-
+  const scope = { organizationId: base.organizationId, projectId };
   const outcome = await runGeoEffect(
     "promptsDelete",
-    deleteGeoPrompt(
-      { organizationId: base.organizationId, projectId },
-      promptId
-    ).pipe(
-      Effect.tap(() =>
-        refreshGeoContentGapsBestEffort({
-          organizationId: base.organizationId,
-          projectId,
-        })
-      )
+    deleteGeoPrompt(scope, promptId).pipe(
+      refreshGeoGapsAfter(scope),
+      Effect.as({ id: promptId })
     )
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json({ id: promptId, organization: base.organization }, 200);
+  return geoOutcomeResponse(c, outcome, 200);
 });
 
 geoPromptsRoutes.openapi(importPromptsRoute, async (c) => {
@@ -284,32 +230,18 @@ geoPromptsRoutes.openapi(importPromptsRoute, async (c) => {
     return rateLimited;
   }
 
+  const scope = { organizationId: base.organizationId, projectId };
   const outcome = await runGeoEffect(
     "promptsImport",
-    importGeoPrompts(
-      { organizationId: base.organizationId, projectId },
-      rows
-    ).pipe(
-      Effect.tap(() =>
-        refreshGeoContentGapsBestEffort({
-          organizationId: base.organizationId,
-          projectId,
-        })
-      )
+    importGeoPrompts(scope, rows).pipe(
+      refreshGeoGapsAfter(scope),
+      Effect.map(({ imported, updated, skipped }) => ({
+        imported,
+        updated,
+        skipped,
+        issues,
+      }))
     )
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(
-    {
-      imported: outcome.value.imported,
-      updated: outcome.value.updated,
-      skipped: outcome.value.skipped,
-      issues,
-      organization: base.organization,
-    },
-    200
-  );
+  return geoOutcomeResponse(c, outcome, 200);
 });

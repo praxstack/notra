@@ -10,7 +10,6 @@ export const PLANNER_TASK_LOCAL_ID_PATTERN = /^t[0-9]{1,3}$/;
 export const plannerTaskLocalIdSchema = z
   .string()
   .regex(PLANNER_TASK_LOCAL_ID_PATTERN);
-export type PlannerTaskLocalId = z.infer<typeof plannerTaskLocalIdSchema>;
 
 export const plannerTaskSchema = z.object({
   localId: plannerTaskLocalIdSchema,
@@ -23,7 +22,6 @@ export const plannerTaskSchema = z.object({
 export type PlannerTask = z.infer<typeof plannerTaskSchema>;
 
 export const plannerDecisionSchema = z.enum(["no_op", "plan", "escalate"]);
-export type PlannerDecision = z.infer<typeof plannerDecisionSchema>;
 
 export const plannerGoalSchema = z.object({
   title: z.string().min(1).max(200),

@@ -8,13 +8,15 @@ import {
   users,
 } from "@notra/db/schema";
 import type { ScheduledPublicationDestinationConfig } from "@notra/db/types/scheduled-publications";
-import { EMAIL_CONFIG } from "@notra/email/utils/config";
 import { socialConnectPlatformSchema } from "@notra/schemas/dashboard/social-accounts";
 import { and, eq } from "drizzle-orm";
 
 import { SOCIAL_PLATFORM_LABELS } from "@/constants/social-connect";
 import { getNotificationData } from "@/lib/email/notification-data";
-import { sendScheduledPublicationFailedEmail } from "@/lib/email/send";
+import {
+  getAppUrl,
+  sendScheduledPublicationFailedEmail,
+} from "@/lib/email/send";
 
 async function describeDestination(
   organizationId: string,
@@ -125,7 +127,7 @@ export async function notifyScheduledPublicationFailed(
     ),
     scheduledFor: formatScheduledFor(row.scheduledAt, row.timeZone),
     reason: row.lastError ?? "Unknown error",
-    postLink: `${EMAIL_CONFIG.getAppUrl()}/${notification.organizationSlug}/content/${row.postId}`,
+    postLink: `${getAppUrl()}/${notification.organizationSlug}/content/${row.postId}`,
   };
   const results = await Promise.all(
     recipientEmails.map((recipientEmail) =>

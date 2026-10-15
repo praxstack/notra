@@ -254,18 +254,10 @@ async function enforceDemoSandboxCap(reservedSlots = 1) {
     )
   );
   if (excessPoolSize > 0) {
-    const excessPool = await db.transaction(async (tx) => {
-      const excessPool = await tx
-        .select()
-        .from(demoSandboxes)
-        .where(like(demoSandboxes.anonymousId, POOLED_ID_PATTERN))
-        .orderBy(asc(demoSandboxes.createdAt))
-        .limit(excessPoolSize)
-        .for("update", { of: demoSandboxes, skipLocked: true });
-      for (const sandbox of excessPool) {
-        await deleteDemoOrganization(sandbox.organizationId, tx);
-      }
-      return excessPool;
+    const excessPool = await deleteLockedDemoSandboxes({
+      where: like(demoSandboxes.anonymousId, POOLED_ID_PATTERN),
+      orderBy: asc(demoSandboxes.createdAt),
+      limit: excessPoolSize,
     });
     await Promise.all(excessPool.map(deleteDemoSandboxApiKey));
     overflow = (await countDemoSandboxes()) - cap;
@@ -273,27 +265,14 @@ async function enforceDemoSandboxCap(reservedSlots = 1) {
       return;
     }
   }
-  const evicted = await db.transaction(async (tx) => {
-    const idle = await tx
-      .select()
-      .from(demoSandboxes)
-      .where(
-        and(
-          notLike(demoSandboxes.anonymousId, POOLED_ID_PATTERN),
-          notLike(demoSandboxes.anonymousId, `${DEMO_SEED_ID_PREFIX}%`),
-          lt(
-            demoSandboxes.lastSeenAt,
-            new Date(Date.now() - DEMO_EVICTION_IDLE_MS)
-          )
-        )
-      )
-      .orderBy(asc(demoSandboxes.lastSeenAt))
-      .limit(overflow)
-      .for("update", { of: demoSandboxes, skipLocked: true });
-    for (const sandbox of idle) {
-      await deleteDemoOrganization(sandbox.organizationId, tx);
-    }
-    return idle;
+  const evicted = await deleteLockedDemoSandboxes({
+    where: and(
+      notLike(demoSandboxes.anonymousId, POOLED_ID_PATTERN),
+      notLike(demoSandboxes.anonymousId, `${DEMO_SEED_ID_PREFIX}%`),
+      lt(demoSandboxes.lastSeenAt, new Date(Date.now() - DEMO_EVICTION_IDLE_MS))
+    ),
+    orderBy: asc(demoSandboxes.lastSeenAt),
+    limit: overflow,
   });
   await Promise.all(evicted.map(deleteDemoSandboxApiKey));
 }
@@ -445,14 +424,6 @@ export async function createDemoSandbox(
   return seedDemoSandbox(createAnonymousId(), input);
 }
 
-async function refillDemoSandboxPool(): Promise<void> {
-  await withDemoLock(
-    DEMO_POOL_REFILL_LOCK_KEY,
-    DEMO_POOL_REFILL_LOCK_SECONDS,
-    refillPool
-  );
-}
-
 async function withDemoLock<T>(
   key: string,
   seconds: number,
@@ -481,7 +452,11 @@ export function maintainDemoSandboxPool(): void {
   afterResponse(async () => {
     await cleanupExpiredDemoSandboxes(DEMO_CLEANUP_BATCH_SIZE);
     await enforceDemoSandboxCap(0);
-    await refillDemoSandboxPool();
+    await withDemoLock(
+      DEMO_POOL_REFILL_LOCK_KEY,
+      DEMO_POOL_REFILL_LOCK_SECONDS,
+      refillPool
+    );
   });
 }
 
@@ -759,6 +734,26 @@ async function deleteDemoOrganization(
   if (userIds.length > 0) {
     await executor.delete(users).where(inArray(users.id, userIds));
   }
+}
+
+function deleteLockedDemoSandboxes(query: {
+  where: SQL | undefined;
+  orderBy: SQL;
+  limit: number;
+}) {
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .select()
+      .from(demoSandboxes)
+      .where(query.where)
+      .orderBy(query.orderBy)
+      .limit(query.limit)
+      .for("update", { of: demoSandboxes, skipLocked: true });
+    for (const sandbox of rows) {
+      await deleteDemoOrganization(sandbox.organizationId, tx);
+    }
+    return rows;
+  });
 }
 
 async function deleteDemoSandboxApiKey(sandbox: Pick<DemoSandbox, "apiKeyId">) {

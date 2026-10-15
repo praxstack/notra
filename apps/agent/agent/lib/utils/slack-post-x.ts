@@ -20,28 +20,63 @@ function pendingKey(callId: string) {
 
 export async function savePendingPostToX(
   callId: string,
-  pending: PendingPostToX
+  pending: PendingPostToX,
+  options: { onlyIfExists?: boolean } = {}
 ): Promise<boolean> {
   if (!redis) {
     return false;
   }
-  await redis.set(pendingKey(callId), JSON.stringify(pending), {
-    ex: POST_TO_X_PENDING_TTL_SECONDS,
-  });
-  return true;
+  const value = JSON.stringify(pending);
+  const result = options.onlyIfExists
+    ? await redis.set(pendingKey(callId), value, {
+        ex: POST_TO_X_PENDING_TTL_SECONDS,
+        xx: true,
+      })
+    : await redis.set(pendingKey(callId), value, {
+        ex: POST_TO_X_PENDING_TTL_SECONDS,
+      });
+  return result !== null;
 }
 
-export async function readPendingPostToX(
+function parsePendingPostToX(
+  raw: PendingPostToX | string | null
+): PendingPostToX | null {
+  if (!raw) {
+    return null;
+  }
+  return typeof raw === "string" ? JSON.parse(raw) : raw;
+}
+
+async function readPendingPostToX(
   callId: string
 ): Promise<PendingPostToX | null> {
   if (!redis) {
     return null;
   }
-  const raw = await redis.get<PendingPostToX>(pendingKey(callId));
-  if (!raw) {
+  return parsePendingPostToX(
+    await redis.get<PendingPostToX>(pendingKey(callId))
+  );
+}
+
+// Reads and deletes in one step so a redelivered rejection for the same call
+// cannot publish the tweet twice.
+async function claimPendingPostToX(
+  callId: string
+): Promise<PendingPostToX | null> {
+  if (!redis) {
     return null;
   }
-  return typeof raw === "string" ? JSON.parse(raw) : raw;
+  return parsePendingPostToX(
+    await redis.getdel<PendingPostToX>(pendingKey(callId))
+  );
+}
+
+export async function readPendingPostToXForOrganization(
+  callId: string,
+  organizationId: string
+): Promise<PendingPostToX | null> {
+  const pending = await readPendingPostToX(callId);
+  return pending?.organizationId === organizationId ? pending : null;
 }
 
 export function buildPostToXConfirmCard(input: {
@@ -121,7 +156,8 @@ export function buildPostToXConfirmCard(input: {
 }
 
 export async function switchPendingPostToXAccount(
-  selectedValue: string | undefined
+  selectedValue: string | undefined,
+  organizationId: string
 ): Promise<void> {
   if (!selectedValue) {
     return;
@@ -147,15 +183,20 @@ export async function switchPendingPostToXAccount(
     return;
   }
 
-  const pending = await readPendingPostToX(parsed.callId);
+  const pending = await readPendingPostToXForOrganization(
+    parsed.callId,
+    organizationId
+  );
   if (!pending) {
     return;
   }
-  await savePendingPostToX(parsed.callId, {
-    ...pending,
-    accountId: parsed.accountId,
-    username: parsed.username,
-  });
+  // Only update a post that is still pending: once publishing has claimed
+  // it, a late account switch must not bring it back for a second publish.
+  await savePendingPostToX(
+    parsed.callId,
+    { ...pending, accountId: parsed.accountId, username: parsed.username },
+    { onlyIfExists: true }
+  );
 }
 
 export async function dismissPostToXConfirmCard(
@@ -207,7 +248,7 @@ export async function publishPendingPostToX(
   callId: string,
   turnId: string
 ): Promise<PostToXOutcome | undefined> {
-  const pending = await readPendingPostToX(callId).catch(() => null);
+  const pending = await claimPendingPostToX(callId).catch(() => null);
   if (!pending) {
     return undefined;
   }
@@ -226,6 +267,13 @@ export async function publishPendingPostToX(
       })),
       Effect.catch((error) =>
         Effect.logWarning("[agent] Post to X failed", error).pipe(
+          // A rejected publish never reached X, so put the post back for the
+          // retry the completion message offers.
+          Effect.andThen(
+            Effect.tryPromise(() => savePendingPostToX(callId, pending)).pipe(
+              Effect.orElseSucceed(() => false)
+            )
+          ),
           Effect.as<PostToXOutcome>({
             turnId,
             postUrl: null,

@@ -7,8 +7,7 @@ import {
 } from "@notra/schemas/dashboard/sitemap";
 
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
-import { baseProcedure } from "@/lib/orpc/base";
+import { baseProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import { getSitemapBrandIdentity } from "@/lib/sitemap/brand-identity";
 import { getContextDevSitemap } from "@/lib/sitemap/context-dev";
 import {
@@ -39,11 +38,8 @@ async function assertSitemapBrandIdentity(
 export const brandSitemapsRouter = {
   list: baseProcedure
     .input(voiceInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       await assertSitemapBrandIdentity(input.organizationId, input.voiceId);
 
       try {
@@ -58,11 +54,8 @@ export const brandSitemapsRouter = {
     }),
   pages: baseProcedure
     .input(listSitemapPagesSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       await assertSitemapBrandIdentity(input.organizationId, input.voiceId);
 
       let result: Awaited<ReturnType<typeof getStoredSitemapPages>>;
@@ -90,11 +83,8 @@ export const brandSitemapsRouter = {
     }),
   create: baseProcedure
     .input(createSitemapSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
       const brandIdentity = await assertSitemapBrandIdentity(
         input.organizationId,
         input.voiceId
@@ -131,12 +121,8 @@ export const brandSitemapsRouter = {
     }),
   delete: baseProcedure
     .input(deleteSitemapSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       let deleted: boolean;
       try {
         deleted = await deleteStoredSitemap({

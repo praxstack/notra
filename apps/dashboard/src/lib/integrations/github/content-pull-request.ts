@@ -1,4 +1,5 @@
-import { GITHUB_API_VERSION_HEADERS } from "@/constants/github";
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
+
 import type {
   ContentPullRequestRef,
   ContentPullRequestState,

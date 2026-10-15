@@ -1,4 +1,3 @@
-import { getAppUrl } from "@notra/ai/qstash/triggers";
 import { logError } from "@notra/ai/utils/server-log";
 import { socialAnalyticsSyncPayloadSchema } from "@notra/schemas/dashboard/analytics";
 import { flattenError } from "zod";
@@ -13,7 +12,7 @@ export async function POST(request: Request) {
   const verified = await verifyQstashSignature({
     request,
     rawBody,
-    url: `${getAppUrl()}${ROUTE_PATH}`,
+    path: ROUTE_PATH,
   });
   if (!verified) {
     return new Response("Unauthorized", { status: 401 });

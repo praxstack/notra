@@ -12,7 +12,7 @@ import {
   MAX_SVG_CONTENT_SIZE,
 } from "../../constants/dashboard/upload";
 
-export const uploadAvatarSchema = z.object({
+const uploadAvatarSchema = z.object({
   type: z.literal("avatar"),
   fileType: z.coerce.string().nonempty(),
   fileSize: z.coerce
@@ -24,7 +24,7 @@ export const uploadAvatarSchema = z.object({
     }),
 });
 
-export const uploadLogoSchema = z.object({
+const uploadLogoSchema = z.object({
   type: z.literal("logo"),
   fileType: z.coerce.string().nonempty(),
   fileSize: z.coerce
@@ -36,7 +36,7 @@ export const uploadLogoSchema = z.object({
     }),
 });
 
-export const uploadBrandAssetSchema = z.object({
+const uploadBrandAssetSchema = z.object({
   type: z.literal("brand_asset"),
   fileType: z.coerce.string().nonempty(),
   fileSize: z.coerce
@@ -48,7 +48,7 @@ export const uploadBrandAssetSchema = z.object({
     }),
 });
 
-export const uploadBrandGuidelinePdfSchema = z.object({
+const uploadBrandGuidelinePdfSchema = z.object({
   type: z.literal("brand_guideline_pdf"),
   fileType: z.coerce.string().nonempty(),
   fileSize: z.coerce
@@ -60,7 +60,7 @@ export const uploadBrandGuidelinePdfSchema = z.object({
     }),
 });
 
-export const uploadMediaSchema = z.object({
+const uploadMediaSchema = z.object({
   type: z.literal("content"),
   fileType: z.coerce.string().nonempty(),
   fileSize: z.coerce
@@ -72,7 +72,7 @@ export const uploadMediaSchema = z.object({
     }),
 });
 
-export const uploadChatSchema = z.object({
+const uploadChatSchema = z.object({
   type: z.literal("chat"),
   fileType: z.coerce.string().nonempty(),
   fileSize: z.coerce
@@ -139,12 +139,6 @@ export const uploadSvgSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-export type UploadSvgInput = z.infer<typeof uploadSvgSchema>;
-
 export const uploadLogoFromUrlSchema = z.object({
   sourceUrl: z.url().max(2048),
-});
-
-export const DeleteSchema = z.object({
-  mediaIds: z.array(z.string()).min(1).max(100),
 });

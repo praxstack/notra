@@ -96,8 +96,11 @@ function segmentHitsBox([x1, y1]: Point, [x2, y2]: Point, box: Box) {
   return true;
 }
 
-function describe(element: ExcalidrawElement, labels: Map<string, string>) {
-  const label = labels.get(element.id);
+function describe(
+  element: ExcalidrawElement,
+  labels: Map<string, ExcalidrawTextElement>
+) {
+  const label = labels.get(element.id)?.text;
   return label
     ? `"${label.replaceAll("\n", " ")}" (${element.id})`
     : element.id;
@@ -125,13 +128,10 @@ export function findDiagramLayoutIssues(scene: ExcalidrawScene): string[] {
   const texts = checked.filter(
     (element): element is ExcalidrawTextElement => element.type === "text"
   );
-  const labelElements = new Map(
+  const labels = new Map(
     texts
       .filter((text) => text.containerId)
       .map((text) => [text.containerId as string, text])
-  );
-  const labels = new Map(
-    [...labelElements].map(([id, text]) => [id, text.text])
   );
 
   for (const [index, a] of shapes.entries()) {
@@ -161,8 +161,9 @@ export function findDiagramLayoutIssues(scene: ExcalidrawScene): string[] {
       }
     }
   }
-  for (const [index, a] of [...freeTexts, ...arrowLabels].entries()) {
-    for (const b of [...freeTexts, ...arrowLabels].slice(index + 1)) {
+  const allTexts = [...freeTexts, ...arrowLabels];
+  for (const [index, a] of allTexts.entries()) {
+    for (const b of allTexts.slice(index + 1)) {
       if (boxesOverlap(shrink(a, 2), shrink(b, 2))) {
         issues.push(`Text ${quote(a)} and text ${quote(b)} overlap.`);
       }
@@ -216,7 +217,7 @@ export function findDiagramLayoutIssues(scene: ExcalidrawScene): string[] {
       }
     }
 
-    const label = labelElements.get(linear.id);
+    const label = labels.get(linear.id);
     if (label) {
       const length = points
         .slice(1)

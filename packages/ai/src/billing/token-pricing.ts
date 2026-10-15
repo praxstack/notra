@@ -251,9 +251,9 @@ const DEFAULT_PRICING: ModelPricing = {
 };
 
 export const MARKUP_PERCENT = 10;
-const MARKUP_MULTIPLIER = 1 + MARKUP_PERCENT / 100;
+export const MARKUP_MULTIPLIER = 1 + MARKUP_PERCENT / 100;
 
-const MINIMUM_COST_CENTS = 1;
+export const MINIMUM_COST_CENTS = 1;
 
 export function calculateTokenCostCents(
   usage: AgentTokenUsage,

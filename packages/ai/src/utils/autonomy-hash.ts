@@ -17,7 +17,7 @@ const stableValue = (value: unknown): unknown => {
   return value;
 };
 
-export const stableJsonStringify = (value: unknown): string =>
+const stableJsonStringify = (value: unknown): string =>
   JSON.stringify(stableValue(value)) ?? "null";
 
 export const computeStableInputHash = (value: unknown): string =>

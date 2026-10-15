@@ -33,7 +33,7 @@ import {
   readCachedCompanyLogo,
   writeCachedCompanyLogo,
 } from "@/lib/onboarding/company-logo-cache";
-import { authorizedProcedure } from "@/lib/orpc/base";
+import { authorizedProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import { runOrpcEffect } from "@/lib/orpc/effect";
 import { toGeoOrpcError } from "@/lib/orpc/utils/geo-errors";
 import type { CompanyLogoResult } from "@/types/onboarding";
@@ -112,13 +112,8 @@ export const onboardingRouter = {
     }),
   get: authorizedProcedure
     .input(organizationIdInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const organizationId = input.organizationId;
       const [org] = await db
         .select({
@@ -140,12 +135,9 @@ export const onboardingRouter = {
       const onboardingCompleted = org?.onboardingCompleted ?? false;
       const onboardingDismissed = org?.onboardingDismissed ?? false;
 
-      if (
-        hasBrandIdentity &&
-        hasIntegration &&
-        hasSchedule &&
-        !onboardingCompleted
-      ) {
+      const setupComplete = hasBrandIdentity && hasIntegration && hasSchedule;
+
+      if (setupComplete && !onboardingCompleted) {
         await db
           .update(organizations)
           .set({ onboardingCompleted: true })
@@ -157,35 +149,22 @@ export const onboardingRouter = {
         hasIntegration,
         hasSchedule,
         hasGeoTracking,
-        onboardingCompleted:
-          hasBrandIdentity && hasIntegration && hasSchedule
-            ? true
-            : onboardingCompleted,
+        onboardingCompleted: setupComplete || onboardingCompleted,
         onboardingDismissed,
       };
     }),
   agentRun: authorizedProcedure
     .input(organizationIdInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       return resolveOnboardingAgentRunState(
         await getOnboardingAgentState(input.organizationId)
       );
     }),
   runAgent: authorizedProcedure
     .input(organizationIdInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
       const { success: withinLimit } = await ratelimit.onboardingAgent.limit(
         input.organizationId
       );
@@ -216,13 +195,8 @@ export const onboardingRouter = {
     }),
   suggestions: authorizedProcedure
     .input(listSuggestionsInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const filters = [
         eq(onboardingSuggestions.organizationId, input.organizationId),
       ];
@@ -237,13 +211,8 @@ export const onboardingRouter = {
     }),
   dismissSuggestion: authorizedProcedure
     .input(dismissSuggestionInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const updated = await db
         .update(onboardingSuggestions)
         .set({ dismissed: true })

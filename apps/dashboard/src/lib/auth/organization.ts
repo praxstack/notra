@@ -35,7 +35,7 @@ const organizationAuthDependencies: OrganizationAuthDependencies = {
   hasDatabaseUrl: () => Boolean(process.env.DATABASE_URL),
 };
 
-export async function assertAuthenticatedWithDeps(
+export async function assertAuthenticated(
   { headers }: { headers: Headers },
   deps: Pick<
     OrganizationAuthDependencies,
@@ -66,10 +66,6 @@ export async function assertAuthenticatedWithDeps(
     memo.authenticatedUserId = user.id;
   }
   return { session, user };
-}
-
-export async function assertAuthenticated(args: { headers: Headers }) {
-  return assertAuthenticatedWithDeps(args);
 }
 
 async function findMembershipMemoized(
@@ -121,7 +117,7 @@ export async function assertOrganizationAccessWithDeps(
   }
 
   const authenticatedUser =
-    user ?? (await assertAuthenticatedWithDeps({ headers }, deps)).user;
+    user ?? (await assertAuthenticated({ headers }, deps)).user;
 
   const membership = await findMembershipMemoized(deps, headers, {
     userId: authenticatedUser.id,
@@ -147,20 +143,12 @@ export async function assertOrganizationAccessWithDeps(
   };
 }
 
-export async function assertOrganizationAccess({
-  headers,
-  organizationId,
-  user,
-}: {
+export function assertOrganizationAccess(args: {
   headers: Headers;
   organizationId: string;
   user?: AuthenticatedUser;
 }) {
-  return assertOrganizationAccessWithDeps({
-    headers,
-    organizationId,
-    user,
-  });
+  return assertOrganizationAccessWithDeps(args);
 }
 
 export async function withOrganizationAuth(

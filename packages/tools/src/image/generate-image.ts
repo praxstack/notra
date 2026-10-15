@@ -24,7 +24,7 @@ export function createGenerateImageTool() {
     inputSchema: imageToolInputSchema,
     async execute({ sourcePostId, title, ...input }, ctx) {
       const organizationId = requireOrganizationId(ctx);
-      const userId = getSessionAttribute(ctx, "userId") ?? null;
+      const userId = getSessionAttribute(ctx, "userId");
       const chatId = getSessionAttribute(ctx, "chatId") ?? undefined;
       const useMarkup = getBooleanSessionAttribute(ctx, "useMarkup");
       const chargeAiCredits =

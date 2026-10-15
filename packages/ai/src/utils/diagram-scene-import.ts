@@ -87,9 +87,6 @@ function limitVia(points: [number, number][]) {
 
 function readArrowhead(element: UnknownRecord, key: string) {
   const value = element[key];
-  if (value === null || value === undefined) {
-    return null;
-  }
   if (typeof value !== "string") {
     return null;
   }

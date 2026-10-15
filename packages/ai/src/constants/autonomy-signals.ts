@@ -1,7 +1,6 @@
 export const SIGNAL_SOURCE_GITHUB = "github";
 export const SIGNAL_INSERT_BATCH_SIZE = 100;
 export const SIGNAL_SOURCE_LINEAR = "linear";
-export const SIGNAL_SOURCE_GRANOLA = "granola";
 
 export const SIGNAL_KIND_GITHUB_RELEASE_PUBLISHED = "github.release.published";
 export const SIGNAL_KIND_GITHUB_PUSH = "github.push";

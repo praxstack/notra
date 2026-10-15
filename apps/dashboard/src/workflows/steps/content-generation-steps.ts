@@ -6,7 +6,6 @@ import {
   releaseContentBilling,
   reserveContentBilling,
 } from "@notra/ai/billing/content-billing";
-import { logWarn } from "@notra/ai/utils/server-log";
 import { db } from "@notra/db/drizzle";
 import {
   brandSettings,
@@ -102,11 +101,7 @@ export async function claimWorkflowExecution(
   return claim;
 }
 
-export async function fetchScheduleTriggerContext(triggerId: string): Promise<{
-  trigger: ScheduleTriggerData | null;
-  lookbackWindow: LookbackWindow;
-}> {
-  "use step";
+async function loadTriggerWithLookback(triggerId: string) {
   const [result, lookbackResult] = await Promise.all([
     db.query.contentTriggers.findFirst({
       where: eq(contentTriggers.id, triggerId),
@@ -115,8 +110,18 @@ export async function fetchScheduleTriggerContext(triggerId: string): Promise<{
       where: eq(contentTriggerLookbackWindows.triggerId, triggerId),
     }),
   ]);
+  return {
+    result,
+    lookbackWindow: parseLookbackWindow(lookbackResult?.window),
+  };
+}
 
-  const lookbackWindow = parseLookbackWindow(lookbackResult?.window);
+export async function fetchScheduleTriggerContext(triggerId: string): Promise<{
+  trigger: ScheduleTriggerData | null;
+  lookbackWindow: LookbackWindow;
+}> {
+  "use step";
+  const { result, lookbackWindow } = await loadTriggerWithLookback(triggerId);
   if (!result) {
     return { trigger: null, lookbackWindow };
   }
@@ -353,16 +358,7 @@ export async function fetchEventTrigger(triggerId: string): Promise<{
   lookbackWindow: LookbackWindow;
 }> {
   "use step";
-  const [result, lookbackResult] = await Promise.all([
-    db.query.contentTriggers.findFirst({
-      where: eq(contentTriggers.id, triggerId),
-    }),
-    db.query.contentTriggerLookbackWindows.findFirst({
-      where: eq(contentTriggerLookbackWindows.triggerId, triggerId),
-    }),
-  ]);
-
-  const lookbackWindow = parseLookbackWindow(lookbackResult?.window);
+  const { result, lookbackWindow } = await loadTriggerWithLookback(triggerId);
   if (!result) {
     return { trigger: null, lookbackWindow };
   }
@@ -504,70 +500,28 @@ export async function trackContentOutcome(
 ): Promise<void> {
   "use step";
   await trackContentOutcomeAndFlush(input);
-  try {
-    if (input.kind === "created") {
-      const trackingResults = await Promise.allSettled(
-        (input.postIds ?? []).map((postId) =>
-          trackScheduledContentCreated({
-            triggerId: input.triggerId,
-            organizationId: input.organizationId,
-            postId,
-            outputType: input.outputType,
-            creationMode: input.creationMode,
-            lookbackWindow: input.lookbackWindow,
-            repositoryCount: input.repositoryCount,
-            source: input.source,
-          })
-        )
-      );
-      const failures = trackingResults.filter(
-        (result) => result.status === "rejected"
-      );
-      if (failures.length > 0) {
-        logWarn("Failed to track some created posts", {
-          workflow: input.logPrefix,
-          triggerId: input.triggerId,
-          failureCount: failures.length,
-        });
-      }
-      return;
-    }
-
-    if (input.kind === "failed") {
-      await trackScheduledContentFailed({
-        triggerId: input.triggerId,
-        organizationId: input.organizationId,
-        outputType: input.outputType,
-        creationMode: input.creationMode,
-        reason: input.reason ?? "unknown",
-        lookbackWindow: input.lookbackWindow,
-        repositoryCount: input.repositoryCount,
-        source: input.source,
-      });
-      return;
-    }
-
-    await trackScheduledContentSkipped({
-      triggerId: input.triggerId,
-      organizationId: input.organizationId,
-      outputType: input.outputType,
-      creationMode: input.creationMode,
-      reason: input.reason ?? "unknown",
-      lookbackWindow: input.lookbackWindow,
-      repositoryCount: input.repositoryCount,
-      source: input.source,
-    });
-  } catch (trackingError) {
-    logWarn("Failed to track content outcome", {
-      workflow: input.logPrefix,
-      triggerId: input.triggerId,
-      kind: input.kind,
-      error:
-        trackingError instanceof Error
-          ? trackingError.message
-          : String(trackingError),
-    });
+  const event = {
+    triggerId: input.triggerId,
+    organizationId: input.organizationId,
+    outputType: input.outputType,
+    creationMode: input.creationMode,
+    lookbackWindow: input.lookbackWindow,
+    repositoryCount: input.repositoryCount,
+    source: input.source,
+  };
+  if (input.kind === "created") {
+    await Promise.all(
+      (input.postIds ?? []).map((postId) =>
+        trackScheduledContentCreated({ ...event, postId })
+      )
+    );
+    return;
   }
+  const track =
+    input.kind === "failed"
+      ? trackScheduledContentFailed
+      : trackScheduledContentSkipped;
+  await track({ ...event, reason: input.reason ?? "unknown" });
 }
 
 export async function fetchNotificationData(input: {

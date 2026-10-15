@@ -4,23 +4,17 @@ import {
 } from "@notra/ai/billing/autumn";
 import { updateUsageAlertsInputSchema } from "@notra/schemas/dashboard/usage-alerts";
 
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { getTranslations } from "@/lib/i18n/server";
-import { authorizedProcedure } from "@/lib/orpc/base";
+import { authorizedProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import { forbidden, serviceUnavailable } from "@/lib/orpc/utils/errors";
 import { setDevelopmentUsageAlerts } from "@/utils/development-usage-alerts";
 
 export const usageAlertsRouter = {
   update: authorizedProcedure
     .input(updateUsageAlertsInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const access = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
-      if (access.membership.role !== "owner") {
+      if (context.auth.membership.role !== "owner") {
         const tErrors = await getTranslations("errors.usageAlerts");
         throw forbidden(tErrors("ownerOnly"));
       }

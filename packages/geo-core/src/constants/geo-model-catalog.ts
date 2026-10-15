@@ -2,7 +2,7 @@ import type { GeoModelCatalogEntry, GeoModelProvider } from "../types/geo";
 
 /**
  * Providers surfaced in the GEO model picker, in display order. The live model
- * list comes from the Vercel AI Gateway feed (see `lib/geo/model-catalog.ts`);
+ * list comes from the Vercel AI Gateway feed (see `geo/model-catalog.ts`);
  * this file only holds presentation config plus a seed snapshot used when the
  * feed is unreachable. A provider is dropped from the catalog when neither the
  * feed nor `GEO_MODEL_CATALOG_STATIC` yields a model for it.
@@ -651,10 +651,7 @@ export const GEO_DEFAULT_ENGINE_IDS: readonly string[] =
 
 export const GEO_AUDIENCE_TYPES = ["technical", "general", "commerce"] as const;
 
-/**
- * Engines seeded for a brand whose buyers never pick a model themselves.
- * ChatGPT gets Sol, Claude gets Opus 5.5, and Gemini gets Flash.
- */
+/** Engines seeded for a brand whose buyers never pick a model themselves. */
 export const GEO_GENERAL_AUDIENCE_ENGINE_IDS: readonly string[] = [
   "anthropic/claude-opus-5.5",
   "openai/gpt-5.6-sol",

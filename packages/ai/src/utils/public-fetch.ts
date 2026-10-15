@@ -76,18 +76,7 @@ function createPublicFetchSignal(
     : AbortSignal.any([requestSignal, AbortSignal.timeout(timeoutMs)]);
 }
 
-function isRedirect(response: Response): boolean {
-  switch (response.status) {
-    case 301:
-    case 302:
-    case 303:
-    case 307:
-    case 308:
-      return true;
-    default:
-      return false;
-  }
-}
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 export async function fetchPublicUrl(
   input: RequestInfo | URL,
@@ -105,7 +94,7 @@ export async function fetchPublicUrl(
       maxRedirects > 0 ? "manual" : "error"
     );
     const location = response.headers.get("location");
-    if (!(isRedirect(response) && location)) {
+    if (!(REDIRECT_STATUSES.has(response.status) && location)) {
       return response;
     }
     if (redirectCount >= maxRedirects) {
@@ -126,11 +115,10 @@ export async function fetchPublicUrl(
   }
 }
 
-export async function fetchPublicMcpUrl(
+export function fetchPublicMcpUrl(
   input: RequestInfo | URL,
   init?: RequestInit,
   timeoutMs?: number
 ) {
-  const response = await fetchPublicUrl(input, init, { timeoutMs });
-  return publicFetchResponseSchema.parse(response);
+  return fetchPublicUrl(input, init, { timeoutMs });
 }

@@ -42,6 +42,7 @@ if (process.env.NOTRA_ATTACHMENT_TELEMETRY_TEST !== "1") {
       session: {},
       user: { id: "user_fixture" },
     }),
+    assertOrganizationAccess: mock(),
   }));
   const { attachmentsRouter } = await import("./attachments");
   const { createORPCContext } = await import("../context");

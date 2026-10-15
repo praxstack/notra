@@ -21,7 +21,7 @@ import type {
  *
  * The publish runs behind an internal route because the destinations need
  * app-only modules the step bundle cannot load. A failed call throws, so the
- * step retries it; a re-run is safe, see below.
+ * step retries it; a re-run is safe.
  */
 export async function runScheduledPublicationStep(
   input: ScheduledPublicationWorkflowInput

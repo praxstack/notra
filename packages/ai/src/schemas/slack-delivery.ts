@@ -18,13 +18,6 @@ export const slackApiResponseSchema = z
       path: ["ts"],
     }
   );
-export type SlackApiResponse = z.infer<typeof slackApiResponseSchema>;
-
-export const irisShipActionValueSchema = z.object({
-  postId: z.string().min(1),
-  organizationId: z.string().min(1),
-  outboxId: z.string().min(1),
-});
 
 export class SlackChannelNotConfiguredError extends Data.TaggedError(
   "SlackChannelNotConfiguredError"

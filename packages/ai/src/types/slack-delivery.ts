@@ -84,9 +84,3 @@ export interface IrisArtifactDecision {
 export interface IrisShippedBlocksInput extends IrisRunBlocksInput {
   decisions: readonly IrisArtifactDecision[];
 }
-
-export interface IrisShipActionValue {
-  postId: string;
-  organizationId: string;
-  outboxId: string;
-}

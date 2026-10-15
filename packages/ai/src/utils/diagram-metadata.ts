@@ -27,12 +27,10 @@ export function readImageFormat(metadata: unknown): RepoImageFormat {
   return isDiagram ? "diagram" : "marketing";
 }
 
-/** Version of the stored diagram; every save increments it. */
 export function readDiagramRevision(metadata: unknown) {
   return (isRecord(metadata) && readNumber(metadata, "diagramRevision")) || 0;
 }
 
-/** True when the post is a diagram Notra can edit without a sandbox. */
 export function canEditDiagramWithoutSandbox(metadata: unknown) {
   return readDiagramSpec(metadata) !== null;
 }

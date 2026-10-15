@@ -7,6 +7,7 @@ import {
 } from "@notra/ai/agents/repo-image-agent";
 import { diagramFormat } from "@notra/ai/agents/repo-image-diagram";
 import { marketingFormat } from "@notra/ai/agents/repo-image-marketing";
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import {
   AGENT_TIMEOUT_MS,
   BOX_BASE_URL,
@@ -37,6 +38,7 @@ import {
   injectHumanizerSkill,
 } from "@notra/ai/utils/repo-image-skills";
 import { logError, logInfo, logWarn } from "@notra/ai/utils/server-log";
+import { shellQuote } from "@notra/ai/utils/shell";
 import { withLongFetchTimeouts } from "@notra/ai/utils/undici-dispatcher";
 import {
   gatewayReportingHeaders,
@@ -57,10 +59,6 @@ function getErrorStatus(error: unknown) {
     typeof error.status === "number"
     ? error.status
     : undefined;
-}
-
-function shellQuote(value: string) {
-  return `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
 const REPO_CLONE_TOKEN_PATH = "/tmp/notra-github-token";
@@ -174,14 +172,14 @@ async function buildSourceContext(params: {
           owner,
           repo,
           pull_number: prNumber,
-          headers: { "X-GitHub-Api-Version": "2022-11-28" },
+          headers: GITHUB_API_VERSION_HEADERS,
         }),
         octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}/files", {
           owner,
           repo,
           pull_number: prNumber,
           per_page: 10,
-          headers: { "X-GitHub-Api-Version": "2022-11-28" },
+          headers: GITHUB_API_VERSION_HEADERS,
         }),
       ]);
     } catch (error) {
@@ -223,7 +221,7 @@ async function buildSourceContext(params: {
         owner,
         repo,
         ref: sha,
-        headers: { "X-GitHub-Api-Version": "2022-11-28" },
+        headers: GITHUB_API_VERSION_HEADERS,
       }
     ));
   } catch (error) {
@@ -318,14 +316,13 @@ async function generateRepoImageWithContext(
   });
 
   return await withLongFetchTimeouts(async () => {
-    const runtime = "node" satisfies Runtime;
     const attributionRunId =
       params.logContext?.runId ??
       getOperationalContext()?.runId ??
       crypto.randomUUID();
     const boxConfig = {
       apiKey: upstashBoxApiKey,
-      runtime: runtime as Runtime,
+      runtime: "node" as Runtime,
       attachHeaders: gatewayReportingHeaders("content-image-agent", {
         ...params.logContext,
         organizationId: input.organizationId,
@@ -343,9 +340,11 @@ async function generateRepoImageWithContext(
       },
       timeout: AGENT_TIMEOUT_MS,
     } satisfies BoxConfig;
-    const box = restoreSnapshotId
-      ? await withBoxRetry(() => Box.fromSnapshot(restoreSnapshotId, boxConfig))
-      : await withBoxRetry(() => Box.create(boxConfig));
+    const box = await withBoxRetry(() =>
+      restoreSnapshotId
+        ? Box.fromSnapshot(restoreSnapshotId, boxConfig)
+        : Box.create(boxConfig)
+    );
     try {
       logInfo("ai.box.started", {
         ...params.logContext,

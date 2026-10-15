@@ -1,6 +1,5 @@
 import { IrisPollError } from "@notra/ai/autonomy/errors";
 import {
-  GITHUB_API_VERSION_HEADER,
   IRIS_POLL_COMMITS_PER_PAGE,
   IRIS_POLL_MAX_REPOSITORIES,
   IRIS_POLL_RELEASES_PER_PAGE,
@@ -15,6 +14,7 @@ import {
   SIGNAL_KIND_GITHUB_RELEASE_PUBLISHED,
   SIGNAL_SOURCE_GITHUB,
 } from "@notra/ai/constants/autonomy-signals";
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import { getTokenForIntegrationId } from "@notra/ai/integrations/github";
 import type {
   IrisPollItem,
@@ -95,7 +95,7 @@ const fetchRecentReleases = Effect.fn("iris.poll.github.releases")(function* (
         owner: repository.owner ?? "",
         repo: repository.repo ?? "",
         per_page: IRIS_POLL_RELEASES_PER_PAGE,
-        headers: { "X-GitHub-Api-Version": GITHUB_API_VERSION_HEADER },
+        headers: GITHUB_API_VERSION_HEADERS,
       }),
     catch: toGithubPollError(
       `Failed to list releases for ${toRepositoryName(repository)}`
@@ -159,7 +159,7 @@ const fetchRecentPush = Effect.fn("iris.poll.github.commits")(function* (
         since: since.toISOString(),
         per_page: IRIS_POLL_COMMITS_PER_PAGE,
         ...(repository.defaultBranch ? { sha: repository.defaultBranch } : {}),
-        headers: { "X-GitHub-Api-Version": GITHUB_API_VERSION_HEADER },
+        headers: GITHUB_API_VERSION_HEADERS,
       }),
     catch: toGithubPollError(
       `Failed to list commits for ${toRepositoryName(repository)}`

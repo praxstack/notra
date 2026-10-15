@@ -199,7 +199,6 @@ export async function ingestGitHubAppMentionWebhook(params: {
 
 async function finishIngest(params: {
   event: string;
-  signature: string | null;
   deliveryId: string | null;
   rawBody: string;
 }): Promise<{

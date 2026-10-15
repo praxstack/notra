@@ -11,6 +11,7 @@ import type {
   RouteUsageSummary,
 } from "@notra/ai/types/router";
 import { toAgentTokenUsage } from "@notra/ai/utils/token-usage";
+import { nonNegativeNumber } from "@notra/ai/utils/unknown-record";
 
 function stepUsage(step: RouteUsageStep): AgentTokenUsage | undefined {
   return step.usage ? toAgentTokenUsage(step.usage) : undefined;
@@ -60,28 +61,21 @@ export async function summarizeRouteUsage(
       if (usage) {
         maxPromptTokens = Math.max(maxPromptTokens, promptTokensOf(usage));
       }
-      if (
-        typeof stepRoute?.gatewayCostUsd === "number" &&
-        Number.isFinite(stepRoute.gatewayCostUsd) &&
-        stepRoute.gatewayCostUsd >= 0
-      ) {
-        gatewayCostUsd = (gatewayCostUsd ?? 0) + stepRoute.gatewayCostUsd;
+      const stepGatewayCostUsd = nonNegativeNumber(stepRoute?.gatewayCostUsd);
+      if (stepGatewayCostUsd !== undefined) {
+        gatewayCostUsd = (gatewayCostUsd ?? 0) + stepGatewayCostUsd;
       }
-      if (
-        typeof stepRoute?.upstreamInferenceCostUsd === "number" &&
-        Number.isFinite(stepRoute.upstreamInferenceCostUsd) &&
-        stepRoute.upstreamInferenceCostUsd >= 0
-      ) {
+      const stepUpstreamCostUsd = nonNegativeNumber(
+        stepRoute?.upstreamInferenceCostUsd
+      );
+      if (stepUpstreamCostUsd !== undefined) {
         upstreamInferenceCostUsd =
-          (upstreamInferenceCostUsd ?? 0) + stepRoute.upstreamInferenceCostUsd;
+          (upstreamInferenceCostUsd ?? 0) + stepUpstreamCostUsd;
       }
-      if (
-        typeof stepRoute?.costUsd === "number" &&
-        Number.isFinite(stepRoute.costUsd) &&
-        stepRoute.costUsd >= 0
-      ) {
-        tokenCostUsd += stepRoute.costUsd;
-        reportedCostUsd += stepRoute.costUsd;
+      const stepCostUsd = nonNegativeNumber(stepRoute?.costUsd);
+      if (stepCostUsd !== undefined) {
+        tokenCostUsd += stepCostUsd;
+        reportedCostUsd += stepCostUsd;
         reportedSteps += 1;
       } else if (usage) {
         const serviceTier =

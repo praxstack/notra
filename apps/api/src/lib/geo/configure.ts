@@ -33,36 +33,28 @@ import { internalDashboardLive } from "../internal-dashboard";
 
 const redis = Redis.fromEnv();
 
+function startWorkflowRun(spanName: string, path: string) {
+  return Effect.fn(spanName)(function* (payload: unknown) {
+    const runId = yield* startDashboardWorkflowEffect(
+      getInternalWorkflowUrl(process.env, path),
+      payload
+    ).pipe(Effect.provide(internalDashboardLive));
+    return { runId };
+  });
+}
+
 const workflowLayer = Layer.succeed(GeoWorkflowService, {
-  startGeoScanRun: Effect.fn("GeoApiWorkflow.startGeoScanRun")(
-    function* (payload) {
-      const runId = yield* startDashboardWorkflowEffect(
-        getInternalWorkflowUrl(process.env, GEO_SCAN_INTERNAL_WORKFLOW_PATH),
-        payload
-      ).pipe(Effect.provide(internalDashboardLive));
-      return { runId };
-    }
+  startGeoScanRun: startWorkflowRun(
+    "GeoApiWorkflow.startGeoScanRun",
+    GEO_SCAN_INTERNAL_WORKFLOW_PATH
   ),
-  startGeoWriterRun: Effect.fn("GeoApiWorkflow.startGeoWriterRun")(
-    function* (payload) {
-      const runId = yield* startDashboardWorkflowEffect(
-        getInternalWorkflowUrl(process.env, GEO_WRITER_INTERNAL_WORKFLOW_PATH),
-        payload
-      ).pipe(Effect.provide(internalDashboardLive));
-      return { runId };
-    }
+  startGeoWriterRun: startWorkflowRun(
+    "GeoApiWorkflow.startGeoWriterRun",
+    GEO_WRITER_INTERNAL_WORKFLOW_PATH
   ),
-  startAgentReadinessRun: Effect.fn("GeoApiWorkflow.startAgentReadinessRun")(
-    function* (payload) {
-      const runId = yield* startDashboardWorkflowEffect(
-        getInternalWorkflowUrl(
-          process.env,
-          AGENT_READINESS_INTERNAL_WORKFLOW_PATH
-        ),
-        payload
-      ).pipe(Effect.provide(internalDashboardLive));
-      return { runId };
-    }
+  startAgentReadinessRun: startWorkflowRun(
+    "GeoApiWorkflow.startAgentReadinessRun",
+    AGENT_READINESS_INTERNAL_WORKFLOW_PATH
   ),
 });
 

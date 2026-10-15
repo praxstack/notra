@@ -1,4 +1,5 @@
 import { logError } from "@notra/ai/utils/server-log";
+import { getAppUrl } from "@notra/ai/utils/url";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
 import { socialConnectCallbackQuerySchema } from "@notra/schemas/dashboard/social-accounts";
 import { Effect } from "effect";
@@ -32,7 +33,7 @@ function readAccountIds(searchParams: URLSearchParams): string[] {
 }
 
 export async function GET(request: Request) {
-  const baseUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const baseUrl = getAppUrl() ?? "";
 
   const { searchParams } = new URL(request.url);
   const parsed = socialConnectCallbackQuerySchema.safeParse({

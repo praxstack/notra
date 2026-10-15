@@ -3,6 +3,7 @@ import {
   toGeoFailureWire,
 } from "@notra/geo-core/geo/failure-wire";
 import { remoteGeoFailureBodySchema } from "@notra/schemas/api/internal-geo";
+import { rateLimitResponseSchema } from "@notra/schemas/api/responses";
 import { Effect } from "effect";
 
 import { geoCoreApiLayer } from "../lib/geo/configure";
@@ -11,12 +12,13 @@ import type {
   GeoFailure,
   GeoOutcome,
   GeoProgramError,
-  RemoteGeoEffectOptions,
+  RemoteGeoOperation,
 } from "../types/geo";
 import {
   callDashboardInternal,
   InternalDashboardError,
   InternalDashboardTimeoutError,
+  SYNCHRONOUS_INTERNAL_CALL_TIMEOUT_MS,
 } from "../utils/internal-workflow";
 import { logError } from "../utils/logging";
 
@@ -97,8 +99,18 @@ function toGeoFailure(failure: GeoFailureWire): GeoFailure {
         status: 409,
         error: `Content brief is ${failure.status ?? "in another state"} and cannot be changed`,
       };
+    // These carry upstream error text (scraper, model, DB), so clients get a
+    // fixed message and the original is logged (see `logsFailureDetail`).
     case "GeoDiscoveryError":
+      return {
+        status: 400,
+        error: "We couldn't analyze that website. Check the URL and try again.",
+      };
     case "GeoSequenceRunError":
+      return {
+        status: 400,
+        error: "The conversation run failed. Please try again.",
+      };
     case "GeoSettingsTrackingError":
     case "GeoWriterPlanError":
       return { status: 400, error: failure.message ?? "Invalid request" };
@@ -117,10 +129,17 @@ function toGeoFailure(failure: GeoFailureWire): GeoFailure {
   }
 }
 
+function logsFailureDetail(tag: string, failure: GeoFailure) {
+  return (
+    failure.status === 500 ||
+    tag === "GeoDiscoveryError" ||
+    tag === "GeoSequenceRunError"
+  );
+}
+
 function toGeoProgramFailure(error: GeoProgramError): GeoFailure {
   switch (error._tag) {
     case "GeoSelectionInvalidError":
-      return { status: 400, error: error.message };
     case "AgentReadinessTargetMissingError":
     case "AgentReadinessApiError":
       return { status: 400, error: error.message };
@@ -146,7 +165,7 @@ export async function runGeoEffect<A, E extends GeoProgramError>(
 
     if (outcome._tag === "Failure") {
       const failure = toGeoProgramFailure(outcome.failure);
-      if (failure.status === 500) {
+      if (logsFailureDetail(outcome.failure._tag, failure)) {
         logError(`[GEO] ${label}`, outcome.failure);
       }
       return { ok: false, failure };
@@ -171,20 +190,35 @@ function readRemoteFailure(detail: string): GeoFailureWire | null {
   }
 }
 
+const REMOTE_RATE_LIMIT_MESSAGE = "Rate limit exceeded. Retry later.";
+
+function readRemoteRateLimit(detail: string): GeoFailure["rateLimit"] {
+  try {
+    const parsed = rateLimitResponseSchema.safeParse(JSON.parse(detail));
+    if (!parsed.success) {
+      return undefined;
+    }
+    const { limit, remaining, reset } = parsed.data;
+    return { limit, remaining, reset };
+  } catch {
+    return undefined;
+  }
+}
+
 export async function runRemoteGeoEffect<A>(
-  label: string,
+  operation: RemoteGeoOperation<A>,
   url: string,
-  payload: unknown,
-  options: RemoteGeoEffectOptions<A>
+  payload: unknown
 ): Promise<GeoOutcome<A>> {
+  const { label } = operation;
   try {
     return {
       ok: true,
       value: await callDashboardInternal(
         url,
         payload,
-        options.responseSchema,
-        options.timeoutMs
+        operation.responseSchema,
+        SYNCHRONOUS_INTERNAL_CALL_TIMEOUT_MS
       ),
     };
   } catch (error) {
@@ -192,9 +226,20 @@ export async function runRemoteGeoEffect<A>(
       logError(`[GEO] ${label} (remote timeout)`, error);
       return {
         ok: false,
+        failure: { status: 409, error: operation.timeoutMessage },
+      };
+    }
+
+    // The dashboard enforces its own per-org budget for these routes, shared
+    // with the dashboard UI, so it can refuse even after the API's own limiter
+    // let the request through.
+    if (error instanceof InternalDashboardError && error.status === 429) {
+      return {
+        ok: false,
         failure: {
-          status: 409,
-          error: options.timeoutMessage,
+          status: 429,
+          error: REMOTE_RATE_LIMIT_MESSAGE,
+          rateLimit: readRemoteRateLimit(error.body),
         },
       };
     }
@@ -205,7 +250,7 @@ export async function runRemoteGeoEffect<A>(
         : null;
     if (remote) {
       const failure = toGeoFailure(remote);
-      if (failure.status === 500) {
+      if (logsFailureDetail(remote._tag, failure)) {
         logError(`[GEO] ${label} (remote)`, error);
       }
       return { ok: false, failure };

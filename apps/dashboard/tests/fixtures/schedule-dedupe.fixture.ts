@@ -116,7 +116,6 @@ test("update excludes its own row from both hash candidates", async () => {
     if (query.sql.includes('"content_triggers"."dedupe_hash" in')) {
       expect(query.sql).toContain('"content_triggers"."id" <>');
       expect(query.params).toContain("own-row");
-      return undefined;
     }
     return undefined;
   });

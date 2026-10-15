@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const POST_TITLE_MAX_LENGTH = 120;
 
-const postSlugSchema = z
+export const postSlugSchema = z
   .string()
   .trim()
   .min(1)
@@ -15,7 +15,7 @@ const postSlugSchema = z
     "Slug must contain lowercase letters, numbers, and hyphens only"
   );
 
-const createPostBaseShape = {
+export const createPostBaseShape = {
   title: z
     .string()
     .max(POST_TITLE_MAX_LENGTH)

@@ -17,7 +17,7 @@ import { posts } from "@notra/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 
 /** Thrown when the diagram changed between reading and saving it. */
-export class DiagramConflictError extends Error {
+class DiagramConflictError extends Error {
   constructor() {
     super(
       "The diagram changed while this edit was in progress. Reload it and try again."

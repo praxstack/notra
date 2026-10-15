@@ -177,7 +177,7 @@ export async function syncPublishedPostAfterCommit(params: {
   if (!file) {
     return false;
   }
-  const result = await syncOrScheduleRepair(
+  return syncOrScheduleRepair(
     {
       organizationId: params.organizationId,
       publicationId: publication.id,
@@ -209,7 +209,6 @@ export async function syncPublishedPostAfterCommit(params: {
     params.scheduleRepair,
     params.octokit
   );
-  return result;
 }
 
 /**

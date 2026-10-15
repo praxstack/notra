@@ -11,7 +11,6 @@ import {
   slackIntegrations,
 } from "@notra/db/schema";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
-import { IRIS_SIGNALS_PAGE_SIZE } from "@notra/schemas/constants/dashboard/iris";
 import {
   irisListRunsInputSchema,
   irisListSignalsInputSchema,
@@ -28,7 +27,6 @@ import {
   IRIS_STATS_WINDOW_MS,
 } from "@/constants/iris";
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { getTranslations } from "@/lib/i18n/server";
 import { assertIrisEnabled } from "@/lib/iris/access";
@@ -44,7 +42,7 @@ import {
   createIrisWakeSchedule,
   deleteIrisWakeSchedule,
 } from "@/lib/iris/wake-schedule";
-import { authorizedProcedure } from "@/lib/orpc/base";
+import { authorizedProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import {
   conflict,
   internalServerError,
@@ -96,13 +94,17 @@ async function ensureWakeSchedule(mandate: IrisMandateRow): Promise<void> {
   }
 }
 
+function startManualIrisRun(organizationId: string) {
+  return startIrisRun({
+    organizationId,
+    trigger: "manual",
+    executionId: `iris-manual-${crypto.randomUUID()}`,
+  });
+}
+
 async function kickManualRun(organizationId: string): Promise<string | null> {
   try {
-    const { runId } = await startIrisRun({
-      organizationId,
-      trigger: "manual",
-      executionId: `iris-manual-${crypto.randomUUID()}`,
-    });
+    const { runId } = await startManualIrisRun(organizationId);
     return runId;
   } catch (error) {
     logError("[Iris] Failed to start a manual run", error, { organizationId });
@@ -124,13 +126,8 @@ async function reloadMandateView(
 export const irisRouter = {
   getOverview: authorizedProcedure
     .input(irisOrganizationInputSchema)
-    .handler(async ({ context, input }): Promise<IrisOverview> => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }): Promise<IrisOverview> => {
       const since = new Date(Date.now() - IRIS_STATS_WINDOW_MS);
 
       const [
@@ -211,12 +208,8 @@ export const irisRouter = {
 
   start: authorizedProcedure
     .input(irisOrganizationInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }): Promise<IrisMandateView> => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
       await assertIrisEnabled(input.organizationId);
       await assertActiveSubscription(input.organizationId);
 
@@ -273,13 +266,8 @@ export const irisRouter = {
 
   pause: authorizedProcedure
     .input(irisMandateInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }): Promise<IrisMandateView> => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
       const mandate = await loadMandateRow(
         input.organizationId,
         input.mandateId
@@ -335,12 +323,8 @@ export const irisRouter = {
 
   resume: authorizedProcedure
     .input(irisMandateInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }): Promise<IrisMandateView> => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
       await assertIrisEnabled(input.organizationId);
       await assertActiveSubscription(input.organizationId);
 
@@ -374,29 +358,21 @@ export const irisRouter = {
 
   runNow: authorizedProcedure
     .input(irisOrganizationInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }): Promise<{ runId: string }> => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
       await assertIrisEnabled(input.organizationId);
       await assertActiveSubscription(input.organizationId);
 
-      const busy = await Effect.runPromise(hasOpenRun(input.organizationId));
-      if (busy) {
-        const tErrors = await getTranslations("errors.iris");
-        throw conflict(tErrors("runInProgress"));
+      const runInProgress = async () =>
+        conflict((await getTranslations("errors.iris"))("runInProgress"));
+
+      if (await Effect.runPromise(hasOpenRun(input.organizationId))) {
+        throw await runInProgress();
       }
 
-      const { runId } = await startIrisRun({
-        organizationId: input.organizationId,
-        trigger: "manual",
-        executionId: `iris-manual-${crypto.randomUUID()}`,
-      });
+      const { runId } = await startManualIrisRun(input.organizationId);
       if (!runId) {
-        const tErrors = await getTranslations("errors.iris");
-        throw conflict(tErrors("runInProgress"));
+        throw await runInProgress();
       }
 
       trackServerEvent({
@@ -414,13 +390,8 @@ export const irisRouter = {
 
   listRuns: authorizedProcedure
     .input(irisListRunsInputSchema)
-    .handler(async ({ context, input }): Promise<IrisListRunsResult> => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }): Promise<IrisListRunsResult> => {
       const cursorDate = input.cursor ? new Date(input.cursor) : null;
       const rows = await db.query.autonomyRuns.findMany({
         where: cursorDate
@@ -488,13 +459,8 @@ export const irisRouter = {
 
   listSignals: authorizedProcedure
     .input(irisListSignalsInputSchema)
-    .handler(async ({ context, input }): Promise<IrisSignalView[]> => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }): Promise<IrisSignalView[]> => {
       const rows = await db
         .select({
           id: autonomySignals.id,

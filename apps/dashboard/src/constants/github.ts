@@ -39,10 +39,6 @@ export const DEFAULT_GITHUB_CONTENT_OUTPUT_ENABLED = {
   blog_post: true,
 } as const satisfies Record<GitHubPublishContentType, boolean>;
 
-export const GITHUB_API_VERSION_HEADERS = {
-  "X-GitHub-Api-Version": "2022-11-28",
-} as const;
-
 export const GITHUB_PULL_REQUEST_BODY_SECTION_START =
   "<!-- notra:content:start -->";
 export const GITHUB_PULL_REQUEST_BODY_SECTION_END =

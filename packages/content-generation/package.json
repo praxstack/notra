@@ -14,11 +14,11 @@
   "dependencies": {
     "@notra/ai": "workspace:*",
     "@notra/webhooks": "workspace:*",
-    "@upstash/redis": "^1.38.4",
-    "zod": "^4.6.5"
+    "@upstash/redis": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@notra/typescript-config": "workspace:*",
-    "typescript": "7.0.2"
+    "typescript": "catalog:"
   }
 }

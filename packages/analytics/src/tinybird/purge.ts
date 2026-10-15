@@ -16,8 +16,21 @@ const ACCOUNT_SCOPED_DATASOURCES = [
   "social_post_stats",
   "social_post_stats_latest",
   "social_account_stats_latest",
+  "social_post_sources",
 ];
-const GEO_DATASOURCES = ["geo_traffic_events"];
+// Rollups are MV targets: deleting from geo_traffic_events does not reach them.
+const GEO_DATASOURCES = [
+  "geo_traffic_events",
+  "geo_traffic_daily",
+  "geo_traffic_pages_by_host_daily",
+];
+const WEB_DATASOURCES = [
+  "web_page_views",
+  "web_page_engagement",
+  "web_pages_daily",
+  "web_sources_daily",
+  "web_audience_daily",
+];
 
 const JOB_POLL_INTERVAL_MS = 1000;
 const JOB_POLL_MAX_ATTEMPTS = 60;
@@ -73,7 +86,11 @@ async function waitForJob(jobId: string): Promise<void> {
   throw new Error("Tinybird delete job timed out");
 }
 
-async function runDelete(datasource: string, condition: string): Promise<void> {
+async function runDelete(
+  datasource: string,
+  condition: string,
+  waitForCompletion = true
+): Promise<void> {
   const response = await fetch(
     `${tinybirdBaseUrl()}/v0/datasources/${datasource}/delete`,
     {
@@ -94,17 +111,18 @@ async function runDelete(datasource: string, condition: string): Promise<void> {
   }
   const payload: { job_id?: string; id?: string } = await response.json();
   const jobId = payload.job_id ?? payload.id;
-  if (jobId) {
+  if (jobId && waitForCompletion) {
     await waitForJob(jobId);
   }
 }
 
 function deleteFromDatasource(
   datasource: string,
-  condition: string
+  condition: string,
+  waitForCompletion = true
 ): Effect.Effect<void, Error> {
   return Effect.tryPromise({
-    try: () => runDelete(datasource, condition),
+    try: () => runDelete(datasource, condition, waitForCompletion),
     catch: (cause) =>
       cause instanceof Error ? cause : new Error(String(cause)),
   });
@@ -144,4 +162,25 @@ export function purgeGeoProjectData(
     );
   });
   return Effect.runPromise(program);
+}
+
+/**
+ * Removes every GEO and web analytics row of a deleted project. Only submits
+ * the delete jobs: nothing reads a deleted project, so the request does not
+ * wait for Tinybird to finish.
+ */
+export function purgeDeletedProjectAnalytics(
+  input: PurgeGeoProjectInput
+): Promise<void> {
+  if (!process.env.TINYBIRD_TOKEN) {
+    return Promise.resolve();
+  }
+  const condition = `organization_id = '${sanitize(input.organizationId)}' AND project_id = '${sanitize(input.projectId)}'`;
+  return Effect.runPromise(
+    Effect.forEach(
+      [...GEO_DATASOURCES, ...WEB_DATASOURCES],
+      (datasource) => deleteFromDatasource(datasource, condition, false),
+      { discard: true }
+    )
+  );
 }

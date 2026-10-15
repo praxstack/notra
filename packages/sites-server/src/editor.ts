@@ -1,4 +1,7 @@
-import { GITHUB_CREATE_COMMIT_ON_BRANCH_MUTATION } from "@notra/ai/constants/github";
+import {
+  GITHUB_CREATE_COMMIT_ON_BRANCH_MUTATION,
+  GITHUB_API_VERSION_HEADERS,
+} from "@notra/ai/constants/github";
 import { createOctokit } from "@notra/ai/utils/octokit";
 import { db } from "@notra/db/drizzle";
 import { siteDrafts, sites } from "@notra/db/schema";
@@ -27,7 +30,6 @@ import {
   SITE_EDITOR_READ_CONCURRENCY,
   VALIDATED_SOURCE_FILE,
 } from "./constants/editor";
-import { GITHUB_API_VERSION_HEADER } from "./constants/github";
 import { SiteInputError, SitePublishConflictError } from "./errors";
 import { getBranchHead, siteRepositoryAccess } from "./github";
 import type { SiteStorageTransaction } from "./types/deployments";
@@ -53,6 +55,10 @@ import { mapWithConcurrency } from "./utils/concurrency";
 import { errorMessage, isNotFoundError } from "./utils/errors";
 import { prefixedId } from "./utils/ids";
 import { repositoryPath } from "./utils/root-directory";
+
+// createCommitOnBranch rejects a stale expectedHeadOid with "Expected branch to
+// point to "<oid>" but it did not". Anything else is a real failure.
+const STALE_HEAD_ERROR_PATTERN = /expected branch to point to/i;
 
 function assertEditablePath(path: string): void {
   if (path === SITE_IGNORE_FILENAME) {
@@ -88,7 +94,7 @@ export async function listSiteSourceFiles(
       repo: repository.repo,
       tree_sha: head.sha,
       recursive: "1",
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   const prefix = site.rootDirectory ? `${site.rootDirectory}/` : "";
@@ -161,7 +167,7 @@ export async function readRepositoryFile(
         repo: repository.repo,
         path: file.path,
         ref: file.ref,
-        headers: GITHUB_API_VERSION_HEADER,
+        headers: GITHUB_API_VERSION_HEADERS,
       }
     );
     if (Array.isArray(data) || data.type !== "file" || !("content" in data)) {
@@ -189,7 +195,7 @@ export async function createRepositoryBranch(
     repo: repository.repo,
     ref: `refs/heads/${branch.name}`,
     sha: branch.sha,
-    headers: GITHUB_API_VERSION_HEADER,
+    headers: GITHUB_API_VERSION_HEADERS,
   });
 }
 
@@ -237,7 +243,7 @@ export async function openRepositoryPullRequest(
       head: pullRequest.head,
       base: pullRequest.base,
       body: pullRequest.body,
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   return data.html_url;
@@ -479,7 +485,7 @@ async function requiresPullRequest(
       owner: repository.owner,
       repo: repository.repo,
       branch,
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   return rules.some((rule) => PULL_REQUEST_RULE_TYPES.has(rule.type));
@@ -571,7 +577,7 @@ export async function publishSiteDrafts(
         .map((draft) => repositoryPath(site.rootDirectory, draft.path)),
     });
   } catch (error) {
-    if (/expected|head|oid/i.test(errorMessage(error))) {
+    if (STALE_HEAD_ERROR_PATTERN.test(errorMessage(error))) {
       throw new SitePublishConflictError(
         [],
         `${branch} moved while publishing. Try again.`

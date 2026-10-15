@@ -2,21 +2,13 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createHmac } from "node:crypto";
 
 const resolveGitHubMentionContext = mock();
-const processGitHubMention = mock();
 const closeContentPublicationForPullRequest = mock();
 const findOpenContentPublicationByPullRequest = mock();
 const getGitHubPublishToken = mock();
 const syncPublishedPostFromPullRequestHead = mock();
 
-mock.module("@notra/ai/utils/redis", () => ({
-  redis: { set: async () => "OK", del: async () => 1 },
-}));
-
 mock.module("@notra/ai/utils/github-mention-context", () => ({
   resolveGitHubMentionContext,
-}));
-mock.module("@notra/ai/utils/github-mention-process", () => ({
-  processGitHubMention,
 }));
 mock.module("@notra/ai/utils/content-publication", () => ({
   closeContentPublicationForPullRequest,
@@ -74,7 +66,6 @@ describe("ingestGitHubAppMentionWebhook", () => {
   beforeEach(() => {
     process.env.GITHUB_APP_WEBHOOK_SECRET = secret;
     resolveGitHubMentionContext.mockReset();
-    processGitHubMention.mockReset();
     closeContentPublicationForPullRequest.mockReset();
     findOpenContentPublicationByPullRequest.mockReset();
     getGitHubPublishToken.mockReset();
@@ -144,7 +135,6 @@ describe("ingestGitHubAppMentionWebhook", () => {
       issue: 42,
     });
     expect(result.context).toBeDefined();
-    expect(processGitHubMention).not.toHaveBeenCalled();
     expect(
       (await ingest("issue_comment", mentionPayload, "ok-1")).httpStatus
     ).toBe(202);

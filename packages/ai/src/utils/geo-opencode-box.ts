@@ -94,30 +94,18 @@ export async function geoOpenCodeBoxErrorMessage(response: Response) {
   return `Request failed with status ${response.status}`;
 }
 
-async function getGeoOpenCodeBoxByName(
-  name: string,
+async function requestGeoOpenCodeBoxApi(
+  path: string,
   apiKey: string,
-  signal: AbortSignal
+  signal: AbortSignal,
+  init: { method?: string; body?: string } = {}
 ) {
-  const response = await fetch(
-    `${GEO_OPENCODE_BOX_API_BASE_URL}/v2/box/${encodeURIComponent(name)}`,
-    {
-      headers: { "X-Box-Api-Key": apiKey },
-      signal,
-    }
-  );
-  if (!response.ok) {
-    throw new BoxError(
-      await geoOpenCodeBoxErrorMessage(response),
-      response.status
-    );
-  }
-  return (await response.json()) as BoxData;
-}
-
-async function listGeoOpenCodeBoxes(apiKey: string, signal: AbortSignal) {
-  const response = await fetch(`${GEO_OPENCODE_BOX_API_BASE_URL}/v2/box`, {
-    headers: { "X-Box-Api-Key": apiKey },
+  const response = await fetch(`${GEO_OPENCODE_BOX_API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      "X-Box-Api-Key": apiKey,
+    },
     signal,
   });
   if (!response.ok) {
@@ -126,6 +114,24 @@ async function listGeoOpenCodeBoxes(apiKey: string, signal: AbortSignal) {
       response.status
     );
   }
+  return response;
+}
+
+async function getGeoOpenCodeBoxByName(
+  name: string,
+  apiKey: string,
+  signal: AbortSignal
+) {
+  const response = await requestGeoOpenCodeBoxApi(
+    `/v2/box/${encodeURIComponent(name)}`,
+    apiKey,
+    signal
+  );
+  return (await response.json()) as BoxData;
+}
+
+async function listGeoOpenCodeBoxes(apiKey: string, signal: AbortSignal) {
+  const response = await requestGeoOpenCodeBoxApi("/v2/box", apiKey, signal);
   return (await response.json()) as BoxData[];
 }
 
@@ -134,21 +140,10 @@ async function requestGeoOpenCodeBoxDeletion(
   apiKey: string,
   signal: AbortSignal
 ) {
-  const response = await fetch(`${GEO_OPENCODE_BOX_API_BASE_URL}/v2/box`, {
+  await requestGeoOpenCodeBoxApi("/v2/box", apiKey, signal, {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Box-Api-Key": apiKey,
-    },
     body: JSON.stringify({ ids: [boxId] }),
-    signal,
   });
-  if (!response.ok) {
-    throw new BoxError(
-      await geoOpenCodeBoxErrorMessage(response),
-      response.status
-    );
-  }
 }
 
 export async function createGeoOpenCodeBox(

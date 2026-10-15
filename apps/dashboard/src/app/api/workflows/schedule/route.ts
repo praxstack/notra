@@ -1,4 +1,3 @@
-import { getBaseUrl } from "@notra/ai/qstash/triggers";
 import { logError } from "@notra/ai/utils/server-log";
 import { scheduleWorkflowPayloadSchema } from "@notra/schemas/dashboard/workflows";
 
@@ -15,7 +14,7 @@ export async function POST(request: Request) {
   const verified = await verifyQstashSignature({
     request,
     rawBody,
-    url: `${getBaseUrl()}/api/workflows/schedule`,
+    path: "/api/workflows/schedule",
   });
   if (!verified) {
     return new Response("Unauthorized", { status: 401 });

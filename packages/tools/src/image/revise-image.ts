@@ -20,7 +20,7 @@ export function createReviseImageTool() {
     inputSchema: reviseImageInputSchema,
     async execute({ postId: inputPostId, prompt, title, useRepository }, ctx) {
       const organizationId = requireOrganizationId(ctx);
-      const userId = getSessionAttribute(ctx, "userId") ?? null;
+      const userId = getSessionAttribute(ctx, "userId");
       const useMarkup = getBooleanSessionAttribute(ctx, "useMarkup");
       const chargeAiCredits =
         getSessionAttribute(ctx, "chargeAiCredits") !== "false";

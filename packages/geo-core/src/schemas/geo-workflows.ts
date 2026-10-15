@@ -4,8 +4,6 @@ import { GEO_MAX_ENGINES, GEO_SHORT_FIELD_MAX_LENGTH } from "../constants/geo";
 import { geoOrganizationInputSchema } from "./geo-scope";
 
 /**
- * Payload of the GEO scan workflow.
- *
  * `claimedAt` is the ISO stamp of the scan-slot claim the trigger took before
  * handing off, and it travels as its own field rather than on
  * `geoOrganizationInputSchema` — a dozen unrelated inputs extend that one, and

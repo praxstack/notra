@@ -4,7 +4,7 @@ import { contentAuthors, type posts } from "../schema";
 import type { PostMetadataColumnsPatch } from "../types/post-metadata";
 
 /** Display dates are calendar days, stored at UTC midnight. */
-export function parsePostDisplayDate(date: string | null): Date | null {
+function parsePostDisplayDate(date: string | null): Date | null {
   return date ? new Date(`${date}T00:00:00.000Z`) : null;
 }
 
@@ -32,7 +32,6 @@ export function postMetadataUpdateData(
   };
 }
 
-/** Filter for the given author ids, scoped to one organization. */
 export function contentAuthorsInOrganization(
   organizationId: string,
   authorIds: readonly string[]

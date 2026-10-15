@@ -4,9 +4,10 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { shellQuote } from "@notra/ai/utils/shell";
+
 import { GUEST_BUILD_RUNNER } from "../src/constants/build-runner";
 import { guestBuildTelemetrySchema } from "../src/schemas/build-telemetry";
-import { shellQuote } from "../src/utils/shell";
 
 test("native guest wrapper measures extraction, compilation and packing and persists failure telemetry", async () => {
   const root = await mkdtemp(join(tmpdir(), "notra-guest-build-"));

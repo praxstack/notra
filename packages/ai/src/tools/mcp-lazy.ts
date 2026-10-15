@@ -413,7 +413,7 @@ function createRuntimeMcpTool({
           } catch (error) {
             const message =
               error instanceof Error ? error.message : String(error);
-            if (isLikelySchemaOrUnknownToolError(message)) {
+            if (MCP_STALE_TOOL_ERROR_REGEX.test(message)) {
               await markMcpToolIndexRowStale({
                 organizationId,
                 toolId: indexedTool.id,
@@ -649,10 +649,6 @@ function shouldRequireApproval(annotations: unknown) {
     return true;
   }
   return (annotations as { readOnlyHint?: unknown }).readOnlyHint !== true;
-}
-
-function isLikelySchemaOrUnknownToolError(message: string) {
-  return MCP_STALE_TOOL_ERROR_REGEX.test(message);
 }
 
 function formatActiveToolDescriptions(tools: ActivatedMcpTool[]) {

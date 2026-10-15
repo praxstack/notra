@@ -95,7 +95,7 @@ export async function PUT(
   }
 
   const raw = await request.text();
-  if (raw.length > MAX_DIAGRAM_SCENE_BYTES) {
+  if (Buffer.byteLength(raw, "utf8") > MAX_DIAGRAM_SCENE_BYTES) {
     return Response.json({ error: "Diagram is too large" }, { status: 413 });
   }
   let json: unknown = null;

@@ -16,7 +16,7 @@ export async function toGeoOrpcError(failure: GeoRouterError): Promise<Error> {
     case "GeoSuggestionNotFoundError":
       return notFound("Suggestion not found");
     case "GeoPromptDuplicateError":
-      return badRequest(t("errors.geo.promptAlreadyTracked"));
+      return conflict(t("errors.geo.promptAlreadyTracked"));
     case "GeoPromptNotFoundError":
       return notFound("Prompt not found");
     case "GeoProjectNotFoundError":
@@ -24,7 +24,7 @@ export async function toGeoOrpcError(failure: GeoRouterError): Promise<Error> {
     case "GeoProjectCreateFailedError":
       return badRequest(t("common.labels.failedToCreateProject"));
     case "GeoProjectDeleteBlockedError":
-      return badRequest(
+      return conflict(
         t(
           failure.reason === "has_sites"
             ? "errors.geo.projectHasSitesDelete"
@@ -91,7 +91,7 @@ export async function toGeoOrpcError(failure: GeoRouterError): Promise<Error> {
     case "GeoScanStartError":
       return toUnexpectedError(failure.cause, "Failed to start the scan");
     case "GeoScanAlreadyRunningError":
-      return badRequest(t("errors.geo.scanAlreadyRunning"));
+      return conflict(t("errors.geo.scanAlreadyRunning"));
     case "GeoScanEnginesEmptyError":
       return badRequest(t("errors.geo.selectModel"));
     case "GeoWriterCreditsExhaustedError":

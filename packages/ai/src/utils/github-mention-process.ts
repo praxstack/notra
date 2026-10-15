@@ -55,12 +55,24 @@ export async function processGitHubMention(
   scheduleRepair?: PublicationRepairScheduler
 ): Promise<GitHubMentionProcessResult> {
   const startedAt = Date.now();
-  logGitHubMentionEvent(GITHUB_MENTION_LOG_EVENTS.processing, {
+  const mentionFields = {
     organizationId: context.organizationId,
     integrationId: context.integrationId,
     deliveryId: context.deliveryId,
     repository: `${context.owner}/${context.repo}`,
     issueNumber: context.issueNumber,
+  };
+  const logCompleted = (
+    fields: Record<string, unknown>,
+    level?: "warn" | "error"
+  ) =>
+    logGitHubMentionEvent(
+      GITHUB_MENTION_LOG_EVENTS.completed,
+      { ...mentionFields, ...fields, durationMs: Date.now() - startedAt },
+      level
+    );
+  logGitHubMentionEvent(GITHUB_MENTION_LOG_EVENTS.processing, {
+    ...mentionFields,
     senderLogin: context.sender.login,
     destinationMode: context.destination.mode,
     postId: context.publication?.postId ?? null,
@@ -74,18 +86,8 @@ export async function processGitHubMention(
       status: "failed" as const,
       reason: "github_token_unavailable",
     };
-    logGitHubMentionEvent(
-      GITHUB_MENTION_LOG_EVENTS.completed,
-      {
-        organizationId: context.organizationId,
-        integrationId: context.integrationId,
-        deliveryId: context.deliveryId,
-        repository: `${context.owner}/${context.repo}`,
-        issueNumber: context.issueNumber,
-        mentionStatus: result.status,
-        reason: result.reason,
-        durationMs: Date.now() - startedAt,
-      },
+    logCompleted(
+      { mentionStatus: result.status, reason: result.reason },
       "error"
     );
     return result;
@@ -221,19 +223,8 @@ export async function processGitHubMention(
       // A failed reply remains retryable once the cause is corrected.
     }
     await finishReaction("confused");
-    logGitHubMentionEvent(
-      GITHUB_MENTION_LOG_EVENTS.completed,
-      {
-        organizationId: context.organizationId,
-        integrationId: context.integrationId,
-        deliveryId: context.deliveryId,
-        repository: `${context.owner}/${context.repo}`,
-        issueNumber: context.issueNumber,
-        mentionStatus: "failed",
-        reason: params.logReason,
-        ...params.fields,
-        durationMs: Date.now() - startedAt,
-      },
+    logCompleted(
+      { mentionStatus: "failed", reason: params.logReason, ...params.fields },
       "warn"
     );
     return {
@@ -371,19 +362,13 @@ export async function processGitHubMention(
         proposals: agentResult.proposals,
       });
       await finishReaction("+1");
-      logGitHubMentionEvent(GITHUB_MENTION_LOG_EVENTS.completed, {
-        organizationId: context.organizationId,
-        integrationId: context.integrationId,
-        deliveryId: context.deliveryId,
-        repository: `${context.owner}/${context.repo}`,
-        issueNumber: context.issueNumber,
+      logCompleted({
         mentionStatus: "suggested",
         suggestions: agentResult.proposals.reduce(
           (sum, proposal) => sum + proposal.suggestions.length,
           0
         ),
         pullRequestUrl: agentResult.pullRequestUrl,
-        durationMs: Date.now() - startedAt,
       });
       return {
         status: "suggested",
@@ -407,18 +392,11 @@ export async function processGitHubMention(
         changedFiles: [],
       });
       await finishReaction("confused");
-      logGitHubMentionEvent(
-        GITHUB_MENTION_LOG_EVENTS.completed,
+      logCompleted(
         {
-          organizationId: context.organizationId,
-          integrationId: context.integrationId,
-          deliveryId: context.deliveryId,
-          repository: `${context.owner}/${context.repo}`,
-          issueNumber: context.issueNumber,
           mentionStatus: "failed",
           reason: "follow_up_pull_request_failed",
           commitSha: agentResult.commitSha,
-          durationMs: Date.now() - startedAt,
         },
         "error"
       );
@@ -477,16 +455,10 @@ export async function processGitHubMention(
       commitSha: agentResult.commitSha,
       pullRequestUrl: agentResult.pullRequestUrl,
     };
-    logGitHubMentionEvent(GITHUB_MENTION_LOG_EVENTS.completed, {
-      organizationId: context.organizationId,
-      integrationId: context.integrationId,
-      deliveryId: context.deliveryId,
-      repository: `${context.owner}/${context.repo}`,
-      issueNumber: context.issueNumber,
+    logCompleted({
       mentionStatus: result.status,
       commitSha: result.commitSha,
       pullRequestUrl: result.pullRequestUrl,
-      durationMs: Date.now() - startedAt,
     });
     return result;
   } catch (error) {
@@ -502,20 +474,12 @@ export async function processGitHubMention(
         body: "I pushed the change, but could not post the full reply. Take a look at the latest commit and tell me if you want it worded differently.",
       }).catch(() => undefined);
       await finishReaction("+1");
-      logGitHubMentionEvent(
-        GITHUB_MENTION_LOG_EVENTS.completed,
+      logCompleted(
         {
-          organizationId: context.organizationId,
-          integrationId: context.integrationId,
-          deliveryId: context.deliveryId,
-          repository: `${context.owner}/${context.repo}`,
-          issueNumber: context.issueNumber,
           mentionStatus: "committed",
           reason: "reply_failed",
           error: reason,
-          commitSha: written.commitSha,
-          pullRequestUrl: written.pullRequestUrl,
-          durationMs: Date.now() - startedAt,
+          ...written,
         },
         "warn"
       );
@@ -540,20 +504,7 @@ export async function processGitHubMention(
       // Leave the delivery retryable when GitHub did not receive the reply.
     }
     await finishReaction("confused");
-    logGitHubMentionEvent(
-      GITHUB_MENTION_LOG_EVENTS.completed,
-      {
-        organizationId: context.organizationId,
-        integrationId: context.integrationId,
-        deliveryId: context.deliveryId,
-        repository: `${context.owner}/${context.repo}`,
-        issueNumber: context.issueNumber,
-        mentionStatus: "failed",
-        reason,
-        durationMs: Date.now() - startedAt,
-      },
-      "error"
-    );
+    logCompleted({ mentionStatus: "failed", reason }, "error");
     return {
       status: "failed",
       reason,

@@ -20,9 +20,7 @@ const GEO_FAILURE_STATUS = 422;
  * dashboard's own `geo.sequenceRun` procedure.
  *
  * There is no GEO sequence workflow to hand off to, so this runs the sequence
- * to completion and only then answers, with the run's real result. It used to
- * answer `{ runId }` with a freshly minted id that identified nothing, which
- * told a caller neither what happened nor what to poll.
+ * to completion and only then answers, with the run's real result.
  *
  * TODO(Phase 6 — durable workflow): move this onto a real GEO sequence
  * workflow so the API can hand off and return a run id a client can follow,
@@ -53,11 +51,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { success } = await ratelimit.geoSequenceRun.limit(
-    parsed.data.organizationId
-  );
+  const { success, limit, remaining, reset } =
+    await ratelimit.geoSequenceRun.limit(parsed.data.organizationId);
   if (!success) {
-    return new Response("Too many requests", { status: 429 });
+    return Response.json(
+      { error: "Too many requests", limit, remaining, reset },
+      { status: 429 }
+    );
   }
 
   const outcome = await Effect.runPromise(

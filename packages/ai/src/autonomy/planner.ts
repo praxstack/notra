@@ -26,7 +26,7 @@ import { Effect } from "effect";
 const PLANNER_MAX_OUTPUT_TOKENS = 4000;
 const PLANNER_REPAIR_ATTEMPTS = 1;
 
-export const IRIS_PLANNER_MODEL_ID = AGENT_DEFAULT_MODEL;
+const IRIS_PLANNER_MODEL_ID = AGENT_DEFAULT_MODEL;
 
 const buildPlannerInputFingerprint = (input: IrisPlannerInput) => ({
   modelId: IRIS_PLANNER_MODEL_ID,

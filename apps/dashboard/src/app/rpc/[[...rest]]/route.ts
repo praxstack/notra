@@ -1,9 +1,9 @@
 import { useLogger as getRequestLogger, withEvlog } from "@notra/ai/evlog";
 import { httpErrorKind } from "@notra/ai/utils/http-error-kind";
-import { logError } from "@notra/ai/utils/server-log";
+import { logError, logWarn } from "@notra/ai/utils/server-log";
 import { runWithGeoRequestMemo } from "@notra/geo-core/utils/request-memo";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
-import { onError } from "@orpc/server";
+import { ORPCError, onError } from "@orpc/server";
 import { RPCHandler } from "@orpc/server/fetch";
 
 import { DASHBOARD_RPC_SLOW_REQUEST_MS } from "@/constants/request-telemetry";
@@ -33,15 +33,22 @@ const handler = new RPCHandler(dashboardRouter, {
       }
     },
     onError((error, options) => {
-      logError("[oRPC] request failed", error);
-      if (isServerFailureError(error)) {
-        trackServerException({
-          error,
-          headers: options.context.headers,
-          userId: options.context.user?.id,
-          properties: { surface: "rpc" },
+      if (!isServerFailureError(error)) {
+        // Expected 4xx (validation, not found, conflict, …): keep a trace
+        // without raising it as an error.
+        logWarn("[oRPC] request rejected", {
+          rpcErrorCode: error instanceof ORPCError ? error.code : undefined,
+          rpcErrorStatus: error instanceof ORPCError ? error.status : undefined,
         });
+        return;
       }
+      logError("[oRPC] request failed", error);
+      trackServerException({
+        error,
+        headers: options.context.headers,
+        userId: options.context.user?.id,
+        properties: { surface: "rpc" },
+      });
     }),
   ],
   plugins: createDashboardHandlerPlugins(),

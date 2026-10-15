@@ -145,14 +145,12 @@ export async function POST(request: Request) {
 
   const { query, slug, projectId } = parsed.data;
 
-  const membership = await db
+  const [member] = await db
     .select({ id: members.id, organizationId: members.organizationId })
     .from(members)
     .innerJoin(organizations, eq(members.organizationId, organizations.id))
     .where(and(eq(organizations.slug, slug), eq(members.userId, user.id)))
     .limit(1);
-
-  const [member] = membership;
   if (!member) {
     log.set({ feature: "command_palette", forbiddenSlug: true });
     log.emit();
@@ -206,9 +204,7 @@ export async function POST(request: Request) {
 
   try {
     const { output: object } = await generateText({
-      model: gateway(UTILITY_MODEL_ID, {
-        organizationId,
-      }),
+      model: gateway(UTILITY_MODEL_ID, { organizationId }),
       output: Output.object({ schema: commandPaletteNavigateResultSchema }),
       instructions: [
         "You are a navigation router for the Notra dashboard command palette.",
@@ -230,9 +226,7 @@ export async function POST(request: Request) {
       ].join("\n"),
       providerOptions: withRouterDefaults(
         { gateway: { tags: ["command-palette-navigation"] } },
-        {
-          modelId: UTILITY_MODEL_ID,
-        }
+        { modelId: UTILITY_MODEL_ID }
       ),
       abortSignal: request.signal,
       ...buildTelemetryOptions({
@@ -244,14 +238,14 @@ export async function POST(request: Request) {
       }),
     });
 
-    const normalizedPath = object.path ?? null;
-    const validPath =
-      normalizedPath !== null && allPaths.includes(normalizedPath);
-
-    if (object.action === "navigate" && validPath) {
+    if (
+      object.action === "navigate" &&
+      object.path &&
+      allPaths.includes(object.path)
+    ) {
       return Response.json({
         action: "navigate",
-        path: normalizedPath,
+        path: object.path,
         reason: object.reason,
       });
     }
@@ -269,9 +263,10 @@ export async function POST(request: Request) {
       error: error instanceof Error ? error.message : String(error),
     });
     log.emit();
-    return Response.json(
-      { action: "chat", path: null, reason: "AI unavailable, opening chat." },
-      { status: 200 }
-    );
+    return Response.json({
+      action: "chat",
+      path: null,
+      reason: "AI unavailable, opening chat.",
+    });
   }
 }

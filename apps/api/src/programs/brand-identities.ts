@@ -5,15 +5,10 @@ import {
   setBrandAnalysisJobStatus,
   updateBrandAnalysisJob,
 } from "@notra/ai/jobs/brand-analysis";
-import {
-  brandSettings,
-  contentTriggers,
-  geoContentBriefs,
-  projects,
-} from "@notra/db/schema";
+import { brandSettings, geoContentBriefs, projects } from "@notra/db/schema";
 import { invalidateGeoIngestHostsCacheForBrand } from "@notra/geo-core/geo/ingest";
 import { isSameUrl } from "@notra/utils/url";
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { Effect } from "effect";
 
 import {
@@ -52,7 +47,9 @@ import {
 import { isConstraintViolation, isPgUniqueViolation } from "../utils/pg-errors";
 import {
   deleteQstashSchedulesForTriggers,
+  disableTriggersAndDelete,
   getTriggersForBrandIdentity,
+  serializeDisabledTriggers,
 } from "../utils/triggers";
 import { validateBrandWebsiteUrl } from "./website-url";
 
@@ -61,6 +58,15 @@ const database = <A>(operation: () => Promise<A>) =>
     try: operation,
     catch: (cause) => new BrandIdentityDatabaseError({ cause }),
   });
+
+const brandIdentityInOrganization = (input: {
+  organizationId: string;
+  brandIdentityId: string;
+}) =>
+  and(
+    eq(brandSettings.id, input.brandIdentityId),
+    eq(brandSettings.organizationId, input.organizationId)
+  );
 
 const mapCreateInsertError = (cause: unknown) => {
   if (isPgUniqueViolation(cause)) {
@@ -158,41 +164,6 @@ const failBrandAnalysisQueue = Effect.fnUntraced(function* (
   return yield* new BrandAnalysisQueueFailedError();
 });
 
-function recoverBeforeWorkflowAccepted(
-  input: CreateBrandIdentityProgramInput,
-  brandIdentityId: string,
-  jobId: string,
-  options: { cleanupJobKey: boolean; markJobFailed: boolean }
-) {
-  return Effect.catch((error: unknown) =>
-    failBrandAnalysisQueue(input, brandIdentityId, jobId, {
-      deleteBrandIdentity: true,
-      cleanupJobKey: options.cleanupJobKey,
-      markJobFailed: options.markJobFailed,
-      errorMessage: queueFailureMessage(error),
-    })
-  );
-}
-
-function recoverWorkflowTriggerFailure(
-  input: CreateBrandIdentityProgramInput,
-  brandIdentityId: string,
-  jobId: string
-) {
-  return Effect.catch((error: unknown) =>
-    failBrandAnalysisQueue(input, brandIdentityId, jobId, {
-      deleteBrandIdentity: isConfirmedWorkflowTriggerRejection(error),
-      cleanupJobKey: false,
-      markJobFailed: true,
-      errorMessage: queueFailureMessage(error),
-    })
-  );
-}
-
-function recoverAfterWorkflowAccepted() {
-  return Effect.catch(() => Effect.fail(new BrandAnalysisQueueFailedError()));
-}
-
 async function isBrandIdentityInUse(
   db: DbClient,
   organizationId: string,
@@ -250,7 +221,7 @@ export const createBrandIdentity = Effect.fn("brandIdentities.create")(
       })
     );
 
-    const insertResult = yield* Effect.tryPromise({
+    const [brandIdentity] = yield* Effect.tryPromise({
       try: () =>
         insertBrandIdentity(input.db, {
           id: newBrandIdentityId,
@@ -259,10 +230,8 @@ export const createBrandIdentity = Effect.fn("brandIdentities.create")(
           isDefault: !hasAnyBrandIdentity,
           websiteUrl,
         }),
-      catch: (cause) => mapCreateInsertError(cause),
+      catch: mapCreateInsertError,
     });
-
-    const [brandIdentity] = insertResult;
 
     if (!brandIdentity) {
       return yield* new BrandIdentityDatabaseError({
@@ -288,10 +257,14 @@ export const createBrandIdentity = Effect.fn("brandIdentities.create")(
         }),
       catch: (cause) => cause,
     }).pipe(
-      recoverBeforeWorkflowAccepted(input, brandIdentity.id, jobId, {
-        cleanupJobKey: true,
-        markJobFailed: false,
-      })
+      Effect.catch((error) =>
+        failBrandAnalysisQueue(input, brandIdentity.id, jobId, {
+          deleteBrandIdentity: true,
+          cleanupJobKey: true,
+          markJobFailed: false,
+          errorMessage: queueFailureMessage(error),
+        })
+      )
     );
 
     const workflowRunId = yield* Effect.tryPromise({
@@ -303,7 +276,16 @@ export const createBrandIdentity = Effect.fn("brandIdentities.create")(
           jobId,
         }),
       catch: (cause) => cause,
-    }).pipe(recoverWorkflowTriggerFailure(input, brandIdentity.id, jobId));
+    }).pipe(
+      Effect.catch((error) =>
+        failBrandAnalysisQueue(input, brandIdentity.id, jobId, {
+          deleteBrandIdentity: isConfirmedWorkflowTriggerRejection(error),
+          cleanupJobKey: false,
+          markJobFailed: true,
+          errorMessage: queueFailureMessage(error),
+        })
+      )
+    );
 
     const updatedJob = yield* Effect.tryPromise({
       try: () =>
@@ -311,7 +293,9 @@ export const createBrandIdentity = Effect.fn("brandIdentities.create")(
           workflowRunId,
         }),
       catch: (cause) => cause,
-    }).pipe(recoverAfterWorkflowAccepted());
+    }).pipe(
+      Effect.catch(() => Effect.fail(new BrandAnalysisQueueFailedError()))
+    );
 
     return {
       job: updatedJob ?? job,
@@ -340,10 +324,7 @@ export const getBrandIdentity = Effect.fn("brandIdentities.get")(function* (
 ) {
   const brandIdentity = yield* database(() =>
     input.db.query.brandSettings.findFirst({
-      where: and(
-        eq(brandSettings.id, input.brandIdentityId),
-        eq(brandSettings.organizationId, input.organizationId)
-      ),
+      where: brandIdentityInOrganization(input),
       columns: brandIdentityQueryColumns(),
     })
   );
@@ -358,10 +339,7 @@ export const patchBrandIdentity = Effect.fn("brandIdentities.patch")(function* (
 ) {
   const existingBrandIdentity = yield* database(() =>
     input.db.query.brandSettings.findFirst({
-      where: and(
-        eq(brandSettings.id, input.brandIdentityId),
-        eq(brandSettings.organizationId, input.organizationId)
-      ),
+      where: brandIdentityInOrganization(input),
       columns: { id: true, websiteUrl: true },
     })
   );
@@ -419,7 +397,7 @@ export const patchBrandIdentity = Effect.fn("brandIdentities.patch")(function* (
     updateData.language = body.language;
   }
 
-  const patchResult = yield* Effect.tryPromise({
+  const [brandIdentity] = yield* Effect.tryPromise({
     try: () =>
       shouldSetDefault
         ? input.db.transaction(async (tx) => {
@@ -429,12 +407,7 @@ export const patchBrandIdentity = Effect.fn("brandIdentities.patch")(function* (
               await tx
                 .update(brandSettings)
                 .set(targetUpdateData)
-                .where(
-                  and(
-                    eq(brandSettings.id, input.brandIdentityId),
-                    eq(brandSettings.organizationId, input.organizationId)
-                  )
-                );
+                .where(brandIdentityInOrganization(input));
             }
 
             await tx
@@ -451,34 +424,27 @@ export const patchBrandIdentity = Effect.fn("brandIdentities.patch")(function* (
             return tx
               .update(brandSettings)
               .set({ isDefault: true, updatedAt })
-              .where(
-                and(
-                  eq(brandSettings.id, input.brandIdentityId),
-                  eq(brandSettings.organizationId, input.organizationId)
-                )
-              )
+              .where(brandIdentityInOrganization(input))
               .returning(selectBrandIdentityColumns());
           })
         : input.db
             .update(brandSettings)
             .set(updateData)
-            .where(
-              and(
-                eq(brandSettings.id, input.brandIdentityId),
-                eq(brandSettings.organizationId, input.organizationId)
-              )
-            )
+            .where(brandIdentityInOrganization(input))
             .returning(selectBrandIdentityColumns()),
     catch: (cause) => {
-      if (isPgUniqueViolation(cause)) {
+      // A concurrent default switch also violates a unique index
+      // (brandSettings_org_default_uidx); only the name index is a duplicate.
+      if (
+        isPgUniqueViolation(cause) &&
+        isConstraintViolation(cause, "brandSettings_org_name_uidx")
+      ) {
         return new BrandIdentityNameDuplicateError();
       }
 
       return new BrandIdentityDatabaseError({ cause });
     },
   });
-
-  const [brandIdentity] = patchResult;
 
   if (!brandIdentity) {
     return yield* new BrandIdentityNotFoundError();
@@ -502,10 +468,7 @@ export const deleteBrandIdentity = Effect.fn("brandIdentities.delete")(
   function* (input: DeleteBrandIdentityProgramInput) {
     const brandIdentity = yield* database(() =>
       input.db.query.brandSettings.findFirst({
-        where: and(
-          eq(brandSettings.id, input.brandIdentityId),
-          eq(brandSettings.organizationId, input.organizationId)
-        ),
+        where: brandIdentityInOrganization(input),
         columns: {
           id: true,
           isDefault: true,
@@ -542,35 +505,13 @@ export const deleteBrandIdentity = Effect.fn("brandIdentities.delete")(
     );
 
     yield* database(() =>
-      input.db.transaction(async (tx) => {
-        if (affectedTriggers.length > 0) {
-          await tx
-            .update(contentTriggers)
-            .set({
-              enabled: false,
-              qstashScheduleId: null,
-              updatedAt: new Date(),
-            })
-            .where(
-              and(
-                eq(contentTriggers.organizationId, input.organizationId),
-                inArray(
-                  contentTriggers.id,
-                  affectedTriggers.map((trigger) => trigger.id)
-                )
-              )
-            );
-        }
-
-        await tx
-          .delete(brandSettings)
-          .where(
-            and(
-              eq(brandSettings.id, input.brandIdentityId),
-              eq(brandSettings.organizationId, input.organizationId)
-            )
-          );
-      })
+      disableTriggersAndDelete(
+        input.db,
+        input.organizationId,
+        affectedTriggers,
+        (tx) =>
+          tx.delete(brandSettings).where(brandIdentityInOrganization(input))
+      )
     );
 
     yield* database(() =>
@@ -579,12 +520,7 @@ export const deleteBrandIdentity = Effect.fn("brandIdentities.delete")(
 
     return {
       id: input.brandIdentityId,
-      disabledSchedules: affectedTriggers
-        .filter((trigger) => trigger.sourceType === "cron")
-        .map((trigger) => ({ id: trigger.id, name: trigger.name })),
-      disabledEvents: affectedTriggers
-        .filter((trigger) => trigger.sourceType !== "cron")
-        .map((trigger) => ({ id: trigger.id, name: trigger.name })),
+      ...serializeDisabledTriggers(affectedTriggers),
     } satisfies DeleteBrandIdentityProgramSuccess;
   }
 );

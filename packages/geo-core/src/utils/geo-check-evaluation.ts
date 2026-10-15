@@ -87,7 +87,7 @@ export const MENTION_EVALUATION_QUESTIONS = {
   },
 } as const;
 
-export type MentionEvaluationResult = EvaluationResult<
+type MentionEvaluationResult = EvaluationResult<
   typeof MENTION_EVALUATION_QUESTIONS
 >;
 

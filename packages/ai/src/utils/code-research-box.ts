@@ -21,6 +21,7 @@ import {
   parseHeadSha,
   wrapCommand,
 } from "@notra/ai/utils/code-research-commands";
+import { readEnvSwitch } from "@notra/ai/utils/env-switch";
 import { withBoxRetry } from "@notra/ai/utils/repo-image-box";
 import { Box, BoxError, EphemeralBox } from "@upstash/box";
 
@@ -48,7 +49,7 @@ function isBoxGoneError(error: unknown): boolean {
 
 export function isCodeResearchConfigured(): boolean {
   return (
-    process.env[CODE_RESEARCH_DISABLE_ENV]?.trim().toLowerCase() !== "off" &&
+    readEnvSwitch(CODE_RESEARCH_DISABLE_ENV, { defaultOn: true }) &&
     Boolean(process.env.UPSTASH_BOX_API_KEY)
   );
 }
@@ -169,7 +170,7 @@ export async function cloneRepositoryIntoBox(
   });
   if (result.exitCode !== 0) {
     throw new Error(
-      `Cloning ${repository.owner}/${repository.repo} failed (exit ${String(result.exitCode)}): ${result.output.trim().slice(-500)}`
+      `Cloning ${repository.owner}/${repository.repo} failed (exit ${result.exitCode}): ${result.output.trim().slice(-500)}`
     );
   }
   return parseHeadSha(result.output);
@@ -187,7 +188,7 @@ export async function checkoutTargetInBox(
   );
   if (result.exitCode !== 0) {
     throw new Error(
-      `Checking out ${JSON.stringify(target)} failed (exit ${String(result.exitCode)}): ${result.output.trim().slice(-500)}`
+      `Checking out ${JSON.stringify(target)} failed (exit ${result.exitCode}): ${result.output.trim().slice(-500)}`
     );
   }
   return parseHeadSha(result.output);

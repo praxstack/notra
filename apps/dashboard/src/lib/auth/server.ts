@@ -161,7 +161,7 @@ export const getAuthIdentity = cacheAuthRequest(
       try {
         headerList = getRequestHeaders();
       } catch {
-        headerList = null;
+        // Outside a request: evaluate the gate without headers.
       }
       const gate = evaluateLocalDevAuth(headerList);
       if (gate.kind === "allowed") {

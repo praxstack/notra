@@ -2,7 +2,7 @@ import { calculateAiCreditCostCents } from "@notra/ai/billing/ai-credit-cost";
 import type { AgentTokenUsage } from "@notra/ai/types/agents";
 import type { LanguageModelUsage } from "ai";
 
-export const toIrisTokenUsage = (
+const toIrisTokenUsage = (
   usage: LanguageModelUsage | undefined,
   modelId: string
 ): AgentTokenUsage => {

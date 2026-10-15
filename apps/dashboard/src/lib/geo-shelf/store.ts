@@ -316,9 +316,6 @@ export async function insertGeoShelfSources(
   sources: GeoShelfSource[],
   executor: GeoShelfDbExecutor = db
 ): Promise<GeoShelfSource[]> {
-  if (sources.length === 0) {
-    return [];
-  }
   const persisted: GeoShelfSource[] = [];
   for (
     let index = 0;

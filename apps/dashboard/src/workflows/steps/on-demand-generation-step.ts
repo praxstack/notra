@@ -124,6 +124,7 @@ export async function runOnDemandGeneration(
     sourceTargetParts.push(`Linear (integrationId: ${ref.integrationId})`);
   }
 
+  const tone = getValidToneProfile(brand?.toneProfile, "Conversational");
   const log = createRequestLogger({
     method: "POST",
     path: "/api/workflows/on-demand-content",
@@ -149,7 +150,7 @@ export async function runOnDemandGeneration(
         defaultBranch: repository.defaultBranch,
       })),
       linearIntegrations: linearIntegrationRefs,
-      tone: getValidToneProfile(brand?.toneProfile, "Conversational"),
+      tone,
       promptInput: {
         sourceTargets: sourceTargetParts.join(", "),
         todayUtc,
@@ -161,7 +162,7 @@ export async function runOnDemandGeneration(
         audience: brand?.audience ?? undefined,
         customInstructions: customInstructions || null,
         language: brand?.language ?? undefined,
-        toneProfile: getValidToneProfile(brand?.toneProfile, "Conversational"),
+        toneProfile: tone,
         customTone: brand?.customTone ?? null,
       },
       sourceMetadata,

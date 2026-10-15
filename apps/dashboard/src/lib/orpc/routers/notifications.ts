@@ -8,7 +8,6 @@ import {
 import { eq } from "drizzle-orm";
 
 import { runAfterResponse } from "@/lib/after-response";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { syncBrewContactsForOrganizationOwners } from "@/lib/email/brew-contacts";
 import {
@@ -16,20 +15,15 @@ import {
   setMarketingEmails,
 } from "@/lib/email/marketing-consent";
 import { getTranslations } from "@/lib/i18n/server";
-import { authorizedProcedure } from "@/lib/orpc/base";
+import { authorizedProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 
 import { forbidden } from "../utils/errors";
 
 export const notificationsRouter = {
   get: authorizedProcedure
     .input(organizationIdInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const settings =
         await db.query.organizationNotificationSettings.findFirst({
           where: eq(
@@ -49,14 +43,9 @@ export const notificationsRouter = {
     }),
   update: authorizedProcedure
     .input(updateNotificationSettingsInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const access = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
-      if (access.membership.role !== "owner") {
+      if (context.auth.membership.role !== "owner") {
         const tErrors = await getTranslations("errors.notifications");
         throw forbidden(tErrors("ownerOnly"));
       }

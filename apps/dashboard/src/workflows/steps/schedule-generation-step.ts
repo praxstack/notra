@@ -86,6 +86,7 @@ export async function runScheduledGeneration(
     brandVoiceId: brand?.id,
   };
 
+  const tone = getValidToneProfile(brand?.toneProfile, "Conversational");
   const promptInput = {
     sourceTargets: sourceTargetParts.join(", "),
     todayUtc,
@@ -97,7 +98,7 @@ export async function runScheduledGeneration(
     audience: brand?.audience ?? undefined,
     customInstructions: customInstructions || null,
     language: brand?.language ?? undefined,
-    toneProfile: getValidToneProfile(brand?.toneProfile, "Conversational"),
+    toneProfile: tone,
     customTone: brand?.customTone ?? null,
   };
 
@@ -107,8 +108,6 @@ export async function runScheduledGeneration(
     repo: repository.repo,
     defaultBranch: repository.defaultBranch,
   }));
-
-  const tone = getValidToneProfile(brand?.toneProfile, "Conversational");
 
   const log = createRequestLogger({
     method: "POST",

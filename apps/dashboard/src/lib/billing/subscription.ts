@@ -202,7 +202,7 @@ export async function hasPaidSubscriptionHistory(
   }
 }
 
-export type GeoEntitlementOutcome = "entitled" | "denied" | "skipped";
+type GeoEntitlementOutcome = "entitled" | "denied" | "skipped";
 
 /**
  * Resolves the AI-answers entitlement without emitting denial telemetry.
@@ -242,7 +242,7 @@ export async function resolveGeoEntitlement(
 }
 
 /** Reports the denial and rejects the request. Call only for confirmed members. */
-export async function rejectGeoEntitlementDenied(
+async function rejectGeoEntitlementDenied(
   organizationId: string
 ): Promise<never> {
   trackServerEvent({

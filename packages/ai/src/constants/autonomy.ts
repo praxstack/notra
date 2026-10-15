@@ -1,10 +1,6 @@
-export const IRIS_AGENT_NAME = "Iris";
 export const IRIS_MANDATE_NAME = "Iris mission";
 
 export const IRIS_COLLECTION_NAME = "Iris";
-export const IRIS_COLLECTION_SLUG = "iris";
-export const IRIS_COLLECTION_DESCRIPTION =
-  "Content created autonomously by Iris";
 
 export const IRIS_CONTROLLER_CLAIM_SCOPE = "iris-controller";
 export const IRIS_CONTROLLER_LEASE_PREFIX = "iris";
@@ -15,8 +11,6 @@ export const CONTROLLER_LEASE_TTL_SECONDS = 1800;
 export const CONTROLLER_LEASE_RENEW_TTL_SECONDS = 1800;
 
 export const OUTBOX_DESTINATION_SLACK = "slack";
-export const MAX_OUTBOX_ATTEMPTS = 5;
-export const OUTBOX_BACKOFF_SECONDS = [30, 120, 600, 1800, 3600] as const;
 
 export const ACTION_BUDGET_WINDOW_HOURS = 24;
 export const PENDING_SIGNAL_FETCH_LIMIT = 50;

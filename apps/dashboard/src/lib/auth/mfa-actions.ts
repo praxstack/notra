@@ -54,15 +54,15 @@ import {
   runAuthFlow,
   signedIn,
   trackAuthEvent,
-  tryWorkOSAuth,
 } from "@/lib/auth/auth-flow";
 import {
   clearBackupCodes,
   consumeBackupCode,
   hasBackupCodes,
-  hasUnusedBackupCode,
+  releaseBackupCode,
   replaceBackupCodes,
 } from "@/lib/auth/backup-codes";
+import { tryWorkOSAuth } from "@/lib/auth/errors";
 import { beginTotpEnrollment } from "@/lib/auth/mfa";
 import {
   clearAllPendingMfaFlows,
@@ -220,10 +220,12 @@ async function redeemBackupCodeActionImpl(
         return rejected;
       }
 
-      const unused = yield* Effect.promise(() =>
-        hasUnusedBackupCode(localUser.id, parsed.data.code)
+      // Claim the code before touching WorkOS so a code can only recover
+      // once; the claim is released if the factors cannot be removed.
+      const claimed = yield* Effect.promise(() =>
+        consumeBackupCode(localUser.id, parsed.data.code)
       );
-      if (!unused) {
+      if (!claimed) {
         return rejected;
       }
 
@@ -249,9 +251,12 @@ async function redeemBackupCodeActionImpl(
         );
         return lockedOutFactors.length === totpFactors.length;
       });
-      const allFactorsRemoved = yield* removeLockedOutFactors;
-      yield* Effect.promise(() =>
-        consumeBackupCode(localUser.id, parsed.data.code)
+      const allFactorsRemoved = yield* removeLockedOutFactors.pipe(
+        Effect.tapError(() =>
+          Effect.tryPromise(() =>
+            releaseBackupCode(localUser.id, parsed.data.code)
+          ).pipe(Effect.ignore)
+        )
       );
 
       if (allFactorsRemoved) {

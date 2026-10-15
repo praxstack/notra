@@ -13,7 +13,7 @@ export const agentFeedbackOrganizationInputSchema = z.object({
 });
 
 /** Longest window the activity chart may request, in days. */
-export const AGENT_FEEDBACK_ACTIVITY_MAX_DAYS = 366;
+const AGENT_FEEDBACK_ACTIVITY_MAX_DAYS = 366;
 const DAY_MS = 86_400_000;
 
 export const agentFeedbackActivityInputSchema = z

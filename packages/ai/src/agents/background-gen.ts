@@ -78,10 +78,7 @@ async function runBackgroundGenWithContext(
     includeSearchBrandReferencesTool,
   } = options;
 
-  if (
-    (!repositories || repositories.length === 0) &&
-    (!linearIntegrations || linearIntegrations.length === 0)
-  ) {
+  if (repositories.length === 0 && !linearIntegrations?.length) {
     throw new Error(
       `At least one repository or Linear integration must be provided to generate ${contentLabel}.`
     );
@@ -100,7 +97,7 @@ async function runBackgroundGenWithContext(
   const prompt = getUserPrompt(contentLabel, promptInput);
 
   const allowedIntegrationIds = Array.from(
-    new Set((repositories ?? []).map((repo) => repo.integrationId))
+    new Set(repositories.map((repo) => repo.integrationId))
   );
 
   const allowedLinearIntegrationIds = Array.from(

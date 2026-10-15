@@ -364,10 +364,7 @@ export async function applyBrandGuidelineScreenshotsStep(
           (typeof response.screenshot === "object"
             ? response.screenshot.format
             : undefined) ?? "png",
-        height:
-          (typeof response.screenshot === "object"
-            ? response.screenshot.height
-            : response.height) ?? config.height,
+        height: getScreenshotResponseHeight(response) ?? config.height,
         index,
         scrollOffset,
         screenshotType: response.screenshotType,

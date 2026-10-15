@@ -32,7 +32,7 @@ describe("resolveEditableMarkdown", () => {
     ).toEqual({ markdown: POST, fromPullRequest: false });
   });
 
-  test("uses the file once the head moved, retaining repository image paths", () => {
+  test("uses the file once the head moved", () => {
     expect(
       resolveEditableMarkdown({
         postMarkdown: POST,

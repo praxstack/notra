@@ -1,21 +1,17 @@
 import { afterAll, beforeAll, expect, mock, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
 import { Effect } from "effect";
 
-if (process.env.NOTRA_WEB_TREND_TEST_WORKER !== "1") {
-  test("web audience comparison mapping in an isolated process", () => {
-    const result = spawnSync(
-      process.execPath,
-      ["test", fileURLToPath(import.meta.url)],
-      {
-        env: { ...process.env, NOTRA_WEB_TREND_TEST_WORKER: "1" },
-        timeout: 30_000,
-      }
-    );
-    expect(result.status, result.stderr?.toString()).toBe(0);
-  }, 35_000);
+import {
+  isIsolatedTestWorker,
+  testInIsolatedProcess,
+} from "./utils/isolated-process";
+
+if (!isIsolatedTestWorker(import.meta.url)) {
+  testInIsolatedProcess(
+    "web audience comparison mapping in an isolated process",
+    import.meta.url
+  );
 } else {
   await import("./utils/infrastructure");
   const { database, initializeDatabase, seedProject } =

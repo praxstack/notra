@@ -93,15 +93,14 @@ const resolveTargetUrl = Effect.fn("geo.agentReadiness.target")(function* (
   return targetUrl;
 });
 
-async function latestRowWhere(
+async function latestRunningRow(
   projectId: string,
-  status?: AgentReadinessReportRow["status"],
   targetUrl?: string
 ): Promise<AgentReadinessReportRow | undefined> {
-  const conditions = [eq(geoAgentReadinessReports.projectId, projectId)];
-  if (status) {
-    conditions.push(eq(geoAgentReadinessReports.status, status));
-  }
+  const conditions = [
+    eq(geoAgentReadinessReports.projectId, projectId),
+    eq(geoAgentReadinessReports.status, "running"),
+  ];
   if (targetUrl) {
     conditions.push(
       inArray(
@@ -278,7 +277,7 @@ export const startAgentReadinessScan = Effect.fn("geo.agentReadiness.start")(
       const [targetUrl, running] = yield* Effect.all([
         resolveTargetUrl(scope.brandSettingsId),
         geoDb("read running readiness", () =>
-          latestRowWhere(scope.projectId, "running")
+          latestRunningRow(scope.projectId)
         ),
       ]);
       if (running && canReuseAgentReadinessScan(running, targetUrl)) {
@@ -326,7 +325,7 @@ export const startAgentReadinessScan = Effect.fn("geo.agentReadiness.start")(
       );
       if (inserted.length === 0) {
         const winner = yield* geoDb("read readiness claim winner", () =>
-          latestRowWhere(scope.projectId, "running", targetUrl)
+          latestRunningRow(scope.projectId, targetUrl)
         );
         if (!winner || !canReuseAgentReadinessScan(winner, targetUrl)) {
           return yield* Effect.fail(

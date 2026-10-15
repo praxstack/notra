@@ -5,17 +5,17 @@ import { realtime } from "@notra/ai/realtime";
 import { chatIdSchema } from "@notra/ai/schemas/chat";
 
 import { withOrganizationAuth } from "@/lib/auth/organization";
+import type { RouteContext } from "@/types/api/routes";
 import { ratelimit } from "@/utils/ratelimit";
-
-interface RouteContext {
-  params: Promise<{ organizationId: string; chatId: string }>;
-}
 
 function toSseChunk(data: unknown) {
   return `data: ${JSON.stringify(data)}\n\n`;
 }
 
-export async function GET(request: Request, { params }: RouteContext) {
+export async function GET(
+  request: Request,
+  { params }: RouteContext<{ organizationId: string; chatId: string }>
+) {
   const { organizationId, chatId } = await params;
   const auth = await withOrganizationAuth(request, organizationId);
 
@@ -62,6 +62,13 @@ export async function GET(request: Request, { params }: RouteContext) {
   let unsubscribe: (() => void) | undefined;
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
+  const teardown = () => {
+    closed = true;
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    unsubscribe?.();
+  };
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -71,11 +78,7 @@ export async function GET(request: Request, { params }: RouteContext) {
         if (closed) {
           return;
         }
-        closed = true;
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-        unsubscribe?.();
+        teardown();
         controller.close();
       };
 
@@ -111,21 +114,11 @@ export async function GET(request: Request, { params }: RouteContext) {
           unsubscribe();
         }
       } catch (error) {
-        closed = true;
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-        unsubscribe?.();
+        teardown();
         throw error;
       }
     },
-    cancel() {
-      closed = true;
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-      unsubscribe?.();
-    },
+    cancel: teardown,
   });
 
   return new Response(stream, {

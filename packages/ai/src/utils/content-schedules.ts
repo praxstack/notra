@@ -35,11 +35,6 @@ const DEDUPE_CONSTRAINT = "contentTriggers_organization_dedupe_uidx";
 const DEFAULT_LOOKBACK_WINDOW = "last_7_days";
 const DEFAULT_SCHEDULE_NAME = "Untitled Schedule";
 
-const storedCronSchemaFields = {
-  frequency: SCHEDULE_FREQUENCIES,
-  lookback: SCHEDULE_LOOKBACK_WINDOWS,
-} as const;
-
 interface ScheduleRow {
   id: string;
   name: string;
@@ -139,6 +134,8 @@ export async function createContentSchedule(
   }
 
   const repositoryIds = repositories.map((repository) => repository.id);
+  const name = input.name.trim() || DEFAULT_SCHEDULE_NAME;
+  const outputConfig = scheduleOutputConfig(input);
   const autoPublish = scheduleAutoPublish(input);
   const dedupeHash = contentScheduleDedupeHash({
     cron,
@@ -168,14 +165,13 @@ export async function createContentSchedule(
       });
     }
 
-    const outputConfig = scheduleOutputConfig(input);
     await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(contentTriggers)
         .values({
           id: triggerId,
           organizationId,
-          name: input.name.trim() || DEFAULT_SCHEDULE_NAME,
+          name,
           sourceType: "cron",
           sourceConfig: { cron },
           targets: { repositoryIds },
@@ -220,9 +216,12 @@ export async function createContentSchedule(
       }
     }
 
-    const setupMessage = scheduleSetupMessage(error);
-    if (setupMessage) {
-      return { status: "error", message: setupMessage };
+    if (error instanceof QstashScheduleSetupError) {
+      return {
+        status: "error",
+        message:
+          "Schedules cannot be started yet because the scheduler is not configured for this environment.",
+      };
     }
 
     throw error;
@@ -231,13 +230,13 @@ export async function createContentSchedule(
   const [schedule] = await summarizeRows(organizationId, [
     {
       id: triggerId,
-      name: input.name.trim() || DEFAULT_SCHEDULE_NAME,
+      name,
       enabled: input.enabled,
       autoPublish,
       outputType: input.outputType,
       sourceConfig: { cron },
       targets: { repositoryIds },
-      outputConfig: scheduleOutputConfig(input),
+      outputConfig,
     },
   ]);
 
@@ -396,7 +395,7 @@ function readCron(sourceConfig: unknown): TriggerCronConfig | null {
   const frequency = record.frequency;
   if (
     typeof frequency !== "string" ||
-    !storedCronSchemaFields.frequency.includes(
+    !SCHEDULE_FREQUENCIES.includes(
       frequency as (typeof SCHEDULE_FREQUENCIES)[number]
     )
   ) {
@@ -460,17 +459,10 @@ function isLookbackWindow(
 ): value is (typeof SCHEDULE_LOOKBACK_WINDOWS)[number] {
   return (
     value !== undefined &&
-    storedCronSchemaFields.lookback.includes(
+    SCHEDULE_LOOKBACK_WINDOWS.includes(
       value as (typeof SCHEDULE_LOOKBACK_WINDOWS)[number]
     )
   );
-}
-
-function scheduleSetupMessage(error: unknown): string | null {
-  if (error instanceof QstashScheduleSetupError) {
-    return "Schedules cannot be started yet because the scheduler is not configured for this environment.";
-  }
-  return null;
 }
 
 function isDedupeConflict(error: unknown): boolean {

@@ -72,13 +72,15 @@ export const scheduledPublicationViewColumns = {
   createdAt: scheduledPublications.createdAt,
 };
 
-function isUniqueViolation(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "23505"
-  );
+/** Drizzle wraps driver errors in DrizzleQueryError, so walk the cause chain. */
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  if ("code" in error && error.code === "23505") {
+    return true;
+  }
+  return "cause" in error && isUniqueViolation(error.cause);
 }
 
 function toScheduledPublicationView(
@@ -732,7 +734,7 @@ export async function releaseScheduledPublicationClaim(
   if (givenUp.length > 0) {
     return "failed";
   }
-  const released = await db
+  const [row] = await db
     .update(scheduledPublications)
     .set({
       status: "scheduled",
@@ -748,7 +750,6 @@ export async function releaseScheduledPublicationClaim(
       postId: scheduledPublications.postId,
       nextAttemptAt: scheduledPublications.nextAttemptAt,
     });
-  const [row] = released;
   if (!row) {
     return "superseded";
   }

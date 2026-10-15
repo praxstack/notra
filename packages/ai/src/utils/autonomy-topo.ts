@@ -34,15 +34,9 @@ export const topologicallySortNodes = <NodeType extends TopologicalNode>(
   }
 
   const ordered: NodeType[] = [];
-  let cursor = 0;
-  while (cursor < queue.length) {
-    const currentId = queue[cursor];
-    cursor += 1;
-    if (currentId === undefined) {
-      continue;
-    }
+  for (const currentId of queue) {
     const current = byId.get(currentId);
-    if (current !== undefined) {
+    if (current) {
       ordered.push(current);
     }
     for (const dependent of dependents.get(currentId) ?? []) {

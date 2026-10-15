@@ -32,7 +32,7 @@ export function sanitizeReturnTo(value: string | null): string | null {
   try {
     decoded = decodeURIComponent(value);
   } catch {
-    decoded = value;
+    // Malformed escapes: validate the raw value instead.
   }
 
   return isSameOriginPath(decoded) ? decoded : null;

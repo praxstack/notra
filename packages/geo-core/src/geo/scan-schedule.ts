@@ -48,7 +48,7 @@ function truncateToMinute(date: Date) {
  * Arms a schedule that has no usable anchor: one interval out from `from`, on
  * a whole minute (see `truncateToMinute`).
  */
-export function nextGeoScanAt(scanIntervalHours: number, from = new Date()) {
+function nextGeoScanAt(scanIntervalHours: number, from = new Date()) {
   return truncateToMinute(
     new Date(from.getTime() + geoScanIntervalMs(scanIntervalHours))
   );
@@ -323,11 +323,8 @@ export const runGeoScanCronSweep = Effect.fn("geo.runScanCronSweep")(
             projectId: row.projectId,
           })
         );
-        if (advanced === null) {
-          return null;
-        }
-        if (advanced) {
-          return true;
+        if (advanced !== false) {
+          return advanced;
         }
         advanceLost += 1;
         yield* geoLogWarn({

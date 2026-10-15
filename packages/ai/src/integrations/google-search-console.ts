@@ -44,6 +44,10 @@ import type {
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 16);
 
+function gscIntegrationLock(organizationId: string) {
+  return sql`SELECT pg_advisory_xact_lock(hashtextextended(${`gsc-integration:${organizationId}`}, 0))`;
+}
+
 export function getGscOAuthCredentials(): GscOAuthCredentials | null {
   const clientId = process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET?.trim();
@@ -160,7 +164,7 @@ export async function getGscIntegration(
   return row ?? null;
 }
 
-export function hasGscGoogleAccountChanged(
+function hasGscGoogleAccountChanged(
   previousEmail: string | null | undefined,
   nextEmail: string | null
 ): boolean {
@@ -175,7 +179,7 @@ export function hasGscGoogleAccountChanged(
   return previous !== next;
 }
 
-export function shouldClearGscSiteOnReconnect(
+function shouldClearGscSiteOnReconnect(
   existing: Pick<GscIntegrationRow, "googleAccountEmail" | "siteUrl"> | null,
   nextEmail: string | null
 ): boolean {
@@ -198,9 +202,7 @@ export async function upsertGscIntegration(
   const encryptedRefreshToken = encryptToken(params.refreshToken);
 
   const { integrationToRevoke, row } = await db.transaction(async (tx) => {
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtextextended(${`gsc-integration:${params.organizationId}`}, 0))`
-    );
+    await tx.execute(gscIntegrationLock(params.organizationId));
     await assertLockOwned?.();
     signal?.throwIfAborted();
     const existing = await tx.query.googleSearchConsoleIntegrations.findFirst({
@@ -267,7 +269,7 @@ export async function upsertGscIntegration(
       throw new Error("Failed to save Google Search Console integration");
     }
 
-    if (!existing || googleAccountChanged) {
+    if (googleAccountChanged) {
       signal?.throwIfAborted();
       await tx
         .delete(geoPromptSuggestions)
@@ -277,8 +279,6 @@ export async function upsertGscIntegration(
             eq(geoPromptSuggestions.status, "pending")
           )
         );
-    }
-    if (googleAccountChanged) {
       await tx
         .update(projects)
         .set({
@@ -320,23 +320,6 @@ export async function upsertGscIntegration(
   return row;
 }
 
-export async function updateGscIntegration(
-  organizationId: string,
-  updates: GscIntegrationUpdate
-): Promise<GscIntegrationRow | null> {
-  const [row] = await db
-    .update(googleSearchConsoleIntegrations)
-    .set(updates)
-    .where(
-      and(
-        eq(googleSearchConsoleIntegrations.organizationId, organizationId),
-        isNull(googleSearchConsoleIntegrations.disconnectingAt)
-      )
-    )
-    .returning();
-  return row ?? null;
-}
-
 export async function claimOrConfirmGscSchedule(
   integration: GscIntegrationRow,
   scheduleId: string,
@@ -344,9 +327,7 @@ export async function claimOrConfirmGscSchedule(
   assertLockOwned?: () => Promise<void>
 ): Promise<GscIntegrationRow | null> {
   return await db.transaction(async (tx) => {
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtextextended(${`gsc-integration:${integration.organizationId}`}, 0))`
-    );
+    await tx.execute(gscIntegrationLock(integration.organizationId));
     await assertLockOwned?.();
     signal?.throwIfAborted();
     const [row] = await tx
@@ -442,9 +423,7 @@ export async function beginGscIntegrationDisconnect(
   assertLockOwned?: () => Promise<void>
 ): Promise<GscIntegrationRow | null> {
   return await db.transaction(async (tx) => {
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtextextended(${`gsc-integration:${organizationId}`}, 0))`
-    );
+    await tx.execute(gscIntegrationLock(organizationId));
     await assertLockOwned?.();
     signal?.throwIfAborted();
     const [row] = await tx
@@ -468,9 +447,7 @@ export async function deleteGscIntegration(
     return null;
   }
   return await db.transaction(async (tx) => {
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtextextended(${`gsc-integration:${integration.organizationId}`}, 0))`
-    );
+    await tx.execute(gscIntegrationLock(integration.organizationId));
     await assertLockOwned?.();
     signal?.throwIfAborted();
     const [row] = await tx
@@ -596,7 +573,7 @@ async function refreshGscAccessToken(
   return accessToken;
 }
 
-export async function getGscAccessToken(
+async function getGscAccessToken(
   integration: GscIntegrationRow
 ): Promise<string> {
   if (integration.disconnectingAt) {
@@ -620,23 +597,14 @@ async function gscFetch(
   url: string,
   init?: RequestInit
 ): Promise<Response> {
-  const accessToken = await getGscAccessToken(integration);
-  const response = await fetch(url, {
-    ...init,
-    headers: {
-      ...init?.headers,
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-  if (response.status === 401) {
-    const refreshed = await refreshGscAccessToken(integration);
-    return await fetch(url, {
+  const send = (accessToken: string) =>
+    fetch(url, {
       ...init,
-      headers: {
-        ...init?.headers,
-        Authorization: `Bearer ${refreshed}`,
-      },
+      headers: { ...init?.headers, Authorization: `Bearer ${accessToken}` },
     });
+  const response = await send(await getGscAccessToken(integration));
+  if (response.status === 401) {
+    return await send(await refreshGscAccessToken(integration));
   }
   return response;
 }

@@ -11,7 +11,7 @@ export async function checkTeamMembersLimit(
     return "allowed";
   }
 
-  let data: Awaited<ReturnType<typeof autumn.check>> | null = null;
+  let data: Awaited<ReturnType<typeof autumn.check>>;
   try {
     data = await autumn.check({
       customerId: organizationId,
@@ -27,9 +27,5 @@ export async function checkTeamMembersLimit(
     return "check-unavailable";
   }
 
-  if (data?.allowed === false) {
-    return "limit-reached";
-  }
-
-  return "allowed";
+  return data.allowed === false ? "limit-reached" : "allowed";
 }

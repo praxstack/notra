@@ -145,7 +145,7 @@ export function classifyUpstreamFailure(
   return undefined;
 }
 
-export function buildRouteMetadata(
+function buildRouteMetadata(
   decision: RouteDecision,
   adapter: GatewayAdapter,
   providerMetadata: SharedV4ProviderMetadata | undefined,
@@ -633,11 +633,7 @@ export class RoutedLanguageModel implements LanguageModelV4 {
       errorName,
       status,
     });
-    const fallbackRoute: ResolvedRoute = {
-      decision,
-      adapter,
-      model: adapter.createModel(decision.requestedModelId),
-    };
+    const fallbackRoute = this.materialize(decision);
     this.routePromise = Promise.resolve(fallbackRoute);
     return fallbackRoute;
   }

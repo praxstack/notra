@@ -2,8 +2,7 @@ import type { Redis } from "@upstash/redis";
 import { Effect } from "effect";
 
 import {
-  EXTERNAL_CACHE_KEY_PREFIX,
-  EXTERNAL_CACHE_TTL_SECONDS,
+  GEO_TRAFFIC_FLUSH_INTERVAL_MS,
   GEO_TRAFFIC_FLUSH_SETTLE_MS,
   GLOBAL_SCOPE_ID,
   INITIAL_CACHE_VERSION,
@@ -15,7 +14,6 @@ import {
   VERSIONED_CACHE_SCOPES,
 } from "../constants/cache";
 import type { AnalyticsCacheScope, CachedQueryOptions } from "../types/cache";
-import { getGeoTrafficFlushIntervalMs } from "../utils/geo-flush-interval";
 import { getAnalyticsRedis } from "./redis";
 
 function versionKey(
@@ -57,18 +55,14 @@ function stableParams(params: Record<string, unknown>): string {
 /**
  * Seconds until the next geo flush window has settled. Entries cached right
  * after a boundary but before the batch is readable expire at the settle
- * point, so the new batch is never hidden for a whole window. Without
- * batching, entries keep the plain live TTL.
+ * point, so the new batch is never hidden for a whole window.
  */
-export function geoLiveTtlSeconds(
-  now: number = Date.now(),
-  intervalMs: number = getGeoTrafficFlushIntervalMs()
-): number {
-  if (intervalMs <= 0) {
-    return LIVE_QUERY_CACHE_TTL_SECONDS;
-  }
-  const boundary = now - (now % intervalMs) + GEO_TRAFFIC_FLUSH_SETTLE_MS;
-  const expiresAt = boundary > now ? boundary : boundary + intervalMs;
+function geoLiveTtlSeconds(): number {
+  const now = Date.now();
+  const boundary =
+    now - (now % GEO_TRAFFIC_FLUSH_INTERVAL_MS) + GEO_TRAFFIC_FLUSH_SETTLE_MS;
+  const expiresAt =
+    boundary > now ? boundary : boundary + GEO_TRAFFIC_FLUSH_INTERVAL_MS;
   return Math.max(1, Math.ceil((expiresAt - now) / 1000));
 }
 
@@ -215,32 +209,4 @@ export function bumpPurgeGeneration(
       Effect.ignore
     )
   );
-}
-
-export function cachedExternalFetch<TResult>(
-  key: string,
-  fetchFresh: () => Promise<TResult>,
-  ttlSeconds: number = EXTERNAL_CACHE_TTL_SECONDS
-): Promise<TResult> {
-  const redis = getAnalyticsRedis();
-  if (!redis) {
-    return fetchFresh();
-  }
-  const cacheKey = `${EXTERNAL_CACHE_KEY_PREFIX}:${key}`;
-  const program = Effect.gen(function* () {
-    const hit = yield* Effect.tryPromise(() =>
-      redis.get<TResult>(cacheKey)
-    ).pipe(Effect.orElseSucceed(() => null));
-    if (hit !== null) {
-      return hit;
-    }
-    const fresh = yield* Effect.tryPromise(() => fetchFresh());
-    if (fresh !== null) {
-      yield* Effect.tryPromise(() =>
-        redis.set(cacheKey, toJsonSafe(fresh), { ex: ttlSeconds })
-      ).pipe(Effect.ignore);
-    }
-    return fresh;
-  });
-  return Effect.runPromise(program);
 }

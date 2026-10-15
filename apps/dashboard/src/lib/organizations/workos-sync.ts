@@ -19,6 +19,27 @@ const skipInDemo = <A, E, R>(
 ): Effect.Effect<A | void, E, R> =>
   Effect.suspend(() => (isDemoMode() ? Effect.void : effect));
 
+async function findWorkOSIds(organizationId: string, userId: string) {
+  const [organization, user] = await Promise.all([
+    db.query.organizations.findFirst({
+      where: eq(organizations.id, organizationId),
+      columns: { workosOrgId: true },
+    }),
+    db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: { workosUserId: true },
+    }),
+  ]);
+
+  if (!(organization?.workosOrgId && user?.workosUserId)) {
+    return null;
+  }
+  return {
+    workosOrgId: organization.workosOrgId,
+    workosUserId: user.workosUserId,
+  };
+}
+
 const ensureWorkOSOrganization = Effect.fn(
   "organizations.sync.ensureWorkOSOrganization"
 )(function* (organizationId: string) {
@@ -127,32 +148,22 @@ const createWorkOSMembership = Effect.fn(
 )(function* (organizationId: string, userId: string, roleSlug?: string) {
   yield* Effect.tryPromise({
     try: async () => {
-      const [organization, user] = await Promise.all([
-        db.query.organizations.findFirst({
-          where: eq(organizations.id, organizationId),
-          columns: { workosOrgId: true },
-        }),
-        db.query.users.findFirst({
-          where: eq(users.id, userId),
-          columns: { workosUserId: true },
-        }),
-      ]);
-
-      if (!(organization?.workosOrgId && user?.workosUserId)) {
+      const ids = await findWorkOSIds(organizationId, userId);
+      if (!ids) {
         return;
       }
 
       try {
         await getWorkOS().userManagement.createOrganizationMembership({
-          organizationId: organization.workosOrgId,
-          userId: user.workosUserId,
+          organizationId: ids.workosOrgId,
+          userId: ids.workosUserId,
           roleSlug,
         });
       } catch (createError) {
         const existing =
           await getWorkOS().userManagement.listOrganizationMemberships({
-            organizationId: organization.workosOrgId,
-            userId: user.workosUserId,
+            organizationId: ids.workosOrgId,
+            userId: ids.workosUserId,
           });
 
         if (existing.data.length === 0) {
@@ -173,25 +184,15 @@ export const updateMembershipRoleInWorkOS = Effect.fn(
 )(function* (organizationId: string, userId: string, roleSlug: string) {
   yield* Effect.tryPromise({
     try: async () => {
-      const [organization, user] = await Promise.all([
-        db.query.organizations.findFirst({
-          where: eq(organizations.id, organizationId),
-          columns: { workosOrgId: true },
-        }),
-        db.query.users.findFirst({
-          where: eq(users.id, userId),
-          columns: { workosUserId: true },
-        }),
-      ]);
-
-      if (!(organization?.workosOrgId && user?.workosUserId)) {
+      const ids = await findWorkOSIds(organizationId, userId);
+      if (!ids) {
         return;
       }
 
       const memberships =
         await getWorkOS().userManagement.listOrganizationMemberships({
-          organizationId: organization.workosOrgId,
-          userId: user.workosUserId,
+          organizationId: ids.workosOrgId,
+          userId: ids.workosUserId,
         });
 
       const membership = memberships.data[0];
@@ -205,8 +206,8 @@ export const updateMembershipRoleInWorkOS = Effect.fn(
       }
 
       await getWorkOS().userManagement.createOrganizationMembership({
-        organizationId: organization.workosOrgId,
-        userId: user.workosUserId,
+        organizationId: ids.workosOrgId,
+        userId: ids.workosUserId,
         roleSlug,
       });
     },
@@ -240,25 +241,15 @@ export const removeMembershipFromWorkOS = Effect.fn(
 )(function* (organizationId: string, userId: string) {
   yield* Effect.tryPromise({
     try: async () => {
-      const [organization, user] = await Promise.all([
-        db.query.organizations.findFirst({
-          where: eq(organizations.id, organizationId),
-          columns: { workosOrgId: true },
-        }),
-        db.query.users.findFirst({
-          where: eq(users.id, userId),
-          columns: { workosUserId: true },
-        }),
-      ]);
-
-      if (!(organization?.workosOrgId && user?.workosUserId)) {
+      const ids = await findWorkOSIds(organizationId, userId);
+      if (!ids) {
         return;
       }
 
       const memberships =
         await getWorkOS().userManagement.listOrganizationMemberships({
-          organizationId: organization.workosOrgId,
-          userId: user.workosUserId,
+          organizationId: ids.workosOrgId,
+          userId: ids.workosUserId,
         });
 
       await Promise.all(

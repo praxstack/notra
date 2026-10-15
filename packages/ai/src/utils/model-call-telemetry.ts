@@ -17,6 +17,7 @@ import {
   recordRequestAICost,
   recordRequestAIUsage,
 } from "@notra/ai/utils/request-ai-usage";
+import { nonNegativeNumber } from "@notra/ai/utils/unknown-record";
 import { getUsageAttribution } from "@notra/ai/utils/usage-attribution";
 
 /** One lifecycle per SDK model invocation, including any router fallback. */
@@ -44,6 +45,9 @@ export function createModelCallTelemetry({
   let finished = false;
   let completionRecorded = false;
 
+  const currentModel = () =>
+    servedModelId ?? route?.decision.modelId ?? request.modelId;
+
   function emit(
     level: "info" | "warn" | "error",
     event: string,
@@ -64,7 +68,7 @@ export function createModelCallTelemetry({
             ? "complete"
             : "partial",
         requestedModel: request.modelId,
-        model: servedModelId ?? route?.decision.modelId ?? request.modelId,
+        model: currentModel(),
         gateway: route?.decision.gateway ?? request.gateway,
         attemptCount,
         fallbackFrom: route?.decision.fallbackFrom,
@@ -93,7 +97,7 @@ export function createModelCallTelemetry({
     emit(level, event, {
       durationMs,
       ai: {
-        model: servedModelId ?? route?.decision.modelId ?? request.modelId,
+        model: currentModel(),
         msToFinish: durationMs,
         msToFirstChunk,
         ...ai,
@@ -165,29 +169,23 @@ export function createModelCallTelemetry({
         routeMetadata.model.trim().length > 0
           ? routeMetadata.model
           : undefined;
+      const gatewayCostUsd = nonNegativeNumber(routeMetadata?.gatewayCostUsd);
       if (
         route?.decision.gateway === "openrouter" &&
-        typeof routeMetadata?.gatewayCostUsd === "number" &&
-        Number.isFinite(routeMetadata.gatewayCostUsd) &&
-        routeMetadata.gatewayCostUsd >= 0
+        routeMetadata &&
+        gatewayCostUsd !== undefined
       ) {
-        const byokInferenceCostUsd =
-          typeof routeMetadata.byokInferenceCostUsd === "number" &&
-          Number.isFinite(routeMetadata.byokInferenceCostUsd) &&
-          routeMetadata.byokInferenceCostUsd >= 0
-            ? routeMetadata.byokInferenceCostUsd
-            : undefined;
+        const byokInferenceCostUsd = nonNegativeNumber(
+          routeMetadata.byokInferenceCostUsd
+        );
         emit("info", "ai.cost.reported", {
           costId: `openrouter:${result.responseId ?? callId}`,
-          gatewayCostUsd: routeMetadata.gatewayCostUsd,
+          gatewayCostUsd,
           byokInferenceCostUsd,
           costUsd:
-            byokInferenceCostUsd !== undefined &&
-            typeof routeMetadata.costUsd === "number" &&
-            Number.isFinite(routeMetadata.costUsd) &&
-            routeMetadata.costUsd >= 0
-              ? routeMetadata.costUsd
-              : undefined,
+            byokInferenceCostUsd === undefined
+              ? undefined
+              : nonNegativeNumber(routeMetadata.costUsd),
           upstreamProvider:
             typeof routeMetadata.upstreamProvider === "string"
               ? routeMetadata.upstreamProvider
@@ -195,7 +193,7 @@ export function createModelCallTelemetry({
         });
       }
       recordRequestAIUsage({
-        model: servedModelId ?? route?.decision.modelId ?? request.modelId,
+        model: currentModel(),
         inputTokens,
         outputTokens,
         cacheReadTokens: result.usage.inputTokens.cacheRead,

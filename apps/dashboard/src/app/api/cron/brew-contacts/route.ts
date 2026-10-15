@@ -1,14 +1,11 @@
 import { isBrewConfigured } from "@notra/email/utils/brew";
 import { isDemoMode } from "@notra/utils/demo-mode";
 
+import { isAuthorizedCron } from "@/lib/auth/cron";
 import { pruneBrewContacts, syncBrewContacts } from "@/lib/email/brew-contacts";
 
 export async function GET(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (
-    !cronSecret ||
-    request.headers.get("authorization") !== `Bearer ${cronSecret}`
-  ) {
+  if (!isAuthorizedCron(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (isDemoMode()) {

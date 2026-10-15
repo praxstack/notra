@@ -13,7 +13,6 @@ import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
 import type { PublicationRepairScheduler } from "@notra/ai/types/content-publication";
 import type {
   GitHubMentionContext,
-  GitHubMentionFileChange,
   GitHubMentionOctokit,
   GitHubMentionToolState,
 } from "@notra/ai/types/github-mention";
@@ -51,27 +50,14 @@ import { and, eq } from "drizzle-orm";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 
-async function recordWrite(
-  params: {
-    octokit: GitHubMentionOctokit;
-    context: GitHubMentionContext;
-    state: GitHubMentionToolState;
-  },
+function markCommitted(
+  state: GitHubMentionToolState,
   commitSha: string,
-  target: { branch: string; pullRequestUrl: string }
+  target: { pullRequestUrl: string }
 ) {
-  params.state.committed = true;
-  params.state.commitSha = commitSha;
-  if (params.context.destination.mode === "new_pull_request") {
-    params.state.pullRequestUrl = null;
-  }
-  const followUp = await ensureFollowUpPullRequest({
-    octokit: params.octokit,
-    context: params.context,
-    state: params.state,
-    branch: target.branch,
-  });
-  params.state.pullRequestUrl = followUp?.htmlUrl ?? target.pullRequestUrl;
+  state.committed = true;
+  state.commitSha = commitSha;
+  state.pullRequestUrl = target.pullRequestUrl;
 }
 
 /**
@@ -181,6 +167,23 @@ export function buildGitHubMentionTools(params: {
   }
 
   const inWriteOrder = createWriteQueue();
+  const recordWrite = async (
+    commitSha: string,
+    target: { branch: string; pullRequestUrl: string }
+  ) => {
+    state.committed = true;
+    state.commitSha = commitSha;
+    if (context.destination.mode === "new_pull_request") {
+      state.pullRequestUrl = null;
+    }
+    const followUp = await ensureFollowUpPullRequest({
+      octokit,
+      context,
+      state,
+      branch: target.branch,
+    });
+    state.pullRequestUrl = followUp?.htmlUrl ?? target.pullRequestUrl;
+  };
   const fileReads = new Map<string, Promise<string>>();
 
   const tools: Record<string, Tool> = {
@@ -261,21 +264,13 @@ export function buildGitHubMentionTools(params: {
             context,
             target,
             scheduleRepair: params.scheduleRepair,
-            onCommitted: (sha) => {
-              state.committed = true;
-              state.commitSha = sha;
-              state.pullRequestUrl = target.pullRequestUrl;
-            },
+            onCommitted: (sha) => markCommitted(state, sha, target),
           });
           if (result.commitSha) {
             state.proposals = state.proposals.filter(
               (proposal) => proposal.path !== input.fromPath
             );
-            await recordWrite(
-              { octokit, context, state },
-              result.commitSha,
-              target
-            );
+            await recordWrite(result.commitSha, target);
           }
           return { ...result, pullRequestUrl: state.pullRequestUrl };
         }),
@@ -549,11 +544,7 @@ export function buildGitHubMentionTools(params: {
             path: publication.path,
             publicationId: publication.id,
             scheduleRepair: params.scheduleRepair,
-            onCommitted: (sha) => {
-              state.committed = true;
-              state.commitSha = sha;
-              state.pullRequestUrl = target.pullRequestUrl;
-            },
+            onCommitted: (sha) => markCommitted(state, sha, target),
             recordPublicationHead:
               context.destination.mode === "same_pull_request",
             commitMessage:
@@ -567,11 +558,7 @@ export function buildGitHubMentionTools(params: {
               publication.title = title;
             }
           }
-          await recordWrite(
-            { octokit, context, state },
-            result.commitSha,
-            target
-          );
+          await recordWrite(result.commitSha, target);
           return {
             postId: publication.postId,
             path: publication.path,
@@ -631,11 +618,9 @@ export function buildGitHubMentionTools(params: {
             branch: target.branch,
             expectedHeadOid: target.expectedHeadOid,
             headline,
-            files: files as GitHubMentionFileChange[],
+            files,
           });
-          state.committed = true;
-          state.commitSha = commitSha;
-          state.pullRequestUrl = target.pullRequestUrl;
+          markCommitted(state, commitSha, target);
           const publicationSync = await syncPublishedPostAfterCommit({
             octokit,
             organizationId: context.organizationId,
@@ -656,7 +641,7 @@ export function buildGitHubMentionTools(params: {
             context.publication.headSha = commitSha;
             context.publication.markdown = publicationSync.markdown;
           }
-          await recordWrite({ octokit, context, state }, commitSha, target);
+          await recordWrite(commitSha, target);
           return {
             commitSha,
             pullRequestUrl: state.pullRequestUrl,
@@ -687,21 +672,13 @@ export function buildGitHubMentionTools(params: {
             expectedHeadOid: target.expectedHeadOid,
             onUsage: state.onUsage,
             scheduleRepair: params.scheduleRepair,
-            onCommitted: (sha) => {
-              state.committed = true;
-              state.commitSha = sha;
-              state.pullRequestUrl = target.pullRequestUrl;
-            },
+            onCommitted: (sha) => markCommitted(state, sha, target),
           });
           if (!result.available) {
             return { error: result.error };
           }
           if (result.commitSha) {
-            await recordWrite(
-              { octokit, context, state },
-              result.commitSha,
-              target
-            );
+            await recordWrite(result.commitSha, target);
           }
           return result;
         }),

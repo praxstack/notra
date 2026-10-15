@@ -7,9 +7,6 @@ export const scheduledPublicationWakeSchema = z.object({
   postId: z.string().trim().min(1),
   dueAt: z.iso.datetime(),
 });
-export type ScheduledPublicationWake = z.infer<
-  typeof scheduledPublicationWakeSchema
->;
 
 /** The workflow step's call that publishes one claimed row. */
 export const scheduledPublicationAttemptRequestSchema = z.object({

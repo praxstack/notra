@@ -141,37 +141,42 @@ beforeEach(() => {
   sleep.mockResolvedValue(undefined);
 });
 
+function personaOnlyPlan() {
+  const plan = scanPlan("project-test", 0, 0);
+  plan.personas = [
+    {
+      personaId: "persona-test",
+      prompts: ["first question", "follow-up question"],
+      snapshot: createPersonaSnapshot(
+        {
+          id: "persona-test",
+          name: "Budgeter",
+          role: "Founder",
+          company: "Small company",
+          summary: "Reduces spend",
+          searchStyle: "Direct",
+          profile: {
+            goals: [],
+            painPoints: [],
+            currentStack: [],
+            buyingTriggers: [],
+            objections: [],
+          },
+        },
+        [],
+        ["first question", "follow-up question"]
+      ),
+      engine: "test/engine",
+      groundedKey: "test/engine",
+      zdr: "none",
+    },
+  ];
+  return plan;
+}
+
 describe("GEO scan workflow orchestration", () => {
   test("persona-only scans execute and contribute to finalization", async () => {
-    const plan = scanPlan("project-test", 0, 0);
-    plan.personas = [
-      {
-        personaId: "persona-test",
-        prompts: ["first question", "follow-up question"],
-        snapshot: createPersonaSnapshot(
-          {
-            id: "persona-test",
-            name: "Budgeter",
-            role: "Founder",
-            company: "Small company",
-            summary: "Reduces spend",
-            searchStyle: "Direct",
-            profile: {
-              goals: [],
-              painPoints: [],
-              currentStack: [],
-              buyingTriggers: [],
-              objections: [],
-            },
-          },
-          [],
-          ["first question", "follow-up question"]
-        ),
-        engine: "test/engine",
-        groundedKey: "test/engine",
-        zdr: "none",
-      },
-    ];
+    const plan = personaOnlyPlan();
     prepare.mockResolvedValue({ status: "planned", plan });
     const personaUsage = {
       ...EMPTY_AGENT_TOKEN_USAGE,
@@ -218,6 +223,52 @@ describe("GEO scan workflow orchestration", () => {
       projectId: plan.context.projectId,
     });
     expect(sleep).not.toHaveBeenCalled();
+  });
+
+  test("a persona-only scan whose personas were all paused mid-scan completes without a retry", async () => {
+    const plan = personaOnlyPlan();
+    prepare.mockResolvedValue({ status: "planned", plan });
+    personaBatch.mockResolvedValue({
+      checks: 0,
+      mentions: 0,
+      dropped: 0,
+      usage: EMPTY_AGENT_TOKEN_USAGE,
+      omitted: 1,
+    });
+
+    await geoScanWorkflow({ organizationId: "org-test" });
+
+    expect(finalize).toHaveBeenCalledTimes(1);
+    expect(finalize).toHaveBeenCalledWith(
+      plan.context,
+      expect.objectContaining({ checks: 0, billedChecks: 0, omitted: 1 }),
+      "completed",
+      plan.claimedAt,
+      { retried: false }
+    );
+    expect(sleep).not.toHaveBeenCalled();
+    expect(trackRetry).not.toHaveBeenCalled();
+  });
+
+  test("a persona-only scan whose conversations failed still fails and retries", async () => {
+    const plan = personaOnlyPlan();
+    prepare.mockResolvedValue({ status: "planned", plan });
+    personaBatch.mockResolvedValue({
+      checks: 0,
+      mentions: 0,
+      dropped: 2,
+      usage: EMPTY_AGENT_TOKEN_USAGE,
+      omitted: 0,
+    });
+
+    await expect(
+      geoScanWorkflow({ organizationId: "org-test" })
+    ).rejects.toBeInstanceOf(FatalError);
+    expect(sleep).toHaveBeenCalledWith(GEO_SCAN_NO_RESULTS_RETRY_DELAY);
+    expect(finalize.mock.calls.map(([, , status]) => status)).toEqual([
+      "failed",
+      "failed",
+    ]);
   });
 
   test("revalidates a handed claim before scanning projects listed ahead of it", async () => {

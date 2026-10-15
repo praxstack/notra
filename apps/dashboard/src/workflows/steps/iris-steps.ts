@@ -270,15 +270,7 @@ export async function evaluateIrisGate(input: {
   costCentsInLast24h: number;
 }): Promise<{ proceed: boolean; reason: string }> {
   "use step";
-  return await Effect.runPromise(
-    evaluateGate({
-      mandate: input.mandate,
-      pendingSignalCount: input.pendingSignalCount,
-      actionsInLast24h: input.actionsInLast24h,
-      costCentsInLast24h: input.costCentsInLast24h,
-      now: new Date(),
-    })
-  );
+  return await Effect.runPromise(evaluateGate({ ...input, now: new Date() }));
 }
 
 export async function isRepeatedIrisGateBlock(input: {
@@ -500,6 +492,33 @@ export async function runIrisTask(input: {
   signalContext: { primarySignal: unknown; summaries: string[] };
 }): Promise<IrisTaskOutcome> {
   "use step";
+  const failTask = (
+    errorMessage: string,
+    kind: "task.failed" | "task.unknown"
+  ) =>
+    Effect.gen(function* () {
+      yield* markTask({
+        taskId: input.task.taskId,
+        status: "failed",
+        errorMessage,
+      });
+      yield* appendCheckpoint({
+        organizationId: input.organizationId,
+        runId: input.runId,
+        taskId: input.task.taskId,
+        kind,
+        state: { localId: input.task.localId, errorMessage },
+      });
+      return {
+        taskId: input.task.taskId,
+        localId: input.task.localId,
+        status: "failed",
+        reused: false,
+        artifacts: [],
+        costCents: 0,
+        errorMessage,
+      } satisfies IrisTaskOutcome;
+    });
   return await Effect.runPromise(
     Effect.gen(function* () {
       yield* markTask({
@@ -565,28 +584,10 @@ export async function runIrisTask(input: {
             error: { message: errorMessage },
           });
         }
-        yield* markTask({
-          taskId: input.task.taskId,
-          status: "failed",
+        return yield* failTask(
           errorMessage,
-        });
-        yield* appendCheckpoint({
-          organizationId: input.organizationId,
-          runId: input.runId,
-          taskId: input.task.taskId,
-          kind:
-            started.action.status === "failed" ? "task.failed" : "task.unknown",
-          state: { localId: input.task.localId, errorMessage },
-        });
-        return {
-          taskId: input.task.taskId,
-          localId: input.task.localId,
-          status: "failed",
-          reused: false,
-          artifacts: [],
-          costCents: 0,
-          errorMessage,
-        } satisfies IrisTaskOutcome;
+          started.action.status === "failed" ? "task.failed" : "task.unknown"
+        );
       }
 
       const executed = yield* Effect.result(
@@ -612,27 +613,7 @@ export async function runIrisTask(input: {
           status: "failed",
           error: { message: errorMessage },
         });
-        yield* markTask({
-          taskId: input.task.taskId,
-          status: "failed",
-          errorMessage,
-        });
-        yield* appendCheckpoint({
-          organizationId: input.organizationId,
-          runId: input.runId,
-          taskId: input.task.taskId,
-          kind: "task.failed",
-          state: { localId: input.task.localId, errorMessage },
-        });
-        return {
-          taskId: input.task.taskId,
-          localId: input.task.localId,
-          status: "failed",
-          reused: false,
-          artifacts: [],
-          costCents: 0,
-          errorMessage,
-        } satisfies IrisTaskOutcome;
+        return yield* failTask(errorMessage, "task.failed");
       }
 
       const result = executed.success;

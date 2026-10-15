@@ -28,7 +28,7 @@ export const updateApiKeySchema = z.object({
   expiration: z.enum(API_KEY_EXPIRATION_VALUES),
 });
 
-export const deleteApiKeySchema = z.object({
+const deleteApiKeySchema = z.object({
   keyId: z.string().min(1, "Key ID is required"),
 });
 
@@ -46,7 +46,6 @@ export const deleteKeyInputSchema = z.object({
 
 export type CreateApiKeyInput = z.infer<typeof createApiKeySchema>;
 export type UpdateApiKeyInput = z.infer<typeof updateApiKeySchema>;
-export type DeleteApiKeyInput = z.infer<typeof deleteApiKeySchema>;
 
 export const updateAccountKeyInputSchema = z.object({
   keyIdParam: z.string().min(1),
@@ -57,6 +56,3 @@ export const deleteAccountKeyInputSchema = z.object({
   keyIdParam: z.string().min(1),
   payload: deleteApiKeySchema,
 });
-
-export type UpdateAccountKeyInput = z.infer<typeof updateAccountKeyInputSchema>;
-export type DeleteAccountKeyInput = z.infer<typeof deleteAccountKeyInputSchema>;

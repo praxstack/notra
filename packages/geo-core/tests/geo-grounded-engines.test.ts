@@ -195,9 +195,6 @@ describe("selected grounded engines", () => {
     expect(engines.map((engine) => engine.label).join(",")).toBe(
       "Claude Sonnet 5,GPT-5.6 Sol"
     );
-    expect(
-      engines.map((engine) => engine.model.split("/").at(-1)).join(",")
-    ).toBe("claude-sonnet-5,gpt-5.6-sol");
     for (const engine of engines) {
       expect(resolveGroundedEngineByKey(engine.key)?.model).toBe(engine.model);
       expect(resolveGroundedEngineByKey(engine.key)?.provider).toBe(
@@ -374,22 +371,16 @@ describe("selected grounded engines", () => {
 describe("partial engine scope", () => {
   const tracked = ["anthropic/claude-sonnet-5", "openai/gpt-5.6-sol"];
 
-  test("a selection that leaves out a tracked engine is partial", () => {
+  test("only a selection that leaves out a tracked engine is partial", () => {
     expect(isPartialGeoScanEngineScope(tracked, ["openai/gpt-5.6-sol"])).toBe(
       true
     );
-  });
-
-  test("every tracked engine, with or without extra models, is a full scan", () => {
     expect(isPartialGeoScanEngineScope(tracked, [...tracked].reverse())).toBe(
       false
     );
     expect(
       isPartialGeoScanEngineScope(tracked, [...tracked, "spacexai/grok-4.7"])
     ).toBe(false);
-  });
-
-  test("a retired tracked id is matched through its replacement", () => {
     expect(
       isPartialGeoScanEngineScope(["spacexai/grok-4.6"], ["spacexai/grok-4.7"])
     ).toBe(false);

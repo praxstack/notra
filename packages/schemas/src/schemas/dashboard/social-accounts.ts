@@ -25,11 +25,11 @@ export type SocialConnectOAuthState = z.infer<
 
 const socialMediaUrlSchema = z.url().max(2048);
 
-export const socialPublishSurfaceSchema = z.enum(["editor", "chat_preview"]);
+const socialPublishSurfaceSchema = z.enum(["editor", "chat_preview"]);
 
 export type SocialPublishSurface = z.infer<typeof socialPublishSurfaceSchema>;
 
-export const publishSocialPostBodySchema = z.object({
+const publishSocialPostBodySchema = z.object({
   accountId: z.string().min(1),
   content: z
     .string()

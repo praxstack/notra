@@ -20,7 +20,7 @@ export interface SlackDashboardRelay {
   auth: VerifiedSessionAuth;
 }
 
-export interface DraftCompletionState {
+interface DraftCompletionState {
   count: number;
   turnId: string;
 }

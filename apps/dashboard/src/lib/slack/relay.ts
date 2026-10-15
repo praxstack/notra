@@ -33,7 +33,10 @@ export function parseSlackExternalChannelKey(
 
 async function resolveRelayBotToken(teamId: string): Promise<string> {
   const integration = await getSlackIntegrationByTeamId(teamId);
-  if (integration?.enabled) {
+  if (integration) {
+    if (!integration.enabled) {
+      throw new Error("Slack integration is disabled for this workspace");
+    }
     return getSlackIntegrationBotToken(integration);
   }
   const envToken = process.env.SLACK_AGENT_BOT_TOKEN?.trim();

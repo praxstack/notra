@@ -18,7 +18,7 @@ import {
 } from "./errors";
 import { decideGateway, otherGateway } from "./policy";
 
-export async function lookupPlan(
+async function lookupPlan(
   context: ResolverContext,
   organizationId: string
 ): Promise<PlanLookup> {
@@ -45,7 +45,7 @@ export async function lookupPlan(
  * caller choice wins; otherwise the organization's entitlement decides.
  * Requests without an organization and lookup failures fail closed.
  */
-export async function lookupZdrMode(
+async function lookupZdrMode(
   context: ResolverContext,
   request: RouteRequest
 ): Promise<ZdrMode> {

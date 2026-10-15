@@ -32,12 +32,12 @@ import {
   generateGitHubWebhookSecret,
   validateGitHubRepositoryAccess,
 } from "../utils/github-integrations";
-import { serializeDisabledTriggers } from "../utils/integrations";
 import { isConstraintViolation, isPgUniqueViolation } from "../utils/pg-errors";
 import {
   deleteQstashSchedulesForTriggers,
-  disableTriggersAndDeleteIntegration,
+  disableTriggersAndDelete,
   getTriggersForIntegration,
+  serializeDisabledTriggers,
 } from "../utils/triggers";
 
 type DbTransaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -237,7 +237,7 @@ const deleteIntegrationWithTriggerCleanup = Effect.fnUntraced(function* (
   );
 
   yield* database(() =>
-    disableTriggersAndDeleteIntegration(
+    disableTriggersAndDelete(
       input.db,
       input.organizationId,
       affectedTriggers,

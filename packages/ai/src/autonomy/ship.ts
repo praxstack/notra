@@ -14,7 +14,7 @@ import type {
   ShipIrisPostResult,
 } from "../types/autonomy-delivery";
 
-export class IrisShipError extends Data.TaggedError("IrisShipError")<{
+class IrisShipError extends Data.TaggedError("IrisShipError")<{
   readonly postId: string;
   readonly operation: string;
   readonly cause: unknown;
@@ -25,7 +25,7 @@ export const recordIrisApproval = Effect.fn("iris.approval.record")(function* (
 ) {
   const result = yield* Effect.tryPromise({
     try: () =>
-      db.transaction(async (tx) => {
+      db.transaction(async (tx): Promise<RecordIrisApprovalResult> => {
         const rows = await tx
           .select({ payload: autonomyOutbox.payload })
           .from(autonomyOutbox)
@@ -39,35 +39,24 @@ export const recordIrisApproval = Effect.fn("iris.approval.record")(function* (
           .for("update");
 
         const row = rows[0];
-        if (!row) {
-          const missing: RecordIrisApprovalResult = {
+        const parsed = irisOutboxPayloadSchema.safeParse(row?.payload);
+        if (!(row && parsed.success)) {
+          return {
             recorded: false,
             existingAction: null,
             approvals: [],
           };
-          return missing;
-        }
-
-        const parsed = irisOutboxPayloadSchema.safeParse(row.payload);
-        if (!parsed.success) {
-          const invalid: RecordIrisApprovalResult = {
-            recorded: false,
-            existingAction: null,
-            approvals: [],
-          };
-          return invalid;
         }
 
         const knownPostIds = new Set(
           parsed.data.artifacts.map((artifact) => artifact.postId)
         );
         if (!knownPostIds.has(input.postId)) {
-          const unknownArtifact: RecordIrisApprovalResult = {
+          return {
             recorded: false,
             existingAction: null,
             approvals: parsed.data.approvals ?? [],
           };
-          return unknownArtifact;
         }
 
         const approvals: readonly IrisApproval[] = parsed.data.approvals ?? [];
@@ -76,12 +65,11 @@ export const recordIrisApproval = Effect.fn("iris.approval.record")(function* (
           (approval) => approval.postId === input.postId
         );
         if (existing) {
-          const unchanged: RecordIrisApprovalResult = {
+          return {
             recorded: false,
             existingAction: existing.action,
             approvals,
           };
-          return unchanged;
         }
 
         const appended: readonly IrisApproval[] = [
@@ -115,12 +103,11 @@ export const recordIrisApproval = Effect.fn("iris.approval.record")(function* (
             )
           );
 
-        const recorded: RecordIrisApprovalResult = {
+        return {
           recorded: true,
           existingAction: null,
           approvals: appended,
         };
-        return recorded;
       }),
     catch: (cause) =>
       new IrisShipError({
@@ -176,21 +163,19 @@ export const shipIrisPost = Effect.fn("iris.post.ship")(function* (
 
   const post = rows[0];
   if (!post) {
-    const missing: ShipIrisPostResult = {
+    return {
       status: "not_found",
       postId: input.postId,
       title: null,
-    };
-    return missing;
+    } satisfies ShipIrisPostResult;
   }
 
   if (post.status === "published") {
-    const alreadyPublished: ShipIrisPostResult = {
+    return {
       status: "already_published",
       postId: post.id,
       title: post.title,
-    };
-    return alreadyPublished;
+    } satisfies ShipIrisPostResult;
   }
 
   const published = yield* Effect.tryPromise({
@@ -219,12 +204,11 @@ export const shipIrisPost = Effect.fn("iris.post.ship")(function* (
   });
 
   if (published.length === 0) {
-    const raced: ShipIrisPostResult = {
+    return {
       status: "already_published",
       postId: post.id,
       title: post.title,
-    };
-    return raced;
+    } satisfies ShipIrisPostResult;
   }
 
   yield* Effect.logInfo("Iris post shipped from Slack").pipe(
@@ -234,10 +218,9 @@ export const shipIrisPost = Effect.fn("iris.post.ship")(function* (
     })
   );
 
-  const shipped: ShipIrisPostResult = {
+  return {
     status: "shipped",
     postId: post.id,
     title: post.title,
-  };
-  return shipped;
+  } satisfies ShipIrisPostResult;
 });

@@ -56,10 +56,16 @@ import type {
 } from "@/types/analytics";
 
 function toNullableNumber(value: number | bigint | null): number | null {
-  if (value === null) {
-    return null;
-  }
-  return Number(value);
+  return value === null ? null : Number(value);
+}
+
+function toRangeParams(range: AnalyticsRangeOptions) {
+  return {
+    days: range.days,
+    timezone: range.timezone,
+    date_from: range.dateFrom,
+    date_to: range.dateTo,
+  };
 }
 
 const syncTrackedAccountNow = Effect.fn("analytics.syncTrackedAccount")(
@@ -157,10 +163,7 @@ export const loadEngagementTimeseries = Effect.fn(
   const result = yield* analyticsQuery("query failed", () =>
     queryEngagementTimeseries({
       organization_id: organizationId,
-      days: range.days,
-      timezone: range.timezone,
-      date_from: range.dateFrom,
-      date_to: range.dateTo,
+      ...toRangeParams(range),
     })
   );
 
@@ -308,10 +311,7 @@ export const loadPostingPerformance = Effect.fn("analytics.postingPerformance")(
       () =>
         queryPostingPerformance({
           organization_id: organizationId,
-          days: range.days,
-          timezone: range.timezone,
-          date_from: range.dateFrom,
-          date_to: range.dateTo,
+          ...toRangeParams(range),
         })
     );
 
@@ -585,10 +585,7 @@ export const loadFollowerGrowth = Effect.fn("analytics.followerGrowth")(
     const result = yield* analyticsQuery("follower growth query failed", () =>
       queryFollowerGrowth({
         organization_id: organizationId,
-        days: range.days,
-        timezone: range.timezone,
-        date_from: range.dateFrom,
-        date_to: range.dateTo,
+        ...toRangeParams(range),
       })
     );
 

@@ -80,7 +80,6 @@ async function isGeoLiveWatched(organizationId: string): Promise<boolean> {
   return watched;
 }
 
-/** Whether live updates for the organization would reach anyone. */
 export async function hasGeoLiveViewers(
   organizationId: string
 ): Promise<boolean> {

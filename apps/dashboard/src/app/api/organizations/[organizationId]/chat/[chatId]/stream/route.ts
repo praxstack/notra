@@ -17,18 +17,18 @@ import {
 } from "@/constants/chat-stream";
 import { withOrganizationAuth } from "@/lib/auth/organization";
 import { chatStreamResumeSchema } from "@/schemas/chat-stream";
+import type { RouteContext } from "@/types/api/routes";
 import { encodeChatStreamId } from "@/utils/chat-stream-id";
 import { ratelimit } from "@/utils/ratelimit";
-
-interface RouteContext {
-  params: Promise<{ organizationId: string; chatId: string }>;
-}
 
 function toSseChunk(chunk: UIMessageChunk, cursor: string) {
   return `id: ${cursor}\ndata: ${JSON.stringify(chunk)}\n\n`;
 }
 
-export async function GET(request: Request, { params }: RouteContext) {
+export async function GET(
+  request: Request,
+  { params }: RouteContext<{ organizationId: string; chatId: string }>
+) {
   const { organizationId, chatId } = await params;
   const auth = await withOrganizationAuth(request, organizationId);
 
@@ -89,6 +89,14 @@ export async function GET(request: Request, { params }: RouteContext) {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let removeAbortListener: (() => void) | undefined;
+  const teardown = () => {
+    closed = true;
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+    unsubscribe?.();
+    removeAbortListener?.();
+  };
 
   const toChunks = (data: unknown): UIMessageChunk[] =>
     Array.isArray(data) ? (data as UIMessageChunk[]) : [data as UIMessageChunk];
@@ -101,12 +109,7 @@ export async function GET(request: Request, { params }: RouteContext) {
         if (closed) {
           return;
         }
-        closed = true;
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-        unsubscribe?.();
-        removeAbortListener?.();
+        teardown();
         controller.close();
       };
 
@@ -218,23 +221,11 @@ export async function GET(request: Request, { params }: RouteContext) {
         }
         pending.clear();
       } catch (error) {
-        closed = true;
-        if (timeout) {
-          clearTimeout(timeout);
-        }
-        unsubscribe?.();
-        removeAbortListener?.();
+        teardown();
         throw error;
       }
     },
-    cancel() {
-      closed = true;
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-      unsubscribe?.();
-      removeAbortListener?.();
-    },
+    cancel: teardown,
   });
 
   return new Response(stream, {

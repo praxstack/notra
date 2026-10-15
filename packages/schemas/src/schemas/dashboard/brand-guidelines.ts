@@ -8,7 +8,7 @@ import {
   BRAND_GUIDELINE_PDF_KEY_MAX_LENGTH,
 } from "../../constants/dashboard/upload";
 
-export const guidelineColorRoleSchema = z.enum([
+const guidelineColorRoleSchema = z.enum([
   "primary",
   "secondary",
   "accent",
@@ -18,14 +18,14 @@ export const guidelineColorRoleSchema = z.enum([
   "custom",
 ]);
 
-export const guidelineFontRoleSchema = z.enum([
+const guidelineFontRoleSchema = z.enum([
   "heading",
   "body",
   "button",
   "unknown",
 ]);
 
-export const guidelineTokenTypeSchema = z.enum([
+const guidelineTokenTypeSchema = z.enum([
   "spacing",
   "radius",
   "shadow",
@@ -33,11 +33,11 @@ export const guidelineTokenTypeSchema = z.enum([
   "unknown",
 ]);
 
-export const guidelineAssetKindSchema = z.enum(["logo", "wordmark"]);
+const guidelineAssetKindSchema = z.enum(["logo", "wordmark"]);
 
-export const guidelineAssetVariantSchema = z.enum(["light", "dark"]);
+const guidelineAssetVariantSchema = z.enum(["light", "dark"]);
 
-export const guidelineScreenshotKindSchema = z.enum([
+const guidelineScreenshotKindSchema = z.enum([
   "desktop_hero",
   "desktop_full_page",
   "mobile_hero",

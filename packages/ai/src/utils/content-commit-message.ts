@@ -6,7 +6,7 @@ import { generateText, Output } from "ai";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 
-export const CONTENT_COMMIT_HEADLINE_MAX_LENGTH = 72;
+const CONTENT_COMMIT_HEADLINE_MAX_LENGTH = 72;
 const CONTENT_COMMIT_EXCERPT_LENGTH = 1200;
 const CONTENT_COMMIT_TIMEOUT_MS = 6000;
 const CONVENTIONAL_PREFIX =
@@ -34,7 +34,7 @@ export function fallbackContentCommitHeadline(
     .trim();
 }
 
-export function sanitizeContentCommitHeadline(
+function sanitizeContentCommitHeadline(
   raw: string | null | undefined,
   fallback: string
 ) {

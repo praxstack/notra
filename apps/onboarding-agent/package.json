@@ -13,25 +13,25 @@
     "devtools": "bun x @ai-sdk/devtools"
   },
   "dependencies": {
-    "@ai-sdk/devtools": "1.0.32",
-    "@aws-sdk/client-s3": "^3.1136.0",
+    "@ai-sdk/devtools": "catalog:",
+    "@aws-sdk/client-s3": "catalog:",
     "@notra/ai": "workspace:*",
     "@notra/db": "workspace:*",
     "@notra/posthog": "workspace:*",
     "@notra/tools": "workspace:*",
-    "ai": "7.0.129",
-    "drizzle-orm": "^0.45.3",
-    "effect": "4.0.0",
+    "ai": "catalog:",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
     "eve": "0.27.13",
     "pg": "^8.23.1",
-    "zod": "^4.6.5"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@notra/typescript-config": "workspace:*",
     "@types/node": "^24.0.15",
-    "dotenv-cli": "^11.0.0",
+    "dotenv-cli": "catalog:",
     "microsandbox": "~0.6.18",
-    "typescript": "7.0.2"
+    "typescript": "catalog:"
   },
   "engines": {
     "node": "24.x"

@@ -1,24 +1,17 @@
 import { afterAll, beforeAll, beforeEach, expect, mock, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
 import { Effect } from "effect";
 
-if (process.env.NOTRA_WEB_ANALYTICS_TEST_WORKER !== import.meta.url) {
-  test("web analytics uses validated scopes without tracking lookups", () => {
-    const result = spawnSync(
-      process.execPath,
-      ["test", "--isolate", fileURLToPath(import.meta.url)],
-      {
-        env: {
-          ...process.env,
-          NOTRA_WEB_ANALYTICS_TEST_WORKER: import.meta.url,
-        },
-        timeout: 30_000,
-      }
-    );
-    expect(result.status, result.stderr?.toString()).toBe(0);
-  }, 35_000);
+import {
+  isIsolatedTestWorker,
+  testInIsolatedProcess,
+} from "./utils/isolated-process";
+
+if (!isIsolatedTestWorker(import.meta.url)) {
+  testInIsolatedProcess(
+    "web analytics uses validated scopes without tracking lookups",
+    import.meta.url
+  );
 } else {
   await import("./utils/infrastructure");
   const { database, initializeDatabase, resetDatabase, seedProject } =

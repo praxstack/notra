@@ -7,13 +7,13 @@ import {
   parseSlackExternalChannelKey,
   postSlackApprovalInteraction,
 } from "@/lib/slack/relay";
+import type { RouteContext } from "@/types/api/routes";
 import { ratelimit } from "@/utils/ratelimit";
 
-interface RouteContext {
-  params: Promise<{ organizationId: string; chatId: string }>;
-}
-
-export async function POST(request: Request, { params }: RouteContext) {
+export async function POST(
+  request: Request,
+  { params }: RouteContext<{ organizationId: string; chatId: string }>
+) {
   const { organizationId, chatId } = await params;
   const auth = await withOrganizationAuth(request, organizationId);
 
@@ -26,7 +26,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ error: "Invalid chat ID" }, { status: 400 });
   }
 
-  const bodyParse = relaySlackApprovalSchema.safeParse(await request.json());
+  const bodyParse = relaySlackApprovalSchema.safeParse(
+    await request.json().catch(() => null)
+  );
   if (!bodyParse.success) {
     return Response.json(
       { error: "Invalid approval", details: bodyParse.error.issues },

@@ -185,10 +185,6 @@ export interface BuildProviderOptionsInput {
 /** Neutral provider options translated by the router for each gateway. */
 export type RouterProviderOptions = z.infer<typeof routerProviderOptionsSchema>;
 
-export type ReasoningEffort = NonNullable<
-  RouterProviderOptions["reasoning"]
->["effort"];
-
 export interface RouterPolicyConfig {
   defaultGateway: GatewayId;
   paidGateway: GatewayId;

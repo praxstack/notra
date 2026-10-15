@@ -106,7 +106,5 @@ export function respondToBrandIdentityFailure(
     return c.json({ error: "Brand identity analysis job not found" }, 404);
   }
 
-  if (failure._tag === "BrandAnalysisQueueFailedError") {
-    return c.json({ error: "Failed to queue brand identity analysis" }, 503);
-  }
+  return c.json({ error: "Failed to queue brand identity analysis" }, 503);
 }

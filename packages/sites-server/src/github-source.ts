@@ -1,3 +1,4 @@
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import { SITE_BUILD_LIMITS } from "@notra/sites-core/constants/sites";
 import {
   SITE_IGNORE_FILENAME,
@@ -8,7 +9,6 @@ import { isCollectedSiteSourcePath } from "@notra/sites-core/utils/source-files"
 import { Effect } from "effect";
 
 import {
-  GITHUB_API_VERSION_HEADER,
   GITHUB_ARCHIVE_TIMEOUT_MS,
   GITHUB_SOURCE_DOWNLOAD_CONCURRENCY,
   GITHUB_SOURCE_DOWNLOAD_MAX_FILES,
@@ -54,7 +54,7 @@ const githubSourceBytes = Effect.fn("Sites.GitHub.sourceBytes")(
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: accept,
-              ...GITHUB_API_VERSION_HEADER,
+              ...GITHUB_API_VERSION_HEADERS,
             },
             signal: AbortSignal.any([controller.signal, signal]),
             redirect: "error",

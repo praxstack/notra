@@ -40,17 +40,11 @@ const UNMETERED_RESERVATION: ContentBillingReservation = {
   useMarkup: false,
 };
 
-export function resolveContentQuotaFeature(
+function resolveContentQuotaFeature(
   outputType: string | null | undefined
 ): ContentQuotaFeatureId | null {
   const parsed = contentTypeSchema.safeParse(outputType);
   return parsed.success ? CONTENT_QUOTA_FEATURES[parsed.data] : null;
-}
-
-export function isMeteredContentQuotaFeature(
-  featureId: ContentQuotaFeatureId
-): boolean {
-  return METERED_CONTENT_QUOTA_FEATURES.has(featureId);
 }
 
 function buildLockId(executionId: string, featureId: string): string {
@@ -67,21 +61,6 @@ function normalizeReservation(
   };
 }
 
-async function hasPaidSubscription(organizationId: string): Promise<boolean> {
-  if (!autumn) {
-    return false;
-  }
-  const customer = await autumn.customers.getOrCreate({
-    customerId: organizationId,
-  });
-  return customer.subscriptions.some(
-    (subscription) =>
-      !subscription.addOn &&
-      subscription.status === "active" &&
-      PAID_OR_LEGACY_PLAN_IDS.has(subscription.planId)
-  );
-}
-
 async function buildDenial(input: {
   organizationId: string;
   reason: ContentBillingDenialReason;
@@ -91,7 +70,7 @@ async function buildDenial(input: {
   const shouldNotify =
     input.reason === "no_entitlement"
       ? false
-      : await hasPaidSubscription(input.organizationId);
+      : await hasActivePaidPlan(input.organizationId, PAID_OR_LEGACY_PLAN_IDS);
   return {
     allowed: false,
     mode: "ai_credits",
@@ -122,7 +101,7 @@ export async function reserveContentBilling(
   let quotaRemaining: number | null = null;
 
   if (quotaFeature) {
-    const metered = isMeteredContentQuotaFeature(quotaFeature);
+    const metered = METERED_CONTENT_QUOTA_FEATURES.has(quotaFeature);
     const quotaLockId =
       metered && countTowardQuota && input.executionId
         ? buildLockId(input.executionId, quotaFeature)

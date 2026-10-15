@@ -11,7 +11,6 @@ import {
 
 import type {
   ClearGitHubPublishFailuresParams,
-  GitHubPublishFailureDependencies,
   GitHubPublishOutputTarget,
   RecordGitHubPublishFailureParams,
 } from "../../../types/integrations/github";
@@ -46,10 +45,9 @@ async function pauseContentOutput(params: GitHubPublishOutputTarget) {
 }
 
 export async function recordGitHubPublishFailure(
-  params: RecordGitHubPublishFailureParams,
-  dependencies: GitHubPublishFailureDependencies = { redisClient: redis }
+  params: RecordGitHubPublishFailureParams
 ) {
-  if (!dependencies.redisClient) {
+  if (!redis) {
     return { failureCount: 0, paused: false };
   }
 
@@ -58,7 +56,7 @@ export async function recordGitHubPublishFailure(
     params.repositoryId,
     params.outputType
   );
-  const failureCount = await dependencies.redisClient.eval<[number], number>(
+  const failureCount = await redis.eval<[number], number>(
     INCREMENT_WITH_TTL_SCRIPT,
     [key],
     [AUTOMATED_WORKFLOW_FAILURE_STATE_TTL_SECONDS]
@@ -68,14 +66,14 @@ export async function recordGitHubPublishFailure(
     return { failureCount, paused: false };
   }
 
-  const paused = await (dependencies.pauseOutput ?? pauseContentOutput)({
+  const paused = await pauseContentOutput({
     outputId: params.outputId,
     outputType: params.outputType,
     repositoryId: params.repositoryId,
   });
   if (paused) {
     try {
-      await dependencies.redisClient.del(key);
+      await redis.del(key);
     } catch (error) {
       logWarn("Failed to clear paused GitHub publish failure state", {
         key,
@@ -88,17 +86,14 @@ export async function recordGitHubPublishFailure(
 }
 
 export async function clearGitHubPublishFailures(
-  params: ClearGitHubPublishFailuresParams,
-  dependencies: Pick<GitHubPublishFailureDependencies, "redisClient"> = {
-    redisClient: redis,
-  }
+  params: ClearGitHubPublishFailuresParams
 ) {
-  if (!dependencies.redisClient) {
+  if (!redis) {
     return;
   }
 
   try {
-    await dependencies.redisClient.del(
+    await redis.del(
       getGitHubPublishFailureKey(
         params.organizationId,
         params.repositoryId,

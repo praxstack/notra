@@ -15,9 +15,8 @@ import { and, asc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { getTranslations } from "@/lib/i18n/server";
-import { authorizedProcedure } from "@/lib/orpc/base";
+import { authorizedProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import { parseSkillFrontmatter } from "@/lib/skills/parse-frontmatter";
 
 import {
@@ -53,16 +52,22 @@ function pickPrimarySkillFile(files: SkillsShFile[]): SkillsShFile | null {
   return anyMd ?? files[0] ?? null;
 }
 
+function skillByName(organizationId: string, name: string) {
+  return and(eq(skills.organizationId, organizationId), eq(skills.name, name));
+}
+
+function findSkillAccess(organizationId: string, name: string) {
+  return db.query.skills.findFirst({
+    where: skillByName(organizationId, name),
+    columns: { id: true, isSystem: true },
+  });
+}
+
 export const skillsRouter = {
   list: authorizedProcedure
     .input(listSkillsInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       await ensureUnslopSkill(input.organizationId);
       const rows = await db
         .select({
@@ -84,21 +89,13 @@ export const skillsRouter = {
 
   getByName: authorizedProcedure
     .input(getSkillInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       if (input.name === "unslop") {
         await ensureUnslopSkill(input.organizationId);
       }
       const row = await db.query.skills.findFirst({
-        where: and(
-          eq(skills.organizationId, input.organizationId),
-          eq(skills.name, input.name)
-        ),
+        where: skillByName(input.organizationId, input.name),
       });
 
       if (!row) {
@@ -110,18 +107,10 @@ export const skillsRouter = {
 
   create: authorizedProcedure
     .input(createSkillInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
       const existing = await db.query.skills.findFirst({
-        where: and(
-          eq(skills.organizationId, input.organizationId),
-          eq(skills.name, input.payload.name)
-        ),
+        where: skillByName(input.organizationId, input.payload.name),
         columns: { id: true },
       });
 
@@ -160,20 +149,9 @@ export const skillsRouter = {
 
   update: authorizedProcedure
     .input(updateSkillInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
-      const row = await db.query.skills.findFirst({
-        where: and(
-          eq(skills.organizationId, input.organizationId),
-          eq(skills.name, input.name)
-        ),
-        columns: { id: true, isSystem: true },
-      });
+      const row = await findSkillAccess(input.organizationId, input.name);
 
       if (!row) {
         throw notFound("Skill not found");
@@ -182,17 +160,14 @@ export const skillsRouter = {
       const nextName = input.payload.name ?? input.name;
       const isRename = nextName !== input.name;
 
-      if (isRename && row.isSystem) {
-        const tErrors = await getTranslations("errors.skills");
-        throw forbidden(tErrors("systemSkillRename"));
-      }
-
       if (isRename) {
+        if (row.isSystem) {
+          const tErrors = await getTranslations("errors.skills");
+          throw forbidden(tErrors("systemSkillRename"));
+        }
+
         const conflictRow = await db.query.skills.findFirst({
-          where: and(
-            eq(skills.organizationId, input.organizationId),
-            eq(skills.name, nextName)
-          ),
+          where: skillByName(input.organizationId, nextName),
           columns: { id: true },
         });
 
@@ -209,12 +184,7 @@ export const skillsRouter = {
           description: input.payload.description,
           content: input.payload.content,
         })
-        .where(
-          and(
-            eq(skills.organizationId, input.organizationId),
-            eq(skills.name, input.name)
-          )
-        );
+        .where(skillByName(input.organizationId, input.name));
 
       trackServerEvent({
         event: POSTHOG_EVENTS.SKILL_UPDATED,
@@ -234,20 +204,9 @@ export const skillsRouter = {
 
   delete: authorizedProcedure
     .input(deleteSkillInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
-      const row = await db.query.skills.findFirst({
-        where: and(
-          eq(skills.organizationId, input.organizationId),
-          eq(skills.name, input.name)
-        ),
-        columns: { id: true, isSystem: true },
-      });
+      const row = await findSkillAccess(input.organizationId, input.name);
 
       if (!row) {
         throw notFound("Skill not found");
@@ -260,12 +219,7 @@ export const skillsRouter = {
 
       await db
         .delete(skills)
-        .where(
-          and(
-            eq(skills.organizationId, input.organizationId),
-            eq(skills.name, input.name)
-          )
-        );
+        .where(skillByName(input.organizationId, input.name));
 
       trackServerEvent({
         event: POSTHOG_EVENTS.SKILL_DELETED,
@@ -329,10 +283,6 @@ export const skillsRouter = {
       }
 
       const parsed = parseSkillFrontmatter(file.contents);
-      const fallbackName = data.slug ?? "";
-      const name = parsed?.name ?? fallbackName;
-      const description = parsed?.description ?? "";
-      const content = parsed?.body ?? file.contents;
 
       trackServerEvent({
         event: POSTHOG_EVENTS.SKILL_IMPORTED_FROM_URL,
@@ -346,9 +296,9 @@ export const skillsRouter = {
       });
 
       return {
-        name,
-        description,
-        content,
+        name: parsed?.name ?? data.slug ?? "",
+        description: parsed?.description ?? "",
+        content: parsed?.body ?? file.contents,
         source: data.source ?? null,
         slug: data.slug ?? null,
       };

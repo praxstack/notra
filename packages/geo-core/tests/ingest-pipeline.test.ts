@@ -31,17 +31,15 @@ const verifyGeoIngestToken = mock((): GeoIngestIdentity => ({
 const verifyGeoIngestSiteToken = mock((token: string): string | null =>
   token === "nst.site_1.good" ? "site_1" : null
 );
-const loadIngestSite = mock(async (siteId: string) =>
-  siteId === "site_1"
-    ? {
-        id: "site_1",
-        organizationId: "org_2",
-        projectId: "proj_2",
-        hosts: ["acme.com"],
-        mounts: ["/"],
-      }
-    : null
-);
+const SITE = {
+  id: "site_1",
+  organizationId: "org_2",
+  projectId: "proj_2",
+  hosts: ["acme.com"],
+  mounts: ["/"],
+};
+const loadSite = async (siteId: string) => (siteId === SITE.id ? SITE : null);
+const loadIngestSite = mock(loadSite);
 const loadOrganizationSitePrefixes = mock(
   async (): Promise<{ host: string; mounts: string[] }[] | null> => []
 );
@@ -134,20 +132,20 @@ describe("runGeoIngest ordering", () => {
       loadIngestAllowedHosts,
       ratelimitLimit,
       trackGeoIngestAnalytics,
+      ingestWebPageViews,
+      ingestWebPageEngagement,
+      webRatelimitLimit,
+      verifyGeoIngestToken,
+      resolveJourneyId,
     ]) {
       m.mockClear();
     }
-    ingestWebPageViews.mockClear();
-    ingestWebPageEngagement.mockClear();
-    webRatelimitLimit.mockClear();
     webRatelimitLimit.mockImplementation(async () => ({ success: true }));
-    verifyGeoIngestToken.mockClear();
     verifyGeoIngestToken.mockImplementation(() => ({
       organizationId: "org_1",
       projectId: "proj_1",
       generation: 1,
     }));
-    resolveJourneyId.mockClear();
     getGeoIngestTokenGeneration.mockImplementation(async () => 1);
     loadIngestAllowedHosts.mockImplementation(
       async (identity?: GeoIngestIdentity) =>
@@ -156,86 +154,93 @@ describe("runGeoIngest ordering", () => {
     ratelimitLimit.mockImplementation(async () => ({ success: true }));
     ingestGeoTrafficEvents.mockImplementation(async () => STORED);
     loadOrganizationSitePrefixes.mockImplementation(async () => []);
-    loadIngestSite.mockImplementation(async (siteId: string) =>
-      siteId === "site_1"
-        ? {
-            id: "site_1",
-            organizationId: "org_2",
-            projectId: "proj_2",
-            hosts: ["acme.com"],
-            mounts: ["/"],
-          }
-        : null
-    );
+    loadIngestSite.mockImplementation(loadSite);
   });
 
-  test("fails instead of acknowledging when Tinybird is not configured", async () => {
-    ingestGeoTrafficEvents.mockImplementation(async () => null);
-    const outcome = await run(ingestRequest());
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestFailedError);
+  test.each([
+    [
+      "Tinybird is not configured",
+      () => ingestGeoTrafficEvents.mockImplementation(async () => null),
+      GeoIngestFailedError,
+      true,
+    ],
+    [
+      "a row is quarantined",
+      () =>
+        ingestGeoTrafficEvents.mockImplementation(async () => ({
+          successful_rows: 0,
+          quarantined_rows: 1,
+        })),
+      GeoIngestFailedError,
+      true,
+    ],
+    [
+      "the rate-limit transport fails",
+      () =>
+        ratelimitLimit.mockImplementation(async () => {
+          throw new Error("Redis unavailable");
+        }),
+      GeoIngestFailedError,
+      false,
+    ],
+    [
+      "Upstash times out even with success true",
+      () =>
+        ratelimitLimit.mockImplementation(async () => ({
+          success: true,
+          reason: "timeout",
+        })),
+      GeoIngestFailedError,
+      false,
+    ],
+    [
+      "the rate limit is hit",
+      () => ratelimitLimit.mockImplementation(async () => ({ success: false })),
+      GeoIngestRateLimitedError,
+      false,
+    ],
+    [
+      "the token was revoked",
+      () => getGeoIngestTokenGeneration.mockImplementation(async () => 2),
+      GeoIngestInvalidTokenError,
+      false,
+    ],
+    [
+      "a legacy organization token cannot load its hosts",
+      () => {
+        verifyGeoIngestToken.mockImplementation(() => ({
+          organizationId: "org_1",
+          projectId: null,
+          generation: 1,
+        }));
+        loadIngestAllowedHosts.mockImplementation(async () => null);
+      },
+      GeoIngestFailedError,
+      false,
+    ],
+  ] as const)(
+    "tracked traffic fails instead of acknowledging when %s",
+    async (_case, arrange, error, writes) => {
+      arrange();
+      const outcome = await run(ingestRequest());
+      expect(outcome._tag === "Failure" && outcome.failure).toBeInstanceOf(
+        error
+      );
+      expect(ingestGeoTrafficEvents.mock.calls.length > 0).toBe(writes);
     }
-  });
+  );
 
-  test("fails instead of acknowledging a quarantined row", async () => {
-    ingestGeoTrafficEvents.mockImplementation(async () => ({
-      successful_rows: 0,
-      quarantined_rows: 1,
-    }));
-    const outcome = await run(ingestRequest());
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestFailedError);
+  test.each([{ method: "GET" }, { method: "GET", url: ":::" }])(
+    "a revoked token stays 401 for the malformed payload %j",
+    async (body) => {
+      getGeoIngestTokenGeneration.mockImplementation(async () => null);
+      const outcome = await run(ingestRequest(body));
+      expect(outcome._tag === "Failure" && outcome.failure).toBeInstanceOf(
+        GeoIngestInvalidTokenError
+      );
+      expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
     }
-  });
-
-  test("rejects tracked traffic when the rate-limit transport fails", async () => {
-    ratelimitLimit.mockImplementation(async () => {
-      throw new Error("Redis unavailable");
-    });
-    const outcome = await run(ingestRequest());
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestFailedError);
-    }
-    expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
-  });
-
-  test("rejects Upstash timeout responses even when success is true", async () => {
-    ratelimitLimit.mockImplementation(async () => ({
-      success: true,
-      reason: "timeout",
-    }));
-    const outcome = await run(ingestRequest());
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestFailedError);
-    }
-    expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
-  });
-
-  test("rejects actual rate-limit hits without writing an event", async () => {
-    ratelimitLimit.mockImplementation(async () => ({ success: false }));
-    const outcome = await run(ingestRequest());
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestRateLimitedError);
-    }
-    expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
-  });
-
-  test("rejects revoked identities for tracked traffic with 401", async () => {
-    getGeoIngestTokenGeneration.mockImplementation(async () => 2);
-
-    const outcome = await run(ingestRequest());
-
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestInvalidTokenError);
-    }
-    expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
-  });
+  );
 
   test("drops tracked events for hosts outside the allowed list", async () => {
     loadIngestAllowedHosts.mockImplementation(async () => ["other.example"]);
@@ -265,52 +270,7 @@ describe("runGeoIngest ordering", () => {
     expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
   });
 
-  test("legacy organization tokens fail closed if host lookup is unavailable", async () => {
-    verifyGeoIngestToken.mockImplementation(() => ({
-      organizationId: "org_1",
-      projectId: null,
-      generation: 1,
-    }));
-    loadIngestAllowedHosts.mockImplementation(async () => null);
-
-    const outcome = await run(ingestRequest());
-
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestFailedError);
-    }
-    expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
-  });
-
-  test("keeps 401 authoritative when a revoked token sends a malformed payload", async () => {
-    getGeoIngestTokenGeneration.mockImplementation(async () => null);
-
-    const outcome = await run(ingestRequest({ method: "GET" }));
-
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestInvalidTokenError);
-    }
-    expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
-  });
-
-  test("keeps 401 authoritative when a revoked token sends an unparseable url", async () => {
-    getGeoIngestTokenGeneration.mockImplementation(async () => null);
-
-    const outcome = await run(ingestRequest({ method: "GET", url: ":::" }));
-
-    expect(outcome._tag).toBe("Failure");
-    if (outcome._tag === "Failure") {
-      expect(outcome.failure).toBeInstanceOf(GeoIngestInvalidTokenError);
-    }
-    expect(ingestGeoTrafficEvents).not.toHaveBeenCalled();
-  });
-
   test("a site token ingests under the site's project and only for its host", async () => {
-    loadIngestAllowedHosts.mockImplementation(
-      async (identity?: GeoIngestIdentity) =>
-        identity?.site ? identity.site.hosts : ["example.com"]
-    );
     const page = {
       method: "GET",
       url: "https://acme.com/blog/a",
@@ -341,10 +301,7 @@ describe("runGeoIngest ordering", () => {
 
   test("a site token cannot ingest outside its published mounts", async () => {
     loadIngestSite.mockImplementation(async () => ({
-      id: "site_1",
-      organizationId: "org_2",
-      projectId: "proj_2",
-      hosts: ["acme.com"],
+      ...SITE,
       mounts: ["/blog"],
     }));
     loadIngestAllowedHosts.mockImplementation(async () => ["acme.com"]);
@@ -366,10 +323,6 @@ describe("runGeoIngest ordering", () => {
   });
 
   test("a site counts its human visitors in web_page_views only", async () => {
-    loadIngestAllowedHosts.mockImplementation(
-      async (identity?: GeoIngestIdentity) =>
-        identity?.site ? identity.site.hosts : ["example.com"]
-    );
     const outcome = await run(
       ingestRequest(
         {

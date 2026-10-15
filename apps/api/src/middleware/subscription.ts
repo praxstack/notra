@@ -5,17 +5,13 @@ import type { Context, Next } from "hono";
 
 import { API_PAYWALL_FEATURES } from "../constants/analytics";
 import { RESTRICTED_BILLING_METHODS } from "../constants/billing";
-import { billingLayer, type BillingMiddlewareOptions } from "../lib/billing";
-import { checkSubscriptionAccess } from "../programs/subscription";
+import { ORGANIZATION_SCOPED_API_KEY_ERROR } from "../constants/skills";
+import { BillingService, billingLayer } from "../lib/billing";
 import { isIngestAuth } from "../types/auth";
 import { trackApiPaywalled } from "../utils/analytics";
 import { getOrganizationId } from "../utils/auth";
 
-export type SubscriptionMiddlewareOptions = BillingMiddlewareOptions;
-
-export function subscriptionMiddleware(
-  options: SubscriptionMiddlewareOptions = {}
-) {
+export function subscriptionMiddleware() {
   return async (c: Context, next: Next) => {
     if (!RESTRICTED_BILLING_METHODS.has(c.req.method)) {
       return next();
@@ -41,17 +37,19 @@ export function subscriptionMiddleware(
 
     const orgId = getOrganizationId(c);
     if (!orgId) {
-      return c.json(
-        { error: "Forbidden: API key must be scoped to an organization" },
-        403
-      );
+      return c.json({ error: ORGANIZATION_SCOPED_API_KEY_ERROR }, 403);
     }
 
-    const layer = options.billingLayer ?? billingLayer(secretKey);
     const access = await Effect.runPromise(
       Effect.result(
-        checkSubscriptionAccess({ organizationId: orgId, secretKey }).pipe(
-          Effect.provide(layer)
+        Effect.gen(function* () {
+          const billing = yield* BillingService;
+          return yield* billing.checkSubscriptionAccess({
+            organizationId: orgId,
+          });
+        }).pipe(
+          Effect.withSpan("billing.checkSubscriptionAccess"),
+          Effect.provide(billingLayer(secretKey))
         )
       )
     );

@@ -10,7 +10,7 @@ import {
 import { SiteContentReadError } from "../schemas/sites";
 import type { PublicSite } from "../types/sites";
 
-export function publicSiteOrigin(origin: string): URL | null {
+function publicSiteOrigin(origin: string): URL | null {
   const url = URL.parse(origin);
   if (
     !url ||

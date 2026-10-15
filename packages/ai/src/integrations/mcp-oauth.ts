@@ -303,6 +303,11 @@ async function completeMcpOAuthAuthorizationPromise(
   }
 
   const integrationId = pending.serverIntegrationId ?? `mcp_${nanoid()}`;
+  const encryptedAuthorizationServerInformation = encryptMcpOAuthSecret(
+    configuration.authorizationServerMetadata
+  );
+  const accessTokenExpiresAt = getMcpAccessTokenExpiresAt(tokens);
+  const accessTokenRefreshAt = getMcpAccessTokenRefreshAt(tokens);
   await db.transaction(async (tx) => {
     if (pending.serverIntegrationId) {
       await tx
@@ -313,11 +318,9 @@ async function completeMcpOAuthAuthorizationPromise(
           connectedByUserId: pending.userId,
           encryptedTokens,
           encryptedClientInformation: pending.encryptedClientInformation,
-          encryptedAuthorizationServerInformation: encryptMcpOAuthSecret(
-            configuration.authorizationServerMetadata
-          ),
-          accessTokenExpiresAt: getMcpAccessTokenExpiresAt(tokens),
-          accessTokenRefreshAt: getMcpAccessTokenRefreshAt(tokens),
+          encryptedAuthorizationServerInformation,
+          accessTokenExpiresAt,
+          accessTokenRefreshAt,
           status: "connected",
           refreshLeaseId: null,
           refreshLeaseExpiresAt: null,
@@ -329,11 +332,9 @@ async function completeMcpOAuthAuthorizationPromise(
             connectedByUserId: pending.userId,
             encryptedTokens,
             encryptedClientInformation: pending.encryptedClientInformation,
-            encryptedAuthorizationServerInformation: encryptMcpOAuthSecret(
-              configuration.authorizationServerMetadata
-            ),
-            accessTokenExpiresAt: getMcpAccessTokenExpiresAt(tokens),
-            accessTokenRefreshAt: getMcpAccessTokenRefreshAt(tokens),
+            encryptedAuthorizationServerInformation,
+            accessTokenExpiresAt,
+            accessTokenRefreshAt,
             status: "connected",
             tokenVersion: sql`${mcpOAuthCredentials.tokenVersion} + 1`,
             refreshLeaseId: null,
@@ -367,11 +368,9 @@ async function completeMcpOAuthAuthorizationPromise(
         connectedByUserId: pending.userId,
         encryptedTokens,
         encryptedClientInformation: pending.encryptedClientInformation,
-        encryptedAuthorizationServerInformation: encryptMcpOAuthSecret(
-          configuration.authorizationServerMetadata
-        ),
-        accessTokenExpiresAt: getMcpAccessTokenExpiresAt(tokens),
-        accessTokenRefreshAt: getMcpAccessTokenRefreshAt(tokens),
+        encryptedAuthorizationServerInformation,
+        accessTokenExpiresAt,
+        accessTokenRefreshAt,
         status: "connected",
       });
     }
@@ -456,7 +455,7 @@ export async function cancelMcpOAuthAuthorization(
   }
 }
 
-export async function deleteExpiredMcpOAuthAuthorizations(
+async function deleteExpiredMcpOAuthAuthorizations(
   organizationId: string,
   userId: string
 ) {
@@ -467,20 +466,6 @@ export async function deleteExpiredMcpOAuthAuthorizations(
         eq(mcpOAuthPendingAuthorizations.organizationId, organizationId),
         eq(mcpOAuthPendingAuthorizations.userId, userId),
         lt(mcpOAuthPendingAuthorizations.expiresAt, new Date())
-      )
-    );
-}
-
-export async function deleteMcpOAuthCredentials(params: {
-  organizationId: string;
-  serverIntegrationId: string;
-}) {
-  await db
-    .delete(mcpOAuthCredentials)
-    .where(
-      and(
-        eq(mcpOAuthCredentials.organizationId, params.organizationId),
-        eq(mcpOAuthCredentials.serverIntegrationId, params.serverIntegrationId)
       )
     );
 }

@@ -57,6 +57,7 @@ import {
   getPostToXCompletionMessage,
   parsePostToXConfirmValue,
   publishPendingPostToX,
+  readPendingPostToXForOrganization,
   switchPendingPostToXAccount,
 } from "../lib/utils/slack-post-x";
 import { parseSlackDashboardRelay } from "../lib/utils/slack-relay";
@@ -165,12 +166,19 @@ const onSlackInteraction: NonNullable<
 
   if (action.actionId.startsWith(POST_TO_X_CONFIRM_ACTION_PREFIX)) {
     const parsed = parsePostToXConfirmValue(action.value);
-    const teamId = ctx.slack.teamId;
+    const teamId = ctx.slack.installationTeamId;
     if (!(parsed && teamId)) {
       return;
     }
     const installation = await resolveSlackInstallation(teamId);
     if (!installation) {
+      return;
+    }
+    const pending = await readPendingPostToXForOrganization(
+      parsed.callId,
+      installation.organizationId
+    );
+    if (!pending) {
       return;
     }
     const accounts = await getLinkedTwitterAccounts(
@@ -190,12 +198,21 @@ const onSlackInteraction: NonNullable<
   }
 
   if (action.actionId.startsWith(POST_TO_X_ACCOUNT_ACTION_PREFIX)) {
-    await switchPendingPostToXAccount(action.selectedOptionValue);
+    const installation = ctx.slack.installationTeamId
+      ? await resolveSlackInstallation(ctx.slack.installationTeamId)
+      : null;
+    if (!installation) {
+      return;
+    }
+    await switchPendingPostToXAccount(
+      action.selectedOptionValue,
+      installation.organizationId
+    );
     return;
   }
 
   if (action.actionId.startsWith(POST_TO_X_CANCEL_ACTION_PREFIX)) {
-    await runWithSlackTeam(ctx.slack.teamId, () =>
+    await runWithSlackTeam(ctx.slack.installationTeamId, () =>
       dismissPostToXConfirmCard(ctx, action.messageTs)
     );
   }
@@ -253,7 +270,7 @@ export default slackChannel({
       ) {
         state.notraPostToXTurnId = data.turnId;
         state.notraPostToXOutcome = await runWithSlackTeam(
-          channel.state.teamId,
+          channel.state.installationTeamId,
           () => publishPendingPostToX(result.callId, data.turnId)
         );
         return;
@@ -303,13 +320,13 @@ export default slackChannel({
       await mirrorAssistantDelta(ctx, data);
     },
     "input.requested": (data, channel, ctx) =>
-      runWithSlackTeam(channel.state.teamId, async () => {
+      runWithSlackTeam(channel.state.installationTeamId, async () => {
         await handleSlackInputRequested(data, channel);
         await mirrorToolApprovals(ctx, data);
         await mirrorSessionStatus(ctx, "idle");
       }),
     "message.completed": (data, channel, ctx) =>
-      runWithSlackTeam(channel.state.teamId, async () => {
+      runWithSlackTeam(channel.state.installationTeamId, async () => {
         if (data.finishReason === "tool-calls") {
           channel.state.pendingToolCallMessage = data.message
             ? firstNonEmptyLine(data.message)
@@ -363,7 +380,7 @@ export default slackChannel({
       }),
     "reasoning.appended": () => undefined,
     "turn.started": (_data, channel, ctx) =>
-      runWithSlackTeam(channel.state.teamId, async () => {
+      runWithSlackTeam(channel.state.installationTeamId, async () => {
         channel.state.pendingToolCallMessage = null;
         await mirrorSessionStatus(ctx, "working");
       }),

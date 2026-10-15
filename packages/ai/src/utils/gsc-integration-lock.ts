@@ -132,8 +132,7 @@ export async function withGscIntegrationLock<T>(
       // Redis starts the TTL before the HTTP response reaches us. Using the
       // request start is conservative when checking the local lease deadline.
       leaseValidUntil = acquisitionStartedAt + lockTtlMs;
-    }
-    if (!acquired) {
+    } else {
       const remainingRetryMs = deadline - Date.now();
       if (remainingRetryMs > 0) {
         await sleep(
@@ -217,10 +216,7 @@ export async function withGscIntegrationLock<T>(
       }
       return result;
     } catch (error) {
-      if (leaseLossError) {
-        throw leaseLossError;
-      }
-      throw error;
+      throw leaseLossError ?? error;
     }
   } finally {
     finished = true;

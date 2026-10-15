@@ -263,9 +263,6 @@ export function getApiScopeId(
   return `${resourceId}.${access}`;
 }
 
-export const API_SCOPE_RESOURCE_IDS: readonly ApiScopeResourceId[] =
-  API_SCOPE_RESOURCES.map((resource) => resource.id);
-
 /** Read scopes in registry order. */
 export const API_READ_SCOPES: readonly ApiReadScope[] = API_SCOPE_RESOURCES.map(
   (resource) => `${resource.id}.read` as const

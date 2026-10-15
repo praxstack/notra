@@ -43,11 +43,10 @@ export async function createAgentSessionWithMapping(
   }
   const payload = createSessionResponseSchema.parse(await response.json());
 
-  const generatedSessionId = randomUUID();
   const inserted = await db
     .insert(agentSessions)
     .values({
-      id: generatedSessionId,
+      id: randomUUID(),
       organizationId: params.scope.organizationId,
       userId: params.scope.userId ?? null,
       chatId: params.scope.chatId ?? null,

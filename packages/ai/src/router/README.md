@@ -12,7 +12,7 @@ const model = gateway("anthropic/claude-sonnet-5", { organizationId });
 const grounded = gateway("openai/gpt-5.4", { organizationId, gateway: "vercel" });
 ```
 
-`gateway()` stays synchronous. It returns a lazy `LanguageModelV3`
+`gateway()` stays synchronous. It returns a lazy `LanguageModelV4`
 (`RoutedLanguageModel`) that resolves its route on the first
 `doGenerate`/`doStream`, so it composes with `withSupermemory`,
 `wrapLanguageModel`, evlog and devtools exactly like the old Vercel-only model.
@@ -104,8 +104,8 @@ Anthropic thinking / OpenAI reasoning settings are mapped to
 
 ## Extraction
 
-`packages/ai/src/router/**` has no `process.env` reads and no `@notra/*`
-imports; everything is injected through `createModelRouter(config)`. The
+`packages/ai/src/router/**` has no `process.env` reads; gateways, plan and
+ZDR lookups and the logger are injected through `createModelRouter(config)`. The
 Notra-specific glue (fixed policy, Autumn plan lookup, evlog logger, singleton)
 lives in `packages/ai/src/constants/router.ts` and `packages/ai/src/gateway.ts`.
 

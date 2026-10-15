@@ -16,11 +16,11 @@
   },
   "dependencies": {
     "ignore": "7.0.12",
-    "zod": "^4.6.5"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@notra/typescript-config": "workspace:*",
-    "bun-types": "1.4.0",
-    "typescript": "7.0.2"
+    "bun-types": "catalog:",
+    "typescript": "catalog:"
   }
 }

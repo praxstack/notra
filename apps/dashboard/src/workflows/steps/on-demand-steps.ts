@@ -127,7 +127,7 @@ export async function finishOnDemand(
     triggerId: "manual_on_demand",
     outputType: input.contentType,
     triggerName: input.contentType,
-    status: input.status === "skipped" ? "skipped" : input.status,
+    status: input.status,
     ...(input.reason ? { reason: input.reason } : {}),
     ...(input.title ? { title: input.title } : {}),
     completedAt: new Date().toISOString(),
@@ -175,13 +175,12 @@ export async function finishOnDemand(
     return;
   }
 
-  const jobStatus = input.status === "skipped" ? "skipped" : "failed";
-  await setTrackedJobStatus(input.jobId, jobStatus, {
+  await setTrackedJobStatus(input.jobId, input.status, {
     error: input.reason ?? null,
   });
   await appendTrackedJobEvent(
     input.jobId,
-    jobStatus,
+    input.status,
     input.reason ?? "Generation did not complete"
   );
 }

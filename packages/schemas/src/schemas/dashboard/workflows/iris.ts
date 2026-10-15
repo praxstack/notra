@@ -2,7 +2,7 @@ import "zod/compile";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way of importing
 import * as z from "zod";
 
-export const irisTriggerSchema = z.enum(["signal", "wake", "manual", "repair"]);
+const irisTriggerSchema = z.enum(["signal", "wake", "manual", "repair"]);
 
 export const irisWorkflowPayloadSchema = z.object({
   organizationId: z.string().trim().min(1),

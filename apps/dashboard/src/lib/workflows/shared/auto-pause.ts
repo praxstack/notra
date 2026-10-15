@@ -1,7 +1,7 @@
 import { redis } from "@notra/ai/utils/redis";
 import { logError, logWarn } from "@notra/ai/utils/server-log";
 import { db } from "@notra/db/drizzle";
-import { contentTriggers, members, organizations } from "@notra/db/schema";
+import { contentTriggers } from "@notra/db/schema";
 import {
   type AutomatedWorkflowFailureState,
   automatedWorkflowFailureStateSchema,
@@ -14,6 +14,7 @@ import {
   AUTOMATED_WORKFLOW_FAILURE_STATE_TTL_SECONDS,
 } from "@/constants/workflows";
 import { sendWorkflowPausedEmail } from "@/lib/email/send";
+import { getOrganizationOwnerContacts } from "@/lib/workflows/shared/ai-credit-notifications";
 import type {
   AutomatedWorkflowPauseReason,
   ClearAutomatedWorkflowPauseStateParams,
@@ -87,22 +88,8 @@ async function sendPausedEmails({
   reason,
   logPrefix,
 }: RecordAutomatedWorkflowPauseParams) {
-  const org = await db.query.organizations.findFirst({
-    where: eq(organizations.id, organizationId),
-    columns: { name: true, slug: true },
-  });
-
-  const ownerMemberships = await db.query.members.findMany({
-    where: and(
-      eq(members.organizationId, organizationId),
-      eq(members.role, "owner")
-    ),
-    with: { users: { columns: { email: true } } },
-  });
-
-  const organizationName = org?.name ?? "Your organization";
-  const organizationSlug = org?.slug ?? "";
-  const ownerEmails = ownerMemberships.map((m) => m.users.email);
+  const { organizationName, organizationSlug, ownerEmails } =
+    await getOrganizationOwnerContacts(organizationId);
   const pauseEventId = crypto.randomUUID();
 
   for (const recipientEmail of ownerEmails) {
@@ -146,10 +133,10 @@ const recordAutomatedWorkflowFailure = Effect.fn(
         cause,
       }),
   });
-  const previousRawState = yield* Effect.tryPromise({
-    try: () => redisClient.get<string>(failureStateKey),
-    catch: () => Promise.resolve(null),
-  });
+  // The state only carries firstFailedAt; a failed read must not drop the failure.
+  const previousRawState = yield* Effect.tryPromise(() =>
+    redisClient.get<string>(failureStateKey)
+  ).pipe(Effect.orElseSucceed(() => null));
   const nextState = {
     ...buildNextState(parseFailureState(previousRawState), failedAt),
     count: failureCount,

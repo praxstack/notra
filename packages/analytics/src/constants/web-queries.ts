@@ -9,7 +9,7 @@ import {
   GEO_WINDOW_PARAMS,
 } from "./geo-queries";
 
-export const WEB_SCOPE_PARAMS = {
+const WEB_SCOPE_PARAMS = {
   site_id: p
     .string()
     .optional("")

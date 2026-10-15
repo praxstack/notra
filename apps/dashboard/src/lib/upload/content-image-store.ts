@@ -31,10 +31,6 @@ export interface StoredContentImage {
   mimeType: ContentMediaMimeType;
 }
 
-function extensionForMime(mimeType: ContentMediaMimeType) {
-  return CONTENT_MEDIA_MIME_EXTENSIONS[mimeType];
-}
-
 function mimeForKey(key: string): ContentMediaMimeType | null {
   const extension = key.split(".").pop()?.toLowerCase();
   for (const [mimeType, candidate] of Object.entries(
@@ -167,7 +163,7 @@ export async function saveContentImage(params: {
   mimeType: ContentMediaMimeType;
   organizationId: string;
 }) {
-  const key = `organization/${params.organizationId}/content/${nanoid()}.${extensionForMime(params.mimeType)}`;
+  const key = `organization/${params.organizationId}/content/${nanoid()}.${CONTENT_MEDIA_MIME_EXTENSIONS[params.mimeType]}`;
   if (!isSafeContentImageKey(key)) {
     throw new Error("Invalid content image key");
   }

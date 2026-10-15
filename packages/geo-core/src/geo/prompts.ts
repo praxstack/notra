@@ -96,16 +96,6 @@ export function toAutoTrackedPrompts(
   return prompts;
 }
 
-export function isAutoPromptScanned(
-  promptId: string,
-  pausedAutoPromptIds: ReadonlySet<string>,
-  removedAutoPromptIds: ReadonlySet<string>
-): boolean {
-  return (
-    !pausedAutoPromptIds.has(promptId) && !removedAutoPromptIds.has(promptId)
-  );
-}
-
 /**
  * Scan results are recorded under a namespaced prompt id for custom prompts
  * (`custom-<uuid>`) so they never collide with the slug ids of auto prompts.
@@ -121,11 +111,11 @@ export function trackedPromptScanId(
   return prompt.source === "custom" ? customPromptScanId(prompt.id) : prompt.id;
 }
 
-export function isCustomPromptScanId(promptId: string): boolean {
+function isCustomPromptScanId(promptId: string): boolean {
   return promptId.startsWith(CUSTOM_PROMPT_SCAN_ID_PREFIX);
 }
 
-export function isConversationScanPromptId(promptId: string): boolean {
+function isConversationScanPromptId(promptId: string): boolean {
   return promptId.startsWith(SEQUENCE_PROMPT_SCAN_ID_PREFIX);
 }
 
@@ -162,7 +152,7 @@ export function activeGapScanFilter(
 }
 
 export function promptIdFromScanId(scanId: string): string {
-  return scanId.startsWith(CUSTOM_PROMPT_SCAN_ID_PREFIX)
+  return isCustomPromptScanId(scanId)
     ? scanId.slice(CUSTOM_PROMPT_SCAN_ID_PREFIX.length)
     : scanId;
 }
@@ -472,9 +462,9 @@ export function assembleGeoScanPrompts(input: {
   const paused = new Set(input.pausedAutoPromptIds);
   const removed = new Set(input.removedAutoPromptIds);
   return [
-    ...input.autoPrompts
-      .filter((prompt) => isAutoPromptScanned(prompt.id, paused, removed))
-      .slice(0, GEO_MAX_PROMPTS),
+    ...input.autoPrompts.filter(
+      (prompt) => !paused.has(prompt.id) && !removed.has(prompt.id)
+    ),
     ...input.customRows.map((row) => ({
       id: customPromptScanId(row.id),
       text: row.prompt,

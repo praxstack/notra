@@ -1,4 +1,7 @@
-import { CLAIM_REAP_GRACE_SECONDS } from "@notra/ai/constants/autonomy";
+import {
+  CLAIM_REAP_GRACE_SECONDS,
+  MILLISECONDS_PER_SECOND,
+} from "@notra/ai/constants/autonomy";
 import { logError, logWarn } from "@notra/ai/utils/server-log";
 import { db } from "@notra/db/drizzle";
 import { autonomyClaims, autonomyControllerLeases } from "@notra/db/schema";
@@ -11,8 +14,6 @@ import type {
   ReapExpiredClaimsResult,
   ReleaseAutonomyClaimInput,
 } from "../types/autonomy";
-
-const MILLISECONDS_PER_SECOND = 1000;
 
 class AutonomyClaimError extends Data.TaggedError("AutonomyClaimError")<{
   readonly message: string;

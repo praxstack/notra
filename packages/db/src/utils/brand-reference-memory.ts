@@ -14,6 +14,17 @@ import {
   getBrandReferenceMemorySyncHash,
 } from "./supermemory";
 
+const referenceColumns = {
+  id: brandReferences.id,
+  type: brandReferences.type,
+  content: brandReferences.content,
+  note: brandReferences.note,
+  applicableTo: brandReferences.applicableTo,
+  metadata: brandReferences.metadata,
+  sourceUrl: brandReferences.sourceUrl,
+  rowVersion: sql<string>`xmin::text`,
+};
+
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Supermemory sync failed";
 }
@@ -24,24 +35,14 @@ export async function syncPersistedBrandReferenceMemory(
   let attemptedCustomId: string | null = null;
   let attemptedDocumentId: string | null = null;
   let attemptedSyncHash: string | null = null;
+  const lockReference = sql`SELECT pg_advisory_xact_lock(hashtextextended(${`brand-reference-memory:${input.referenceId}`}, 0))`;
 
   try {
     return await db.transaction(async (tx) => {
-      await tx.execute(
-        sql`SELECT pg_advisory_xact_lock(hashtextextended(${`brand-reference-memory:${input.referenceId}`}, 0))`
-      );
+      await tx.execute(lockReference);
 
       const [reference] = await tx
-        .select({
-          id: brandReferences.id,
-          type: brandReferences.type,
-          content: brandReferences.content,
-          note: brandReferences.note,
-          applicableTo: brandReferences.applicableTo,
-          metadata: brandReferences.metadata,
-          sourceUrl: brandReferences.sourceUrl,
-          rowVersion: sql<string>`xmin::text`,
-        })
+        .select(referenceColumns)
         .from(brandReferences)
         .where(
           and(
@@ -104,22 +105,13 @@ export async function syncPersistedBrandReferenceMemory(
 
     try {
       await db.transaction(async (tx) => {
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(hashtextextended(${`brand-reference-memory:${input.referenceId}`}, 0))`
-        );
+        await tx.execute(lockReference);
 
         const [currentReference] = await tx
           .select({
-            id: brandReferences.id,
-            type: brandReferences.type,
-            content: brandReferences.content,
-            note: brandReferences.note,
-            applicableTo: brandReferences.applicableTo,
-            metadata: brandReferences.metadata,
-            sourceUrl: brandReferences.sourceUrl,
+            ...referenceColumns,
             supermemoryDocumentId: brandReferences.supermemoryDocumentId,
             supermemoryMemoryId: brandReferences.supermemoryMemoryId,
-            rowVersion: sql<string>`xmin::text`,
           })
           .from(brandReferences)
           .where(

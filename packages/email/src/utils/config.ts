@@ -5,20 +5,12 @@ function normalizeUrl(url: string): string {
 }
 
 export const EMAIL_CONFIG = {
-  /**
-   * Site URL for marketing site (logo, assets, etc.)
-   * Falls back to production URL if not set
-   */
   getSiteUrl(): string {
     return normalizeUrl(
       process.env.NEXT_PUBLIC_SITE_URL || "https://usenotra.com"
     );
   },
 
-  /**
-   * App/Dashboard URL for the Dashboard application
-   * Falls back to production URL if not set
-   */
   getAppUrl(): string {
     return normalizeUrl(
       process.env.NEXT_PUBLIC_APP_URL || "https://app.usenotra.com"

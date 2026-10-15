@@ -111,14 +111,12 @@ async function dispatchBrandAnalysisWorkflow({
       jobId,
     });
 
-    if (redis) {
-      await setBrandAnalysisJobStatus(redis, jobId, "failed", {
-        step: null,
-        currentStep: 0,
-        totalSteps: 3,
-        error: message,
-      });
-    }
+    await setBrandAnalysisJobStatus(redis, jobId, "failed", {
+      step: null,
+      currentStep: 0,
+      totalSteps: 3,
+      error: message,
+    });
   }
 }
 
@@ -138,18 +136,16 @@ export async function queueBrandAnalysisForOnboarding({
     websiteUrl,
   });
 
-  if (!redis) {
-    return { jobId, brandIdentityId: brandIdentity.id };
+  if (redis) {
+    afterResponse(() =>
+      dispatchBrandAnalysisWorkflow({
+        organizationId,
+        websiteUrl,
+        brandIdentityId: brandIdentity.id,
+        jobId,
+      })
+    );
   }
-
-  afterResponse(() =>
-    dispatchBrandAnalysisWorkflow({
-      organizationId,
-      websiteUrl,
-      brandIdentityId: brandIdentity.id,
-      jobId,
-    })
-  );
 
   return { jobId, brandIdentityId: brandIdentity.id };
 }

@@ -25,6 +25,7 @@ import {
 import { rateLimitResponseSchema } from "@notra/schemas/api/responses";
 import { Effect } from "effect";
 
+import { ORGANIZATION_SCOPED_API_KEY_ERROR } from "../constants/skills";
 import {
   createPost,
   createPostGeneration,
@@ -38,18 +39,19 @@ import {
 } from "../programs/posts";
 import { runGeoEffect } from "../runtime/geo";
 import { isOAuthAuth } from "../types/auth";
-import type { DbClient } from "../types/db";
 import { getOrganizationId } from "../utils/auth";
 import {
   getContentGenerationUnavailableReason,
-  isContentGenerationConfigured,
   resolveRequestedBrandVoiceId,
   resolveRequestedLinearIntegrationIds,
   resolveRequestedRepositoryIds,
 } from "../utils/content-generation";
 import { createOpenApiApp } from "../utils/openapi-app";
 import { errorResponse, rateLimitResponse } from "../utils/openapi-responses";
-import { getOrganizationResponse } from "../utils/organizations";
+import {
+  getOrganizationResponse,
+  resolveRequestOrganization,
+} from "../utils/organizations";
 import {
   respondToPostFailure,
   runPostProgram,
@@ -343,29 +345,12 @@ const getPostGenerationRoute = createRoute({
   },
 });
 
-async function requireOrganization(
-  c: {
-    get: (key: "db") => DbClient;
-  },
-  orgId: string
-) {
-  const organization = await getOrganizationResponse(c.get("db"), orgId);
-  return organization ?? null;
-}
-
 postsRoutes.openapi(getPostsRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-
-  const organization = await requireOrganization(c, orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
 
   const result = await runPostProgram(
     listPosts({
@@ -392,18 +377,11 @@ postsRoutes.openapi(getPostsRoute, async (c) => {
 });
 
 postsRoutes.openapi(listPostAuthorsRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-
-  const organization = await requireOrganization(c, orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
 
   const result = await runPostProgram(
     listPostAuthors({ db: c.get("db"), organizationId: orgId })
@@ -417,18 +395,11 @@ postsRoutes.openapi(listPostAuthorsRoute, async (c) => {
 });
 
 postsRoutes.openapi(getPostRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-
-  const organization = await requireOrganization(c, orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
 
   const result = await runPostProgram(
     getPost({
@@ -454,18 +425,11 @@ postsRoutes.openapi(getPostRoute, async (c) => {
 });
 
 postsRoutes.openapi(deletePostRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-
-  const organization = await requireOrganization(c, orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
 
   const result = await runPostProgram(
     deletePost({
@@ -486,21 +450,14 @@ postsRoutes.openapi(deletePostRoute, async (c) => {
 });
 
 postsRoutes.openapi(patchPostRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
+  const { orgId, organization } = scope;
 
   const { postId } = c.req.valid("param");
   const body = c.req.valid("json");
-  const organization = await requireOrganization(c, orgId);
-
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
 
   const preparedResult = await runPostProgram(
     preparePatchPost({
@@ -512,11 +469,7 @@ postsRoutes.openapi(patchPostRoute, async (c) => {
   );
 
   if (preparedResult._tag === "Failure") {
-    const response = respondToPostFailure(c, preparedResult.failure);
-    if (response) {
-      return response;
-    }
-    throw preparedResult.failure;
+    return respondToPostFailure(c, preparedResult.failure);
   }
 
   const rateLimited = await enforceRatelimit(c, ratelimit.postUpdate);
@@ -534,11 +487,7 @@ postsRoutes.openapi(patchPostRoute, async (c) => {
   );
 
   if (result._tag === "Failure") {
-    const response = respondToPostFailure(c, result.failure);
-    if (response) {
-      return response;
-    }
-    throw result.failure;
+    return respondToPostFailure(c, result.failure);
   }
 
   const { post, authors, previousStatus } = result.success;
@@ -613,18 +562,11 @@ postsRoutes.openapi(patchPostRoute, async (c) => {
 });
 
 postsRoutes.openapi(createPostRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-
-  const organization = await requireOrganization(c, orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
 
   const body = c.req.valid("json");
 
@@ -642,11 +584,7 @@ postsRoutes.openapi(createPostRoute, async (c) => {
   );
 
   if (result._tag === "Failure") {
-    const response = respondToPostFailure(c, result.failure);
-    if (response) {
-      return response;
-    }
-    throw result.failure;
+    return respondToPostFailure(c, result.failure);
   }
 
   const { post } = result.success;
@@ -664,20 +602,13 @@ postsRoutes.openapi(createPostRoute, async (c) => {
 postsRoutes.openapi(createPostGenerationRoute, async (c) => {
   const orgId = getOrganizationId(c);
   if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+    return c.json({ error: ORGANIZATION_SCOPED_API_KEY_ERROR }, 403);
   }
 
   const runtimeEnv = c.env ?? {};
   const redis = getRedis(runtimeEnv);
   const unavailableReason = getContentGenerationUnavailableReason(runtimeEnv);
-  if (
-    !redis ||
-    !isContentGenerationConfigured(runtimeEnv) ||
-    unavailableReason
-  ) {
+  if (!redis || unavailableReason) {
     return c.json(
       { error: unavailableReason ?? "Content generation is unavailable" },
       503
@@ -685,7 +616,7 @@ postsRoutes.openapi(createPostGenerationRoute, async (c) => {
   }
 
   const body = c.req.valid("json");
-  const organization = await requireOrganization(c, orgId);
+  const organization = await getOrganizationResponse(c.get("db"), orgId);
 
   if (!organization) {
     return c.json({ error: "Organization not found" }, 404);
@@ -759,10 +690,7 @@ postsRoutes.openapi(createPostGenerationRoute, async (c) => {
 postsRoutes.openapi(getPostGenerationRoute, async (c) => {
   const orgId = getOrganizationId(c);
   if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+    return c.json({ error: ORGANIZATION_SCOPED_API_KEY_ERROR }, 403);
   }
 
   const redis = getRedis(c.env ?? {});

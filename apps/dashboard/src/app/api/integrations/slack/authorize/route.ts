@@ -1,6 +1,8 @@
 import { redis } from "@notra/ai/utils/redis";
 import { logError } from "@notra/ai/utils/server-log";
+import { getAppUrl } from "@notra/ai/utils/url";
 import { slackAuthorizeQuerySchema } from "@notra/schemas/dashboard/slack-integration";
+import { buildCallbackUrl } from "@notra/utils/callback-url";
 import { ORPCError } from "@orpc/server";
 
 import {
@@ -13,7 +15,7 @@ import { slackOAuthErrorParam } from "@/lib/integrations/slack/oauth-errors";
 import { ratelimit } from "@/utils/ratelimit";
 
 export async function GET(request: Request) {
-  const baseUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const baseUrl = getAppUrl() ?? "";
 
   try {
     const { searchParams } = new URL(request.url);
@@ -52,13 +54,17 @@ export async function GET(request: Request) {
 
     const { success: withinLimit } = await ratelimit.slackOAuth.limit(userId);
     if (!withinLimit) {
-      return redirectResponse(`${baseUrl}${callbackPath}?error=rate_limited`);
+      return redirectResponse(
+        buildCallbackUrl(baseUrl, callbackPath, { error: "rate_limited" })
+      );
     }
 
     const clientId = process.env.SLACK_AGENT_CLIENT_ID;
     if (!clientId || !redis) {
       return redirectResponse(
-        `${baseUrl}${callbackPath}?error=slack_not_configured`
+        buildCallbackUrl(baseUrl, callbackPath, {
+          error: "slack_not_configured",
+        })
       );
     }
 

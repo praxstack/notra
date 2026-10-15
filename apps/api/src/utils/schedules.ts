@@ -1,6 +1,5 @@
 import { normalizeCronConfig } from "@notra/ai/qstash/triggers";
 import { scheduleDedupeHashes } from "@notra/ai/utils/trigger-hash";
-import { githubIntegrations } from "@notra/db/schema";
 import type { QstashError } from "@notra/schemas/api/qstash";
 import {
   createScheduleRequestSchema,
@@ -9,12 +8,10 @@ import {
   scheduleTargetsRepositoryIdsSchema,
   scheduleTargetsSchema,
 } from "@notra/schemas/api/schedules";
-import { and, eq, inArray } from "drizzle-orm";
 import { Effect } from "effect";
 import * as z from "zod";
 
 import type { ScheduleDatabaseError } from "../errors/schedules";
-import type { DbClient } from "../types/db";
 import type {
   CreateScheduleBody,
   ScheduleDomainError,
@@ -54,36 +51,6 @@ export function normalizeSchedule(input: CreateScheduleBody) {
 
 export function hashSchedule(input: CreateScheduleBody) {
   return scheduleDedupeHashes(input)[0];
-}
-
-export async function ensureScheduleTargetsExist(
-  db: DbClient,
-  organizationId: string,
-  repositoryIds: string[],
-  message: string
-) {
-  if (repositoryIds.length === 0) {
-    return null;
-  }
-
-  const integrations = await db.query.githubIntegrations.findMany({
-    where: and(
-      eq(githubIntegrations.organizationId, organizationId),
-      inArray(githubIntegrations.id, repositoryIds)
-    ),
-    columns: { id: true },
-  });
-
-  const existingIds = new Set(
-    integrations.map((integration) => integration.id)
-  );
-  const missingIds = repositoryIds.filter((id) => !existingIds.has(id));
-
-  if (missingIds.length > 0) {
-    return { error: message, missingIntegrationIds: missingIds };
-  }
-
-  return null;
 }
 
 export function serializeSchedule(trigger: ScheduleTriggerWithLookbackWindow) {

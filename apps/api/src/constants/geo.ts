@@ -15,6 +15,3 @@ export const GEO_PLAN_REQUIRED_MESSAGE =
   "GEO requires a Starter, Growth, or Scale plan";
 
 export const GEO_PROJECT_NOT_FOUND_ERROR = "Project not found";
-
-export const ORGANIZATION_SCOPED_API_KEY_ERROR =
-  "Forbidden: API key must be scoped to an organization";

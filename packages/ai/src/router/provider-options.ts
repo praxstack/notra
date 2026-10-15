@@ -50,9 +50,6 @@ function resolveZdrFlag(
   return allowNonZdr ? requested === true : true;
 }
 
-/**
- * Split the neutral router block from the caller's provider options.
- */
 export function splitRouterOptions(providerOptions?: SharedV4ProviderOptions): {
   router: RouterProviderOptions;
   rest: SharedV4ProviderOptions;
@@ -210,9 +207,6 @@ export function buildOpenRouterProviderOptions(
   };
 }
 
-/**
- * Attach the neutral router block to caller provider options.
- */
 export function withRouterProviderOptions(
   providerOptions: SharedV4ProviderOptions | undefined,
   router: RouterProviderOptions

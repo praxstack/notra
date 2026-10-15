@@ -78,7 +78,7 @@ const MARKDOWN_HEADING_REGEX = /^#{1,6}\s+/gm;
 const MARKDOWN_LINK_URL_REGEX = /\]\((\S+?)\)/g;
 const DASH_REGEX = /[–—]/g;
 
-export class GeoWriterError extends Error {
+class GeoWriterError extends Error {
   readonly usage?: AgentTokenUsage;
 
   constructor(message: string, usage?: AgentTokenUsage) {
@@ -136,6 +136,14 @@ function describeError(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown error";
 }
 
+function describeBriefIssues(
+  issues: readonly { path: readonly PropertyKey[]; message: string }[]
+): string[] {
+  return issues.map(
+    (issue) => `${issue.path.join(".") || "brief"}: ${issue.message}`
+  );
+}
+
 function describeUnfinishedPlan(
   finishReason: FinishReason,
   text: string,
@@ -158,40 +166,31 @@ function describeUnfinishedPlan(
   };
 }
 
-function describePlannerFailure(error: unknown): PlannerFailure {
-  if (NoObjectGeneratedError.isInstance(error)) {
-    const previousOutput = error.text;
+function describePlannerFailure(error: NoObjectGeneratedError): PlannerFailure {
+  const previousOutput = error.text;
 
-    if (previousOutput) {
-      try {
-        const parsed = geoContentBriefSchema.safeParse(
-          JSON.parse(previousOutput)
-        );
-        if (!parsed.success) {
-          return {
-            errors: parsed.error.issues.map(
-              (issue) => `${issue.path.join(".") || "brief"}: ${issue.message}`
-            ),
-            previousOutput,
-          };
-        }
-      } catch {
-        // The raw response is still useful to the model during the repair attempt.
+  if (previousOutput) {
+    try {
+      const parsed = geoContentBriefSchema.safeParse(
+        JSON.parse(previousOutput)
+      );
+      if (!parsed.success) {
+        return {
+          errors: describeBriefIssues(parsed.error.issues),
+          previousOutput,
+        };
       }
+    } catch {
+      // The raw response is still useful to the model during the repair attempt.
     }
-
-    return {
-      errors: [
-        `${error.message}${error.finishReason ? ` Finish reason: ${error.finishReason}.` : ""}`,
-      ],
-      previousOutput,
-    };
   }
 
-  if (error instanceof Error) {
-    return { errors: [error.message] };
-  }
-  return { errors: ["Unknown planner error"] };
+  return {
+    errors: [
+      `${error.message}${error.finishReason ? ` Finish reason: ${error.finishReason}.` : ""}`,
+    ],
+    previousOutput,
+  };
 }
 
 export async function generateGeoContentBrief(
@@ -224,6 +223,8 @@ async function generateGeoContentBriefWithContext(
   const basePrompt = buildGeoPlannerPrompt(input);
 
   let prompt = basePrompt;
+  const repairPrompt = (failure: PlannerFailure) =>
+    `${basePrompt}\n\n${buildGeoPlannerRepairPrompt(failure)}`;
   let usage: AgentTokenUsage = toTokenUsage(
     undefined,
     GEO_WRITER_PLANNER_MODEL
@@ -277,19 +278,14 @@ async function generateGeoContentBriefWithContext(
         if (result.finishReason !== "length") {
           break;
         }
-        prompt = `${basePrompt}\n\n${buildGeoPlannerRepairPrompt({
-          errors: failure.errors,
-          previousOutput: failure.previousOutput,
-        })}`;
+        prompt = repairPrompt(failure);
         continue;
       }
       const parsed = geoContentBriefSchema.safeParse(result.output);
       if (parsed.success) {
         return { brief: stripDashes(parsed.data), usage };
       }
-      lastError = parsed.error.issues
-        .map((issue) => `${issue.path.join(".") || "brief"}: ${issue.message}`)
-        .join("; ");
+      lastError = describeBriefIssues(parsed.error.issues).join("; ");
     } catch (error) {
       if (
         !NoObjectGeneratedError.isInstance(error) ||
@@ -302,16 +298,11 @@ async function generateGeoContentBriefWithContext(
       }
       const failure = describePlannerFailure(error);
       lastError = failure.errors.join("; ");
-      prompt = `${basePrompt}\n\n${buildGeoPlannerRepairPrompt({
-        errors: failure.errors,
-        previousOutput: failure.previousOutput,
-      })}`;
+      prompt = repairPrompt(failure);
       continue;
     }
 
-    prompt = `${basePrompt}\n\n${buildGeoPlannerRepairPrompt({
-      errors: [lastError],
-    })}`;
+    prompt = repairPrompt({ errors: [lastError] });
   }
 
   throw new GeoWriterError(`Failed to plan the article: ${lastError}`, usage);
@@ -378,7 +369,7 @@ function unwrapCodeFence(markdown: string): string {
   return trimmed.slice(firstBreak + 1, lastFence).trim();
 }
 
-export function isHumanizedDraftAcceptable(
+function isHumanizedDraftAcceptable(
   original: string,
   humanized: string
 ): boolean {
@@ -437,11 +428,12 @@ async function humanizeMarkdown(
   const routeUsage = await summarizeRouteUsage(result.steps, GEO_WRITER_MODEL);
   const usage = toTokenUsage(result.usage, GEO_WRITER_MODEL, routeUsage);
 
-  if (!isHumanizedDraftAcceptable(markdown, humanized)) {
-    return { markdown: null, usage };
-  }
-
-  return { markdown: humanized, usage };
+  return {
+    markdown: isHumanizedDraftAcceptable(markdown, humanized)
+      ? humanized
+      : null,
+    usage,
+  };
 }
 
 function isSuccessfulWebSearch(result: unknown): boolean {
@@ -536,14 +528,10 @@ function gateGeoWriterSave(
 }
 
 function formatMonthYear(date: Date): string {
-  try {
-    return new Intl.DateTimeFormat("en", {
-      month: "long",
-      year: "numeric",
-    }).format(date);
-  } catch {
-    return date.toISOString().slice(0, 7);
-  }
+  return new Intl.DateTimeFormat("en", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 export async function runGeoWriter(

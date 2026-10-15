@@ -308,12 +308,9 @@ export const coalesceSignals = Effect.fn("iris.signals.coalesce")(function* (
     );
   }
 
-  const coalescedSignalIds: string[] = [];
-  for (const row of rows) {
-    if (row.id !== primary.id) {
-      coalescedSignalIds.push(row.id);
-    }
-  }
+  const coalescedSignalIds = rows
+    .filter((row) => row.id !== primary.id)
+    .map((row) => row.id);
 
   if (coalescedSignalIds.length > 0) {
     const now = new Date();

@@ -33,6 +33,25 @@ function accumulatorKey(sessionId: string, turnId: string) {
   return `agent:usage:acc:${sessionId}:${turnId}`;
 }
 
+function billedKeyFor(sessionId: string, turnId: string) {
+  return `agent:usage:billed:${sessionId}:${turnId}`;
+}
+
+function usageProperties(
+  ctx: HookContext,
+  turnId: string
+): Record<string, string | number> {
+  return {
+    source: getSessionAttribute(ctx, "surface") ?? "agent",
+    agent: ctx.agent.name,
+    session_id: ctx.session.id,
+    turn_id: turnId,
+    markup_applied: getBooleanSessionAttribute(ctx, "useMarkup")
+      ? "true"
+      : "false",
+  };
+}
+
 async function trackUsage(
   modelId: string,
   organizationId: string,
@@ -119,7 +138,7 @@ export function createUsageHook(
     ctx: HookContext
   ) {
     const key = accumulatorKey(ctx.session.id, event.data.turnId);
-    const billedKey = `agent:usage:billed:${ctx.session.id}:${event.data.turnId}`;
+    const billedKey = billedKeyFor(ctx.session.id, event.data.turnId);
     const billingKey = `${key}:billing`;
     let claimed = false;
     let trackingStarted = false;
@@ -164,8 +183,8 @@ export function createUsageHook(
       // Keep evidence past the claim's TTL. There is no documented Autumn
       // idempotency contract: an interrupted/rejected track must be reconciled
       // manually, never automatically retried by another terminal event.
-      // A durable reconciliation path remains outside this change; neither
-      // this claim nor the pending record guarantees exactly-once billing.
+      // No durable reconciliation path exists yet; neither this claim nor
+      // the pending record guarantees exactly-once billing.
       await redis.persist(billingKey);
       const accumulated =
         await redis.hgetall<Record<string, string>>(billingKey);
@@ -186,15 +205,7 @@ export function createUsageHook(
               ? undefined
               : Number(accumulated.costMicroUsd),
         },
-        {
-          source: getSessionAttribute(ctx, "surface") ?? "agent",
-          agent: ctx.agent.name,
-          session_id: ctx.session.id,
-          turn_id: event.data.turnId,
-          markup_applied: getBooleanSessionAttribute(ctx, "useMarkup")
-            ? "true"
-            : "false",
-        }
+        usageProperties(ctx, event.data.turnId)
       );
       charged = true;
       await redis.del(billingKey);
@@ -257,14 +268,8 @@ export function createUsageHook(
               organizationId,
               stepUsage,
               {
-                source: getSessionAttribute(ctx, "surface") ?? "agent",
-                agent: ctx.agent.name,
-                session_id: ctx.session.id,
-                turn_id: event.data.turnId,
+                ...usageProperties(ctx, event.data.turnId),
                 step_index: event.data.stepIndex,
-                markup_applied: getBooleanSessionAttribute(ctx, "useMarkup")
-                  ? "true"
-                  : "false",
               }
             );
             return;
@@ -278,7 +283,7 @@ export function createUsageHook(
               stepKey,
               key,
               `${key}:billing`,
-              `agent:usage:billed:${ctx.session.id}:${event.data.turnId}`,
+              billedKeyFor(ctx.session.id, event.data.turnId),
             ],
             [
               stepUsage.inputTokens,

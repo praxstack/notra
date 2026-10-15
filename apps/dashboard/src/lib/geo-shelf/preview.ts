@@ -70,27 +70,12 @@ async function assertStablePublicShelfUrl(rawUrl: string): Promise<void> {
   }
 }
 
-function cleanTitle(value: string | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-  const collapsed = value.replace(WHITESPACE_RUN, " ").trim();
-  if (collapsed.length === 0) {
-    return null;
-  }
-  return collapsed.slice(0, GEO_SHELF_TITLE_MAX_LENGTH);
-}
-
-function cleanDescription(value: string | undefined): string | null {
+function cleanText(value: string | undefined): string | null {
   if (!value) {
     return null;
   }
   const collapsed = value.replace(WHITESPACE_RUN, " ").trim();
   return collapsed.length > 0 ? collapsed : null;
-}
-
-function hasContextDevKey(): boolean {
-  return isContextDevConfigured();
 }
 
 export async function previewGeoShelfUrl(
@@ -107,7 +92,7 @@ export async function previewGeoShelfUrl(
     available: false,
   };
 
-  if (!hasContextDevKey()) {
+  if (!isContextDevConfigured()) {
     return unavailable;
   }
 
@@ -130,8 +115,10 @@ export async function previewGeoShelfUrl(
       url,
       finalUrl,
       domain,
-      title: cleanTitle(page.metadata?.title),
-      description: cleanDescription(page.metadata?.description),
+      title:
+        cleanText(page.metadata?.title)?.slice(0, GEO_SHELF_TITLE_MAX_LENGTH) ??
+        null,
+      description: cleanText(page.metadata?.description),
       available: true,
     };
   } catch (error) {

@@ -24,6 +24,14 @@ import type {
   SendWorkflowPausedEmailProps,
 } from "@/types/email/send";
 
+export function getAppUrl() {
+  return process.env.APP_URL ?? EMAIL_CONFIG.getAppUrl();
+}
+
+function getSchedulesLink(organizationSlug: string) {
+  return `${getAppUrl()}/${organizationSlug}/automation/schedules`;
+}
+
 export async function sendWelcomeEmail({ userEmail }: { userEmail: string }) {
   return sendBrewEmail({
     category: "welcome",
@@ -43,8 +51,6 @@ export async function sendScheduledContentFailedEmail({
   organizationSlug,
   subject,
 }: SendScheduledContentFailedEmailProps) {
-  const settingsLink = `${process.env.APP_URL ?? EMAIL_CONFIG.getAppUrl()}/${organizationSlug}/automation/schedules`;
-
   return sendBrewEmail({
     category: "schedule-content-failed",
     to: recipientEmail,
@@ -54,7 +60,7 @@ export async function sendScheduledContentFailedEmail({
       organizationSlug,
       scheduleName,
       reason,
-      settingsLink,
+      settingsLink: getSchedulesLink(organizationSlug),
     }),
     idempotencyKey: digestBatchKey,
   });
@@ -83,8 +89,6 @@ export async function sendScheduledContentSkippedEmail({
   organizationSlug,
   subject,
 }: SendScheduledContentSkippedEmailProps) {
-  const settingsLink = `${process.env.APP_URL ?? EMAIL_CONFIG.getAppUrl()}/${organizationSlug}/automation/schedules`;
-
   return sendBrewEmail({
     category: "schedule-content-skipped",
     to: recipientEmail,
@@ -94,7 +98,7 @@ export async function sendScheduledContentSkippedEmail({
       organizationSlug,
       scheduleName,
       reason,
-      settingsLink,
+      settingsLink: getSchedulesLink(organizationSlug),
     }),
     idempotencyKey: digestBatchKey,
   });
@@ -109,7 +113,7 @@ export async function sendAiCreditsDepletedEmail({
   limitLabel,
   subject,
 }: SendAiCreditsDepletedEmailProps) {
-  const appUrl = process.env.APP_URL ?? EMAIL_CONFIG.getAppUrl();
+  const appUrl = getAppUrl();
   const creditsLink = limitLabel
     ? `${appUrl}/${organizationSlug}/settings/billing`
     : `${appUrl}/${organizationSlug}/settings/credits`;
@@ -140,8 +144,6 @@ export async function sendWorkflowPausedEmail({
   pauseEventId,
   subject,
 }: SendWorkflowPausedEmailProps) {
-  const appUrl = process.env.APP_URL ?? EMAIL_CONFIG.getAppUrl();
-  const settingsLink = `${appUrl}/${organizationSlug}/automation/schedules`;
   return sendBrewEmail({
     category: "workflow-paused",
     to: recipientEmail,
@@ -151,7 +153,7 @@ export async function sendWorkflowPausedEmail({
       organizationSlug,
       automationName,
       reason,
-      settingsLink,
+      settingsLink: getSchedulesLink(organizationSlug),
     }),
     idempotencyKey: `${recipientEmail}:${pauseEventId}`,
   });

@@ -7,24 +7,13 @@ import type {
   ChatSessionSummary,
 } from "../types/chat";
 
-function findLastUserMessageIndex(messages: UIMessage[]) {
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === "user") {
-      return index;
-    }
-  }
-  return -1;
-}
-
 export function stampUserMessageAuthors<T extends UIMessage>(
   messages: T[],
   authorUserId: string
 ): T[] {
-  const lastUserIndex = findLastUserMessageIndex(messages);
-  if (lastUserIndex === -1) {
-    return messages;
-  }
-
+  const lastUserIndex = messages.findLastIndex(
+    (message) => message.role === "user"
+  );
   const message = messages[lastUserIndex];
   if (!message) {
     return messages;

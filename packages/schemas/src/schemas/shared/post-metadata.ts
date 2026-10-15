@@ -97,7 +97,7 @@ export const contentAuthorFieldsSchema = z.object({
   github: optionalLinkSchema,
 });
 
-export const contentAuthorSchema = z.object({
+const contentAuthorSchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),

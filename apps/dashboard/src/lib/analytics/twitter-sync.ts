@@ -87,7 +87,7 @@ async function fetchUserTweets(userId: string, startTime: Date) {
   return tweets;
 }
 
-export interface TwitterSyncRows {
+interface TwitterSyncRows {
   accountStats: SocialAccountStatsRow[];
   posts: SocialPostRow[];
   postStats: SocialPostStatsRow[];

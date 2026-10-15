@@ -45,7 +45,7 @@ export const POST = withEvlog(async (request: Request) => {
         event,
         error: error instanceof Error ? error.message : error,
       });
-      if (event && SITES_ONLY_GITHUB_EVENTS.has(event)) {
+      if (SITES_ONLY_GITHUB_EVENTS.has(event)) {
         return Response.json(
           { error: "Sites webhook failed" },
           { status: 500 }

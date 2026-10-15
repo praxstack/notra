@@ -26,14 +26,6 @@ const database = <A>(operation: () => Promise<A>) =>
     catch: (cause) => new FeedbackDatabaseError({ cause }),
   });
 
-const classifyFeedback = (
-  params: Parameters<typeof classifyAgentFeedback>[0]
-) =>
-  Effect.tryPromise({
-    try: () => classifyAgentFeedback(params),
-    catch: (cause) => new FeedbackDatabaseError({ cause }),
-  });
-
 const projectExists = (
   db: SubmitFeedbackProgramInput["db"],
   organizationId: string,
@@ -221,19 +213,21 @@ export const submitFeedback = Effect.fn("feedback.submit")(function* ({
   const feedbackId = nanoid();
   const needsClassification = !(body.kind && body.sentiment && body.title);
   const classification = needsClassification
-    ? yield* classifyFeedback({
-        organizationId,
-        feedbackId,
-        message: body.message,
-        title: body.title,
-        contextUrl: body.contextUrl,
-        agentClient: body.agentClient,
-        suppliedFields: {
-          kind: body.kind,
-          sentiment: body.sentiment,
+    ? yield* database(() =>
+        classifyAgentFeedback({
+          organizationId,
+          feedbackId,
+          message: body.message,
           title: body.title,
-        },
-      })
+          contextUrl: body.contextUrl,
+          agentClient: body.agentClient,
+          suppliedFields: {
+            kind: body.kind,
+            sentiment: body.sentiment,
+            title: body.title,
+          },
+        })
+      )
     : null;
 
   const [created] = yield* database(() =>

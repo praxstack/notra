@@ -125,17 +125,19 @@ async function runIrisMission(input: {
   progress: IrisControllerProgress;
 }): Promise<IrisControllerResult> {
   const { organizationId, trigger, leaseToken, progress } = input;
+  const releaseLease = () =>
+    releaseIrisLease({ organizationId, ownerToken: leaseToken });
 
   const context = await loadIrisMandate(organizationId);
   const mandate = context.mandate;
   if (!mandate) {
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await releaseLease();
     return { status: "no_active_mandate", runId: null, reason: null };
   }
 
   const flagState = await resolveIrisFlagForRun(organizationId);
   if (flagState === "disabled") {
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await releaseLease();
     return { status: "flag_disabled", runId: null, reason: null };
   }
 
@@ -204,7 +206,7 @@ async function runIrisMission(input: {
       }
     }
 
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await releaseLease();
     await reapIrisExpiredClaims();
     return { status: "gate_blocked", runId: noOpRunId, reason: gate.reason };
   }
@@ -223,6 +225,11 @@ async function runIrisMission(input: {
     signalIds: gathered.pendingSignalIds,
   });
   progress.coalescedSignalIds = coalesced.signalIds;
+  const markSignalsProcessed = () =>
+    markIrisSignalsProcessed({
+      organizationId,
+      signalIds: coalesced.signalIds,
+    });
 
   const plan = await planIrisRun({
     runId,
@@ -232,6 +239,15 @@ async function runIrisMission(input: {
   });
 
   const output = plan.output;
+  const finalizeWithoutGoal = (status: "completed" | "failed") =>
+    finalizeIrisRun({
+      organizationId,
+      runId,
+      status,
+      costCents: plan.costCents,
+      goalId: null,
+      goalStatus: null,
+    });
 
   if (output !== null && plan.inputHash !== undefined) {
     await persistIrisPlannerOutput({
@@ -243,19 +259,9 @@ async function runIrisMission(input: {
   }
 
   if (plan.status === "rejected" || output === null) {
-    await finalizeIrisRun({
-      organizationId,
-      runId,
-      status: "failed",
-      costCents: plan.costCents,
-      goalId: null,
-      goalStatus: null,
-    });
-    await markIrisSignalsProcessed({
-      organizationId,
-      signalIds: coalesced.signalIds,
-    });
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await finalizeWithoutGoal("failed");
+    await markSignalsProcessed();
+    await releaseLease();
     return {
       status: "plan_rejected",
       runId,
@@ -264,31 +270,14 @@ async function runIrisMission(input: {
   }
 
   if (output.decision === "no_op") {
-    await finalizeIrisRun({
-      organizationId,
-      runId,
-      status: "completed",
-      costCents: plan.costCents,
-      goalId: null,
-      goalStatus: null,
-    });
-    await markIrisSignalsProcessed({
-      organizationId,
-      signalIds: coalesced.signalIds,
-    });
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await finalizeWithoutGoal("completed");
+    await markSignalsProcessed();
+    await releaseLease();
     return { status: "no_op", runId, reason: output.reason };
   }
 
   if (output.decision === "escalate") {
-    await finalizeIrisRun({
-      organizationId,
-      runId,
-      status: "completed",
-      costCents: plan.costCents,
-      goalId: null,
-      goalStatus: null,
-    });
+    await finalizeWithoutGoal("completed");
     await publishIrisOutbox({
       organizationId,
       runId,
@@ -303,29 +292,16 @@ async function runIrisMission(input: {
         organizationSlug: context.organizationSlug,
       },
     });
-    await markIrisSignalsProcessed({
-      organizationId,
-      signalIds: coalesced.signalIds,
-    });
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await markSignalsProcessed();
+    await releaseLease();
     return { status: "escalated", runId, reason: output.reason };
   }
 
   const goal = output.goal;
   if (!goal) {
-    await finalizeIrisRun({
-      organizationId,
-      runId,
-      status: "failed",
-      costCents: plan.costCents,
-      goalId: null,
-      goalStatus: null,
-    });
-    await markIrisSignalsProcessed({
-      organizationId,
-      signalIds: coalesced.signalIds,
-    });
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await finalizeWithoutGoal("failed");
+    await markSignalsProcessed();
+    await releaseLease();
     return {
       status: "plan_rejected",
       runId,
@@ -361,6 +337,15 @@ async function runIrisMission(input: {
     if (canceledTaskIds.has(task.taskId)) {
       continue;
     }
+    const cancelRemainingTasks = (reason: string) =>
+      cancelIrisTasks({
+        taskIds: collectRemainingTaskIds(
+          persisted.tasks,
+          canceledTaskIds,
+          task.taskId
+        ),
+        reason,
+      });
 
     const projectedActions = gathered.actionsInLast24h + tasksAttempted;
     const projectedCostCents = gathered.costCentsInLast24h + costCents;
@@ -368,14 +353,9 @@ async function runIrisMission(input: {
       projectedActions >= mandate.policy.maxActionsPerDay ||
       projectedCostCents >= mandate.policy.maxCostCentsPerDay
     ) {
-      await cancelIrisTasks({
-        taskIds: collectRemainingTaskIds(
-          persisted.tasks,
-          canceledTaskIds,
-          task.taskId
-        ),
-        reason: "The daily action or spend budget was reached",
-      });
+      await cancelRemainingTasks(
+        "The daily action or spend budget was reached"
+      );
       break;
     }
 
@@ -385,28 +365,14 @@ async function runIrisMission(input: {
     });
     if (!leaseHeld) {
       leaseLost = true;
-      await cancelIrisTasks({
-        taskIds: collectRemainingTaskIds(
-          persisted.tasks,
-          canceledTaskIds,
-          task.taskId
-        ),
-        reason: "The controller lease was lost",
-      });
+      await cancelRemainingTasks("The controller lease was lost");
       break;
     }
 
     const stillActive = await isIrisMandateActive(organizationId);
     if (!stillActive) {
       mandateRevoked = true;
-      await cancelIrisTasks({
-        taskIds: collectRemainingTaskIds(
-          persisted.tasks,
-          canceledTaskIds,
-          task.taskId
-        ),
-        reason: "Iris was paused",
-      });
+      await cancelRemainingTasks("Iris was paused");
       break;
     }
 
@@ -478,11 +444,8 @@ async function runIrisMission(input: {
   });
 
   if (mandateRevoked) {
-    await markIrisSignalsProcessed({
-      organizationId,
-      signalIds: coalesced.signalIds,
-    });
-    await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+    await markSignalsProcessed();
+    await releaseLease();
     return { status: runStatus, runId, reason: "Iris was paused" };
   }
 
@@ -501,12 +464,9 @@ async function runIrisMission(input: {
     },
   });
 
-  await markIrisSignalsProcessed({
-    organizationId,
-    signalIds: coalesced.signalIds,
-  });
+  await markSignalsProcessed();
 
-  await releaseIrisLease({ organizationId, ownerToken: leaseToken });
+  await releaseLease();
   await reapIrisExpiredClaims();
 
   return { status: runStatus, runId, reason: null };

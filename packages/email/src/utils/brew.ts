@@ -38,6 +38,18 @@ import { logDevEmail } from "./dev";
 
 const BODY_REGEX = /<body([^>]*)>([\s\S]*)<\/body>/i;
 
+/** Retry-After is either delay-seconds or an HTTP-date (RFC 9110 10.2.3). */
+function parseRetryAfterMs(header: string | null): number | undefined {
+  if (!header) {
+    return undefined;
+  }
+  const seconds = Number(header);
+  const delayMs = Number.isFinite(seconds)
+    ? seconds * 1000
+    : Date.parse(header) - Date.now();
+  return delayMs > 0 ? delayMs : undefined;
+}
+
 export function isBrewConfigured(): boolean {
   return Boolean(process.env.BREW_API_KEY);
 }
@@ -82,7 +94,7 @@ async function brewFetch<T>(
   if (!response.ok) {
     const { error } = (json ?? {}) as BrewErrorBody;
     const code = error?.code ?? `http_${response.status}`;
-    const retryAfterSeconds = Number(response.headers.get("Retry-After"));
+    const retryAfterMs = parseRetryAfterMs(response.headers.get("Retry-After"));
 
     return {
       ok: false,
@@ -94,8 +106,7 @@ async function brewFetch<T>(
           response.status === HTTP_TOO_MANY_REQUESTS ||
           response.status >= 500 ||
           code === "IDEMPOTENCY_IN_PROGRESS",
-        retryAfterMs:
-          retryAfterSeconds > 0 ? retryAfterSeconds * 1000 : undefined,
+        retryAfterMs,
       },
     };
   }
@@ -280,7 +291,6 @@ export async function upsertBrewContacts(
   return { failed, errors };
 }
 
-/** Lists every Brew contact, page by page. */
 export async function listBrewContacts(): Promise<BrewResponse<BrewContact[]>> {
   const contacts: BrewContact[] = [];
   let cursor: string | null = null;
@@ -358,7 +368,6 @@ function getMarketingDomainId(): Promise<string> {
   return marketingDomainId;
 }
 
-/** Reads whether Brew lets marketing email reach the contact. */
 export async function getBrewMarketingStatus(
   email: string
 ): Promise<BrewMarketingStatus> {

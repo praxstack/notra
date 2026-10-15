@@ -45,6 +45,7 @@ import {
   trackGeoScanRetryScheduledStep,
 } from "./steps/geo-scan-steps";
 import { refreshGeoContentGapsStep } from "./steps/refresh-geo-content-gaps";
+import { startGeoSentimentStep } from "./steps/start-geo-sentiment";
 import { syncGeoShelfCitationsStep } from "./steps/sync-geo-shelf-citations";
 
 interface GeoScanProjectOutcome {
@@ -65,6 +66,9 @@ function addBatchOutcome(
   totals.checks += outcome.checks;
   totals.mentions += outcome.mentions;
   totals.dropped += outcome.dropped;
+  if (outcome.omitted) {
+    totals.omitted = (totals.omitted ?? 0) + outcome.omitted;
+  }
   const engine = outcome.engineUsage ?? EMPTY_AGENT_TOKEN_USAGE;
   const judge = outcome.judgeUsage ?? EMPTY_AGENT_TOKEN_USAGE;
   const batchEngineUsage =
@@ -174,71 +178,56 @@ async function finalizeProjectRun(
     ...(options.failure ? { failure: options.failure } : {}),
   });
   const { context } = plan;
+  const scope = {
+    organizationId: context.organizationId,
+    projectId: context.projectId,
+  };
+  const logFollowUpFailure = (
+    title: string,
+    error: unknown,
+    payload?: Record<string, unknown>
+  ) =>
+    appendAutomationLogBestEffort({
+      organizationId: context.organizationId,
+      integrationId: context.projectId,
+      integrationType: "geo",
+      title,
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : String(error),
+      referenceId: context.runId,
+      ...(payload ? { payload } : {}),
+      ...(options.retentionDays
+        ? { retentionDays: options.retentionDays }
+        : {}),
+    });
   if (totals.checks > 0) {
     try {
-      await refreshGeoContentGapsStep({
-        organizationId: context.organizationId,
-        projectId: context.projectId,
-      });
+      await refreshGeoContentGapsStep(scope);
     } catch (error) {
-      await appendAutomationLogBestEffort({
-        organizationId: context.organizationId,
-        integrationId: context.projectId,
-        integrationType: "geo",
-        title: `Content gaps could not refresh for ${context.companyName}`,
-        status: "failed",
-        errorMessage: error instanceof Error ? error.message : String(error),
-        referenceId: context.runId,
-        ...(options.retentionDays
-          ? { retentionDays: options.retentionDays }
-          : {}),
-      });
+      await logFollowUpFailure(
+        `Content gaps could not refresh for ${context.companyName}`,
+        error
+      );
     }
   }
   if (status === "completed" && totals.checks > 0) {
     try {
-      await syncGeoShelfCitationsStep({
-        organizationId: context.organizationId,
-        projectId: context.projectId,
-      });
+      await syncGeoShelfCitationsStep(scope);
     } catch (error) {
-      await appendAutomationLogBestEffort({
-        organizationId: context.organizationId,
-        integrationId: context.projectId,
-        integrationType: "geo",
-        title: `GEO shelf space could not refresh for ${context.companyName}`,
-        status: "failed",
-        errorMessage: error instanceof Error ? error.message : String(error),
-        referenceId: context.runId,
-        payload: {
-          scanId: context.scanId,
-        },
-        ...(options.retentionDays
-          ? { retentionDays: options.retentionDays }
-          : {}),
-      });
+      await logFollowUpFailure(
+        `GEO shelf space could not refresh for ${context.companyName}`,
+        error,
+        { scanId: context.scanId }
+      );
     }
     try {
-      await startGeoSentimentStep({
-        organizationId: context.organizationId,
-        projectId: context.projectId,
-      });
+      await startGeoSentimentStep(scope);
     } catch (error) {
-      await appendAutomationLogBestEffort({
-        organizationId: context.organizationId,
-        integrationId: context.projectId,
-        integrationType: "geo",
-        title: `GEO sentiment analysis could not start for ${context.companyName}`,
-        status: "failed",
-        errorMessage: error instanceof Error ? error.message : String(error),
-        referenceId: context.runId,
-        payload: {
-          scanId: context.scanId,
-        },
-        ...(options.retentionDays
-          ? { retentionDays: options.retentionDays }
-          : {}),
-      });
+      await logFollowUpFailure(
+        `GEO sentiment analysis could not start for ${context.companyName}`,
+        error,
+        { scanId: context.scanId }
+      );
     }
   }
   const errorMessage =
@@ -307,8 +296,8 @@ async function runGeoScanProjectRun(
       billedUsage: plan.usage ?? EMPTY_AGENT_TOKEN_USAGE,
     } satisfies GeoScanProjectTotals,
   };
-  const { totals } = state;
-  const attempted =
+  const totals: GeoScanProjectTotals = state.totals;
+  const planned =
     plan.tasks.length + plan.sequences.length + plan.personas.length;
 
   try {
@@ -340,9 +329,16 @@ async function runGeoScanProjectRun(
       failure: classifyGeoScanExecutionFailure(error),
       ...(retentionDays ? { retentionDays } : {}),
     });
-    return { totals, attempted, noSuccessfulChecks: totals.checks === 0 };
+    return {
+      totals,
+      attempted: planned,
+      noSuccessfulChecks: totals.checks === 0,
+    };
   }
 
+  // Items omitted mid-scan (paused/archived personas) were never attempted,
+  // so a scan made only of them must not fail and schedule a retry.
+  const attempted = planned - (totals.omitted ?? 0);
   if (totals.checks === 0 && attempted > 0) {
     await finalizeProjectRun(plan, totals, "failed", state.claimedAt, {
       retried: options.retried,
@@ -448,4 +444,3 @@ export async function geoScanWorkflow(
   }
   return { status: "completed", checks, mentions };
 }
-import { startGeoSentimentStep } from "./steps/start-geo-sentiment";

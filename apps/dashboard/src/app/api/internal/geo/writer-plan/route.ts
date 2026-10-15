@@ -47,11 +47,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { success } = await ratelimit.geoWriterPlan.limit(
-    parsed.data.organizationId
-  );
+  const { success, limit, remaining, reset } =
+    await ratelimit.geoWriterPlan.limit(parsed.data.organizationId);
   if (!success) {
-    return new Response("Too many requests", { status: 429 });
+    return Response.json(
+      { error: "Too many requests", limit, remaining, reset },
+      { status: 429 }
+    );
   }
 
   const outcome = await Effect.runPromise(

@@ -3,9 +3,7 @@ import type { GeoTrafficEventRow } from "@notra/analytics/tinybird/datasources";
 
 import type { BatchedRow } from "./ingest";
 
-export type GeoEventWriteResult = Awaited<
-  ReturnType<typeof ingestGeoTrafficEvents>
->;
+type GeoEventWriteResult = Awaited<ReturnType<typeof ingestGeoTrafficEvents>>;
 
 export interface EventBatcherOptions<R extends BatchedRow> {
   intervalMs: number;

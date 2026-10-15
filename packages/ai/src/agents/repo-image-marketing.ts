@@ -1,4 +1,5 @@
 import {
+  boxFileHasMinBytes,
   createAgentSession,
   getErrorMessage,
   type RepoImageBox,
@@ -37,13 +38,12 @@ const logoReviewSchema = z.object({
   revisionPrompt: z.string().nullable(),
 });
 
-async function hasHtmlOutput(box: RepoImageBox) {
-  const run = await withBoxRetry(() =>
-    box.exec.command(
-      `test -f ${REPO_IMAGE_OUTPUT_HTML_PATH} && test "$(wc -c < ${REPO_IMAGE_OUTPUT_HTML_PATH})" -ge ${MIN_REPO_IMAGE_HTML_BYTES} && echo ok || echo incomplete`
-    )
+function hasHtmlOutput(box: RepoImageBox) {
+  return boxFileHasMinBytes(
+    box,
+    REPO_IMAGE_OUTPUT_HTML_PATH,
+    MIN_REPO_IMAGE_HTML_BYTES
   );
-  return run.result.trim() === "ok";
 }
 
 async function readAndRenderHtml(box: RepoImageBox) {

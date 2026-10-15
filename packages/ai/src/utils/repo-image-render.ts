@@ -99,15 +99,10 @@ function enforceSatoriDisplay(node: unknown) {
     return;
   }
 
-  if (!node.props) {
-    node.props = {};
-  }
-  const props = node.props;
-  if (!props.style) {
-    props.style = {};
-  }
-  const style = props.style;
-  const display = style.display;
+  node.props ??= {};
+  node.props.style ??= {};
+  const { style } = node.props;
+  const { display } = style;
   if (typeof display !== "string" || !SATORI_VALID_DISPLAY.has(display)) {
     style.display = "flex";
   }

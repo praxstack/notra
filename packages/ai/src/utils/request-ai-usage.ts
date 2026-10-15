@@ -7,7 +7,7 @@ import type {
   RequestRouteCost,
 } from "@notra/ai/types/request-ai-usage";
 import { getOpenRequestLogger } from "@notra/ai/utils/evlog-request";
-import { isRecord } from "@notra/ai/utils/unknown-record";
+import { isRecord, nonNegativeNumber } from "@notra/ai/utils/unknown-record";
 
 const MICRO_USD = 1_000_000;
 
@@ -28,17 +28,9 @@ function routeInfo(
   }
   const completeCost =
     record.gateway !== "openrouter" ||
-    (typeof record.byokInferenceCostUsd === "number" &&
-      Number.isFinite(record.byokInferenceCostUsd) &&
-      record.byokInferenceCostUsd >= 0);
+    nonNegativeNumber(record.byokInferenceCostUsd) !== undefined;
   return {
-    costUsd:
-      completeCost &&
-      typeof costUsd === "number" &&
-      Number.isFinite(costUsd) &&
-      costUsd >= 0
-        ? costUsd
-        : undefined,
+    costUsd: completeCost ? nonNegativeNumber(costUsd) : undefined,
     ...(gateway ? { gateway } : {}),
     ...(typeof generationId === "string" ? { generationId } : {}),
     ...(typeof model === "string" ? { model } : {}),

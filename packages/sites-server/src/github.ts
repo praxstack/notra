@@ -1,3 +1,4 @@
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import { createScopedGitHubAppInstallationToken } from "@notra/ai/integrations/github";
 import {
   createOctokit,
@@ -19,7 +20,6 @@ import {
   CONFIG_SEARCH_SKIPPED_SEGMENTS,
   CONTENT_FILE,
   EMPTY_TREE_SCAN,
-  GITHUB_API_VERSION_HEADER,
   GITHUB_COMPARE_MAX_FILES,
   GITHUB_ARCHIVE_TIMEOUT_MS,
   GITHUB_PAGE_SIZE,
@@ -159,7 +159,7 @@ export const downloadRepositoryTarballEffect = Effect.fn(
             headers: {
               Authorization: `Bearer ${token}`,
               Accept: "application/vnd.github+json",
-              ...GITHUB_API_VERSION_HEADER,
+              ...GITHUB_API_VERSION_HEADERS,
             },
             redirect: "follow",
             signal: AbortSignal.any([controller.signal, signal]),
@@ -255,7 +255,7 @@ export async function getBranchHead(
       owner: repository.owner,
       repo: repository.repo,
       branch,
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   return {
@@ -284,7 +284,7 @@ export async function changedPathsBetween(
       owner: repository.owner,
       repo: repository.repo,
       basehead: `${base}...${head}`,
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   const files = data.files ?? [];
@@ -318,7 +318,7 @@ export async function pullRequestChangedPaths(
         pull_number: pullNumber,
         per_page: GITHUB_PAGE_SIZE,
         page,
-        headers: GITHUB_API_VERSION_HEADER,
+        headers: GITHUB_API_VERSION_HEADERS,
       }
     );
     for (const file of data) {
@@ -353,7 +353,7 @@ export async function createCheckRun(
       status: "in_progress",
       started_at: new Date().toISOString(),
       output: { title: params.title, summary: params.summary },
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   return String(data.id);
@@ -374,7 +374,7 @@ export async function upsertPreviewComment(
   const repo = {
     owner: repository.owner,
     repo: repository.repo,
-    headers: GITHUB_API_VERSION_HEADER,
+    headers: GITHUB_API_VERSION_HEADERS,
   };
   const { data: pr } = await octokit.request(
     "GET /repos/{owner}/{repo}/pulls/{pull_number}",
@@ -449,7 +449,7 @@ export async function completeCheckRun(
           ? { annotations: params.annotations.slice(0, 50) }
           : {}),
       },
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
 }
@@ -470,7 +470,7 @@ export async function getSiteRepositoryOverview(
   const params = {
     owner: repository.owner,
     repo: repository.repo,
-    headers: GITHUB_API_VERSION_HEADER,
+    headers: GITHUB_API_VERSION_HEADERS,
   };
   const [{ data: repo }, commits] = await Promise.all([
     octokit.request("GET /repos/{owner}/{repo}", params),
@@ -516,7 +516,7 @@ export async function getDefaultBranch(
     {
       owner: repository.owner,
       repo: repository.repo,
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   return data.default_branch;
@@ -536,7 +536,7 @@ async function listBranches(
         repo: repository.repo,
         per_page: GITHUB_PAGE_SIZE,
         page,
-        headers: GITHUB_API_VERSION_HEADER,
+        headers: GITHUB_API_VERSION_HEADERS,
       }
     );
     branches.push(...data.map((branch) => branch.name));
@@ -560,7 +560,7 @@ async function listConfigDirectories(
       repo: repository.repo,
       tree_sha: ref,
       recursive: "1",
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   const directories: string[] = [];

@@ -13,6 +13,7 @@ import type {
   RepoImageSourceContext,
   RepoImageUsage,
 } from "@notra/ai/types/repo-image";
+import { withBoxRetry } from "@notra/ai/utils/repo-image-box";
 import { extractRepoImageUsage } from "@notra/ai/utils/repo-image-usage";
 import { logInfo, logWarn } from "@notra/ai/utils/server-log";
 import type { Box } from "@upstash/box";
@@ -39,6 +40,19 @@ export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
 
+export async function boxFileHasMinBytes(
+  box: RepoImageBox,
+  path: string,
+  minBytes: number
+) {
+  const check = await withBoxRetry(() =>
+    box.exec.command(
+      `test -f ${path} && test "$(wc -c < ${path})" -ge ${minBytes} && echo ok || echo incomplete`
+    )
+  );
+  return check.result.trim() === "ok";
+}
+
 export interface RepoImageFormatContext {
   box: RepoImageBox;
   input: GenerateRepoImageInput;
@@ -59,6 +73,12 @@ export interface RepoImageFormatRunner {
   prepare: (context: RepoImageFormatContext) => Promise<void>;
   run: (context: RepoImageFormatContext) => Promise<RepoImageRender>;
 }
+
+const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set([
+  "cancelled",
+  "completed",
+  "failed",
+]);
 
 function isAgentTimeoutError(error: unknown) {
   if (!(error instanceof Error)) {
@@ -110,29 +130,21 @@ async function streamAgent(
         // Run.cancel() swallows HTTP failures and sets only a local status.
         // Confirm this exact run stopped through the supported backend API.
         await stream.cancel();
-        let run = (await box.listRuns()).find(
-          (candidate) => candidate.id === stream.id
-        );
+        const findRun = async () =>
+          (await box.listRuns()).find(
+            (candidate) => candidate.id === stream.id
+          );
+        let run = await findRun();
         for (
           let attempt = 1;
           attempt < RUN_CANCEL_CONFIRMATION_ATTEMPTS &&
-          (!run ||
-            (run.status !== "cancelled" &&
-              run.status !== "completed" &&
-              run.status !== "failed"));
+          !TERMINAL_RUN_STATUSES.has(run?.status ?? "");
           attempt++
         ) {
           await delay(RUN_CANCEL_CONFIRMATION_INTERVAL_MS);
-          run = (await box.listRuns()).find(
-            (candidate) => candidate.id === stream.id
-          );
+          run = await findRun();
         }
-        if (
-          !run ||
-          (run.status !== "cancelled" &&
-            run.status !== "completed" &&
-            run.status !== "failed")
-        ) {
+        if (!(run && TERMINAL_RUN_STATUSES.has(run.status))) {
           throw new Error("Backend run is not confirmed terminal");
         }
         if (
@@ -169,7 +181,7 @@ async function streamAgent(
   }
 }
 
-export function mergeRepoImageUsage(
+function mergeRepoImageUsage(
   current: RepoImageUsage,
   next: RepoImageUsage
 ): RepoImageUsage {

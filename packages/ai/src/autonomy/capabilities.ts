@@ -104,24 +104,37 @@ const SOCIAL_POST_MAX_OUTPUT_TOKENS = 800;
 const IMAGE_REVIEW_MAX_OUTPUT_TOKENS = 700;
 const ISO_DATE_LENGTH = 10;
 
-export const IRIS_CONTENT_MODEL_ID = AGENT_DEFAULT_MODEL;
+const IRIS_CONTENT_MODEL_ID = AGENT_DEFAULT_MODEL;
 
 const SOCIAL_CONTENT_TYPES: Record<IrisSocialPlatform, ContentType> = {
   twitter: "twitter_post",
   linkedin: "linkedin_post",
 };
 
+const capabilityError = (
+  input: ExecuteIrisTaskInput,
+  message: string,
+  retryable: boolean,
+  cause: unknown
+): IrisCapabilityError =>
+  new IrisCapabilityError({
+    message,
+    capabilityName: input.task.capabilityName,
+    taskId: input.task.id,
+    retryable,
+    cause,
+  });
+
 const buildParamsError = (
   input: ExecuteIrisTaskInput,
   cause: unknown
 ): IrisCapabilityError =>
-  new IrisCapabilityError({
-    message: `Task params do not match the contract of ${input.task.capabilityName}`,
-    capabilityName: input.task.capabilityName,
-    taskId: input.task.id,
-    retryable: false,
-    cause,
-  });
+  capabilityError(
+    input,
+    `Task params do not match the contract of ${input.task.capabilityName}`,
+    false,
+    cause
+  );
 
 export const ensureIrisCollection = Effect.fn(
   "iris.capabilities.ensureCollection"
@@ -218,25 +231,18 @@ const generateIrisText = Effect.fn("iris.capabilities.generateText")(
           ),
         }),
       catch: (cause) =>
-        new IrisCapabilityError({
-          message: "Content generation failed",
-          capabilityName: params.input.task.capabilityName,
-          taskId: params.input.task.id,
-          retryable: true,
-          cause,
-        }),
+        capabilityError(params.input, "Content generation failed", true, cause),
     });
 
     const text = generated.text.trim();
     if (text.length === 0) {
       return yield* Effect.fail(
-        new IrisCapabilityError({
-          message: "Content generation returned an empty draft",
-          capabilityName: params.input.task.capabilityName,
-          taskId: params.input.task.id,
-          retryable: true,
-          cause: null,
-        })
+        capabilityError(
+          params.input,
+          "Content generation returned an empty draft",
+          true,
+          null
+        )
       );
     }
 
@@ -278,13 +284,12 @@ const loadExistingIrisArtifact = Effect.fn(
         )
         .limit(1),
     catch: (cause) =>
-      new IrisCapabilityError({
-        message: "Failed to check for an already generated draft",
-        capabilityName: input.task.capabilityName,
-        taskId: input.task.id,
-        retryable: true,
-        cause,
-      }),
+      capabilityError(
+        input,
+        "Failed to check for an already generated draft",
+        true,
+        cause
+      ),
   });
 
   const existing = rows.at(0);
@@ -341,13 +346,12 @@ const persistIrisPost = Effect.fn("iris.capabilities.persistPost")(
           },
         }),
       catch: (cause) =>
-        new IrisCapabilityError({
-          message: "Failed to save the generated content",
-          capabilityName: input.task.capabilityName,
-          taskId: input.task.id,
-          retryable: true,
-          cause,
-        }),
+        capabilityError(
+          input,
+          "Failed to save the generated content",
+          true,
+          cause
+        ),
     });
 
     const artifact: IrisArtifact = {
@@ -376,13 +380,12 @@ const resolveIrisRepository = Effect.fn("iris.capabilities.resolveRepository")(
     const integrations = yield* Effect.tryPromise({
       try: () => getGitHubIntegrationsByOrganization(input.organizationId),
       catch: (cause) =>
-        new IrisCapabilityError({
-          message: "Failed to load the GitHub integrations",
-          capabilityName: input.task.capabilityName,
-          taskId: input.task.id,
-          retryable: true,
-          cause,
-        }),
+        capabilityError(
+          input,
+          "Failed to load the GitHub integrations",
+          true,
+          cause
+        ),
     });
 
     const signalEnvelope = irisSignalEnvelopeSchema.safeParse(
@@ -543,6 +546,21 @@ const generateIrisIllustration = Effect.fn("iris.capabilities.illustration")(
     });
 
     let costCents = 0;
+    const rejected = (reason: string, revisionRounds: number) =>
+      ({
+        verdict: {
+          markerIndex: marker.index,
+          description: marker.description,
+          accept: false,
+          reason,
+          revisionRounds,
+          postId: null,
+          imageUrl: null,
+        },
+        image: null,
+        costCents,
+      }) satisfies IrisImageOutcome;
+
     const firstAttempt = yield* Effect.result(
       runRepoImageGeneration({
         input: params.input,
@@ -560,33 +578,23 @@ const generateIrisIllustration = Effect.fn("iris.capabilities.illustration")(
           markerIndex: marker.index,
         }
       );
-      return {
-        verdict: {
-          markerIndex: marker.index,
-          description: marker.description,
-          accept: false,
-          reason: "Image generation failed",
-          revisionRounds: 0,
-          postId: null,
-          imageUrl: null,
-        },
-        image: null,
-        costCents,
-      } satisfies IrisImageOutcome;
+      return rejected("Image generation failed", 0);
     }
 
     let current = firstAttempt.success;
     costCents += irisSandboxCostCents(current.usage, IMAGE_GEN_MODEL_ID);
 
-    let reviewOutcome = yield* Effect.result(
-      reviewIrisImage({
-        pngBase64: current.pngBase64,
-        description: marker.description,
-        articleTitle: params.articleTitle,
-        organizationId: params.input.organizationId,
-        runId: params.input.runId,
-      })
-    );
+    const reviewCurrent = () =>
+      Effect.result(
+        reviewIrisImage({
+          pngBase64: current.pngBase64,
+          description: marker.description,
+          articleTitle: params.articleTitle,
+          organizationId: params.input.organizationId,
+          runId: params.input.runId,
+        })
+      );
+    let reviewOutcome = yield* reviewCurrent();
     let accept = false;
     let reason = "Quality check could not run, image was rejected";
     let revisionRounds = 0;
@@ -623,15 +631,7 @@ const generateIrisIllustration = Effect.fn("iris.capabilities.illustration")(
         current = revised.success;
         costCents += irisSandboxCostCents(current.usage, IMAGE_GEN_MODEL_ID);
 
-        reviewOutcome = yield* Effect.result(
-          reviewIrisImage({
-            pngBase64: current.pngBase64,
-            description: marker.description,
-            articleTitle: params.articleTitle,
-            organizationId: params.input.organizationId,
-            runId: params.input.runId,
-          })
-        );
+        reviewOutcome = yield* reviewCurrent();
 
         if (reviewOutcome._tag === "Success") {
           costCents += reviewOutcome.success.costCents;
@@ -652,19 +652,7 @@ const generateIrisIllustration = Effect.fn("iris.capabilities.illustration")(
         reason,
         revisionRounds,
       });
-      return {
-        verdict: {
-          markerIndex: marker.index,
-          description: marker.description,
-          accept: false,
-          reason,
-          revisionRounds,
-          postId: null,
-          imageUrl: null,
-        },
-        image: null,
-        costCents,
-      } satisfies IrisImageOutcome;
+      return rejected(reason, revisionRounds);
     }
 
     const imagePostId = computeNamespacedId(
@@ -702,19 +690,7 @@ const generateIrisIllustration = Effect.fn("iris.capabilities.illustration")(
     );
 
     if (saved._tag === "Failure") {
-      return {
-        verdict: {
-          markerIndex: marker.index,
-          description: marker.description,
-          accept: false,
-          reason: "Image could not be saved",
-          revisionRounds,
-          postId: null,
-          imageUrl: null,
-        },
-        image: null,
-        costCents,
-      } satisfies IrisImageOutcome;
+      return rejected("Image could not be saved", revisionRounds);
     }
 
     yield* Effect.annotateLogs(Effect.logInfo("iris.image.accepted"), {
@@ -821,13 +797,7 @@ const executeAnalyticsRead = Effect.fn("iris.capabilities.analyticsRead")(
           }),
         ]),
       catch: (cause) =>
-        new IrisCapabilityError({
-          message: "Failed to read social analytics",
-          capabilityName: input.task.capabilityName,
-          taskId: input.task.id,
-          retryable: true,
-          cause,
-        }),
+        capabilityError(input, "Failed to read social analytics", true, cause),
     });
 
     const [overview, top, performance] = analytics;
@@ -931,13 +901,12 @@ const executeExperimentCreate = Effect.fn("iris.capabilities.experimentCreate")(
 
     if (variantAPostId === variantBPostId) {
       return yield* Effect.fail(
-        new IrisCapabilityError({
-          message: "An A/B test needs two different posts to compare",
-          capabilityName: input.task.capabilityName,
-          taskId: input.task.id,
-          retryable: false,
-          cause: null,
-        })
+        capabilityError(
+          input,
+          "An A/B test needs two different posts to compare",
+          false,
+          null
+        )
       );
     }
 
@@ -975,13 +944,12 @@ const executeExperimentCreate = Effect.fn("iris.capabilities.experimentCreate")(
           )
           .limit(1),
       catch: (cause) =>
-        new IrisCapabilityError({
-          message: "Failed to check for an already running A/B test",
-          capabilityName: input.task.capabilityName,
-          taskId: input.task.id,
-          retryable: true,
-          cause,
-        }),
+        capabilityError(
+          input,
+          "Failed to check for an already running A/B test",
+          true,
+          cause
+        ),
     });
 
     const existing = existingRows.at(0);
@@ -1025,13 +993,7 @@ const executeExperimentCreate = Effect.fn("iris.capabilities.experimentCreate")(
           })
           .onConflictDoNothing({ target: socialExperiments.id }),
       catch: (cause) =>
-        new IrisCapabilityError({
-          message: "Failed to start the A/B test",
-          capabilityName: input.task.capabilityName,
-          taskId: input.task.id,
-          retryable: true,
-          cause,
-        }),
+        capabilityError(input, "Failed to start the A/B test", true, cause),
     });
 
     yield* Effect.annotateLogs(
@@ -1085,13 +1047,7 @@ const executeExperimentRead = Effect.fn("iris.capabilities.experimentRead")(
           .orderBy(desc(socialExperiments.createdAt))
           .limit(limit),
       catch: (cause) =>
-        new IrisCapabilityError({
-          message: "Failed to read the A/B tests",
-          capabilityName: input.task.capabilityName,
-          taskId: input.task.id,
-          retryable: true,
-          cause,
-        }),
+        capabilityError(input, "Failed to read the A/B tests", true, cause),
     });
 
     const postIds = [
@@ -1439,12 +1395,11 @@ function executeByCapability(
     return executeSocialPostCreate(input);
   }
   return Effect.fail(
-    new IrisCapabilityError({
-      message: `Unknown capability "${input.task.capabilityName}"`,
-      capabilityName: input.task.capabilityName,
-      taskId: input.task.id,
-      retryable: false,
-      cause: null,
-    })
+    capabilityError(
+      input,
+      `Unknown capability "${input.task.capabilityName}"`,
+      false,
+      null
+    )
   );
 }

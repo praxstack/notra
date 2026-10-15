@@ -172,15 +172,10 @@ async function writeCitedShelfPages(
   executor: GeoShelfDbExecutor
 ): Promise<number> {
   const key = storeKey(seed);
-
   const nowIso = new Date().toISOString();
   const storedByUrl = new Map(stored.map((state) => [state.url, state]));
   const toInsert: GeoShelfSource[] = [];
-  const citationUpdates: {
-    id: string;
-    citations: GeoShelfCitedPage["citations"];
-    title: string | null;
-  }[] = [];
+  const citationUpdates: Parameters<typeof updateGeoShelfCitations>[1] = [];
 
   for (const page of cited) {
     const existing = storedByUrl.get(page.url);

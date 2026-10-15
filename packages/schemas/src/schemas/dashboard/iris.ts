@@ -14,17 +14,14 @@ export const irisPlannerDecisionPreviewSchema = z.object({
 export const irisOrganizationInputSchema = z.object({
   organizationId: organizationIdSchema,
 });
-export type IrisOrganizationInput = z.infer<typeof irisOrganizationInputSchema>;
 
 export const irisMandateInputSchema = irisOrganizationInputSchema.extend({
   mandateId: z.string().trim().min(1),
 });
-export type IrisMandateInput = z.infer<typeof irisMandateInputSchema>;
 
 export const irisListRunsInputSchema = irisOrganizationInputSchema.extend({
   cursor: z.iso.datetime().nullish(),
 });
-export type IrisListRunsInput = z.infer<typeof irisListRunsInputSchema>;
 
 export const irisListSignalsInputSchema = irisOrganizationInputSchema.extend({
   limit: z
@@ -34,7 +31,6 @@ export const irisListSignalsInputSchema = irisOrganizationInputSchema.extend({
     .max(IRIS_SIGNALS_PAGE_SIZE)
     .default(IRIS_SIGNALS_PAGE_SIZE),
 });
-export type IrisListSignalsInput = z.infer<typeof irisListSignalsInputSchema>;
 
 export const irisArtifactListSchema = z.array(irisOutboxArtifactSchema);
 

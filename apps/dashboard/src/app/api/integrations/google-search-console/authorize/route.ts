@@ -5,6 +5,7 @@ import {
 import { getGscOAuthCredentials } from "@notra/ai/integrations/google-search-console";
 import { redis } from "@notra/ai/utils/redis";
 import { logError } from "@notra/ai/utils/server-log";
+import { getAppUrl } from "@notra/ai/utils/url";
 import {
   GSC_OAUTH_STATE_KEY_PREFIX,
   GSC_OAUTH_STATE_TTL_SECONDS,
@@ -21,7 +22,7 @@ import { getGscRedirectUri } from "@/lib/integrations/google-search-console/redi
 import { ratelimit } from "@/utils/ratelimit";
 
 export async function GET(request: Request) {
-  const baseUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const baseUrl = getAppUrl() ?? "";
 
   try {
     const { searchParams } = new URL(request.url);

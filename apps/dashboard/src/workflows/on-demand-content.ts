@@ -70,26 +70,45 @@ export async function onDemandContentWorkflow(
 
   await markOnDemandJobRunning({ jobId, contentType });
 
+  const finish = (
+    status: "success" | "failed" | "skipped",
+    detail: {
+      reason?: string;
+      title?: string;
+      primaryPostId?: string;
+      postCount?: number;
+    }
+  ) =>
+    finishOnDemand({
+      organizationId,
+      runId,
+      workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
+      startedAt: workflowStartedAt,
+      contentType,
+      status,
+      ...detail,
+      source,
+      jobId,
+    });
+  const reconcileCollection = () =>
+    reconcileCollectionAttempt({ collectionId, organizationId, runId });
+
   const gate = await gateContentBilling({
     organizationId,
     executionId: runId,
     outputType: contentType,
   });
   if (!gate.allowed) {
-    await finishOnDemand({
-      organizationId,
-      runId,
-      workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
-      startedAt: workflowStartedAt,
-      contentType,
-      status: "failed",
-      reason: describeContentBillingDenial(gate),
-      source,
-      jobId,
-    });
-    await reconcileCollectionAttempt({ collectionId, organizationId, runId });
+    await finish("failed", { reason: describeContentBillingDenial(gate) });
+    await reconcileCollection();
     return { status: "credits_exhausted" };
   }
+  const releaseBilling = () =>
+    finalizeContentBilling({
+      reservation: gate,
+      action: "release",
+      logPrefix: LOG_PREFIX,
+    });
 
   let repositories: Awaited<ReturnType<typeof fetchOnDemandRepositories>>;
   let brand: Awaited<ReturnType<typeof resolveManualBrandSettings>>;
@@ -103,13 +122,37 @@ export async function onDemandContentWorkflow(
       resolveManualBrandSettings({ organizationId, brandVoiceId }),
     ]);
   } catch (error) {
-    await finalizeContentBilling({
-      reservation: gate,
-      action: "release",
-      logPrefix: LOG_PREFIX,
-    });
+    await releaseBilling();
     throw error;
   }
+
+  const trackUnsuccessfulRun = (kind: "failed" | "skipped", reason: string) =>
+    trackContentOutcome({
+      kind,
+      triggerId: "manual_on_demand",
+      organizationId,
+      outputType: contentType,
+      creationMode: "manual",
+      reason,
+      lookbackWindow,
+      repositoryCount: repositories.length,
+      source: "on_demand",
+      logPrefix: LOG_PREFIX,
+    });
+  const appendLog = (
+    status: "success" | "failed" | "skipped",
+    title: string,
+    detail: { errorMessage?: string; referenceId?: string }
+  ) =>
+    appendAutomationLog({
+      organizationId,
+      integrationId: "manual_on_demand",
+      integrationType: "manual",
+      title,
+      status,
+      ...detail,
+    });
+  const contentLabel = contentType.replaceAll("_", " ");
 
   const hasLinearSources = Boolean(
     dataPoints.includeLinearData &&
@@ -121,35 +164,10 @@ export async function onDemandContentWorkflow(
     console.error("[OnDemandContent] No valid data sources found, canceling", {
       organizationId,
     });
-    await finishOnDemand({
-      organizationId,
-      runId,
-      workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
-      startedAt: workflowStartedAt,
-      contentType,
-      status: "failed",
-      reason: "No valid data sources found",
-      source,
-      jobId,
-    });
-    await finalizeContentBilling({
-      reservation: gate,
-      action: "release",
-      logPrefix: LOG_PREFIX,
-    });
-    await trackContentOutcome({
-      kind: "failed",
-      triggerId: "manual_on_demand",
-      organizationId,
-      outputType: contentType,
-      creationMode: "manual",
-      reason: "No valid data sources found",
-      lookbackWindow,
-      repositoryCount: 0,
-      source: "on_demand",
-      logPrefix: LOG_PREFIX,
-    });
-    await reconcileCollectionAttempt({ collectionId, organizationId, runId });
+    await finish("failed", { reason: "No valid data sources found" });
+    await releaseBilling();
+    await trackUnsuccessfulRun("failed", "No valid data sources found");
+    await reconcileCollection();
     return { status: "no_sources" };
   }
 
@@ -165,43 +183,15 @@ export async function onDemandContentWorkflow(
     });
 
     if (contentResult.status === "skipped") {
-      await finishOnDemand({
-        organizationId,
-        runId,
-        workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
-        startedAt: workflowStartedAt,
-        contentType,
-        status: "skipped",
-        reason: contentResult.reason,
-        source,
-        jobId,
-      });
-      await appendAutomationLog({
-        organizationId,
-        integrationId: "manual_on_demand",
-        integrationType: "manual",
-        title: `On-demand generation skipped for ${contentType.replaceAll("_", " ")}`,
-        status: "skipped",
-        errorMessage: contentResult.reason,
-      });
-      await finalizeContentBilling({
-        reservation: gate,
-        action: "release",
-        logPrefix: LOG_PREFIX,
-      });
-      await trackContentOutcome({
-        kind: "skipped",
-        triggerId: "manual_on_demand",
-        organizationId,
-        outputType: contentType,
-        creationMode: "manual",
-        reason: contentResult.reason,
-        lookbackWindow,
-        repositoryCount: repositories.length,
-        source: "on_demand",
-        logPrefix: LOG_PREFIX,
-      });
-      await reconcileCollectionAttempt({ collectionId, organizationId, runId });
+      await finish("skipped", { reason: contentResult.reason });
+      await appendLog(
+        "skipped",
+        `On-demand generation skipped for ${contentLabel}`,
+        { errorMessage: contentResult.reason }
+      );
+      await releaseBilling();
+      await trackUnsuccessfulRun("skipped", contentResult.reason);
+      await reconcileCollection();
       return { status: "skipped", reason: contentResult.reason };
     }
 
@@ -219,103 +209,39 @@ export async function onDemandContentWorkflow(
         reason = contentResult.reason;
       }
 
-      await finishOnDemand({
-        organizationId,
-        runId,
-        workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
-        startedAt: workflowStartedAt,
-        contentType,
-        status: "failed",
-        reason,
-        source,
-        jobId,
-      });
-      await appendAutomationLog({
-        organizationId,
-        integrationId: "manual_on_demand",
-        integrationType: "manual",
-        title: `On-demand generation failed for ${contentType.replaceAll("_", " ")}`,
-        status: "failed",
-        errorMessage: reason,
-      });
-      await finalizeContentBilling({
-        reservation: gate,
-        action: "release",
-        logPrefix: LOG_PREFIX,
-      });
-      await trackContentOutcome({
-        kind: "failed",
-        triggerId: "manual_on_demand",
-        organizationId,
-        outputType: contentType,
-        creationMode: "manual",
-        reason,
-        lookbackWindow,
-        repositoryCount: repositories.length,
-        source: "on_demand",
-        logPrefix: LOG_PREFIX,
-      });
-      await reconcileCollectionAttempt({ collectionId, organizationId, runId });
+      await finish("failed", { reason });
+      await appendLog(
+        "failed",
+        `On-demand generation failed for ${contentLabel}`,
+        { errorMessage: reason }
+      );
+      await releaseBilling();
+      await trackUnsuccessfulRun("failed", reason);
+      await reconcileCollection();
       return { status: "generation_failed", reason };
     }
 
     const createdPosts = contentResult.posts;
     if (createdPosts.length === 0) {
-      await finishOnDemand({
-        organizationId,
-        runId,
-        workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
-        startedAt: workflowStartedAt,
-        contentType,
-        status: "failed",
-        reason: "No content was generated",
-        source,
-        jobId,
-      });
-      await appendAutomationLog({
-        organizationId,
-        integrationId: "manual_on_demand",
-        integrationType: "manual",
-        title: `On-demand generation for ${contentType.replaceAll("_", " ")} produced no content`,
-        status: "failed",
-        errorMessage: "No content was generated",
-      });
-      await finalizeContentBilling({
-        reservation: gate,
-        action: "release",
-        logPrefix: LOG_PREFIX,
-      });
-      await trackContentOutcome({
-        kind: "failed",
-        triggerId: "manual_on_demand",
-        organizationId,
-        outputType: contentType,
-        creationMode: "manual",
-        reason: "No content was generated",
-        lookbackWindow,
-        repositoryCount: repositories.length,
-        source: "on_demand",
-        logPrefix: LOG_PREFIX,
-      });
-      await reconcileCollectionAttempt({ collectionId, organizationId, runId });
+      await finish("failed", { reason: "No content was generated" });
+      await appendLog(
+        "failed",
+        `On-demand generation for ${contentLabel} produced no content`,
+        { errorMessage: "No content was generated" }
+      );
+      await releaseBilling();
+      await trackUnsuccessfulRun("failed", "No content was generated");
+      await reconcileCollection();
       return { status: "empty_result" };
     }
 
     const contentTitle =
       createdPosts.length === 1
         ? (createdPosts[0]?.title ?? contentType)
-        : `${createdPosts.length} ${contentType.replaceAll("_", " ")} drafts`;
+        : `${createdPosts.length} ${contentLabel} drafts`;
 
-    await finishOnDemand({
-      organizationId,
-      runId,
-      workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
-      startedAt: workflowStartedAt,
-      contentType,
-      status: "success",
+    await finish("success", {
       title: contentTitle,
-      source,
-      jobId,
       primaryPostId: createdPosts[0]?.postId,
       postCount: createdPosts.length,
     });
@@ -336,17 +262,13 @@ export async function onDemandContentWorkflow(
         },
         logPrefix: LOG_PREFIX,
       });
-      await appendAutomationLog({
-        organizationId,
-        integrationId: "manual_on_demand",
-        integrationType: "manual",
-        title:
-          createdPosts.length === 1
-            ? `On-demand generation created "${contentTitle}"`
-            : `On-demand generation created ${createdPosts.length} drafts`,
-        status: "success",
-        referenceId: createdPosts[0]?.postId,
-      });
+      await appendLog(
+        "success",
+        createdPosts.length === 1
+          ? `On-demand generation created "${contentTitle}"`
+          : `On-demand generation created ${createdPosts.length} drafts`,
+        { referenceId: createdPosts[0]?.postId }
+      );
       await trackContentOutcome({
         kind: "created",
         triggerId: "manual_on_demand",
@@ -368,35 +290,10 @@ export async function onDemandContentWorkflow(
 
     return { status: "success", postId: contentResult.postId };
   } catch (error) {
-    await finishOnDemand({
-      organizationId,
-      runId,
-      workflow: WORKFLOW_ANALYTICS_NAMES.ON_DEMAND_CONTENT,
-      startedAt: workflowStartedAt,
-      contentType,
-      status: "failed",
-      reason: "Unexpected workflow error",
-      source,
-      jobId,
-    });
-    await finalizeContentBilling({
-      reservation: gate,
-      action: "release",
-      logPrefix: LOG_PREFIX,
-    });
-    await trackContentOutcome({
-      kind: "failed",
-      triggerId: "manual_on_demand",
-      organizationId,
-      outputType: contentType,
-      creationMode: "manual",
-      reason: "Unexpected workflow error",
-      lookbackWindow,
-      repositoryCount: repositories.length,
-      source: "on_demand",
-      logPrefix: LOG_PREFIX,
-    });
-    await reconcileCollectionAttempt({ collectionId, organizationId, runId });
+    await finish("failed", { reason: "Unexpected workflow error" });
+    await releaseBilling();
+    await trackUnsuccessfulRun("failed", "Unexpected workflow error");
+    await reconcileCollection();
     throw error;
   }
 }

@@ -35,16 +35,11 @@ export type ChatUIMessage = UIMessage<ChatMessageMetadata>;
 export type StoredChatPreferences = z.infer<typeof storedChatPreferencesSchema>;
 export type ChatSessionSummary = z.infer<typeof chatSessionSummarySchema>;
 export type ChatSurface = z.infer<typeof chatSurfaceSchema>;
-export type ExternalChannelSource = z.infer<typeof externalChannelSourceSchema>;
 export type ExternalChannelLookupSource = z.infer<
   typeof externalChannelLookupSourceSchema
 >;
 export type ExternalChannelId = z.infer<typeof externalChannelIdSchema>;
-export type UpdateChatSessionInput = z.infer<typeof updateChatSessionSchema>;
 export type ChatWorkflowPayload = z.infer<typeof chatWorkflowPayloadSchema>;
-export type ChatTransportRequestInput = z.infer<
-  typeof chatTransportRequestInputSchema
->;
 
 export interface ChatSessionState {
   projectId: string | null;
@@ -137,8 +132,3 @@ export type ChatStreamLifecycleInput = Omit<
 > & {
   abortSignal?: AbortSignal;
 };
-
-export interface ForwardChatStreamInput {
-  stream: ReadableStream<UIMessageChunk>;
-  emit: (chunks: UIMessageChunk[]) => Promise<unknown>;
-}

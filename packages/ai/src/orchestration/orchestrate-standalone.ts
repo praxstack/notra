@@ -43,7 +43,7 @@ import {
   hasEnabledGitHubIntegration,
   hasEnabledLinearIntegration,
 } from "./integration-validator";
-import { routeMessage, selectAutoModel } from "./router";
+import { routeAutoModel } from "./router";
 import {
   buildStandaloneToolSet,
   getLinearContextFromIntegrations,
@@ -101,31 +101,16 @@ export async function orchestrateStandaloneChat(
   const hasMcp = mcpServerCount > 0;
   const mcpContext = context.filter((item) => item.type === "mcp-server");
 
-  const lastUserMessage = getLastUserMessage(messages);
-  const hasNonTextPartsOnLatestTurn = lastUserMessageHasNonTextParts(messages);
-
   const routingDecision = await resolveConversationRoute(
     messages,
     requestedModel,
-    async () => {
-      const decision = await routeMessage(
-        lastUserMessage,
+    () =>
+      routeAutoModel(
+        messages,
         hasGitHub || hasLinear || hasMcp,
         log,
-        hasNonTextPartsOnLatestTurn,
         telemetryMetadata
-      );
-      const auto = selectAutoModel(decision);
-      return {
-        model: auto.model,
-        thinkingLevel: auto.thinkingLevel,
-        complexity: decision.complexity,
-        requiresTools: true,
-        reasoning: decision.requiresTools
-          ? `auto → ${auto.model}: ${decision.reasoning}`
-          : `auto → ${auto.model}: ${decision.reasoning} (tools available by default)`,
-      };
-    }
+      )
   );
   const autoThinkingLevel = routingDecision.thinkingLevel;
 
@@ -379,39 +364,6 @@ function isLinearToolName(toolName: string) {
   return ["getLinearIssues", "getLinearProjects", "getLinearCycles"].includes(
     toolName
   );
-}
-
-function lastUserMessageHasNonTextParts(messages: UIMessage[]): boolean {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (!message || message.role !== "user") {
-      continue;
-    }
-    if (!Array.isArray(message.parts)) {
-      return false;
-    }
-    return message.parts.some((part) => part.type !== "text");
-  }
-  return false;
-}
-
-function getLastUserMessage(messages: UIMessage[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (!message || message.role !== "user") {
-      continue;
-    }
-    const parts = message.parts;
-    if (!Array.isArray(parts)) {
-      continue;
-    }
-    for (const part of parts) {
-      if (part.type === "text") {
-        return part.text;
-      }
-    }
-  }
-  return "";
 }
 
 const TERMINAL_TOOL_STATES = new Set([

@@ -14,7 +14,7 @@ customer middleware (@usenotra/geo)          ai-traffic-ingest service (Railway)
                                                -> Tinybird geo_traffic_events
 ```
 
-The ingest route is a thin adapter: every step (auth, rate limit, payload validation, event build, Tinybird write) is an Effect composed into one program in `pipeline.ts` (`runGeoIngest`), and each way it can fail is a tagged error in `errors.ts`. The service runs the program with `Effect.result` and maps the failure channel to a status in `response.ts`. The pipeline takes a standard `Request` and a background-task scheduler. Bun tracks pending tasks until shutdown; the dashboard's compatibility handler uses Next.js `after`.
+The ingest route is a thin adapter: every step (auth, rate limit, payload validation, event build, Tinybird write) is an Effect composed into one program in `pipeline.ts` (`runGeoIngest`), and each way it can fail is a tagged error in `errors.ts`. `handler.ts` runs the program with `Effect.result` and maps the failure channel to a status in `response.ts`. The pipeline takes a standard `Request`, a background-task scheduler, and an optional write buffer (`batcher.ts`). Bun tracks pending tasks until shutdown; the dashboard's compatibility route uses `afterResponse`.
 
 Deployment and endpoint migration are documented in `apps/ai-traffic-ingest/README.md`. Without `GEO_INGEST_URL`, the dashboard still executes the shared pipeline locally. Setting that variable forwards the old endpoint to Railway and gives new installs the direct service URL.
 

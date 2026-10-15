@@ -1,5 +1,6 @@
 import { redis } from "@notra/ai/utils/redis";
 import { logError } from "@notra/ai/utils/server-log";
+import { getAppUrl } from "@notra/ai/utils/url";
 import { linearAuthorizeQuerySchema } from "@notra/schemas/dashboard/linear";
 import { ORPCError } from "@orpc/server";
 
@@ -9,7 +10,7 @@ import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { linearOAuthErrorParam } from "@/lib/integrations/linear/oauth-errors";
 
 export async function GET(request: Request) {
-  const baseUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const baseUrl = getAppUrl() ?? "";
 
   try {
     const { searchParams } = new URL(request.url);

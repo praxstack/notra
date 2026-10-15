@@ -24,29 +24,29 @@
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/sdk-node": "^0.220.0",
     "@unkey/api": "^2.3.0",
-    "@upstash/ratelimit": "^2.1.0",
-    "@upstash/redis": "^1.38.4",
-    "@vercel/oidc": "^3.8.10",
+    "@upstash/ratelimit": "catalog:",
+    "@upstash/redis": "catalog:",
+    "@vercel/oidc": "catalog:",
     "@workos-inc/node": "^10.13.0",
-    "ai": "7.0.129",
-    "autumn-js": "~1.2.56",
-    "drizzle-orm": "^0.45.3",
-    "effect": "4.0.0",
+    "ai": "catalog:",
+    "autumn-js": "catalog:",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
     "eve": "0.19.0",
-    "evlog": "2.28.1",
+    "evlog": "catalog:",
     "hono": "^4.12.30",
     "jose": "^6.2.12",
     "marked": "^16.3.0",
-    "nanoid": "^5.1.16",
-    "sanitize-html": "^2.17.7",
+    "nanoid": "catalog:",
+    "sanitize-html": "catalog:",
     "tsup": "^8.5.1",
-    "zod": "^4.6.5"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite": "catalog:",
     "@notra/typescript-config": "workspace:*",
-    "@types/sanitize-html": "^2.16.2",
+    "@types/sanitize-html": "catalog:",
     "knip": "^6.12.1",
-    "typescript": "7.0.2"
+    "typescript": "catalog:"
   }
 }

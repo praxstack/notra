@@ -1,3 +1,4 @@
+import { GITHUB_API_VERSION } from "@notra/ai/constants/github";
 import { Data, Effect } from "effect";
 import type { GitHubRepo, GitHubUser } from "~types/github";
 
@@ -25,7 +26,7 @@ function buildFetchOptions(token: string): RequestInit {
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
+      "X-GitHub-Api-Version": GITHUB_API_VERSION,
       "User-Agent": "notra-star-video",
     },
     cache: "no-store",

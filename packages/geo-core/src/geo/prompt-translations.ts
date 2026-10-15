@@ -137,7 +137,7 @@ const changePicks = (
   change: (
     tx: DbTransaction,
     entries: readonly GeoPromptTranslationEntry[]
-  ) => Effect.Effect<GeoPromptTranslationError | null, never | Error>
+  ) => Effect.Effect<GeoPromptTranslationError | null, Error>
 ) =>
   geoDb("prompt translation change failed", () =>
     db.transaction((tx) =>

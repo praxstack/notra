@@ -1,4 +1,5 @@
 import {
+  boxFileHasMinBytes,
   createAgentSession,
   getErrorMessage,
   type RepoImageBox,
@@ -45,12 +46,9 @@ type DiagramOutcome =
 async function readAndRenderDiagram(
   box: RepoImageBox
 ): Promise<DiagramOutcome> {
-  const check = await withBoxRetry(() =>
-    box.exec.command(
-      `test -f ${DIAGRAM_SPEC_PATH} && test "$(wc -c < ${DIAGRAM_SPEC_PATH})" -ge ${MIN_DIAGRAM_SPEC_BYTES} && echo ok || echo incomplete`
-    )
-  );
-  if (check.result.trim() !== "ok") {
+  if (
+    !(await boxFileHasMinBytes(box, DIAGRAM_SPEC_PATH, MIN_DIAGRAM_SPEC_BYTES))
+  ) {
     return { error: undefined };
   }
   const raw = await withBoxRetry(() => box.files.read(DIAGRAM_SPEC_PATH));

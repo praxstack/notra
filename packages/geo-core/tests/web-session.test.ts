@@ -1,12 +1,14 @@
 import { beforeEach, expect, mock, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
 import { WEB_SESSION_TTL_SECONDS } from "../src/constants/web-analytics";
 import { WEB_SESSION_RESOLVE_SCRIPT } from "../src/constants/web-session";
 import type { WebPageViewInput, WebSession } from "../src/types/ingest";
 import { CHROME } from "./constants/web-page-view";
 import { deferred } from "./utils/deferred";
+import {
+  isIsolatedTestWorker,
+  testInIsolatedProcess,
+} from "./utils/isolated-process";
 
 function view(path: string, referer?: string): WebPageViewInput {
   const url = new URL(`https://acme.com${path}`);
@@ -31,21 +33,11 @@ function view(path: string, referer?: string): WebPageViewInput {
   } as WebPageViewInput;
 }
 
-if (process.env.NOTRA_WEB_ANALYTICS_TEST_WORKER !== import.meta.url) {
-  test("web-session runs with process-isolated module mocks", () => {
-    const result = spawnSync(
-      process.execPath,
-      ["test", "--isolate", fileURLToPath(import.meta.url)],
-      {
-        env: {
-          ...process.env,
-          NOTRA_WEB_ANALYTICS_TEST_WORKER: import.meta.url,
-        },
-        timeout: 30_000,
-      }
-    );
-    expect(result.status, result.stderr?.toString()).toBe(0);
-  }, 35_000);
+if (!isIsolatedTestWorker(import.meta.url)) {
+  testInIsolatedProcess(
+    "web-session runs with process-isolated module mocks",
+    import.meta.url
+  );
 } else {
   const store = new Map<string, WebSession>();
   let fail = false;

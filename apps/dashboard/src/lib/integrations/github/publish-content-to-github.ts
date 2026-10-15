@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { GITHUB_CREATE_COMMIT_ON_BRANCH_MUTATION } from "@notra/ai/constants/github";
+import {
+  GITHUB_CREATE_COMMIT_ON_BRANCH_MUTATION,
+  GITHUB_API_VERSION_HEADERS,
+} from "@notra/ai/constants/github";
 import {
   fallbackContentCommitHeadline,
   generateContentCommitHeadline,
@@ -10,7 +13,6 @@ import { createGitHubContentExportMarker } from "@notra/ai/utils/github-content-
 import { slugify } from "@notra/utils/slugify";
 
 import {
-  GITHUB_API_VERSION_HEADERS,
   GITHUB_CONTENT_COMMIT_METADATA_PREFIX,
   GITHUB_CONTENT_MAX_ASSET_COUNT,
 } from "@/constants/github";
@@ -214,11 +216,7 @@ function createHashOnlyContentBranchName(
   contentType: GitHubPublishContentType,
   contentId: string
 ) {
-  const contentHash = createHash("sha256")
-    .update(contentId)
-    .digest("hex")
-    .slice(0, CONTENT_BRANCH_HASH_LENGTH);
-  return `notra/${contentBranchPrefix(contentType)}-${contentHash}`;
+  return `notra/${contentBranchPrefix(contentType)}-${contentBranchDiscriminator(contentId)}`;
 }
 
 function createLegacyContentBranchName(
@@ -249,6 +247,24 @@ function toPullRequestResult(
     pullRequestNumber: pullRequest.number,
     pullRequestUrl: pullRequest.html_url,
   };
+}
+
+async function getBranchHeadSha(
+  octokit: GitHubClient,
+  owner: string,
+  repo: string,
+  branchName: string
+) {
+  const { data } = await octokit.request(
+    "GET /repos/{owner}/{repo}/git/ref/{ref}",
+    {
+      owner,
+      repo,
+      ref: `heads/${branchName}`,
+      headers: GITHUB_API_VERSION_HEADERS,
+    }
+  );
+  return data.object.sha;
 }
 
 async function findExistingPullRequest(
@@ -397,14 +413,11 @@ async function isContentOnDefaultBranch(
   params: PublishContentDraftPullRequestParams
 ) {
   try {
-    const { data: defaultBranchRef } = await octokit.request(
-      "GET /repos/{owner}/{repo}/git/ref/{ref}",
-      {
-        owner: params.owner,
-        repo: params.repo,
-        ref: `heads/${params.defaultBranch}`,
-        headers: GITHUB_API_VERSION_HEADERS,
-      }
+    const defaultBranchSha = await getBranchHeadSha(
+      octokit,
+      params.owner,
+      params.repo,
+      params.defaultBranch
     );
     const expectedFiles = [
       { contents: Buffer.from(params.markdown), path: params.path },
@@ -420,7 +433,7 @@ async function isContentOnDefaultBranch(
           owner: params.owner,
           repo: params.repo,
           path: expectedFile.path,
-          ref: defaultBranchRef.object.sha,
+          ref: defaultBranchSha,
           headers: {
             ...GITHUB_API_VERSION_HEADERS,
             Accept: "application/vnd.github.object+json",
@@ -441,7 +454,7 @@ async function isContentOnDefaultBranch(
           owner: params.owner,
           repo: params.repo,
           path,
-          ref: defaultBranchRef.object.sha,
+          ref: defaultBranchSha,
           headers: {
             ...GITHUB_API_VERSION_HEADERS,
             Accept: "application/vnd.github.object+json",
@@ -500,16 +513,12 @@ async function assertRecoverableContentBranch(
 ) {
   let branchHeadSha: string;
   try {
-    const { data: branchRef } = await params.octokit.request(
-      "GET /repos/{owner}/{repo}/git/ref/{ref}",
-      {
-        owner: params.owner,
-        repo: params.repo,
-        ref: `heads/${params.branchName}`,
-        headers: GITHUB_API_VERSION_HEADERS,
-      }
+    branchHeadSha = await getBranchHeadSha(
+      params.octokit,
+      params.owner,
+      params.repo,
+      params.branchName
     );
-    branchHeadSha = branchRef.object.sha;
   } catch (error) {
     throw new GitHubContentPublishError(
       "Failed to read the existing content branch",
@@ -692,16 +701,13 @@ async function commitContentToBranch(
     return commitSha;
   } catch (error) {
     try {
-      const { data: currentRef } = await octokit.request(
-        "GET /repos/{owner}/{repo}/git/ref/{ref}",
-        {
-          owner: params.owner,
-          repo: params.repo,
-          ref: `heads/${branchName}`,
-          headers: GITHUB_API_VERSION_HEADERS,
-        }
+      const currentHeadSha = await getBranchHeadSha(
+        octokit,
+        params.owner,
+        params.repo,
+        branchName
       );
-      if (currentRef.object.sha !== branchHeadSha) {
+      if (currentHeadSha !== branchHeadSha) {
         throw new GitHubContentBranchConflictError(branchName, params.path);
       }
     } catch (reconciliationError) {
@@ -744,16 +750,12 @@ async function assertContentCommitIsBranchHead(params: {
 
     let currentHeadSha: string;
     try {
-      const { data: currentRef } = await params.octokit.request(
-        "GET /repos/{owner}/{repo}/git/ref/{ref}",
-        {
-          owner: params.owner,
-          repo: params.repo,
-          ref: `heads/${params.branchName}`,
-          headers: GITHUB_API_VERSION_HEADERS,
-        }
+      currentHeadSha = await getBranchHeadSha(
+        params.octokit,
+        params.owner,
+        params.repo,
+        params.branchName
       );
-      currentHeadSha = currentRef.object.sha;
     } catch (error) {
       throw new GitHubContentPublishError(
         "Failed to verify the content branch after committing",
@@ -817,16 +819,12 @@ export async function publishContentDraftPullRequest(
   let baseSha: string;
 
   try {
-    const { data: baseRef } = await octokit.request(
-      "GET /repos/{owner}/{repo}/git/ref/{ref}",
-      {
-        owner: requestedParams.owner,
-        repo: requestedParams.repo,
-        ref: `heads/${requestedParams.defaultBranch}`,
-        headers: GITHUB_API_VERSION_HEADERS,
-      }
+    baseSha = await getBranchHeadSha(
+      octokit,
+      requestedParams.owner,
+      requestedParams.repo,
+      requestedParams.defaultBranch
     );
-    baseSha = baseRef.object.sha;
   } catch (error) {
     if (hasGitHubStatus(error, 409)) {
       throw new GitHubRepositoryEmptyError(
@@ -932,12 +930,12 @@ export async function publishContentDraftPullRequest(
   if (!existingPullRequest) {
     let branchExists = true;
     try {
-      await octokit.request("GET /repos/{owner}/{repo}/git/ref/{ref}", {
-        owner: requestedParams.owner,
-        repo: requestedParams.repo,
-        ref: `heads/${branchName}`,
-        headers: GITHUB_API_VERSION_HEADERS,
-      });
+      await getBranchHeadSha(
+        octokit,
+        requestedParams.owner,
+        requestedParams.repo,
+        branchName
+      );
     } catch (error) {
       if (!hasGitHubStatus(error, 404)) {
         throw new GitHubContentPublishError(
@@ -950,12 +948,12 @@ export async function publishContentDraftPullRequest(
     }
     if (!branchExists && hashOnlyBranchName !== branchName) {
       try {
-        await octokit.request("GET /repos/{owner}/{repo}/git/ref/{ref}", {
-          owner: requestedParams.owner,
-          repo: requestedParams.repo,
-          ref: `heads/${hashOnlyBranchName}`,
-          headers: GITHUB_API_VERSION_HEADERS,
-        });
+        await getBranchHeadSha(
+          octokit,
+          requestedParams.owner,
+          requestedParams.repo,
+          hashOnlyBranchName
+        );
         branchName = hashOnlyBranchName;
         branchExists = true;
       } catch (error) {

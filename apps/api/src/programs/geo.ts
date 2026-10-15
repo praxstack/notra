@@ -20,7 +20,7 @@ import { Effect } from "effect";
 import { GeoScanNotFoundError, GeoSelectionInvalidError } from "../errors/geo";
 import { geoScanPlanSummarySelection } from "../utils/geo-scan-plan-summary";
 
-export interface ValidateGeoSelectionInput {
+interface ValidateGeoSelectionInput {
   readonly organizationId: string;
   readonly engines: readonly string[];
   readonly languages: readonly string[];
@@ -81,7 +81,7 @@ export const upsertGeoSettingsWithValidation = Effect.fn(
   return yield* upsertGeoSettings(input);
 });
 
-export interface GeoProjectScopeInput {
+interface GeoProjectScopeInput {
   readonly organizationId: string;
   readonly projectId: string;
 }
@@ -100,7 +100,7 @@ export const startGeoAgentReadinessScanForProject = Effect.fn(
   return yield* startAgentReadinessScan(scope);
 });
 
-export interface ListGeoScansInput extends GeoProjectScopeInput {
+interface ListGeoScansInput extends GeoProjectScopeInput {
   readonly limit: number;
   readonly page: number;
 }
@@ -119,20 +119,18 @@ interface GeoScanRecord {
   readonly createdAt: Date;
 }
 
-function geoScanReadColumns() {
-  return {
-    id: true,
-    projectId: true,
-    status: true,
-    errorCode: true,
-    errorMessage: true,
-    failedStage: true,
-    retryable: true,
-    startedAt: true,
-    finishedAt: true,
-    createdAt: true,
-  } as const;
-}
+const GEO_SCAN_READ_COLUMNS = {
+  id: true,
+  projectId: true,
+  status: true,
+  errorCode: true,
+  errorMessage: true,
+  failedStage: true,
+  retryable: true,
+  startedAt: true,
+  finishedAt: true,
+  createdAt: true,
+} as const;
 
 interface GeoScanEngineCounts {
   readonly scanId: string;
@@ -253,7 +251,7 @@ export const listGeoScansForProject = Effect.fn("geo.scans.list")(function* (
     geoDb("list geo scans", () =>
       db.query.geoScans.findMany({
         where: scope,
-        columns: geoScanReadColumns(),
+        columns: GEO_SCAN_READ_COLUMNS,
         extras: { planSummary: geoScanPlanSummarySelection() },
         orderBy: [desc(geoScans.startedAt)],
         limit: input.limit,
@@ -287,7 +285,7 @@ export const listGeoScansForProject = Effect.fn("geo.scans.list")(function* (
   };
 });
 
-export interface GetGeoScanInput extends GeoProjectScopeInput {
+interface GetGeoScanInput extends GeoProjectScopeInput {
   readonly scanId: string;
 }
 
@@ -301,7 +299,7 @@ export const getGeoScanForProject = Effect.fn("geo.scans.get")(function* (
         eq(geoScans.projectId, input.projectId),
         eq(geoScans.organizationId, input.organizationId)
       ),
-      columns: geoScanReadColumns(),
+      columns: GEO_SCAN_READ_COLUMNS,
       extras: { planSummary: geoScanPlanSummarySelection() },
     })
   );

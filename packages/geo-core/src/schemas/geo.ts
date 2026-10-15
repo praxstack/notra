@@ -23,6 +23,7 @@ import {
   GEO_DISCOVERY_MAX_PROMPTS,
   GEO_DISCOVERY_MIN_COMPETITORS,
   GEO_DISCOVERY_MIN_PROMPTS,
+  GEO_EXCERPT_MAX_LENGTH,
   GEO_EXISTING_PAGE_URL_MAX_LENGTH,
   GEO_GAP_TITLE_MAX_LENGTH,
   GEO_GENERATED_CONVERSATION_MAX_TURNS,
@@ -62,7 +63,6 @@ import { publicWebsiteUrlSchema } from "./url";
 
 const GEO_SUPPORTED_LANGUAGE_SET = new Set<string>(SUPPORTED_LANGUAGES);
 const MAX_GEO_TRAFFIC_LOG_FILTER_VALUES = 3;
-const MAX_EXCERPT_LENGTH = 300;
 const MAX_DAYS = 365;
 const GEO_DAY_STRING_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const geoWindowFields = {
@@ -111,7 +111,7 @@ export const geoSettingsLanguageAddInputSchema =
     language: geoSupportedLanguageSchema,
   });
 
-export const geoConversionPathSchema = string()
+const geoConversionPathSchema = string()
   .trim()
   .min(1)
   .max(GEO_CONVERSION_PATH_MAX_LENGTH)
@@ -119,7 +119,7 @@ export const geoConversionPathSchema = string()
     message: "Conversion paths must start with /",
   });
 
-export const geoProjectDomainSchema = string()
+const geoProjectDomainSchema = string()
   .trim()
   .min(1)
   .max(GEO_SHORT_FIELD_MAX_LENGTH)
@@ -135,16 +135,7 @@ export const geoSettingsUpsertInputSchema = geoOrganizationInputSchema.extend({
     .max(GEO_MAX_CONVERSION_PATHS)
     .optional(),
   domains: array(geoProjectDomainSchema).max(GEO_MAX_DOMAINS).optional(),
-  languages: array(string().min(1))
-    .min(1)
-    .max(GEO_MAX_LANGUAGES)
-    .refine(
-      (values) =>
-        values.every((value) => GEO_SUPPORTED_LANGUAGE_SET.has(value)),
-      {
-        message: "Unsupported language",
-      }
-    ),
+  languages: geoTrackingLanguagesSchema,
   engines: array(string().min(1).max(GEO_SHORT_FIELD_MAX_LENGTH)).max(
     GEO_MAX_ENGINES
   ),
@@ -304,7 +295,7 @@ export const geoCompetitorShareInputSchema = geoTimeseriesInputSchema.extend({
   summaryOnly: boolean().optional(),
 });
 
-export const geoPromptTagsSchema = array(
+const geoPromptTagsSchema = array(
   string().trim().min(1).max(GEO_PROMPT_TAG_MAX_LENGTH)
 )
   .max(GEO_PROMPT_MAX_TAGS)
@@ -428,7 +419,7 @@ export const geoBrandSearchInputSchema = geoOrganizationInputSchema.extend({
  * Lenient on purpose: generated conversations are filtered after the call, so
  * one badly sized turn never fails the whole website analysis.
  */
-export const geoGeneratedConversationSchema = object({
+const geoGeneratedConversationSchema = object({
   name: string().min(1),
   steps: array(string().min(1)).max(GEO_GENERATED_CONVERSATION_MAX_TURNS),
 });
@@ -469,7 +460,7 @@ export const geoJudgeResultSchema = object({
   position: number().nullable(),
   sentiment: enumType(["positive", "neutral", "negative"]).nullable(),
   competitors: array(string()).max(MAX_JUDGE_COMPETITORS),
-  excerpt: string().max(MAX_EXCERPT_LENGTH),
+  excerpt: string().max(GEO_EXCERPT_MAX_LENGTH),
 });
 
 export const aiTrafficInputSchema = geoOrganizationInputSchema.extend({

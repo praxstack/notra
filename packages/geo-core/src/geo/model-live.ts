@@ -1,6 +1,6 @@
 import { getEvaluationClient } from "@notra/ai/evaluation/client";
 import { gateway, getRouteMetadata } from "@notra/ai/gateway";
-import type { RouteMetadata } from "@notra/ai/types/router";
+import type { RouteMetadata, RouteUsageStep } from "@notra/ai/types/router";
 import { summarizeRouteUsage } from "@notra/ai/utils/route-usage";
 import { generateText, isStepCount, Output } from "ai";
 import { Effect, Layer } from "effect";
@@ -58,6 +58,26 @@ function usageWithModel(
     route,
     ...(totalUsd === undefined ? {} : { totalUsd }),
   };
+}
+
+/** Replaces the step-derived usage route and cost once the steps are summarized. */
+function withRouteUsage(modelId: string) {
+  return <A extends { usage: GeoModelTokenUsage }>({
+    steps,
+    ...rest
+  }: A & { steps: readonly RouteUsageStep[] }) =>
+    Effect.promise(async () => {
+      const routeUsage = await summarizeRouteUsage(steps, modelId);
+      return {
+        ...rest,
+        usage: usageWithModel(
+          rest.usage,
+          modelId,
+          routeUsage.route ?? rest.usage.route,
+          routeUsage.tokenCostUsd
+        ),
+      };
+    });
 }
 
 /** Retains SDK default retries; no additional Effect retry policy. */
@@ -122,20 +142,7 @@ export const geoModelLive = Layer.succeed(
               })
             ),
         }),
-        Effect.flatMap(({ steps, ...answer }) =>
-          Effect.promise(async () => {
-            const routeUsage = await summarizeRouteUsage(steps, input.engine);
-            return {
-              ...answer,
-              usage: usageWithModel(
-                answer.usage,
-                input.engine,
-                routeUsage.route ?? answer.usage.route,
-                routeUsage.tokenCostUsd
-              ),
-            };
-          })
-        )
+        Effect.flatMap(withRouteUsage(input.engine))
       )
     ),
     groundedAnswer: Effect.fn("GeoModel.groundedAnswer")((input) =>
@@ -202,21 +209,7 @@ export const geoModelLive = Layer.succeed(
               })
             ),
         }),
-        Effect.flatMap(({ steps, ...answer }) =>
-          Effect.promise(async () => {
-            const modelId = engineModelOf(input.engine.key);
-            const routeUsage = await summarizeRouteUsage(steps, modelId);
-            return {
-              ...answer,
-              usage: usageWithModel(
-                answer.usage,
-                modelId,
-                routeUsage.route ?? answer.usage.route,
-                routeUsage.tokenCostUsd
-              ),
-            };
-          })
-        )
+        Effect.flatMap(withRouteUsage(engineModelOf(input.engine.key)))
       )
     ),
     judge: Effect.fn("GeoModel.judge")((input) =>
@@ -262,23 +255,7 @@ export const geoModelLive = Layer.succeed(
               })
             ),
         }),
-        Effect.flatMap(({ steps, ...judged }) =>
-          Effect.promise(async () => {
-            const routeUsage = await summarizeRouteUsage(
-              steps,
-              GEO_JUDGE_MODEL
-            );
-            return {
-              ...judged,
-              usage: usageWithModel(
-                judged.usage,
-                GEO_JUDGE_MODEL,
-                routeUsage.route ?? judged.usage.route,
-                routeUsage.tokenCostUsd
-              ),
-            };
-          })
-        )
+        Effect.flatMap(withRouteUsage(GEO_JUDGE_MODEL))
       )
     ),
     evaluateMention: Effect.fn("GeoModel.evaluateMention")((input) =>

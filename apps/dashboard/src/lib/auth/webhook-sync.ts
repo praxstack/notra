@@ -7,7 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { Data, Effect } from "effect";
 
 import { upsertMembership } from "@/lib/auth/membership-upsert";
-import { isWorkOSNotFound } from "@/lib/auth/workos-error";
+import { nullIfWorkOSNotFound } from "@/lib/auth/workos-error";
 
 class WebhookSyncError extends Data.TaggedError("WebhookSyncError")<{
   readonly message: string;
@@ -46,12 +46,7 @@ const resolveOrganizationIdByExternalId = Effect.fn(
     try: async () => {
       const remote = await getWorkOS()
         .organizations.getOrganization(workosOrgId)
-        .catch((error) => {
-          if (isWorkOSNotFound(error)) {
-            return null;
-          }
-          throw error;
-        });
+        .catch(nullIfWorkOSNotFound);
 
       if (!remote?.externalId) {
         return null;
@@ -79,12 +74,7 @@ const resolveUserIdByExternalId = Effect.fn(
     try: async () => {
       const remote = await getWorkOS()
         .userManagement.getUser(workosUserId)
-        .catch((error) => {
-          if (isWorkOSNotFound(error)) {
-            return null;
-          }
-          throw error;
-        });
+        .catch(nullIfWorkOSNotFound);
 
       if (!remote) {
         return null;

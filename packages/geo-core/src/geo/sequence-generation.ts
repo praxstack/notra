@@ -115,6 +115,12 @@ export async function insertGeneratedConversationsIfEmpty(
   return rows.length;
 }
 
+function sequenceLimitError() {
+  return new GeoDiscoveryError({
+    message: `You already have ${GEO_MAX_SEQUENCES} conversations. Remove one to generate more.`,
+  });
+}
+
 export const generateGeoSequences = Effect.fn("geo.sequencesGenerate")(
   function* (input: GeoScopeInput) {
     const scope = yield* requireGeoProject(input);
@@ -164,11 +170,7 @@ export const generateGeoSequences = Effect.fn("geo.sequencesGenerate")(
 
     const room = GEO_MAX_SEQUENCES - existing.length;
     if (room <= 0) {
-      return yield* Effect.fail(
-        new GeoDiscoveryError({
-          message: `You already have ${GEO_MAX_SEQUENCES} conversations. Remove one to generate more.`,
-        })
-      );
+      return yield* Effect.fail(sequenceLimitError());
     }
 
     const companyName =
@@ -253,11 +255,7 @@ export const generateGeoSequences = Effect.fn("geo.sequencesGenerate")(
       })
     );
     if (rows.length === 0) {
-      return yield* Effect.fail(
-        new GeoDiscoveryError({
-          message: `You already have ${GEO_MAX_SEQUENCES} conversations. Remove one to generate more.`,
-        })
-      );
+      return yield* Effect.fail(sequenceLimitError());
     }
 
     const response: GeoSequencesGenerateResponse = {

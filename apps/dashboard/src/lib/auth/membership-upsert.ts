@@ -4,10 +4,7 @@ import { members } from "@notra/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 
 import { MEMBERSHIP_CONFLICT_TARGET_RETRY_MS } from "@/constants/auth/membership";
-import type {
-  MembershipUpsertInput,
-  MembershipUpsertStrategies,
-} from "@/types/auth/membership";
+import type { MembershipUpsertInput } from "@/types/auth/membership";
 
 /** Postgres `invalid_column_reference`: no unique index matches ON CONFLICT. */
 const MISSING_CONFLICT_TARGET_CODE = "42P10";
@@ -25,10 +22,6 @@ function hasPostgresErrorCode(error: unknown, code: string): boolean {
     current = (current as { cause?: unknown }).cause;
   }
   return false;
-}
-
-function hasMissingConflictTargetCode(error: unknown): boolean {
-  return hasPostgresErrorCode(error, MISSING_CONFLICT_TARGET_CODE);
 }
 
 async function withMembershipAdvisoryLock<T>(
@@ -128,40 +121,25 @@ async function upsertMembershipReadThenWrite(
   });
 }
 
-async function runMembershipUpsert(
-  strategies: MembershipUpsertStrategies,
+export async function upsertMembership(
   input: MembershipUpsertInput
 ): Promise<void> {
   if (Date.now() < conflictTargetRetryAt) {
-    await strategies.readThenWrite(input);
+    await upsertMembershipReadThenWrite(input);
     return;
   }
 
   try {
-    await strategies.atomic(input);
+    await upsertMembershipAtomically(input);
     conflictTargetRetryAt = 0;
   } catch (error) {
-    if (!hasMissingConflictTargetCode(error)) {
+    if (!hasPostgresErrorCode(error, MISSING_CONFLICT_TARGET_CODE)) {
       throw error;
     }
     conflictTargetRetryAt = Date.now() + MEMBERSHIP_CONFLICT_TARGET_RETRY_MS;
-    strategies.onFallback?.();
-    await strategies.readThenWrite(input);
+    logWarn(
+      "[auth] members(organization_id, user_id) unique index missing; apply migration 0085. Falling back to read-then-write membership sync."
+    );
+    await upsertMembershipReadThenWrite(input);
   }
-}
-
-function warnConflictTargetMissing(): void {
-  logWarn(
-    "[auth] members(organization_id, user_id) unique index missing; apply migration 0085. Falling back to read-then-write membership sync."
-  );
-}
-
-const productionStrategies: MembershipUpsertStrategies = {
-  atomic: upsertMembershipAtomically,
-  readThenWrite: upsertMembershipReadThenWrite,
-  onFallback: warnConflictTargetMissing,
-};
-
-export function upsertMembership(input: MembershipUpsertInput): Promise<void> {
-  return runMembershipUpsert(productionStrategies, input);
 }

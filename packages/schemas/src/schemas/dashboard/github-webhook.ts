@@ -89,12 +89,7 @@ export const githubPushEventCommitsSchema = z.object({
   commits: z.array(commitSchema.pick({ message: true }).loose()),
 });
 
-export const GITHUB_EVENT_TYPES = [
-  "release",
-  "push",
-  "pull_request",
-  "ping",
-] as const;
+const GITHUB_EVENT_TYPES = ["release", "push", "pull_request", "ping"] as const;
 export type GitHubEventType = (typeof GITHUB_EVENT_TYPES)[number];
 
 export function isGitHubEventType(event: string): event is GitHubEventType {

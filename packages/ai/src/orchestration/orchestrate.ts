@@ -11,19 +11,14 @@ import { resolveConversationRoute } from "@notra/ai/utils/resolve-conversation-r
 import { summarizeRouteUsage } from "@notra/ai/utils/route-usage";
 import { logError } from "@notra/ai/utils/server-log";
 import { buildTelemetryOptions } from "@notra/ai/utils/tcc";
-import {
-  convertToModelMessages,
-  isStepCount,
-  streamText,
-  type UIMessage,
-} from "ai";
+import { convertToModelMessages, isStepCount, streamText } from "ai";
 
 import {
   hasEnabledGitHubIntegration,
   hasEnabledLinearIntegration,
   validateIntegrations,
 } from "./integration-validator";
-import { routeMessage, selectAutoModel } from "./router";
+import { routeAutoModel } from "./router";
 import { getThinkingProviderOptions } from "./thinking";
 import {
   buildToolSet,
@@ -66,40 +61,13 @@ export async function orchestrateChat(
 
   const hasGitHub = hasEnabledGitHubIntegration(validatedIntegrations);
   const hasLinear = hasEnabledLinearIntegration(validatedIntegrations);
-  const hasIntegrationContext = hasGitHub || hasLinear;
 
-  const lastUserMessage = getLastUserMessage(messages);
-  const hasAttachments = lastUserMessageHasNonTextParts(messages);
-  const routedDecision = await resolveConversationRoute(
+  const routingDecision = await resolveConversationRoute(
     messages,
     undefined,
-    async () => {
-      const decision = await routeMessage(
-        lastUserMessage,
-        hasIntegrationContext,
-        log,
-        hasAttachments,
-        telemetryMetadata
-      );
-      const auto = selectAutoModel(decision);
-      return {
-        model: auto.model,
-        thinkingLevel: auto.thinkingLevel,
-        complexity: decision.complexity,
-        requiresTools: true,
-        reasoning: decision.requiresTools
-          ? `auto → ${auto.model}: ${decision.reasoning}`
-          : `auto → ${auto.model}: ${decision.reasoning} (tools available by default)`,
-      };
-    }
+    () =>
+      routeAutoModel(messages, hasGitHub || hasLinear, log, telemetryMetadata)
   );
-  const routingDecision = {
-    ...routedDecision,
-    requiresTools: true,
-    reasoning: routedDecision.requiresTools
-      ? routedDecision.reasoning
-      : `${routedDecision.reasoning} (tools available by default)`,
-  };
 
   const modelWithMemory = createModel(
     organizationId,
@@ -195,37 +163,4 @@ export async function orchestrateChat(
   });
 
   return { stream, routingDecision };
-}
-
-function lastUserMessageHasNonTextParts(messages: UIMessage[]): boolean {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (!message || message.role !== "user") {
-      continue;
-    }
-    if (!Array.isArray(message.parts)) {
-      return false;
-    }
-    return message.parts.some((part) => part.type !== "text");
-  }
-  return false;
-}
-
-function getLastUserMessage(messages: UIMessage[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i];
-    if (!message || message.role !== "user") {
-      continue;
-    }
-    const parts = message.parts;
-    if (!Array.isArray(parts)) {
-      continue;
-    }
-    for (const part of parts) {
-      if (part.type === "text") {
-        return part.text;
-      }
-    }
-  }
-  return "";
 }

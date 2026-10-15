@@ -6,7 +6,6 @@ import {
   GEO_AGENT_LABELS,
   GEO_JOURNEY_BROWSE_CATEGORY,
   GEO_JOURNEY_CHIP_LENGTH,
-  GEO_JOURNEY_EXPLICIT_PREFIX,
   GEO_MAX_RANGE_DAYS,
   GEO_SPARKLINE_MIN_POINTS,
   GEO_SPARKLINE_FLAT_THRESHOLD,
@@ -24,7 +23,6 @@ import type {
   GeoTrafficTotals,
   GeoTrafficTrendRow,
   GeoVisitorType,
-  TrafficMetricDeltas,
 } from "../types/geo";
 import { formatDayLabel } from "./day-label";
 
@@ -153,12 +151,6 @@ export function formatGeoJourneyChip(journeyId: string): string {
   return journeyId.slice(-GEO_JOURNEY_CHIP_LENGTH);
 }
 
-export function toGeoJourneyKind(journeyId: string): "tagged" | "fingerprint" {
-  return journeyId.startsWith(GEO_JOURNEY_EXPLICIT_PREFIX)
-    ? "tagged"
-    : "fingerprint";
-}
-
 export function toggleGeoTrafficFilterValue<T extends string>(
   values: T[],
   value: T
@@ -214,13 +206,6 @@ export function formatGeoJourneySpan(
     return `${unit(hours, "hour")} ${unit(minutes % MINUTES_PER_HOUR, "minute")}`;
   }
   return `${unit(Math.floor(hours / HOURS_PER_DAY), "day")} ${unit(hours % HOURS_PER_DAY, "hour")}`;
-}
-
-export function formatMarkdownShare(markdown: number, visits: number): string {
-  if (visits === 0) {
-    return "-";
-  }
-  return `${Math.round((markdown / visits) * 100)}%`;
 }
 
 export function trafficDayKey(day: string): string {
@@ -337,61 +322,6 @@ export function trafficVisitDelta(
 
 export function isGeoStatDeltaNew(delta: number): boolean {
   return delta === GEO_STAT_DELTA_NEW;
-}
-
-export function formatGeoTrafficRequestCount(total: number): string {
-  return `${total.toLocaleString()} ${total === 1 ? "request" : "requests"}`;
-}
-
-function sumTrafficTrendMetric(
-  rows: readonly GeoTrafficTrendRow[],
-  key:
-    | typeof GEO_TRAFFIC_TREND_CRAWLER_KEY
-    | typeof GEO_TRAFFIC_TREND_REFERRAL_KEY
-): number {
-  return rows.reduce((total, row) => total + row[key], 0);
-}
-
-export function trafficMetricDeltas(
-  rows: readonly GeoTrafficTrendRow[]
-): TrafficMetricDeltas {
-  const empty: TrafficMetricDeltas = {
-    crawler: null,
-    aiReferral: null,
-    total: null,
-  };
-  if (rows.length < GEO_SPARKLINE_MIN_POINTS) {
-    return empty;
-  }
-
-  const mid = Math.floor(rows.length / 2);
-  const previous = rows.slice(0, mid);
-  const current = rows.slice(mid);
-  const previousCrawler = sumTrafficTrendMetric(
-    previous,
-    GEO_TRAFFIC_TREND_CRAWLER_KEY
-  );
-  const currentCrawler = sumTrafficTrendMetric(
-    current,
-    GEO_TRAFFIC_TREND_CRAWLER_KEY
-  );
-  const previousReferral = sumTrafficTrendMetric(
-    previous,
-    GEO_TRAFFIC_TREND_REFERRAL_KEY
-  );
-  const currentReferral = sumTrafficTrendMetric(
-    current,
-    GEO_TRAFFIC_TREND_REFERRAL_KEY
-  );
-
-  return {
-    crawler: trafficVisitDelta(currentCrawler, previousCrawler),
-    aiReferral: trafficVisitDelta(currentReferral, previousReferral),
-    total: trafficVisitDelta(
-      currentCrawler + currentReferral,
-      previousCrawler + previousReferral
-    ),
-  };
 }
 
 export function sparklineTrend(

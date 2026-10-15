@@ -1,3 +1,4 @@
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import {
   createOctokit,
   GITHUB_INTERACTIVE_READ_TIMEOUT_MS,
@@ -6,7 +7,6 @@ import { db } from "@notra/db/drizzle";
 import { sites, users } from "@notra/db/schema";
 import { and, asc, eq, or, sql } from "drizzle-orm";
 
-import { GITHUB_API_VERSION_HEADERS } from "@/constants/github";
 import { SITE_ENTRY_DIRECTORIES } from "@/constants/site-github-publish";
 import type {
   SiteGitHubPublishTarget,

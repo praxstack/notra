@@ -5,7 +5,10 @@ import {
 import { isDemoMode } from "@notra/utils/demo-mode";
 import { os } from "@orpc/server";
 
-import { assertAuthenticated } from "@/lib/auth/organization";
+import {
+  assertAuthenticated,
+  assertOrganizationAccess,
+} from "@/lib/auth/organization";
 import type { ORPCContext } from "@/types/orpc/context";
 import { runWithRpcRequestMemo } from "@/utils/rpc-request-scope";
 
@@ -51,4 +54,18 @@ export const authorizedProcedure = baseProcedure.use(
       },
     });
   }
+);
+
+/** Use after `.input()` so `organizationId` is already validated. */
+export const withOrganizationAccess = os.$context<ORPCContext>().middleware(
+  async ({ context, next }, input: { organizationId: string }) =>
+    await next({
+      context: {
+        auth: await assertOrganizationAccess({
+          headers: context.headers,
+          organizationId: input.organizationId,
+          user: context.user ?? undefined,
+        }),
+      },
+    })
 );

@@ -88,30 +88,23 @@ function createRouter(): ModelRouter {
   });
 }
 
-/** Process-wide router singleton with the product's fixed routing policy. */
-export function getModelRouter(): ModelRouter {
+function getModelRouter(): ModelRouter {
   router ??= createRouter();
   return router;
 }
 
-/**
- * Test/ops hook: replace the singleton (pass `null` to rebuild from env on
- * next access).
- */
+/** Test hook: replace the singleton (`null` rebuilds it from env on next access). */
 export function setModelRouter(next: ModelRouter | null): void {
   router = next;
 }
 
 /**
- * Create a routed language model. Backwards compatible with the previous
- * Vercel-only `gateway(modelId)` signature: without options the route falls
- * back to the configured default gateway. Pass `organizationId` to route by
- * plan and `gateway` to pin a specific gateway.
+ * Create a routed language model. Without options the route falls back to
+ * the configured default gateway. Pass `organizationId` to route by plan and
+ * `gateway` to pin a specific gateway.
  */
-export const gateway = (...args: GatewayArgs): GatewayResult => {
-  const [modelId, options] = args;
-  return getModelRouter().model(modelId, options);
-};
+export const gateway = (...[modelId, options]: GatewayArgs): GatewayResult =>
+  getModelRouter().model(modelId, options);
 
 export function resolveModelRoute(
   request: RouteRequest

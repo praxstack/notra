@@ -17,20 +17,21 @@ import {
 } from "../programs/geo";
 import { runGeoEffect } from "../runtime/geo";
 import { trackApiEvent } from "../utils/analytics";
-import { attachGeoOrganization, geoErrorResponse } from "../utils/geo";
+import {
+  attachGeoOrganization,
+  geoErrorResponse,
+  geoOutcomeResponse,
+} from "../utils/geo";
 import { createOpenApiApp } from "../utils/openapi-app";
 import { rateLimitResponse } from "../utils/openapi-responses";
 import { enforceRatelimit, RATE_LIMITS, ratelimit } from "../utils/ratelimit";
 
 export const geoAgentReadinessRoutes = createOpenApiApp();
 
-const GEO_TAG = GEO_OPENAPI_TAG;
-const commonErrors = GEO_COMMON_ERROR_RESPONSES;
-
 const getReadinessRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/geo/agent-readiness",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "getGeoAgentReadiness",
   summary: "Get the latest agent readiness report",
   description:
@@ -43,14 +44,14 @@ const getReadinessRoute = createRoute({
         "application/json": { schema: agentReadinessResponseSchema },
       },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
 const startScanRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/geo/agent-readiness/scan",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "startGeoAgentReadinessScan",
   summary: "Start an agent readiness scan",
   description:
@@ -63,7 +64,7 @@ const startScanRoute = createRoute({
         "application/json": { schema: agentReadinessScanResponseSchema },
       },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
     429: rateLimitResponse(
       RATE_LIMITS.agentReadinessScan.requests,
       RATE_LIMITS.agentReadinessScan.window
@@ -79,11 +80,7 @@ geoAgentReadinessRoutes.openapi(getReadinessRoute, async (c) => {
     "agentReadiness",
     getGeoAgentReadiness({ organizationId: base.organizationId, projectId })
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(attachGeoOrganization(base.organization, outcome.value), 200);
+  return geoOutcomeResponse(c, outcome, 200);
 });
 
 geoAgentReadinessRoutes.openapi(startScanRoute, async (c) => {

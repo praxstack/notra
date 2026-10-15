@@ -11,7 +11,7 @@ const AUTUMN_SECRET_KEY = process.env.AUTUMN_SECRET_KEY;
  */
 export const AUTUMN_READ_TIMEOUT_MS = 5000;
 
-export interface AutumnClient {
+interface AutumnClient {
   check: Autumn["check"];
   track: Autumn["track"];
   customers: Pick<Autumn["customers"], "getOrCreate" | "update" | "delete">;

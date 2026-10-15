@@ -1,3 +1,7 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { loadRenderFont } from "@notra/ai/utils/render-font";
 import { Resvg } from "@resvg/resvg-js";
 import * as echarts from "echarts";
@@ -20,13 +24,11 @@ export async function renderChart(input: ChartInput): Promise<Buffer> {
   let fontDirectory: string | undefined;
   try {
     fontDirectory = await mkdtemp(join(tmpdir(), "notra-chart-"));
-    const fontFiles = [
-      join(fontDirectory, "regular.ttf"),
-      join(fontDirectory, "bold.ttf"),
-    ];
+    const regularFile = join(fontDirectory, "regular.ttf");
+    const boldFile = join(fontDirectory, "bold.ttf");
     await Promise.all([
-      writeFile(join(fontDirectory, "regular.ttf"), Buffer.from(regular)),
-      writeFile(join(fontDirectory, "bold.ttf"), Buffer.from(bold)),
+      writeFile(regularFile, Buffer.from(regular)),
+      writeFile(boldFile, Buffer.from(bold)),
     ]);
     renderer.setOption({
       animation: false,
@@ -80,7 +82,7 @@ export async function renderChart(input: ChartInput): Promise<Buffer> {
       font: {
         loadSystemFonts: false,
         defaultFontFamily: "Inter",
-        fontFiles,
+        fontFiles: [regularFile, boldFile],
       },
     })
       .render()
@@ -92,6 +94,3 @@ export async function renderChart(input: ChartInput): Promise<Buffer> {
     }
   }
 }
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";

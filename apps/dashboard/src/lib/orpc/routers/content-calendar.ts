@@ -18,14 +18,13 @@ import {
 } from "@notra/schemas/dashboard/content-calendar";
 
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { openScheduledPullRequestAhead } from "@/lib/content/scheduled-publication-destinations";
 import { runScheduledPublicationSweep } from "@/lib/content/scheduled-publication-sweep";
 import { afterResponse } from "@/lib/framework/after-response";
 import { getTranslations } from "@/lib/i18n/server";
 
-import { baseProcedure } from "../base";
+import { baseProcedure, withOrganizationAccess } from "../base";
 import { badRequest, conflict, notFound } from "../utils/errors";
 
 const IMMEDIATE_PUBLISH_WINDOW_MS = 60 * 1000;
@@ -70,11 +69,8 @@ function publishDueNow(postId: string) {
 export const contentCalendarRouter = {
   list: baseProcedure
     .input(contentCalendarRangeInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       if (
         input.projectId &&
         !(await isProjectInOrganization(input.organizationId, input.projectId))
@@ -90,11 +86,8 @@ export const contentCalendarRouter = {
     }),
   get: baseProcedure
     .input(contentInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       return {
         schedule: await getPostSchedule({
           organizationId: input.organizationId,
@@ -104,11 +97,9 @@ export const contentCalendarRouter = {
     }),
   schedule: baseProcedure
     .input(schedulePostInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       await assertActiveSubscription(input.organizationId, "content.schedule");
 
       const scheduledAt = new Date(input.scheduledAt);
@@ -160,11 +151,9 @@ export const contentCalendarRouter = {
     }),
   cancel: baseProcedure
     .input(contentInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       const result = await cancelPostSchedule({
         organizationId: input.organizationId,
         postId: input.contentId,
@@ -188,11 +177,8 @@ export const contentCalendarRouter = {
     }),
   publishNow: baseProcedure
     .input(contentInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       await assertActiveSubscription(
         input.organizationId,
         "content.schedule.publishNow"
@@ -215,11 +201,8 @@ export const contentCalendarRouter = {
     }),
   retry: baseProcedure
     .input(scheduledPublicationIdInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       await assertActiveSubscription(
         input.organizationId,
         "content.schedule.retry"

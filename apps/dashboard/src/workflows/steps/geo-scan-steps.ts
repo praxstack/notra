@@ -28,6 +28,7 @@ import {
   trackGeoScanStepResult,
 } from "@/lib/analytics/geo-workflow-events";
 import { geoCoreDashboardLayer } from "@/lib/geo/configure";
+import type { GeoDashboardRuntime } from "@/types/geo-runtime";
 
 function parseClaimedAt(claimedAt?: string): Date | undefined {
   if (!claimedAt) {
@@ -57,16 +58,30 @@ async function flushObservability(): Promise<void> {
   await flushPostHogServer();
 }
 
+async function runScanBatch<E>(
+  context: GeoScanProjectContext,
+  batch: Effect.Effect<GeoScanBatchOutcome, E, GeoDashboardRuntime>
+): Promise<GeoScanBatchOutcome> {
+  try {
+    const outcome = await Effect.runPromise(
+      batch.pipe(Effect.provide(geoCoreDashboardLayer))
+    );
+    await publishBatchProgress(context, outcome);
+    return outcome;
+  } finally {
+    await flushObservability();
+  }
+}
+
 export async function listGeoScanProjectsStep(
   organizationId: string,
-  options: { projectId?: string; projectIds?: string[]; claimedAt?: string }
+  options: { projectId?: string; claimedAt?: string }
 ): Promise<string[]> {
   "use step";
   try {
     return await Effect.runPromise(
       listGeoScanProjects(organizationId, {
         projectId: options.projectId,
-        projectIds: options.projectIds,
         claimedAt: parseClaimedAt(options.claimedAt),
       }).pipe(Effect.provide(geoCoreDashboardLayer))
     );
@@ -148,17 +163,7 @@ export async function runGeoScanTaskBatchStep(
   tasks: GeoScanPlannedTask[]
 ): Promise<GeoScanBatchOutcome> {
   "use step";
-  try {
-    const outcome = await Effect.runPromise(
-      runGeoScanTaskBatch(context, tasks).pipe(
-        Effect.provide(geoCoreDashboardLayer)
-      )
-    );
-    await publishBatchProgress(context, outcome);
-    return outcome;
-  } finally {
-    await flushObservability();
-  }
+  return await runScanBatch(context, runGeoScanTaskBatch(context, tasks));
 }
 
 export async function runGeoScanSequenceBatchStep(
@@ -166,17 +171,10 @@ export async function runGeoScanSequenceBatchStep(
   sequences: GeoScanPlannedSequence[]
 ): Promise<GeoScanBatchOutcome> {
   "use step";
-  try {
-    const outcome = await Effect.runPromise(
-      runGeoScanSequenceBatch(context, sequences).pipe(
-        Effect.provide(geoCoreDashboardLayer)
-      )
-    );
-    await publishBatchProgress(context, outcome);
-    return outcome;
-  } finally {
-    await flushObservability();
-  }
+  return await runScanBatch(
+    context,
+    runGeoScanSequenceBatch(context, sequences)
+  );
 }
 
 export async function runGeoScanPersonaBatchStep(
@@ -184,17 +182,7 @@ export async function runGeoScanPersonaBatchStep(
   personas: GeoScanPlannedPersona[]
 ): Promise<GeoScanBatchOutcome> {
   "use step";
-  try {
-    const outcome = await Effect.runPromise(
-      runGeoScanPersonaBatch(context, personas).pipe(
-        Effect.provide(geoCoreDashboardLayer)
-      )
-    );
-    await publishBatchProgress(context, outcome);
-    return outcome;
-  } finally {
-    await flushObservability();
-  }
+  return await runScanBatch(context, runGeoScanPersonaBatch(context, personas));
 }
 
 export async function finalizeGeoScanProjectStep(

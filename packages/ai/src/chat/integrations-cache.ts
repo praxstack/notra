@@ -132,9 +132,3 @@ async function loadStandaloneChatIntegrations(
 
   return [...github, ...linear, ...granola];
 }
-
-export const standaloneChatResolvers = {
-  resolveContext: getGitHubToolRepositoryContextByIntegrationId,
-  resolveLinearContext: getLinearToolContextByIntegrationId,
-  resolveGranolaContext: getGranolaToolContextByIntegrationId,
-};

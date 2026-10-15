@@ -79,16 +79,6 @@ export const githubAppWebhookPayloadSchema = z.object({
   installation: installationSchema.optional(),
 });
 
-export const contentPublicationStatusSchema = z.enum(
-  CONTENT_PUBLICATION_STATUSES
-);
-
-export const githubMentionDestinationModeSchema = z.enum([
-  "same_pull_request",
-  "new_pull_request",
-  "reply_only",
-]);
-
 export const githubMentionDirectorySchema = z.object({
   path: z
     .string()

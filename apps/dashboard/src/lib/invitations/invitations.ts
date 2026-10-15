@@ -12,7 +12,7 @@ import {
 } from "@/constants/cookies";
 import { upsertMembership } from "@/lib/auth/membership-upsert";
 import { getAuthIdentity } from "@/lib/auth/server";
-import { isWorkOSNotFound } from "@/lib/auth/workos-error";
+import { nullIfWorkOSNotFound } from "@/lib/auth/workos-error";
 import type {
   InvitationActionResult,
   InvitationPageData,
@@ -20,15 +20,10 @@ import type {
   InvitationViewer,
 } from "@/types/invitation";
 
-async function findInvitation(token: string): Promise<Invitation | null> {
-  try {
-    return await getWorkOS().userManagement.findInvitationByToken(token);
-  } catch (error) {
-    if (isWorkOSNotFound(error)) {
-      return null;
-    }
-    throw error;
-  }
+function findInvitation(token: string): Promise<Invitation | null> {
+  return getWorkOS()
+    .userManagement.findInvitationByToken(token)
+    .catch(nullIfWorkOSNotFound);
 }
 
 function unavailableReason(

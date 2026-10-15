@@ -169,13 +169,3 @@ export function hasEnabledLinearIntegration(
 ): boolean {
   return validatedIntegrations.some((i) => i.type === "linear" && i.enabled);
 }
-
-export function getRepoContexts(
-  validatedIntegrations: ValidatedIntegration[]
-): Array<{ owner: string; repo: string }> {
-  return validatedIntegrations.flatMap((i) =>
-    i.type === "github"
-      ? i.repositories.map((r) => ({ owner: r.owner, repo: r.repo }))
-      : []
-  );
-}

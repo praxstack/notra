@@ -84,9 +84,7 @@ export const POST = withEvlog(async function POST(
   try {
     const { organizationId } = await params;
 
-    log.set({
-      feature: "standalone_chat",
-    });
+    log.set({ feature: "standalone_chat" });
 
     const auth = await withOrganizationAuth(request, organizationId);
 
@@ -169,47 +167,38 @@ export const POST = withEvlog(async function POST(
       return rateLimited;
     }
 
-    let useMarkup = false;
-    let chargeAiCredits = false;
-    let billingMode: string | null = null;
-    if (autumn || allowUnmeteredAiInDevelopment) {
-      let billing: Awaited<ReturnType<typeof checkChatBilling>>;
-      try {
-        billing = await checkChatBilling(organizationId);
-      } catch (checkError) {
-        log.error(
-          checkError instanceof Error ? checkError : String(checkError),
-          { billingCheck: "failed" }
-        );
-        trackBlocked("BILLING_ERROR");
-        return Response.json(
-          { error: "Failed to check usage limits", code: "BILLING_ERROR" },
-          { status: 500 }
-        );
-      }
-
-      if (!billing.allowed) {
-        trackBlocked("USAGE_LIMIT_REACHED");
-        return Response.json(
-          {
-            error: "Usage limit reached",
-            code: "USAGE_LIMIT_REACHED",
-            balance: billing.balanceRemaining ?? 0,
-          },
-          { status: 403 }
-        );
-      }
-
-      useMarkup = billing.useMarkup;
-      chargeAiCredits = billing.chargeAiCredits;
-      billingMode = billing.mode;
-    } else {
+    if (!(autumn || allowUnmeteredAiInDevelopment)) {
       trackBlocked("BILLING_UNAVAILABLE");
       return Response.json(
         { error: "Billing service is unavailable", code: "BILLING_ERROR" },
         { status: 503 }
       );
     }
+    let billing: Awaited<ReturnType<typeof checkChatBilling>>;
+    try {
+      billing = await checkChatBilling(organizationId);
+    } catch (checkError) {
+      log.error(checkError instanceof Error ? checkError : String(checkError), {
+        billingCheck: "failed",
+      });
+      trackBlocked("BILLING_ERROR");
+      return Response.json(
+        { error: "Failed to check usage limits", code: "BILLING_ERROR" },
+        { status: 500 }
+      );
+    }
+    if (!billing.allowed) {
+      trackBlocked("USAGE_LIMIT_REACHED");
+      return Response.json(
+        {
+          error: "Usage limit reached",
+          code: "USAGE_LIMIT_REACHED",
+          balance: billing.balanceRemaining ?? 0,
+        },
+        { status: 403 }
+      );
+    }
+    const { useMarkup, chargeAiCredits, mode: billingMode } = billing;
 
     cleanupOrganizationId = organizationId;
     cleanupChatId = chatId;
@@ -437,8 +426,6 @@ async function createDirectStandaloneChatResponse({
   projectId?: string;
   surface?: ChatWorkflowPayload["surface"];
 }) {
-  const autumnClient = autumn;
-
   const lifecycle = await createChatStreamLifecycle({
     organizationId,
     chatId,
@@ -496,11 +483,7 @@ async function createDirectStandaloneChatResponse({
           usageSnapshot.cacheWriteTokens =
             usage.inputTokenDetails?.cacheWriteTokens ?? 0;
 
-          if (
-            !autumnClient ||
-            allowUnmeteredAiInDevelopment ||
-            !chargeAiCredits
-          ) {
+          if (!autumn || allowUnmeteredAiInDevelopment || !chargeAiCredits) {
             return;
           }
 
@@ -515,7 +498,7 @@ async function createDirectStandaloneChatResponse({
           );
 
           try {
-            await autumnClient.track({
+            await autumn.track({
               customerId: organizationId,
               featureId: FEATURES.AI_CREDITS,
               value: cost.costCents,

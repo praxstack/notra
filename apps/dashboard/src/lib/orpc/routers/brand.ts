@@ -6,6 +6,10 @@ import {
 } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
 import { deleteQstashSchedule } from "@notra/ai/qstash/triggers";
+import {
+  isUnmeteredReference,
+  withReferenceBillingFlag,
+} from "@notra/ai/utils/brand-references";
 import { redis } from "@notra/ai/utils/redis";
 import { logError } from "@notra/ai/utils/server-log";
 import { db } from "@notra/db/drizzle";
@@ -21,6 +25,7 @@ import {
   connectedSocialAccounts,
   contentTriggers,
 } from "@notra/db/schema";
+import type { BrandReferenceMemoryLink } from "@notra/db/types/supermemory";
 import { deleteBrandReferenceMemory } from "@notra/db/utils/supermemory";
 import { invalidateGeoIngestHostsCacheForBrand } from "@notra/geo-core/geo/ingest";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
@@ -60,7 +65,6 @@ import {
 } from "@/constants/integration-analytics";
 import { normalizeTwitterProfileImageUrl } from "@/constants/twitter";
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
 import {
   attachBrandGuidelineSourcePdf,
@@ -75,12 +79,13 @@ import {
 import { countBrandVoices } from "@/lib/brand-voice-count";
 import { isUniqueConstraintError } from "@/lib/db/errors";
 import { getTranslations } from "@/lib/i18n/server";
-import { baseProcedure } from "@/lib/orpc/base";
+import { baseProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import {
   startBrandAnalysisRun,
   startBrandGuidelinesRun,
 } from "@/lib/workflows/start";
 import type { BrandReferenceSource } from "@/types/analytics/integration-events";
+import type { TrackServerEventInput } from "@/types/analytics/posthog";
 import type {
   BrandSettings as BrandVoiceOutput,
   ProgressData,
@@ -140,6 +145,19 @@ async function verifyVoiceOwnership(organizationId: string, voiceId: string) {
   return voice;
 }
 
+async function voiceNameTakenError() {
+  const tErrors = await getTranslations("errors.brand");
+  return conflict(tErrors("voiceNameTaken"));
+}
+
+async function listBrandVoices(organizationId: string) {
+  const voices = await db.query.brandSettings.findMany({
+    where: eq(brandSettings.organizationId, organizationId),
+    orderBy: [desc(brandSettings.isDefault), asc(brandSettings.createdAt)],
+  });
+  return { voices: voices.map(serializeBrandVoice) };
+}
+
 async function getGuidelineIdForVoice(voiceId: string) {
   const guideline = await db.query.brandGuidelines.findFirst({
     where: eq(brandGuidelines.brandSettingsId, voiceId),
@@ -151,6 +169,12 @@ async function getGuidelineIdForVoice(voiceId: string) {
   }
 
   return guideline.id;
+}
+
+async function getEditableGuidelineId(organizationId: string, voiceId: string) {
+  await assertActiveSubscription(organizationId);
+  await verifyVoiceOwnership(organizationId, voiceId);
+  return getGuidelineIdForVoice(voiceId);
 }
 
 async function getTriggersForBrandVoice(
@@ -184,17 +208,73 @@ async function getReferenceById(referenceId: string, voiceId: string) {
   });
 }
 
-function isMemorySyncFieldUpdate(data: {
-  applicableTo?: string[];
+function memoryLinkColumns(link: BrandReferenceMemoryLink) {
+  return {
+    supermemoryDocumentId: link.documentId,
+    supermemoryMemoryId: link.memoryId,
+    supermemorySyncedAt: new Date(),
+    supermemoryLastSyncError: null,
+  };
+}
+
+async function deleteMemoryDocumentQuietly(
+  documentId: string | null,
+  failureMessage: string
+) {
+  if (!documentId) {
+    return;
+  }
+  try {
+    await deleteBrandReferenceMemory({ documentId });
+  } catch (cleanupError) {
+    logError(failureMessage, cleanupError);
+  }
+}
+
+function isOriginalTweet(tweet: TwitterTweet) {
+  return !tweet.referenced_tweets?.some(
+    (reference) =>
+      reference.type === "quoted" || reference.type === "replied_to"
+  );
+}
+
+function trackReferenceLimitReached(
+  params: Omit<TrackServerEventInput, "event">
+) {
+  const { properties, ...event } = params;
+  trackServerEvent({
+    ...event,
+    event: POSTHOG_EVENTS.BRAND_REFERENCE_LIMIT_REACHED,
+    properties,
+  });
+  trackServerEvent({
+    ...event,
+    event: POSTHOG_EVENTS.QUOTA_EXCEEDED,
+    properties: { feature: REFERENCE_QUOTA_FEATURE },
+  });
+}
+
+interface MemorySyncFields {
+  applicableTo?: string[] | null;
   content?: string;
   note?: string | null;
   sourceUrl?: string | null;
-}) {
+}
+
+/** Only fields the client sent with a different value force a Supermemory re-sync. */
+function hasMemorySyncFieldChange(
+  existing: MemorySyncFields,
+  update: MemorySyncFields
+) {
+  const applicableToChanged =
+    update.applicableTo !== undefined &&
+    JSON.stringify(update.applicableTo) !==
+      JSON.stringify(existing.applicableTo ?? null);
   return (
-    Object.hasOwn(data, "content") ||
-    Object.hasOwn(data, "note") ||
-    Object.hasOwn(data, "applicableTo") ||
-    Object.hasOwn(data, "sourceUrl")
+    applicableToChanged ||
+    (update.content !== undefined && update.content !== existing.content) ||
+    (update.note !== undefined && update.note !== existing.note) ||
+    (update.sourceUrl !== undefined && update.sourceUrl !== existing.sourceUrl)
   );
 }
 
@@ -279,29 +359,13 @@ export const brandRouter = {
   voices: {
     list: baseProcedure
       .input(organizationIdInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
-        const voices = await db.query.brandSettings.findMany({
-          where: eq(brandSettings.organizationId, input.organizationId),
-          orderBy: [
-            desc(brandSettings.isDefault),
-            asc(brandSettings.createdAt),
-          ],
-        });
-
-        return { voices: voices.map(serializeBrandVoice) };
-      }),
+      .use(withOrganizationAccess)
+      .handler(({ input }) => listBrandVoices(input.organizationId)),
     create: baseProcedure
       .input(voiceCreateInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+        const { auth } = context;
         await assertActiveSubscription(input.organizationId);
 
         const name =
@@ -316,8 +380,7 @@ export const brandRouter = {
         });
 
         if (existingVoice) {
-          const tErrors = await getTranslations("errors.brand");
-          throw conflict(tErrors("voiceNameTaken"));
+          throw await voiceNameTakenError();
         }
 
         const websiteUrl = await validateWebsiteUrl(input.websiteUrl);
@@ -328,7 +391,7 @@ export const brandRouter = {
         });
 
         try {
-          const voice = await db
+          const [createdVoice] = await db
             .insert(brandSettings)
             .values({
               id: randomUUID(),
@@ -338,8 +401,6 @@ export const brandRouter = {
               websiteUrl,
             })
             .returning();
-
-          const createdVoice = voice[0];
 
           if (!createdVoice) {
             throw internalServerError("Failed to create brand voice");
@@ -361,8 +422,7 @@ export const brandRouter = {
           return { voice: serializeBrandVoice(createdVoice) };
         } catch (error) {
           if (isUniqueConstraintError(error)) {
-            const tErrors = await getTranslations("errors.brand");
-            throw conflict(tErrors("voiceNameTaken"));
+            throw await voiceNameTakenError();
           }
 
           throw internalServerError("Failed to create brand voice", error);
@@ -370,11 +430,8 @@ export const brandRouter = {
       }),
     update: baseProcedure
       .input(voiceUpdateInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await assertActiveSubscription(input.organizationId);
 
         const voice = await verifyVoiceOwnership(
@@ -414,19 +471,10 @@ export const brandRouter = {
             );
           }
 
-          const voices = await db.query.brandSettings.findMany({
-            where: eq(brandSettings.organizationId, input.organizationId),
-            orderBy: [
-              desc(brandSettings.isDefault),
-              asc(brandSettings.createdAt),
-            ],
-          });
-
-          return { voices: voices.map(serializeBrandVoice) };
+          return await listBrandVoices(input.organizationId);
         } catch (error) {
           if (isUniqueConstraintError(error)) {
-            const tErrors = await getTranslations("errors.brand");
-            throw conflict(tErrors("voiceNameTaken"));
+            throw await voiceNameTakenError();
           }
 
           throw internalServerError("Failed to update brand settings", error);
@@ -434,12 +482,9 @@ export const brandRouter = {
       }),
     delete: baseProcedure
       .input(voiceInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+        const { auth } = context;
         const voice = await verifyVoiceOwnership(
           input.organizationId,
           input.voiceId
@@ -521,11 +566,9 @@ export const brandRouter = {
       }),
     setDefault: baseProcedure
       .input(setDefaultVoiceInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+        const { auth } = context;
         await assertActiveSubscription(input.organizationId);
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
@@ -558,24 +601,12 @@ export const brandRouter = {
           },
         });
 
-        const voices = await db.query.brandSettings.findMany({
-          where: eq(brandSettings.organizationId, input.organizationId),
-          orderBy: [
-            desc(brandSettings.isDefault),
-            asc(brandSettings.createdAt),
-          ],
-        });
-
-        return { voices: voices.map(serializeBrandVoice) };
+        return listBrandVoices(input.organizationId);
       }),
     affectedTriggers: baseProcedure
       .input(voiceInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
         const affectedTriggers = await getTriggersForBrandVoice(
@@ -604,12 +635,8 @@ export const brandRouter = {
   analysis: {
     getProgress: baseProcedure
       .input(organizationIdInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         const progress = redis
           ? await redis.get<ProgressData>(
               `brand:progress:${input.organizationId}`
@@ -628,11 +655,9 @@ export const brandRouter = {
       }),
     start: baseProcedure
       .input(analyzeInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+        const { auth } = context;
         await assertActiveSubscription(input.organizationId);
 
         const url = await validateWebsiteUrl(input.url);
@@ -661,23 +686,17 @@ export const brandRouter = {
   guidelines: {
     get: baseProcedure
       .input(voiceInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
         return getBrandGuidelines(input.voiceId);
       }),
     refresh: baseProcedure
       .input(voiceInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+        const { auth } = context;
         await assertActiveSubscription(input.organizationId);
 
         const voice = await verifyVoiceOwnership(
@@ -723,15 +742,12 @@ export const brandRouter = {
       }),
     updateColor: baseProcedure
       .input(voiceInputSchema.and(updateGuidelineColorSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-        await assertActiveSubscription(input.organizationId);
-
-        await verifyVoiceOwnership(input.organizationId, input.voiceId);
-        const guidelineId = await getGuidelineIdForVoice(input.voiceId);
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
+        const guidelineId = await getEditableGuidelineId(
+          input.organizationId,
+          input.voiceId
+        );
 
         const updated = await db
           .update(brandGuidelineColors)
@@ -758,15 +774,12 @@ export const brandRouter = {
       }),
     updateFont: baseProcedure
       .input(voiceInputSchema.and(updateGuidelineFontSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-        await assertActiveSubscription(input.organizationId);
-
-        await verifyVoiceOwnership(input.organizationId, input.voiceId);
-        const guidelineId = await getGuidelineIdForVoice(input.voiceId);
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
+        const guidelineId = await getEditableGuidelineId(
+          input.organizationId,
+          input.voiceId
+        );
 
         const updated = await db
           .update(brandGuidelineFonts)
@@ -793,15 +806,12 @@ export const brandRouter = {
       }),
     updateToken: baseProcedure
       .input(voiceInputSchema.and(updateGuidelineTokenSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-        await assertActiveSubscription(input.organizationId);
-
-        await verifyVoiceOwnership(input.organizationId, input.voiceId);
-        const guidelineId = await getGuidelineIdForVoice(input.voiceId);
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
+        const guidelineId = await getEditableGuidelineId(
+          input.organizationId,
+          input.voiceId
+        );
 
         const updated = await db
           .update(brandGuidelineTokens)
@@ -826,15 +836,12 @@ export const brandRouter = {
       }),
     updateAsset: baseProcedure
       .input(voiceInputSchema.and(updateGuidelineAssetSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-        await assertActiveSubscription(input.organizationId);
-
-        await verifyVoiceOwnership(input.organizationId, input.voiceId);
-        const guidelineId = await getGuidelineIdForVoice(input.voiceId);
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
+        const guidelineId = await getEditableGuidelineId(
+          input.organizationId,
+          input.voiceId
+        );
 
         const updated = await db
           .update(brandGuidelineAssets)
@@ -869,15 +876,12 @@ export const brandRouter = {
       }),
     updateScreenshot: baseProcedure
       .input(voiceInputSchema.and(updateGuidelineScreenshotSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-        await assertActiveSubscription(input.organizationId);
-
-        await verifyVoiceOwnership(input.organizationId, input.voiceId);
-        const guidelineId = await getGuidelineIdForVoice(input.voiceId);
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
+        const guidelineId = await getEditableGuidelineId(
+          input.organizationId,
+          input.voiceId
+        );
 
         try {
           const updated = await db
@@ -909,15 +913,12 @@ export const brandRouter = {
       }),
     createColor: baseProcedure
       .input(voiceInputSchema.and(createGuidelineColorSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-        await assertActiveSubscription(input.organizationId);
-
-        await verifyVoiceOwnership(input.organizationId, input.voiceId);
-        const guidelineId = await getGuidelineIdForVoice(input.voiceId);
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
+        const guidelineId = await getEditableGuidelineId(
+          input.organizationId,
+          input.voiceId
+        );
 
         const sortOrderRows = await db
           .select({
@@ -941,15 +942,12 @@ export const brandRouter = {
       }),
     createAsset: baseProcedure
       .input(voiceInputSchema.and(createGuidelineAssetSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-        await assertActiveSubscription(input.organizationId);
-
-        await verifyVoiceOwnership(input.organizationId, input.voiceId);
-        const guidelineId = await getGuidelineIdForVoice(input.voiceId);
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
+        const guidelineId = await getEditableGuidelineId(
+          input.organizationId,
+          input.voiceId
+        );
 
         const sortOrderRows = await db
           .select({
@@ -977,11 +975,8 @@ export const brandRouter = {
       }),
     attachSourcePdf: baseProcedure
       .input(voiceInputSchema.and(attachGuidelineSourcePdfSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await assertActiveSubscription(input.organizationId);
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
@@ -1007,11 +1002,8 @@ export const brandRouter = {
       }),
     removeSourcePdf: baseProcedure
       .input(voiceInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await assertActiveSubscription(input.organizationId);
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
         return removeBrandGuidelineSourcePdf(input.voiceId);
@@ -1021,12 +1013,8 @@ export const brandRouter = {
   references: {
     list: baseProcedure
       .input(voiceInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
         const references = await db.query.brandReferences.findMany({
@@ -1038,16 +1026,19 @@ export const brandRouter = {
       }),
     create: baseProcedure
       .input(voiceInputSchema.and(createReferenceSchema))
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+        const { auth } = context;
         await assertActiveSubscription(input.organizationId);
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
-        const metadata = input.metadata ?? null;
+        const chargesReferenceQuota = Boolean(
+          autumn && !allowUnmeteredAiInDevelopment
+        );
+        const metadata = withReferenceBillingFlag(input.metadata, {
+          metered: chargesReferenceQuota,
+        });
         const tweetId = (metadata as Record<string, unknown> | null)?.tweetId;
         const metadataUrl = (metadata as Record<string, unknown> | null)?.url;
         const parsedMetadataUrl =
@@ -1083,23 +1074,18 @@ export const brandRouter = {
         const applicableTo: ApplicablePlatform[] = input.applicableTo ??
           typeDefaults[input.type] ?? ["all"];
 
-        if (autumn && !allowUnmeteredAiInDevelopment) {
-          let data: { allowed?: boolean } | null = null;
-
-          try {
-            data = await autumn.check({
+        if (autumn && chargesReferenceQuota) {
+          const data = await autumn
+            .check({
               customerId: input.organizationId,
               featureId: FEATURES.REFERENCES,
               requiredBalance: 1,
               sendEvent: true,
-            });
-          } catch {
-            data = null;
-          }
+            })
+            .catch(() => null);
 
           if (!data?.allowed) {
-            trackServerEvent({
-              event: POSTHOG_EVENTS.BRAND_REFERENCE_LIMIT_REACHED,
+            trackReferenceLimitReached({
               headers: context.headers,
               userId: auth.user.id,
               organizationId: input.organizationId,
@@ -1109,15 +1095,6 @@ export const brandRouter = {
                 type: input.type,
               },
             });
-            trackServerEvent({
-              event: POSTHOG_EVENTS.QUOTA_EXCEEDED,
-              headers: context.headers,
-              userId: auth.user.id,
-              organizationId: input.organizationId,
-              properties: {
-                feature: REFERENCE_QUOTA_FEATURE,
-              },
-            });
             const tErrors = await getTranslations("errors.brand");
             throw forbidden(tErrors("referenceLimitAdd"), {
               code: REFERENCE_LIMIT_REACHED_CODE,
@@ -1125,7 +1102,7 @@ export const brandRouter = {
           }
         }
 
-        const inserted = await db
+        const [reference] = await db
           .insert(brandReferences)
           .values({
             id: randomUUID(),
@@ -1139,8 +1116,6 @@ export const brandRouter = {
             applicableTo,
           })
           .returning();
-
-        const reference = inserted[0];
 
         if (!reference) {
           throw internalServerError("Reference was not created");
@@ -1156,18 +1131,11 @@ export const brandRouter = {
           });
           createdDocumentId = link.documentId;
 
-          const synced = await db
+          const [syncedReference] = await db
             .update(brandReferences)
-            .set({
-              supermemoryDocumentId: link.documentId,
-              supermemoryMemoryId: link.memoryId,
-              supermemorySyncedAt: new Date(),
-              supermemoryLastSyncError: null,
-            })
+            .set(memoryLinkColumns(link))
             .where(eq(brandReferences.id, reference.id))
             .returning();
-
-          const syncedReference = synced[0];
 
           if (!syncedReference) {
             throw internalServerError("Reference was not created");
@@ -1193,20 +1161,12 @@ export const brandRouter = {
             .delete(brandReferences)
             .where(eq(brandReferences.id, reference.id));
 
-          if (createdDocumentId) {
-            try {
-              await deleteBrandReferenceMemory({
-                documentId: createdDocumentId,
-              });
-            } catch (cleanupError) {
-              logError(
-                "Error cleaning up failed Supermemory reference",
-                cleanupError
-              );
-            }
-          }
+          await deleteMemoryDocumentQuietly(
+            createdDocumentId,
+            "Error cleaning up failed Supermemory reference"
+          );
 
-          if (autumn) {
+          if (autumn && chargesReferenceQuota) {
             await autumn.track({
               customerId: input.organizationId,
               featureId: FEATURES.REFERENCES,
@@ -1222,11 +1182,8 @@ export const brandRouter = {
       }),
     update: baseProcedure
       .input(referenceInputSchema.and(updateReferenceSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await assertActiveSubscription(input.organizationId);
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
@@ -1244,7 +1201,7 @@ export const brandRouter = {
           input.sourceUrl !== undefined &&
           input.sourceUrl !== existing.sourceUrl;
 
-        const updated = await db
+        const [reference] = await db
           .update(brandReferences)
           .set({
             note: input.note,
@@ -1259,14 +1216,17 @@ export const brandRouter = {
           .where(eq(brandReferences.id, input.referenceId))
           .returning();
 
-        const reference = updated[0];
-
         if (!reference) {
           throw internalServerError("Reference update failed");
         }
 
+        // A previously failed or missing sync retries on any save.
+        const memoryOutOfSync =
+          existing.supermemoryDocumentId === null ||
+          existing.supermemoryLastSyncError !== null;
         if (
-          !isMemorySyncFieldUpdate({
+          !memoryOutOfSync &&
+          !hasMemorySyncFieldChange(existing, {
             content: input.content,
             note: input.note,
             sourceUrl: input.sourceUrl,
@@ -1288,12 +1248,7 @@ export const brandRouter = {
 
           await db
             .update(brandReferences)
-            .set({
-              supermemoryDocumentId: link.documentId,
-              supermemoryMemoryId: link.memoryId,
-              supermemorySyncedAt: new Date(),
-              supermemoryLastSyncError: null,
-            })
+            .set(memoryLinkColumns(link))
             .where(eq(brandReferences.id, input.referenceId));
 
           if (
@@ -1330,18 +1285,10 @@ export const brandRouter = {
         } catch (error) {
           logError("Error syncing updated reference to Supermemory", error);
 
-          if (createdDocumentId) {
-            try {
-              await deleteBrandReferenceMemory({
-                documentId: createdDocumentId,
-              });
-            } catch (cleanupError) {
-              logError(
-                "Error cleaning up failed updated Supermemory reference",
-                cleanupError
-              );
-            }
-          }
+          await deleteMemoryDocumentQuietly(
+            createdDocumentId,
+            "Error cleaning up failed updated Supermemory reference"
+          );
 
           await db
             .update(brandReferences)
@@ -1361,12 +1308,8 @@ export const brandRouter = {
       }),
     delete: baseProcedure
       .input(referenceInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
         const existing = await getReferenceById(
@@ -1388,7 +1331,7 @@ export const brandRouter = {
           .delete(brandReferences)
           .where(eq(brandReferences.id, input.referenceId));
 
-        if (autumn) {
+        if (autumn && !isUnmeteredReference(existing.metadata)) {
           await autumn.track({
             customerId: input.organizationId,
             featureId: FEATURES.REFERENCES,
@@ -1400,12 +1343,9 @@ export const brandRouter = {
       }),
     importTweets: baseProcedure
       .input(voiceInputSchema.and(importTweetsSchema))
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+        const { auth } = context;
         const { success: withinLimit } = await ratelimit.importTweets.limit(
           input.organizationId
         );
@@ -1417,7 +1357,7 @@ export const brandRouter = {
 
         await verifyVoiceOwnership(input.organizationId, input.voiceId);
 
-        const maxResults = input.maxResults;
+        const { maxResults } = input;
 
         const socialAccount = await db.query.connectedSocialAccounts.findFirst({
           where: and(
@@ -1491,15 +1431,7 @@ export const brandRouter = {
               ) ?? timeline.includes.users[0];
           }
 
-          const filtered = (timeline.data ?? []).filter(
-            (tweet) =>
-              !tweet.referenced_tweets?.some(
-                (reference) =>
-                  reference.type === "quoted" || reference.type === "replied_to"
-              )
-          );
-
-          for (const tweet of filtered) {
+          for (const tweet of (timeline.data ?? []).filter(isOriginalTweet)) {
             originalTweets.push(tweet);
 
             if (originalTweets.length >= maxResults) {
@@ -1518,14 +1450,7 @@ export const brandRouter = {
         }
 
         let tweets = originalTweets;
-        const isPinnedOriginal =
-          pinnedTweet &&
-          !pinnedTweet.referenced_tweets?.some(
-            (reference) =>
-              reference.type === "quoted" || reference.type === "replied_to"
-          );
-
-        if (isPinnedOriginal) {
+        if (pinnedTweet && isOriginalTweet(pinnedTweet)) {
           tweets = tweets.filter((tweet) => tweet.id !== pinnedTweet.id);
           tweets.unshift(pinnedTweet);
         }
@@ -1556,10 +1481,10 @@ export const brandRouter = {
 
         const existingTweetIds = new Set(
           existingRefs
-            .map((reference) => {
-              return (reference.metadata as Record<string, unknown> | null)
-                ?.tweetId;
-            })
+            .map(
+              (reference) =>
+                (reference.metadata as Record<string, unknown> | null)?.tweetId
+            )
             .filter(Boolean)
         );
 
@@ -1601,20 +1526,13 @@ export const brandRouter = {
 
         if (tweetsRequiringEntitlement > 0) {
           if (autumn) {
-            let data: {
-              allowed?: boolean;
-              balance?: { unlimited?: boolean; remaining?: number } | null;
-            } | null = null;
-
-            try {
-              data = await autumn.check({
+            const data = await autumn
+              .check({
                 customerId: input.organizationId,
                 featureId: FEATURES.REFERENCES,
                 requiredBalance: 1,
-              });
-            } catch {
-              data = null;
-            }
+              })
+              .catch(() => null);
 
             if (data?.allowed) {
               if (data.balance?.unlimited) {
@@ -1629,8 +1547,7 @@ export const brandRouter = {
           }
 
           if (freeImportCount === 0 && paidImportCount === 0) {
-            trackServerEvent({
-              event: POSTHOG_EVENTS.BRAND_REFERENCE_LIMIT_REACHED,
+            trackReferenceLimitReached({
               headers: context.headers,
               userId: auth.user.id,
               organizationId: input.organizationId,
@@ -1638,15 +1555,6 @@ export const brandRouter = {
                 voice_id: input.voiceId,
                 source: BRAND_REFERENCE_SOURCES.TWEET,
                 requested_count: newTweets.length,
-              },
-            });
-            trackServerEvent({
-              event: POSTHOG_EVENTS.QUOTA_EXCEEDED,
-              headers: context.headers,
-              userId: auth.user.id,
-              organizationId: input.organizationId,
-              properties: {
-                feature: REFERENCE_QUOTA_FEATURE,
               },
             });
             const tErrors = await getTranslations("errors.brand");
@@ -1658,22 +1566,25 @@ export const brandRouter = {
 
         newTweets = newTweets.slice(0, freeImportCount + paidImportCount);
 
-        const values = newTweets.map((tweet) => ({
+        const values = newTweets.map((tweet, index) => ({
           id: randomUUID(),
           brandSettingsId: input.voiceId,
           type: "twitter_post" as const,
           content: tweet.text,
-          metadata: {
-            tweetId: tweet.id,
-            authorHandle,
-            authorName,
-            url: `https://x.com/${authorHandle}/status/${tweet.id}`,
-            likes: tweet.public_metrics?.like_count ?? 0,
-            retweets: tweet.public_metrics?.retweet_count ?? 0,
-            replies: tweet.public_metrics?.reply_count ?? 0,
-            profileImageUrl,
-            createdAt: tweet.created_at ?? new Date().toISOString(),
-          },
+          metadata: withReferenceBillingFlag(
+            {
+              tweetId: tweet.id,
+              authorHandle,
+              authorName,
+              url: `https://x.com/${authorHandle}/status/${tweet.id}`,
+              likes: tweet.public_metrics?.like_count ?? 0,
+              retweets: tweet.public_metrics?.retweet_count ?? 0,
+              replies: tweet.public_metrics?.reply_count ?? 0,
+              profileImageUrl,
+              createdAt: tweet.created_at ?? new Date().toISOString(),
+            },
+            { metered: Boolean(autumn) && index >= freeImportCount }
+          ),
           note: null,
           sourceCapturedAt: new Date(),
           sourceUrl: `https://x.com/${authorHandle}/status/${tweet.id}`,
@@ -1684,10 +1595,6 @@ export const brandRouter = {
           .insert(brandReferences)
           .values(values)
           .returning();
-
-        const freeReferenceIds = new Set(
-          inserted.slice(0, freeImportCount).map((reference) => reference.id)
-        );
 
         let syncedCount = 0;
         let syncedBillableCount = 0;
@@ -1705,36 +1612,27 @@ export const brandRouter = {
 
             await db
               .update(brandReferences)
-              .set({
-                supermemoryDocumentId: link.documentId,
-                supermemoryMemoryId: link.memoryId,
-                supermemorySyncedAt: new Date(),
-                supermemoryLastSyncError: null,
-              })
+              .set(memoryLinkColumns(link))
               .where(eq(brandReferences.id, reference.id));
             syncedCount += 1;
-            if (!freeReferenceIds.has(reference.id)) {
+            if (!isUnmeteredReference(reference.metadata)) {
               syncedBillableCount += 1;
             }
           } catch (error) {
             logError("Error syncing imported tweet to Supermemory", error);
 
-            if (createdDocumentId) {
-              try {
-                await deleteBrandReferenceMemory({
-                  documentId: createdDocumentId,
-                });
-              } catch (cleanupError) {
-                logError(
-                  "Error cleaning up imported Supermemory reference",
-                  cleanupError
-                );
-              }
-            }
+            await deleteMemoryDocumentQuietly(
+              createdDocumentId,
+              "Error cleaning up imported Supermemory reference"
+            );
 
+            // Unsynced imports are never billed, so deleting them must not refund.
             await db
               .update(brandReferences)
               .set({
+                metadata: withReferenceBillingFlag(reference.metadata, {
+                  metered: false,
+                }),
                 supermemoryLastSyncError:
                   error instanceof Error
                     ? error.message
@@ -1786,12 +1684,8 @@ export const brandRouter = {
       }),
     fetchTweet: baseProcedure
       .input(voiceInputSchema.and(fetchTweetSchema))
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         const { success: withinLimit } = await ratelimit.fetchTweet.limit(
           input.organizationId
         );

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { withReferenceBillingFlag } from "@notra/ai/utils/brand-references";
 import { db } from "@notra/db/drizzle";
 import { brandReferences, brandSettings } from "@notra/db/schema";
 import type { BrandReferenceMemorySyncResult } from "@notra/db/types/brand-reference-memory";
@@ -132,7 +133,10 @@ export async function addBrandReferences(
       brandSettingsId: settings.id,
       content: reference.content,
       id: randomUUID(),
-      metadata: buildReferenceMetadata(reference),
+      // Onboarding references never charge the REFERENCES quota.
+      metadata: withReferenceBillingFlag(buildReferenceMetadata(reference), {
+        metered: false,
+      }),
       note: reference.note ?? null,
       sourceCapturedAt: reference.sourceCapturedAt
         ? new Date(reference.sourceCapturedAt)

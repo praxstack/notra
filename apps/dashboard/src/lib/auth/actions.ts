@@ -12,59 +12,55 @@ import { getAuthIdentity, getAuthSession } from "@/lib/auth/server";
 import { retryTransientDbError } from "@/lib/db/retry";
 import { getLastVisitedProject } from "@/utils/cookies";
 
-const getOrganizationAccess = cacheAuthRequest(async (rawSlug: string) => {
-  const slugValidation = organizationSlugParamSchema.safeParse(rawSlug);
+export const validateOrganizationAccess = cacheAuthRequest(
+  async (rawSlug: string) => {
+    const slugValidation = organizationSlugParamSchema.safeParse(rawSlug);
 
-  if (!slugValidation.success) {
-    throw notFound();
-  }
-
-  const slug = slugValidation.data;
-  const session = await getAuthIdentity();
-
-  if (!session?.user) {
-    if (await isSessionBanned()) {
-      throw redirect({ href: "/auth/banned" });
+    if (!slugValidation.success) {
+      throw notFound();
     }
-    throw redirect({
-      href: `/login?returnTo=${encodeURIComponent(`/${slug}`)}`,
-    });
-  }
 
-  const organization = await retryTransientDbError(() =>
-    db.query.organizations.findFirst({
-      where: eq(organizations.slug, slug),
-      with: {
-        members: {
-          where: eq(members.userId, session.user.id),
+    const slug = slugValidation.data;
+    const session = await getAuthIdentity();
+
+    if (!session?.user) {
+      if (await isSessionBanned()) {
+        throw redirect({ href: "/auth/banned" });
+      }
+      throw redirect({
+        href: `/login?returnTo=${encodeURIComponent(`/${slug}`)}`,
+      });
+    }
+
+    const organization = await retryTransientDbError(() =>
+      db.query.organizations.findFirst({
+        where: eq(organizations.slug, slug),
+        with: {
+          members: {
+            where: eq(members.userId, session.user.id),
+          },
         },
-      },
-    })
-  );
+      })
+    );
 
-  if (!organization || organization.members.length === 0) {
-    const fallback = await getLastActiveOrganizationForUser(session.user.id);
-    if (fallback && fallback.slug !== slug) {
-      throw redirect({ href: `/${fallback.slug}` });
+    if (!organization || organization.members.length === 0) {
+      const fallback = await getLastActiveOrganizationForUser(session.user.id);
+      if (fallback && fallback.slug !== slug) {
+        throw redirect({ href: `/${fallback.slug}` });
+      }
+      throw notFound();
     }
-    throw notFound();
+
+    return {
+      organization,
+      user: session.user,
+      member: organization.members[0],
+    };
   }
+);
 
-  return {
-    organization,
-    user: session.user,
-    member: organization.members[0],
-  };
-});
-
-export async function validateOrganizationAccess(rawSlug: string) {
-  return getOrganizationAccess(rawSlug);
-}
-
-export async function getSession() {
-  const session = await getAuthSession();
-
-  return session;
+export function getSession() {
+  return getAuthSession();
 }
 
 const getLastActiveOrganizationForUser = cacheAuthRequest(
@@ -150,16 +146,6 @@ export const getLastActiveOrganization = cacheAuthRequest(async () => {
   return getLastActiveOrganizationForUser(session.user.id);
 });
 
-async function getAllOrganizationsForUser(userId: string) {
-  return retryTransientDbError(() =>
-    db
-      .select({ slug: organizations.slug, id: organizations.id })
-      .from(members)
-      .innerJoin(organizations, eq(organizations.id, members.organizationId))
-      .where(eq(members.userId, userId))
-  );
-}
-
 export const getAllUserOrganizations = cacheAuthRequest(async () => {
   const session = await getAuthSession();
 
@@ -167,5 +153,12 @@ export const getAllUserOrganizations = cacheAuthRequest(async () => {
     return [];
   }
 
-  return getAllOrganizationsForUser(session.user.id);
+  const userId = session.user.id;
+  return retryTransientDbError(() =>
+    db
+      .select({ slug: organizations.slug, id: organizations.id })
+      .from(members)
+      .innerJoin(organizations, eq(organizations.id, members.organizationId))
+      .where(eq(members.userId, userId))
+  );
 });

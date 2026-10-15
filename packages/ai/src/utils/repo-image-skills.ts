@@ -40,6 +40,7 @@ import { Data, Effect } from "effect";
 
 import { formatBrandGuidelineSourceInstructions } from "./brand-guideline-source";
 import { withBoxRetry } from "./repo-image-box";
+import { shellQuote } from "./shell";
 
 type RepoImageBox = Awaited<ReturnType<typeof Box.create>>;
 
@@ -75,7 +76,7 @@ export async function injectExcalidrawDiagramSkill(params: {
 }) {
   await Effect.runPromise(
     Effect.all([
-      writeSandboxSkillEffect({
+      writeSandboxTextFileEffect({
         box: params.box,
         dir: DIAGRAM_SKILL_DIR,
         path: DIAGRAM_SKILL_PATH,
@@ -110,7 +111,7 @@ const injectBrandIdentitySkillEffect = Effect.fn("injectBrandIdentitySkill")(
       return null;
     }
 
-    yield* writeSandboxSkillEffect({
+    yield* writeSandboxTextFileEffect({
       box: params.box,
       dir: BRAND_IDENTITY_SKILL_DIR,
       path: BRAND_IDENTITY_SKILL_PATH,
@@ -148,7 +149,7 @@ const injectHumanizerSkillEffect = Effect.fn("injectHumanizerSkill")(
       return;
     }
 
-    yield* writeSandboxSkillEffect({
+    yield* writeSandboxTextFileEffect({
       box: params.box,
       dir: HUMANIZER_SKILL_DIR,
       path: HUMANIZER_SKILL_PATH,
@@ -156,15 +157,6 @@ const injectHumanizerSkillEffect = Effect.fn("injectHumanizerSkill")(
     });
   }
 );
-
-function writeSandboxSkillEffect(params: {
-  box: RepoImageBox;
-  dir: string;
-  path: string;
-  content: string;
-}) {
-  return writeSandboxTextFileEffect(params);
-}
 
 function writeSandboxTextFileEffect(params: {
   box: RepoImageBox;
@@ -492,8 +484,4 @@ function extensionFromAssetUrl(url: string) {
       .match(PATH_EXTENSION_REGEX)?.[1]
       ?.toLowerCase();
   }
-}
-
-function shellQuote(value: string) {
-  return `'${value.replaceAll("'", "'\\''")}'`;
 }

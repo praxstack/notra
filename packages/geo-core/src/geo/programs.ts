@@ -231,15 +231,17 @@ function findGeoSettingsRow(projectId: string) {
   );
 }
 
+function loadScopeSettingsRow(projectId: string | null) {
+  return projectId
+    ? geoDb("settings lookup failed", () => findGeoSettingsRow(projectId))
+    : Effect.succeed(null);
+}
+
 export const loadGeoSettings = Effect.fn("geo.settings")(function* (
   input: GeoScopeInput
 ) {
   const scope = yield* resolveGeoScope(input);
-  const row = scope.projectId
-    ? yield* geoDb("settings lookup failed", () =>
-        findGeoSettingsRow(scope.projectId ?? "")
-      )
-    : null;
+  const row = yield* loadScopeSettingsRow(scope.projectId);
 
   const catalog = yield* loadGeoModelCatalog(scope.organizationId);
   const response: GeoSettingsResponse = {
@@ -807,9 +809,8 @@ export const upsertGeoSettings = Effect.fn("geo.settingsUpsert")(function* (
       })
     );
   }
-  const preservedEngines = storedEngines.filter(
-    (engine) =>
-      unavailableStaticEngines.size > 0 && unavailableStaticEngines.has(engine)
+  const preservedEngines = storedEngines.filter((engine) =>
+    unavailableStaticEngines.has(engine)
   );
   const preservedEngineSet = new Set(preservedEngines);
   const engines = [...new Set([...requestedEngines, ...preservedEngines])];
@@ -1205,11 +1206,7 @@ export const loadGeoCompetitorDetail = Effect.fn("geo.competitorDetail")(
       toGeoCheckWindow({ days: GEO_COMPETITOR_DETAIL_DAYS });
 
     const checkScope = geoCheckScope(scope);
-    const settingsRow = scope.projectId
-      ? yield* geoDb("settings lookup failed", () =>
-          findGeoSettingsRow(scope.projectId ?? "")
-        )
-      : null;
+    const settingsRow = yield* loadScopeSettingsRow(scope.projectId);
     const own = isGeoOwnBrandName(
       brand,
       settingsRow?.companyName,
@@ -1293,7 +1290,9 @@ export const loadAiTraffic = Effect.fn("geo.aiTraffic")(function* (
   path = ""
 ) {
   const scope = yield* resolveGeoScope(input);
-  const windowParams = {
+  const params = {
+    ...geoScopeParams(scope),
+    ...geoHiddenSourceParams(),
     ...geoTrafficWindowParams(window, AI_TRAFFIC_DEFAULT_DAYS),
     hosts: hosts.join(","),
     path,
@@ -1301,37 +1300,23 @@ export const loadAiTraffic = Effect.fn("geo.aiTraffic")(function* (
       ? { site_id: siteId, project_id: "", include_unassigned: 0 }
       : {}),
   };
-  const settingsRow = scope.projectId
-    ? yield* geoDb("settings lookup failed", () =>
-        findGeoSettingsRow(scope.projectId ?? "")
-      )
-    : null;
+  const settingsRow = yield* loadScopeSettingsRow(scope.projectId);
   const conversionPaths = settingsRow?.conversionPaths ?? [];
   const query = siteId && isTinybirdConfigured() ? geoRequiredQuery : geoQuery;
 
   const [overview, timeseries, conversionPages] = yield* Effect.all(
     [
       query("traffic overview query failed", () =>
-        queryGeoTrafficOverview({
-          ...geoScopeParams(scope),
-          ...geoHiddenSourceParams(),
-          ...windowParams,
-        })
+        queryGeoTrafficOverview(params)
       ),
       query("traffic timeseries query failed", () =>
-        queryGeoTrafficTimeseries({
-          ...geoScopeParams(scope),
-          ...geoHiddenSourceParams(),
-          ...windowParams,
-        })
+        queryGeoTrafficTimeseries(params)
       ),
       conversionPaths.length === 0
         ? Effect.succeed(null)
         : query("traffic conversion pages query failed", () =>
             queryGeoTrafficPages({
-              ...geoScopeParams(scope),
-              ...geoHiddenSourceParams(),
-              ...windowParams,
+              ...params,
               limit: AI_TRAFFIC_PAGES_FETCH_LIMIT,
               visitor: "ai_referral",
             })
@@ -1412,8 +1397,7 @@ export const loadGeoTrafficLog = Effect.fn("geo.trafficLog")(function* (
       path,
     })
   );
-  const data = rows?.data ?? [];
-  const log = data.map(toGeoTrafficLogEntry);
+  const log = (rows?.data ?? []).map(toGeoTrafficLogEntry);
 
   const response: GeoTrafficLogResponse = {
     configured: isTinybirdConfigured(),
@@ -2106,8 +2090,7 @@ export const startGeoScanScoped = Effect.fn("geo.startScanScoped")(function* (
 
   if (engines) {
     const catalog = yield* loadGeoModelCatalog(scope.organizationId);
-    const tracked = row.engines ?? [];
-    if (scopeGeoScanEngines(catalog, tracked, engines).length === 0) {
+    if (scopeGeoScanEngines(catalog, row.engines ?? [], engines).length === 0) {
       return yield* Effect.fail(new GeoScanEnginesEmptyError({ projectId }));
     }
   }

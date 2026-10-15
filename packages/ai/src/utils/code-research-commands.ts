@@ -34,6 +34,7 @@ import type {
   CodeResearchSearchMatch,
   CodeResearchTarget,
 } from "@notra/ai/types/code-research";
+import { shellQuote } from "@notra/ai/utils/shell";
 
 const FIELD_SEPARATOR = "\u001f";
 const COMMIT_FORMAT = "%H%x1f%an%x1f%aI%x1f%s";
@@ -45,13 +46,9 @@ const RENAME_BRACES_PATTERN = /\{([^{}]*?) => ([^{}]*?)\}/;
 const GIT = "git -c core.quotePath=false";
 const CREDENTIAL_FREE_GIT =
   "GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c core.quotePath=false";
-
-export function shellQuote(value: string): string {
-  if (value.includes("\0")) {
-    throw new Error("Arguments cannot contain NUL bytes.");
-  }
-  return `'${value.replaceAll("'", "'\\''")}'`;
-}
+const EXCLUDED_PATHSPECS = CODE_RESEARCH_DIFF_EXCLUDES.map((pattern) =>
+  shellQuote(`:(exclude,glob)**/${pattern}`)
+).join(" ");
 
 /**
  * Runs a script inside the repository with a hard timeout. stderr is merged
@@ -65,7 +62,7 @@ export function wrapCommand(
   const cwd = options?.cwd ?? CODE_RESEARCH_REPO_DIR;
   const timeout =
     options?.timeoutSeconds ?? CODE_RESEARCH_COMMAND_TIMEOUT_SECONDS;
-  return `cd ${shellQuote(cwd)} && timeout ${String(timeout)} sh -c ${shellQuote(
+  return `cd ${shellQuote(cwd)} && timeout ${timeout} sh -c ${shellQuote(
     script
   )} 2>&1; printf '\\n%s%s' ${shellQuote(CODE_RESEARCH_EXIT_MARKER)} "$?"`;
 }
@@ -203,11 +200,7 @@ function assertGitHubName(value: string, label: string): string {
 
 function fetchWithFallback(refspec: string): string {
   const quoted = shellQuote(refspec);
-  return `{ ${CREDENTIAL_FREE_GIT} fetch --quiet --no-tags --shallow-since=${String(
-    CODE_RESEARCH_HISTORY_DAYS
-  )}.days.ago origin ${quoted} || ${CREDENTIAL_FREE_GIT} fetch --quiet --no-tags --depth=${String(
-    CODE_RESEARCH_FALLBACK_DEPTH
-  )} origin ${quoted}; }`;
+  return `{ ${CREDENTIAL_FREE_GIT} fetch --quiet --no-tags --shallow-since=${CODE_RESEARCH_HISTORY_DAYS}.days.ago origin ${quoted} || ${CREDENTIAL_FREE_GIT} fetch --quiet --no-tags --depth=${CODE_RESEARCH_FALLBACK_DEPTH} origin ${quoted}; }`;
 }
 
 export function buildCloneScript(repository: CodeResearchRepository): string {
@@ -221,7 +214,7 @@ export function buildCloneScript(repository: CodeResearchRepository): string {
   // Repositories without commits in the window fail the shallow-since clone.
   return [
     `rm -rf ${dir}`,
-    `{ ${clone(`--shallow-since=${String(CODE_RESEARCH_HISTORY_DAYS)}.days.ago`)} || { rm -rf ${dir} && ${clone(`--depth=${String(CODE_RESEARCH_FALLBACK_DEPTH)}`)}; }; }`,
+    `{ ${clone(`--shallow-since=${CODE_RESEARCH_HISTORY_DAYS}.days.ago`)} || { rm -rf ${dir} && ${clone(`--depth=${CODE_RESEARCH_FALLBACK_DEPTH}`)}; }; }`,
     `cd ${dir}`,
     `${GIT} rev-parse HEAD`,
   ].join(" && ");
@@ -246,12 +239,10 @@ export function buildCheckoutScript(
     }
     case "pull_request": {
       if (!(Number.isInteger(target.number) && target.number > 0)) {
-        throw new Error(
-          `Invalid pull request number ${String(target.number)}.`
-        );
+        throw new Error(`Invalid pull request number ${target.number}.`);
       }
-      const local = `refs/remotes/origin/pr/${String(target.number)}`;
-      return `${fetchWithFallback(`+refs/pull/${String(target.number)}/head:${local}`)} && ${checkout(local)}`;
+      const local = `refs/remotes/origin/pr/${target.number}`;
+      return `${fetchWithFallback(`+refs/pull/${target.number}/head:${local}`)} && ${checkout(local)}`;
     }
     case "commit": {
       const sha = target.sha.trim().toLowerCase();
@@ -276,7 +267,7 @@ export function describeTarget(target: CodeResearchTarget): string {
     case "branch":
       return `branch ${target.branch}`;
     case "pull_request":
-      return `pull request #${String(target.number)}`;
+      return `pull request #${target.number}`;
     case "commit":
       return `commit ${target.sha.slice(0, 12)}`;
     default: {
@@ -323,11 +314,11 @@ export function buildOverviewScript(sha: string): string {
     "echo @@TREE",
     `${GIT} ls-tree --format=${shellQuote("%(objecttype) %(path)")} ${commit}`,
     "echo @@README",
-    `f=$(${GIT} ls-tree --name-only ${commit} | grep -i -m1 -E ${shellQuote("^readme(\\.(md|mdx|rst|txt))?$")}); if [ -n "$f" ]; then echo "$f"; ${GIT} show ${commit}:"$f" | head -n ${String(CODE_RESEARCH_README_MAX_LINES)}; fi`,
+    `f=$(${GIT} ls-tree --name-only ${commit} | grep -i -m1 -E ${shellQuote("^readme(\\.(md|mdx|rst|txt))?$")}); if [ -n "$f" ]; then echo "$f"; ${GIT} show ${commit}:"$f" | head -n ${CODE_RESEARCH_README_MAX_LINES}; fi`,
     "echo @@MANIFESTS",
-    `${GIT} ls-tree -r --name-only ${commit} | grep -E ${manifests} | head -n ${String(CODE_RESEARCH_OVERVIEW_MANIFESTS)}`,
+    `${GIT} ls-tree -r --name-only ${commit} | grep -E ${manifests} | head -n ${CODE_RESEARCH_OVERVIEW_MANIFESTS}`,
     "echo @@COMMITS",
-    `${GIT} log -n ${String(CODE_RESEARCH_OVERVIEW_COMMITS)} --format=${shellQuote(COMMIT_FORMAT)} ${commit}`,
+    `${GIT} log -n ${CODE_RESEARCH_OVERVIEW_COMMITS} --format=${shellQuote(COMMIT_FORMAT)} ${commit}`,
   ].join("; ");
 }
 
@@ -416,7 +407,7 @@ export function buildListFilesScript(
   const filter = glob?.trim()
     ? ` | grep -E ${shellQuote(globToPathPattern(path, glob))}`
     : "";
-  return `${GIT} ls-tree -r --name-only ${shellQuote(assertFullSha(sha))} -- ${shellQuote(path || ".")}${filter} | head -n ${String(CODE_RESEARCH_LIST_SCAN_LIMIT + 1)}`;
+  return `${GIT} ls-tree -r --name-only ${shellQuote(assertFullSha(sha))} -- ${shellQuote(path || ".")}${filter} | head -n ${CODE_RESEARCH_LIST_SCAN_LIMIT + 1}`;
 }
 
 function globToPathPattern(basePath: string, glob: string): string {
@@ -426,7 +417,7 @@ function globToPathPattern(basePath: string, glob: string): string {
   return `^${prefix}${globToRegExp(glob).source.slice(1).replaceAll("\\/", "/")}`;
 }
 
-export function globToRegExp(glob: string): RegExp {
+function globToRegExp(glob: string): RegExp {
   let pattern = "";
   const source = glob.trim().replace(/^\/+/, "");
   for (let index = 0; index < source.length; index += 1) {
@@ -516,20 +507,17 @@ export function buildSearchScript(params: {
     "-n",
     "-I",
     "--no-color",
-    `--max-count=${String(params.maxPerFile)}`,
+    `--max-count=${params.maxPerFile}`,
     params.regex ? "-E" : "-F",
     params.ignoreCase ? "-i" : "",
   ].filter(Boolean);
-  const excludes = CODE_RESEARCH_DIFF_EXCLUDES.map((pattern) =>
-    shellQuote(`:(exclude,glob)**/${pattern}`)
-  ).join(" ");
   // Only grep's exit status goes to a file, so it survives the line cap:
   // 1 means no match, anything above is an error such as an invalid regex.
   // 141 is SIGPIPE from head closing the pipe once the cap is reached.
   return [
     "s=$(mktemp)",
     "trap 'rm -f \"$s\"' EXIT INT TERM",
-    `{ ${GIT} grep ${flags.join(" ")} -e ${shellQuote(params.query)} ${shellQuote(assertFullSha(params.sha))} -- ${pathspecFor(params.path, params.glob)} ${excludes}; echo "$?" > "$s"; } | head -n ${String(CODE_RESEARCH_SEARCH_MAX_LINES)}`,
+    `{ ${GIT} grep ${flags.join(" ")} -e ${shellQuote(params.query)} ${shellQuote(assertFullSha(params.sha))} -- ${pathspecFor(params.path, params.glob)} ${EXCLUDED_PATHSPECS}; echo "$?" > "$s"; } | head -n ${CODE_RESEARCH_SEARCH_MAX_LINES}`,
     'c=$(cat "$s")',
     '[ -z "$c" ] && c=2',
     '[ "$c" = 141 ] && c=0',
@@ -595,9 +583,7 @@ export function buildReadFileScript(
     `if [ "$(${GIT} cat-file -s ${object})" -gt 0 ] && ! ${GIT} show ${object} | grep -Iq .; then exit 6; fi`,
     `echo ${shellQuote(path)}`,
     `${GIT} show ${object} | wc -l`,
-    `${GIT} show ${object} | sed -n ${shellQuote(`${String(startLine)},${String(endLine)}p`)} | head -c ${String(
-      CODE_RESEARCH_READ_MAX_BYTES + 1
-    )}`,
+    `${GIT} show ${object} | sed -n ${shellQuote(`${startLine},${endLine}p`)} | head -c ${CODE_RESEARCH_READ_MAX_BYTES + 1}`,
   ].join("; ");
 }
 
@@ -610,7 +596,7 @@ export function describeReadFailure(exitCode: number, path: string): string {
     case 6:
       return `"${path}" is a binary file and cannot be read as text.`;
     default:
-      return `Reading "${path}" failed with exit code ${String(exitCode)}.`;
+      return `Reading "${path}" failed with exit code ${exitCode}.`;
   }
 }
 
@@ -631,7 +617,7 @@ export function buildHistoryScript(params: {
   grep?: string;
 }): string {
   const args = [
-    `-n ${String(params.limit)}`,
+    `-n ${params.limit}`,
     `--format=${shellQuote(COMMIT_FORMAT)}`,
     params.since ? `--since=${shellQuote(params.since)}` : "",
     params.grep?.trim()
@@ -642,21 +628,14 @@ export function buildHistoryScript(params: {
   return `${GIT} log ${args.join(" ")} ${shellQuote(assertFullSha(params.sha))}${pathspec}`;
 }
 
-function diffExcludes(path: string): string {
-  const excludes = CODE_RESEARCH_DIFF_EXCLUDES.map((pattern) =>
-    shellQuote(`:(exclude,glob)**/${pattern}`)
-  );
-  return [shellQuote(path || "."), ...excludes].join(" ");
-}
-
 export function buildShowChangeScript(params: {
   sha: string;
   ref: string | null;
   defaultBranch: string;
   path: string;
 }): string {
-  const pathspec = diffExcludes(params.path);
-  const limit = String(CODE_RESEARCH_DIFF_MAX_BYTES + 1);
+  const pathspec = `${shellQuote(params.path || ".")} ${EXCLUDED_PATHSPECS}`;
+  const limit = CODE_RESEARCH_DIFF_MAX_BYTES + 1;
   if (params.ref) {
     const ref = shellQuote(assertSafeRef(params.ref, "ref"));
     const fetchMissing = CODE_RESEARCH_FULL_SHA_PATTERN.test(params.ref)
@@ -671,7 +650,7 @@ export function buildShowChangeScript(params: {
   const base = shellQuote(`refs/remotes/origin/${branch}`);
   const head = shellQuote(assertFullSha(params.sha));
   const deepen = (depth: number) =>
-    `${CREDENTIAL_FREE_GIT} fetch --quiet --no-tags --deepen=${String(depth)} origin ${shellQuote(
+    `${CREDENTIAL_FREE_GIT} fetch --quiet --no-tags --deepen=${depth} origin ${shellQuote(
       `+refs/heads/${branch}:refs/remotes/origin/${branch}`
     )} ${head}`;
   const mergeBase = `b=$(${GIT} merge-base ${base} ${head})`;

@@ -11,22 +11,22 @@
     "test": "bun test tests"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1136.0",
+    "@aws-sdk/client-s3": "catalog:",
     "@notra/ai": "workspace:*",
     "@notra/db": "workspace:*",
     "@notra/geo-core": "workspace:*",
     "@notra/sites-compiler": "workspace:*",
     "@notra/sites-core": "workspace:*",
-    "drizzle-orm": "^0.45.3",
-    "effect": "4.0.0",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
     "tar-stream": "3.2.0",
-    "zod": "^4.6.5"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@notra/typescript-config": "workspace:*",
     "@types/node": "^22.15.3",
     "@types/tar-stream": "^3.1.5",
-    "bun-types": "1.4.0",
-    "typescript": "7.0.2"
+    "bun-types": "catalog:",
+    "typescript": "catalog:"
   }
 }

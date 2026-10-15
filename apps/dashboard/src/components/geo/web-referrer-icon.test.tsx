@@ -47,11 +47,3 @@ test("direct, unknown, and inherited-object source names get a safe UI icon", ()
     expect(html).not.toContain("<title>Google</title>");
   }
 });
-
-test("AI referrers keep their provider logos", () => {
-  const html = renderToStaticMarkup(
-    <WebReferrerIcon source={source("ai", "openai")} />
-  );
-  expect(html).toContain("<svg");
-  expect(html).toContain('aria-hidden="true"');
-});

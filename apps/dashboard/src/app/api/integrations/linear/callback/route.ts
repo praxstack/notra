@@ -5,6 +5,7 @@ import {
 } from "@notra/ai/integrations/linear";
 import { redis } from "@notra/ai/utils/redis";
 import { logError } from "@notra/ai/utils/server-log";
+import { getAppUrl } from "@notra/ai/utils/url";
 import { buildCallbackUrl } from "@notra/utils/callback-url";
 import { ORPCError } from "@orpc/server";
 
@@ -28,9 +29,18 @@ import type {
 } from "@/types/linear-oauth";
 
 export async function GET(request: Request) {
-  const baseUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const baseUrl = getAppUrl() ?? "";
 
   let restoreOAuthState: (() => Promise<void>) | null = null;
+  const trackFailed = (errorCode: string, oauthState?: LinearOAuthState) =>
+    trackIntegrationConnectFailed({
+      headers: request.headers,
+      userId: oauthState?.userId,
+      organizationId: oauthState?.organizationId,
+      provider: INTEGRATION_PROVIDERS.LINEAR,
+      authKind: INTEGRATION_AUTH_KINDS.OAUTH,
+      errorCode,
+    });
 
   try {
     const { searchParams } = new URL(request.url);
@@ -39,22 +49,12 @@ export async function GET(request: Request) {
     const error = searchParams.get("error");
 
     if (error) {
-      trackIntegrationConnectFailed({
-        headers: request.headers,
-        provider: INTEGRATION_PROVIDERS.LINEAR,
-        authKind: INTEGRATION_AUTH_KINDS.OAUTH,
-        errorCode: error,
-      });
+      trackFailed(error);
       return redirectResponse(`${baseUrl}/?error=${encodeURIComponent(error)}`);
     }
 
     if (!code || !state || !redis) {
-      trackIntegrationConnectFailed({
-        headers: request.headers,
-        provider: INTEGRATION_PROVIDERS.LINEAR,
-        authKind: INTEGRATION_AUTH_KINDS.OAUTH,
-        errorCode: "invalid_callback",
-      });
+      trackFailed("invalid_callback");
       return redirectResponse(`${baseUrl}/?error=invalid_callback`);
     }
 
@@ -143,14 +143,7 @@ export async function GET(request: Request) {
       const tokenError = await tokenRes.text();
       logError("Linear token exchange failed", tokenError);
       await restoreOAuthState();
-      trackIntegrationConnectFailed({
-        headers: request.headers,
-        userId: oauthState.userId,
-        organizationId: oauthState.organizationId,
-        provider: INTEGRATION_PROVIDERS.LINEAR,
-        authKind: INTEGRATION_AUTH_KINDS.OAUTH,
-        errorCode: "token_exchange_failed",
-      });
+      trackFailed("token_exchange_failed", oauthState);
       return redirectResponse(`${baseUrl}/?error=token_exchange_failed`);
     }
 
@@ -194,14 +187,7 @@ export async function GET(request: Request) {
     );
 
     if (alreadyConnected) {
-      trackIntegrationConnectFailed({
-        headers: request.headers,
-        userId: oauthState.userId,
-        organizationId: oauthState.organizationId,
-        provider: INTEGRATION_PROVIDERS.LINEAR,
-        authKind: INTEGRATION_AUTH_KINDS.OAUTH,
-        errorCode: "workspace_already_connected",
-      });
+      trackFailed("workspace_already_connected", oauthState);
       return redirectResponse(
         buildCallbackUrl(baseUrl, oauthState.callbackPath, {
           error: "workspace_already_connected",
@@ -236,12 +222,7 @@ export async function GET(request: Request) {
   } catch (error) {
     logError("Error in Linear OAuth callback", error);
     await restoreOAuthState?.();
-    trackIntegrationConnectFailed({
-      headers: request.headers,
-      provider: INTEGRATION_PROVIDERS.LINEAR,
-      authKind: INTEGRATION_AUTH_KINDS.OAUTH,
-      errorCode: "callback_failed",
-    });
+    trackFailed("callback_failed");
     return redirectResponse(`${baseUrl}/?error=callback_failed`);
   }
 }

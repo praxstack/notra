@@ -48,16 +48,5 @@ export function analyticsSideEffect(
   label: string,
   run: () => Promise<unknown>
 ): Effect.Effect<void> {
-  return Effect.tryPromise({
-    try: run,
-    catch: (cause) => new AnalyticsRequestError({ label, cause }),
-  }).pipe(
-    Effect.map(() => undefined),
-    Effect.catch((error) => {
-      logError("[Analytics] Request failed", error.cause, {
-        label: error.label,
-      });
-      return Effect.succeed(undefined);
-    })
-  );
+  return analyticsQuery(label, run).pipe(Effect.asVoid);
 }

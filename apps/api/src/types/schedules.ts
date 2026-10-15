@@ -7,7 +7,6 @@ import type {
 import type { z } from "zod";
 
 import type {
-  ScheduleDatabaseError,
   ScheduleDuplicateError,
   ScheduleMissingTargetsError,
   ScheduleNotFoundError,

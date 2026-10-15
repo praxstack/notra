@@ -115,35 +115,10 @@ function toSessionSummary(row: ChatSessionSummaryRow): ChatSessionSummary {
   };
 }
 
-export async function isChatDeleted(
-  organizationId: string,
-  chatId: string
-): Promise<boolean> {
-  const row = await db
-    .select({ deletedAt: chatSessions.deletedAt })
-    .from(chatSessions)
-    .where(
-      and(
-        eq(chatSessions.id, chatId),
-        eq(chatSessions.organizationId, organizationId),
-        isNull(chatSessions.contentId)
-      )
-    )
-    .limit(1)
-    .then((rows) => rows[0]);
-
-  if (!row) {
-    return false;
-  }
-
-  return row.deletedAt !== null;
-}
-
 async function upsertChatSession(
   organizationId: string,
   chatId: string,
   messages: UIMessage[],
-  mode: "append" | "replace",
   externalChannelId?: ExternalChannelId | null,
   expectedLastMessageId?: string | null,
   contentId?: string,
@@ -191,25 +166,12 @@ async function upsertChatSession(
     })
     .onConflictDoUpdate({
       target: chatSessions.id,
-      set: {
-        messages:
-          mode === "append"
-            ? sql`${chatSessions.messages} || ${serializedMessages}`
-            : serializedMessages,
-      },
+      set: { messages: serializedMessages },
       setWhere: writableSession,
     })
     .returning({ id: chatSessions.id });
 
   return insertedOrUpdated.length > 0;
-}
-
-export async function saveChatMessage(
-  organizationId: string,
-  chatId: string,
-  message: UIMessage
-): Promise<boolean> {
-  return upsertChatSession(organizationId, chatId, [message], "append");
 }
 
 export async function appendChatMessageIfMissing(
@@ -309,14 +271,6 @@ export async function upsertChatMessageById(
   return updated.length > 0;
 }
 
-export async function saveChatMessages(
-  organizationId: string,
-  chatId: string,
-  messages: UIMessage[]
-): Promise<boolean> {
-  return upsertChatSession(organizationId, chatId, messages, "append");
-}
-
 export async function replaceChatHistory(
   organizationId: string,
   chatId: string,
@@ -329,7 +283,6 @@ export async function replaceChatHistory(
     organizationId,
     chatId,
     messages,
-    "replace",
     externalChannelId,
     expectedLastMessageId,
     undefined,
@@ -347,7 +300,6 @@ export async function replaceContentChatHistory(
     organizationId,
     chatId,
     messages,
-    "replace",
     undefined,
     undefined,
     contentId
@@ -463,38 +415,6 @@ export async function loadContentChatHistory(
   }
 
   return row.messages as UIMessage[];
-}
-
-export async function createChatSession(
-  organizationId: string,
-  options?: {
-    id?: string;
-    title?: string;
-    externalChannelId?: ExternalChannelId | null;
-    projectId?: string | null;
-  }
-): Promise<ChatSessionSummary> {
-  const id = options?.id ?? generateChatId();
-  const title = normalizeChatTitle(options?.title ?? "New chat") || "New chat";
-
-  const [row] = await db
-    .insert(chatSessions)
-    .values({
-      id,
-      organizationId,
-      projectId: options?.projectId ?? null,
-      title,
-      messages: [] as unknown as Record<string, unknown>,
-      externalChannelSource: options?.externalChannelId?.source ?? null,
-      externalChannelId: options?.externalChannelId?.id ?? null,
-    })
-    .returning();
-
-  if (!row) {
-    throw new Error("Failed to create chat session");
-  }
-
-  return toSessionSummary(row);
 }
 
 /**

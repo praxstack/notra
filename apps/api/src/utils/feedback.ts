@@ -71,7 +71,5 @@ export function respondToFeedbackFailure(
   if (failure._tag === "FeedbackProjectNotFoundError") {
     return c.json({ error: FEEDBACK_PROJECT_NOT_FOUND_ERROR }, 404);
   }
-  if (failure._tag === "FeedbackNotFoundError") {
-    return c.json({ error: FEEDBACK_NOT_FOUND_ERROR }, 404);
-  }
+  return c.json({ error: FEEDBACK_NOT_FOUND_ERROR }, 404);
 }

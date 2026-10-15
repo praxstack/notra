@@ -7,8 +7,6 @@ import {
   GEO_MAX_SEQUENCES,
   GEO_SEQUENCE_MAX_TURNS,
   GEO_SCAN_HOURS_PER_DAY,
-  GEO_SCAN_INTERVAL_FALLBACK_NOUN,
-  GEO_SCAN_INTERVAL_LABEL_PREFIX,
   GEO_SCAN_INTERVAL_OPTIONS,
   GEO_SCAN_STALE_MS,
 } from "../constants/geo";
@@ -40,13 +38,6 @@ export function isGeoScanRunning(
   }
   const finishedAt = toTimestamp(lastScanAt);
   return finishedAt === null || startedAt > finishedAt;
-}
-
-export function geoScanEmptyMessage(
-  isScanning: boolean,
-  idleMessage: string
-): string {
-  return isScanning ? "Scanning engines…" : idleMessage;
 }
 
 const HANDOFF_REJECTED_ERROR_NAME = "InternalDashboardError";
@@ -184,26 +175,6 @@ export function classifyGeoScanExecutionFailure(
     failedStage: "execution",
     retryable: "timedOut" in error && error.timedOut === true ? true : null,
   };
-}
-
-/** "day", "3 days", "36 hours" — the noun that follows "every". */
-export function geoScanIntervalNoun(intervalHours: number): string {
-  const option = GEO_SCAN_INTERVAL_OPTIONS.find(
-    (entry) => entry.value === intervalHours
-  );
-  if (option) {
-    return option.label
-      .replace(GEO_SCAN_INTERVAL_LABEL_PREFIX, "")
-      .toLowerCase();
-  }
-  if (!Number.isFinite(intervalHours) || intervalHours <= 0) {
-    return GEO_SCAN_INTERVAL_FALLBACK_NOUN;
-  }
-  if (intervalHours % GEO_SCAN_HOURS_PER_DAY === 0) {
-    const days = intervalHours / GEO_SCAN_HOURS_PER_DAY;
-    return days === 1 ? "day" : `${days} days`;
-  }
-  return `${intervalHours} hours`;
 }
 
 /** Whole days for a custom interval, rounded up so partial days stay visible. */

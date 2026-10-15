@@ -12,6 +12,7 @@ import {
 } from "@notra/ai/utils/gsc-integration-lock";
 import { redis } from "@notra/ai/utils/redis";
 import { logError } from "@notra/ai/utils/server-log";
+import { getAppUrl } from "@notra/ai/utils/url";
 import {
   GSC_OAUTH_CALLBACK_PATH,
   GSC_OAUTH_STATE_KEY_PREFIX,
@@ -28,7 +29,7 @@ import { gscOAuthErrorParam } from "@/lib/integrations/google-search-console/oau
 import { getGscRedirectUri } from "@/lib/integrations/google-search-console/redirect-uri";
 
 export async function GET(request: Request) {
-  const baseUrl = process.env.APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const baseUrl = getAppUrl() ?? "";
 
   let restoreOAuthState: (() => Promise<void>) | null = null;
   let callbackPath = "/";

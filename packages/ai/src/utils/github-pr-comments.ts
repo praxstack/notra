@@ -1,13 +1,10 @@
-import { GITHUB_API_VERSION_HEADER } from "@notra/ai/constants/autonomy-poll";
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import { GITHUB_MENTION_TRUSTED_AUTHOR_ASSOCIATIONS } from "@notra/ai/constants/github-mention";
 import type {
   CommitFilesToPullRequestParams,
   GitHubCommentKind,
 } from "@notra/ai/types/github-mention";
 
-const GITHUB_API_VERSION_HEADERS = {
-  "X-GitHub-Api-Version": GITHUB_API_VERSION_HEADER,
-} as const;
 const TRUSTED_AUTHOR_ASSOCIATIONS = new Set<string>(
   GITHUB_MENTION_TRUSTED_AUTHOR_ASSOCIATIONS
 );

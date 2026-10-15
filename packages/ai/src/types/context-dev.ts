@@ -3,18 +3,6 @@ export interface ContextDevErrorResponse {
   error_code?: string;
 }
 
-export interface ContextDevMarkdownOptions {
-  enabled?: boolean;
-  includeLinks?: boolean;
-  includeImages?: boolean;
-  shortenBase64Images?: boolean;
-  useMainContentOnly?: boolean;
-  includeFrames?: boolean;
-  maxAgeMs?: number;
-  waitForMs?: number;
-  timeoutMS?: number;
-}
-
 export interface ContextDevWebSearchInput {
   query: string;
   limit?: number;

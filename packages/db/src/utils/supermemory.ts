@@ -17,12 +17,8 @@ import type {
   SupermemorySearchResult,
 } from "../types/supermemory";
 
-function getApiKey() {
-  return process.env.SUPERMEMORY_API_KEY;
-}
-
 function getHeaders() {
-  const apiKey = getApiKey();
+  const apiKey = process.env.SUPERMEMORY_API_KEY;
 
   if (!apiKey) {
     throw new Error("SUPERMEMORY_API_KEY is not configured");
@@ -47,7 +43,7 @@ function truncateText(value: string, maxLength: number) {
   return `${value.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 }
 
-export function getBrandReferenceContainerTag(voiceId: string) {
+function getBrandReferenceContainerTag(voiceId: string) {
   const voiceHash = createHash("sha256").update(voiceId).digest("hex");
   return `brand_voice_${voiceHash.slice(0, SUPERMEMORY_CONTAINER_TAG_HASH_LENGTH)}`;
 }
@@ -82,7 +78,7 @@ function getBrandReferenceSearchResultKey(result: SupermemorySearchResult) {
   return null;
 }
 
-export function buildBrandReferenceMemoryContent(
+function buildBrandReferenceMemoryContent(
   payload: BrandReferenceMemoryPayload
 ) {
   const note = payload.note?.trim();

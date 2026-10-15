@@ -23,7 +23,7 @@ import { getWorkOS } from "@workos/authkit-session";
 import { Effect } from "effect";
 
 import { SECURITY_ERROR_CODES, TOTP_FACTOR_TYPE } from "@/constants/security";
-import { ActionFailure } from "@/lib/actions/errors";
+import { ActionFailure, tryAction } from "@/lib/actions/errors";
 import { runAction } from "@/lib/actions/run-action";
 import { validateActionInput } from "@/lib/actions/validate-input";
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
@@ -32,7 +32,7 @@ import {
   clearBackupCodes,
   consumeBackupCode,
   countRemainingBackupCodes,
-  hasUnusedBackupCode,
+  releaseBackupCode,
   replaceBackupCodes,
 } from "@/lib/auth/backup-codes";
 import {
@@ -62,11 +62,22 @@ const tryWorkOS = <T>(run: () => Promise<T>) =>
       new ActionFailure({ message: readWorkOSError(cause).message, cause }),
   });
 
-const tryDb = <T>(run: () => Promise<T>, message: string) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) => new ActionFailure({ message, cause }),
-  });
+const failSecurity = (
+  key:
+    | "unavailable"
+    | "invalidConfirmation"
+    | "alreadyEnabled"
+    | "enrollmentExpired"
+    | "invalidTotp"
+    | "setupBeforeBackupCodes"
+    | "factorMissing",
+  code?: string
+) =>
+  securityTranslations.pipe(
+    Effect.flatMap((t) =>
+      Effect.fail(new ActionFailure({ code, message: t(key) }))
+    )
+  );
 
 const attemptDb = <T>(run: () => Promise<T>) =>
   Effect.tryPromise(run).pipe(
@@ -98,11 +109,9 @@ const requireSecurityContext = Effect.fn("auth.security.requireContext")(
     const session = yield* requireSession();
     const workosUserId = session.user.workosUserId;
     if (!workosUserId) {
-      return yield* Effect.fail(
-        new ActionFailure({
-          code: SECURITY_ERROR_CODES.UNAVAILABLE,
-          message: (yield* securityTranslations)("unavailable"),
-        })
+      return yield* failSecurity(
+        "unavailable",
+        SECURITY_ERROR_CODES.UNAVAILABLE
       );
     }
 
@@ -181,26 +190,22 @@ const confirmSecondFactor = Effect.fn("auth.security.confirmSecondFactor")(
     if (isTotpCode(code)) {
       const confirmed = yield* verifyTotpAgainstFactors(factors, code);
       if (!confirmed) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            code: SECURITY_ERROR_CODES.INVALID_CODE,
-            message: (yield* securityTranslations)("invalidConfirmation"),
-          })
+        return yield* failSecurity(
+          "invalidConfirmation",
+          SECURITY_ERROR_CODES.INVALID_CODE
         );
       }
       return null;
     }
     const backupCode = normalizeBackupCode(code);
-    const unused = yield* tryDb(
-      () => hasUnusedBackupCode(context.localUserId, backupCode),
+    const claimed = yield* tryAction(
+      () => consumeBackupCode(context.localUserId, backupCode),
       (yield* securityTranslations)("backupCheckFailed")
     );
-    if (!unused) {
-      return yield* Effect.fail(
-        new ActionFailure({
-          code: SECURITY_ERROR_CODES.INVALID_CODE,
-          message: (yield* securityTranslations)("invalidConfirmation"),
-        })
+    if (!claimed) {
+      return yield* failSecurity(
+        "invalidConfirmation",
+        SECURITY_ERROR_CODES.INVALID_CODE
       );
     }
     return backupCode;
@@ -215,11 +220,13 @@ const withSecondFactor = <A>(
 ) =>
   Effect.gen(function* () {
     const backupCode = yield* confirmSecondFactor(context, factors, code);
+    // The backup code was claimed by confirmSecondFactor; give it back when
+    // the change it confirmed does not go through.
     return yield* change.pipe(
-      Effect.tap(() =>
+      Effect.tapError(() =>
         backupCode
-          ? Effect.promise(() =>
-              consumeBackupCode(context.localUserId, backupCode)
+          ? Effect.tryPromise(() =>
+              releaseBackupCode(context.localUserId, backupCode)
             ).pipe(Effect.ignore)
           : Effect.void
       )
@@ -258,11 +265,7 @@ export async function startTotpEnrollment(): Promise<
       const context = yield* requireSecurityContext();
       const existing = yield* listTotpFactors(context.workosUserId);
       if (existing.length > 0) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: (yield* securityTranslations)("alreadyEnabled"),
-          })
-        );
+        return yield* failSecurity("alreadyEnabled");
       }
       const enrollment = yield* tryWorkOS(() =>
         createTotpFactor(context.workosUserId, context.email)
@@ -324,11 +327,7 @@ export async function verifyTotpEnrollment(
         inProgress.authenticationChallengeId ===
           input.authenticationChallengeId;
       if (!isOwnEnrollment) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: (yield* securityTranslations)("enrollmentExpired"),
-          })
-        );
+        return yield* failSecurity("enrollmentExpired");
       }
 
       const verification = yield* tryWorkOS(() =>
@@ -338,19 +337,13 @@ export async function verifyTotpEnrollment(
         })
       );
       if (!verification.valid) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            code: SECURITY_ERROR_CODES.INVALID_CODE,
-            message: (yield* securityTranslations)("invalidTotp"),
-          })
+        return yield* failSecurity(
+          "invalidTotp",
+          SECURITY_ERROR_CODES.INVALID_CODE
         );
       }
       if (verification.challenge.authenticationFactorId !== input.factorId) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: (yield* securityTranslations)("enrollmentExpired"),
-          })
-        );
+        return yield* failSecurity("enrollmentExpired");
       }
       yield* Effect.promise(clearTotpEnrollmentInProgress);
 
@@ -386,17 +379,13 @@ export async function regenerateBackupCodes(
       );
       const factors = yield* listTotpFactors(context.workosUserId);
       if (factors.length === 0) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: (yield* securityTranslations)("setupBeforeBackupCodes"),
-          })
-        );
+        return yield* failSecurity("setupBeforeBackupCodes");
       }
       const codes = yield* withSecondFactor(
         context,
         factors,
         input.confirmationCode,
-        tryDb(
+        tryAction(
           () => replaceBackupCodes(context.localUserId),
           (yield* securityTranslations)("backupCodesFailed")
         )
@@ -423,11 +412,7 @@ export async function removeAuthFactor(
 
       const factors = yield* listTotpFactors(context.workosUserId);
       if (!factors.some((factor) => factor.id === input.factorId)) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: (yield* securityTranslations)("factorMissing"),
-          })
-        );
+        return yield* failSecurity("factorMissing");
       }
       yield* withSecondFactor(
         context,

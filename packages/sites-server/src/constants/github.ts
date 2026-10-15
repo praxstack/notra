@@ -2,9 +2,6 @@ import { SITE_BUILD_LIMITS } from "@notra/sites-core/constants/sites";
 
 import type { RepositoryTreeScan } from "../types/github";
 
-export const GITHUB_API_VERSION_HEADER = {
-  "X-GitHub-Api-Version": "2022-11-28",
-} as const;
 export const MAX_TARBALL_BYTES = SITE_BUILD_LIMITS.maxSourceBytes;
 export const CHECK_RUN_NAME = "Notra Sites";
 export const UNCHANGED_BUILD_TITLE = "Skipped – no site changes";

@@ -3,6 +3,7 @@ import { autonomyOutbox, organizations } from "@notra/db/schema";
 import { and, asc, eq, gte, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { Duration, Effect, Schedule } from "effect";
 
+import { MILLISECONDS_PER_SECOND } from "../constants/autonomy";
 import {
   SLACK_DELIVERY_ATTEMPT_TIMEOUT_SECONDS,
   SLACK_DELIVERY_BACKOFF_FACTOR,
@@ -29,8 +30,21 @@ import type {
 import type { SlackMessageContent } from "../types/slack-delivery";
 import { buildIrisNoOpBlocks, buildIrisRunBlocks } from "../utils/slack-blocks";
 
-const MILLISECONDS_PER_SECOND = 1000;
 const SLACK_DESTINATION = "slack";
+
+const outboxRowColumns = {
+  id: autonomyOutbox.id,
+  organizationId: autonomyOutbox.organizationId,
+  destination: autonomyOutbox.destination,
+  attempts: autonomyOutbox.attempts,
+  payload: autonomyOutbox.payload,
+};
+
+const attemptStaleBefore = (now: Date) =>
+  new Date(
+    now.getTime() -
+      SLACK_DELIVERY_ATTEMPT_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND
+  );
 
 const inlineBackoffSchedule: Schedule.Schedule<
   Duration.Duration,
@@ -200,13 +214,12 @@ const markFailed = Effect.fn("iris.outbox.markFailed")(function* (input: {
     })
   );
 
-  const outcome: IrisDeliveryOutcome = {
+  return {
     outboxId: input.row.id,
     status: "failed",
     lastError: input.lastError,
     nextAttemptAt: null,
-  };
-  return outcome;
+  } satisfies IrisDeliveryOutcome;
 });
 
 const markRetrying = Effect.fn("iris.outbox.markRetrying")(function* (input: {
@@ -233,13 +246,12 @@ const markRetrying = Effect.fn("iris.outbox.markRetrying")(function* (input: {
     },
   });
 
-  const outcome: IrisDeliveryOutcome = {
+  return {
     outboxId: input.row.id,
     status: updated ? "pending" : "skipped",
     lastError: updated ? input.lastError : null,
     nextAttemptAt: updated ? nextAttemptAt : null,
-  };
-  return outcome;
+  } satisfies IrisDeliveryOutcome;
 });
 
 const deliverableStatusFilter = (now: Date) =>
@@ -247,13 +259,7 @@ const deliverableStatusFilter = (now: Date) =>
     eq(autonomyOutbox.status, "pending"),
     and(
       eq(autonomyOutbox.status, "attempting"),
-      lt(
-        autonomyOutbox.updatedAt,
-        new Date(
-          now.getTime() -
-            SLACK_DELIVERY_ATTEMPT_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND
-        )
-      )
+      lt(autonomyOutbox.updatedAt, attemptStaleBefore(now))
     )
   );
 
@@ -292,7 +298,7 @@ const claimOutboxRow = Effect.fn("iris.outbox.claim")(function* (input: {
   return rows.length > 0;
 });
 
-export const deliverOutboxMessage = Effect.fn("iris.outbox.deliver")(function* (
+const deliverOutboxMessage = Effect.fn("iris.outbox.deliver")(function* (
   row: IrisOutboxRow
 ) {
   const attempts = row.attempts + 1;
@@ -306,13 +312,12 @@ export const deliverOutboxMessage = Effect.fn("iris.outbox.deliver")(function* (
       })
     );
 
-    const skipped: IrisDeliveryOutcome = {
+    return {
       outboxId: row.id,
       status: "skipped",
       lastError: null,
       nextAttemptAt: null,
-    };
-    return skipped;
+    } satisfies IrisDeliveryOutcome;
   }
 
   const payloadResult = yield* Effect.result(parsePayload(row));
@@ -379,13 +384,12 @@ export const deliverOutboxMessage = Effect.fn("iris.outbox.deliver")(function* (
         }),
     });
 
-    const outcome: IrisDeliveryOutcome = {
+    return {
       outboxId: row.id,
       status: updated.length > 0 ? "delivered" : "skipped",
       lastError: null,
       nextAttemptAt: null,
-    };
-    return outcome;
+    } satisfies IrisDeliveryOutcome;
   }
 
   const error = deliveryResult.failure;
@@ -427,23 +431,16 @@ const loadDeliverableRows = Effect.fn("iris.outbox.loadDeliverable")(function* (
       lte(autonomyOutbox.nextAttemptAt, now)
     ),
   ];
-
-  const where = organizationId
-    ? and(...filters, eq(autonomyOutbox.organizationId, organizationId))
-    : and(...filters);
+  if (organizationId) {
+    filters.push(eq(autonomyOutbox.organizationId, organizationId));
+  }
 
   return yield* Effect.tryPromise({
     try: () =>
       db
-        .select({
-          id: autonomyOutbox.id,
-          organizationId: autonomyOutbox.organizationId,
-          destination: autonomyOutbox.destination,
-          attempts: autonomyOutbox.attempts,
-          payload: autonomyOutbox.payload,
-        })
+        .select(outboxRowColumns)
         .from(autonomyOutbox)
-        .where(where)
+        .where(and(...filters))
         .orderBy(asc(autonomyOutbox.createdAt))
         .limit(SLACK_DELIVERY_BATCH_SIZE),
     catch: (cause) =>
@@ -459,16 +456,15 @@ const failStrandedOutboxRows = Effect.fn("iris.outbox.failStranded")(function* (
   organizationId?: string
 ) {
   const now = new Date();
-  const staleBefore = new Date(
-    now.getTime() -
-      SLACK_DELIVERY_ATTEMPT_TIMEOUT_SECONDS * MILLISECONDS_PER_SECOND
-  );
   const filters = [
     eq(autonomyOutbox.destination, SLACK_DESTINATION),
     eq(autonomyOutbox.status, "attempting"),
-    lt(autonomyOutbox.updatedAt, staleBefore),
+    lt(autonomyOutbox.updatedAt, attemptStaleBefore(now)),
     gte(autonomyOutbox.attempts, SLACK_DELIVERY_MAX_ATTEMPTS),
   ];
+  if (organizationId) {
+    filters.push(eq(autonomyOutbox.organizationId, organizationId));
+  }
 
   const stranded = yield* Effect.tryPromise({
     try: () =>
@@ -479,11 +475,7 @@ const failStrandedOutboxRows = Effect.fn("iris.outbox.failStranded")(function* (
           lastError: "delivery_timeout",
           updatedAt: now,
         })
-        .where(
-          organizationId
-            ? and(...filters, eq(autonomyOutbox.organizationId, organizationId))
-            : and(...filters)
-        )
+        .where(and(...filters))
         .returning({ id: autonomyOutbox.id }),
     catch: (cause) =>
       new IrisOutboxPersistenceError({
@@ -554,13 +546,7 @@ export const loadIrisOutboxCard = Effect.fn("iris.outbox.loadCard")(
     const rows = yield* Effect.tryPromise({
       try: () =>
         db
-          .select({
-            id: autonomyOutbox.id,
-            organizationId: autonomyOutbox.organizationId,
-            destination: autonomyOutbox.destination,
-            attempts: autonomyOutbox.attempts,
-            payload: autonomyOutbox.payload,
-          })
+          .select(outboxRowColumns)
           .from(autonomyOutbox)
           .where(
             and(

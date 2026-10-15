@@ -1,4 +1,8 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  PutObjectCommand,
+  type PutObjectCommandInput,
+} from "@aws-sdk/client-s3";
+import { fetchPublicUrl } from "@notra/ai/utils/public-fetch";
 import { db } from "@notra/db/drizzle";
 import { members } from "@notra/db/schema";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
@@ -40,6 +44,44 @@ import {
 } from "../utils/errors";
 
 const TRAILING_SLASH_REGEX = /\/$/;
+
+async function requireActiveOrganizationMember(context: {
+  headers: Headers;
+  session: { activeOrganizationId?: string | null } | null;
+  user: { id: string };
+}): Promise<string> {
+  const orgId = context.session?.activeOrganizationId;
+
+  if (!orgId) {
+    throw unauthorized(
+      (await getTranslations("common.labels"))("noActiveOrganization")
+    );
+  }
+
+  const membership = await db.query.members.findFirst({
+    where: and(
+      eq(members.userId, context.user.id),
+      eq(members.organizationId, orgId)
+    ),
+    columns: { id: true },
+  });
+
+  if (!membership) {
+    const tErrors = await getTranslations("errors.upload");
+    throw forbidden(tErrors("noOrganizationAccess"));
+  }
+  recordAuthorizedOrganization(context.headers, orgId, context.user.id);
+  return orgId;
+}
+
+async function putPublicR2Object(
+  object: Omit<PutObjectCommandInput, "Bucket"> & { Key: string }
+) {
+  const { client, bucketName, publicUrl } = getR2Config();
+  await client.send(new PutObjectCommand({ Bucket: bucketName, ...object }));
+  const baseUrl = publicUrl.replace(TRAILING_SLASH_REGEX, "");
+  return { key: object.Key, publicUrl: `${baseUrl}/${object.Key}` };
+}
 
 export const uploadRouter = {
   createPresignedUpload: authorizedProcedure
@@ -91,27 +133,7 @@ export const uploadRouter = {
     .input(uploadLogoFromUrlSchema)
     .handler(async ({ context, input }) => {
       assertNotDemo();
-      const orgId = context.session?.activeOrganizationId;
-
-      if (!orgId) {
-        throw unauthorized(
-          (await getTranslations("common.labels"))("noActiveOrganization")
-        );
-      }
-
-      const membership = await db.query.members.findFirst({
-        where: and(
-          eq(members.userId, context.user.id),
-          eq(members.organizationId, orgId)
-        ),
-        columns: { id: true },
-      });
-
-      if (!membership) {
-        const tErrors = await getTranslations("errors.upload");
-        throw forbidden(tErrors("noOrganizationAccess"));
-      }
-      recordAuthorizedOrganization(context.headers, orgId, context.user.id);
+      const orgId = await requireActiveOrganizationMember(context);
 
       const sourceUrl = new URL(input.sourceUrl);
       const isAllowedSource =
@@ -123,17 +145,13 @@ export const uploadRouter = {
         throw badRequest(tErrors("logoSourceNotAllowed"));
       }
 
-      let response: Response;
-      try {
-        response = await fetch(sourceUrl, {
-          signal: AbortSignal.timeout(COMPANY_LOGO_FETCH_TIMEOUT_MS),
-        });
-      } catch {
-        const tErrors = await getTranslations("errors.upload");
-        throw badRequest(tErrors("logoFetchFailed"));
-      }
+      // No redirects and public addresses only: the host allowlist above
+      // would not hold for a redirect target.
+      const response = await fetchPublicUrl(sourceUrl, undefined, {
+        timeoutMs: COMPANY_LOGO_FETCH_TIMEOUT_MS,
+      }).catch(() => null);
 
-      if (!response.ok) {
+      if (!response?.ok) {
         const tErrors = await getTranslations("errors.upload");
         throw badRequest(tErrors("logoFetchFailed"));
       }
@@ -150,49 +168,17 @@ export const uploadRouter = {
 
       const id = nanoid();
       const key = `organization/${orgId}/logo/${id}.${getFileExtension(fileType)}`;
-      const { client: r2Client, bucketName, publicUrl } = getR2Config();
-
-      await r2Client.send(
-        new PutObjectCommand({
-          Bucket: bucketName,
-          Key: key,
-          Body: body,
-          ContentType: fileType,
-        })
-      );
-
-      const baseUrl = publicUrl.replace(TRAILING_SLASH_REGEX, "");
-
-      return {
-        key,
-        publicUrl: `${baseUrl}/${key}`,
-      };
+      return await putPublicR2Object({
+        Key: key,
+        Body: body,
+        ContentType: fileType,
+      });
     }),
   uploadSvg: authorizedProcedure
     .input(uploadSvgSchema)
     .handler(async ({ context, input }) => {
       assertNotDemo();
-      const orgId = context.session?.activeOrganizationId;
-
-      if (!orgId) {
-        throw unauthorized(
-          (await getTranslations("common.labels"))("noActiveOrganization")
-        );
-      }
-
-      const membership = await db.query.members.findFirst({
-        where: and(
-          eq(members.userId, context.user.id),
-          eq(members.organizationId, orgId)
-        ),
-        columns: { id: true },
-      });
-
-      if (!membership) {
-        const tErrors = await getTranslations("errors.upload");
-        throw forbidden(tErrors("noOrganizationAccess"));
-      }
-      recordAuthorizedOrganization(context.headers, orgId, context.user.id);
+      const orgId = await requireActiveOrganizationMember(context);
 
       let sanitized: string;
       try {
@@ -210,26 +196,13 @@ export const uploadRouter = {
         input.type === "brand_asset"
           ? `organization/${orgId}/brand-assets/${id}.svg`
           : `organization/${orgId}/content/${id}.svg`;
-
-      const { client: r2Client, bucketName, publicUrl } = getR2Config();
-
-      await r2Client.send(
-        new PutObjectCommand({
-          Bucket: bucketName,
-          Key: key,
-          Body: sanitized,
-          ContentType: SVG_MIME_TYPE,
-          ContentDisposition:
-            input.type === "brand_asset" ? "inline" : "attachment",
-          CacheControl: "no-store",
-        })
-      );
-
-      const baseUrl = publicUrl.replace(TRAILING_SLASH_REGEX, "");
-
-      return {
-        key,
-        publicUrl: `${baseUrl}/${key}`,
-      };
+      return await putPublicR2Object({
+        Key: key,
+        Body: sanitized,
+        ContentType: SVG_MIME_TYPE,
+        ContentDisposition:
+          input.type === "brand_asset" ? "inline" : "attachment",
+        CacheControl: "no-store",
+      });
     }),
 };

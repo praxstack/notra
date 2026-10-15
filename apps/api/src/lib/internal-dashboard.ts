@@ -114,13 +114,8 @@ export const internalDashboardLive = internalDashboardLayer({
     if (secret.trim()) {
       return secret.trim();
     }
-    return yield* Effect.tryPromise({
-      try: () => getVercelOidcToken(),
-      catch: () =>
-        new InternalDashboardAdapterError({
-          kind: "authentication",
-          message: "Internal dashboard credentials unavailable",
-        }),
-    }).pipe(Effect.catch(() => Effect.succeed(null)));
+    return yield* Effect.tryPromise(() => getVercelOidcToken()).pipe(
+      Effect.orElseSucceed(() => null)
+    );
   }),
 });

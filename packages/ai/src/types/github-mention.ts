@@ -23,14 +23,6 @@ export interface GitHubMentionSender {
   type?: string;
 }
 
-export interface GitHubMentionRepository {
-  id: number;
-  name: string;
-  fullName: string;
-  defaultBranch: string;
-  owner: string;
-}
-
 /** Set when the mention was written in a review thread under "Files changed". */
 export interface GitHubMentionReviewThread {
   path: string;

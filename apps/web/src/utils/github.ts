@@ -1,3 +1,4 @@
+import { GITHUB_API_VERSION } from "@notra/ai/constants/github";
 import type {
   ContributorsData,
   GitHubIssue,
@@ -34,7 +35,7 @@ const EMPTY_DATA: ContributorsData = {
 function buildHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
+    "X-GitHub-Api-Version": GITHUB_API_VERSION,
     "User-Agent": `${GITHUB_OWNER}-${GITHUB_REPO}-site`,
   };
   if (process.env.GITHUB_TOKEN) {

@@ -14,22 +14,13 @@ import {
   createGetGeoTimeseriesTool,
   createListGeoProjectsTool,
 } from "@notra/ai/tools/geo";
-import {
-  createGetCommitsByTimeframeTool,
-  createGetPullRequestsTool,
-  createGetReleaseByTagTool,
-} from "@notra/ai/tools/github";
+import { buildGitHubDataTools } from "@notra/ai/tools/github";
 import {
   createGetGranolaFoldersTool,
   createGetGranolaNotesTool,
   createGetGranolaNoteTool,
 } from "@notra/ai/tools/granola";
 import { createImageTool } from "@notra/ai/tools/image";
-import {
-  createGetLinearCyclesTool,
-  createGetLinearIssuesTool,
-  createGetLinearProjectsTool,
-} from "@notra/ai/tools/linear";
 import {
   createGetAvailableIntegrationsTool,
   createGetBrandIdentityTool,
@@ -42,7 +33,6 @@ import {
   createGetPostTool,
   createUpdatePostTool,
   createViewPostTool,
-  getCreatePostToolName,
 } from "@notra/ai/tools/post";
 import {
   createCancelPostScheduleTool,
@@ -72,7 +62,15 @@ import type {
   ValidatedIntegration,
 } from "@notra/ai/types/orchestration";
 import { isCodeResearchConfigured } from "@notra/ai/utils/code-research-box";
+import { getCreatePostToolName } from "@notra/ai/utils/post-tool-name";
 import type { Tool } from "ai";
+
+import {
+  getGitHubRepoList,
+  hasGitHubRepositories,
+  registerLinearTools,
+  uniqueIntegrationIds,
+} from "./tool-registry";
 
 /** Tools that write user-visible records and must pause for user approval. */
 export function getStandaloneApprovalToolNames(): Set<string> {
@@ -217,30 +215,18 @@ export function buildStandaloneToolSet(
     );
   }
 
-  const hasGitHub = validatedIntegrations.some(
-    (i) => i.type === "github" && i.repositories.length > 0
-  );
-
-  if (hasGitHub) {
-    const allowedIntegrationIds = Array.from(
-      new Set(
-        validatedIntegrations
-          .filter((integration) => integration.type === "github")
-          .map((integration) => integration.id)
-      )
+  if (hasGitHubRepositories(validatedIntegrations)) {
+    const allowedIntegrationIds = uniqueIntegrationIds(
+      validatedIntegrations,
+      "github"
     );
-
-    tools.getPullRequests = createGetPullRequestsTool(
-      { organizationId, allowedIntegrationIds },
-      deps?.resolveContext
-    );
-    tools.getReleaseByTag = createGetReleaseByTagTool(
-      { organizationId, allowedIntegrationIds },
-      deps?.resolveContext
-    );
-    tools.getCommitsByTimeframe = createGetCommitsByTimeframeTool(
-      { organizationId, allowedIntegrationIds },
-      deps?.resolveContext
+    Object.assign(
+      tools,
+      buildGitHubDataTools({
+        organizationId,
+        allowedIntegrationIds,
+        resolveContext: deps?.resolveContext,
+      })
     );
 
     if (params.codeResearch && chatId && isCodeResearchConfigured()) {
@@ -263,46 +249,21 @@ export function buildStandaloneToolSet(
     );
   }
 
-  const hasLinear = validatedIntegrations.some((i) => i.type === "linear");
-
-  if (hasLinear) {
-    const allowedLinearIntegrationIds = Array.from(
-      new Set(
-        validatedIntegrations
-          .filter((integration) => integration.type === "linear")
-          .map((integration) => integration.id)
-      )
-    );
-
-    tools.getLinearIssues = createGetLinearIssuesTool(
-      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
-      deps?.resolveLinearContext
-    );
-    tools.getLinearProjects = createGetLinearProjectsTool(
-      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
-      deps?.resolveLinearContext
-    );
-    tools.getLinearCycles = createGetLinearCyclesTool(
-      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
-      deps?.resolveLinearContext
-    );
-
-    const teams = getLinearTeamList(validatedIntegrations);
-    descriptions.push(
-      `**Linear Integration**: Fetch issues, projects, and cycles${teams ? ` from: ${teams}` : ""}`
-    );
-  }
+  registerLinearTools(
+    tools,
+    descriptions,
+    organizationId,
+    validatedIntegrations,
+    deps?.resolveLinearContext
+  );
 
   const hasGranola = validatedIntegrations.some((i) => i.type === "granola");
 
   if (hasGranola) {
-    const granolaIntegrationIds = new Set<string>();
-    for (const integration of validatedIntegrations) {
-      if (integration.type === "granola") {
-        granolaIntegrationIds.add(integration.id);
-      }
-    }
-    const allowedGranolaIntegrationIds = Array.from(granolaIntegrationIds);
+    const allowedGranolaIntegrationIds = uniqueIntegrationIds(
+      validatedIntegrations,
+      "granola"
+    );
 
     tools.getGranolaNotes = createGetGranolaNotesTool(
       { organizationId, allowedIntegrationIds: allowedGranolaIntegrationIds },
@@ -324,28 +285,6 @@ export function buildStandaloneToolSet(
   }
 
   return { tools, descriptions };
-}
-
-function getGitHubRepoList(integrations: ValidatedIntegration[]): string {
-  const repos: string[] = [];
-  for (const integration of integrations) {
-    if (integration.type === "github") {
-      for (const repo of integration.repositories) {
-        repos.push(`${repo.owner}/${repo.repo}`);
-      }
-    }
-  }
-  return repos.join(", ");
-}
-
-function getLinearTeamList(integrations: ValidatedIntegration[]): string {
-  const teams: string[] = [];
-  for (const integration of integrations) {
-    if (integration.type === "linear") {
-      teams.push(integration.linearTeamName ?? integration.displayName);
-    }
-  }
-  return teams.join(", ");
 }
 
 function getGranolaWorkspaceList(integrations: ValidatedIntegration[]): string {

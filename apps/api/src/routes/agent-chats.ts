@@ -18,6 +18,7 @@ import {
 import { isDemoMode } from "@notra/utils/demo-mode";
 import type { Context } from "hono";
 
+import { ORGANIZATION_SCOPED_API_KEY_ERROR } from "../constants/skills";
 import { createAgentClient, isAgentApiEnabled } from "../lib/agent/client";
 import { checkAgentAiCredits } from "../utils/agent-credits";
 import { getOrganizationId } from "../utils/auth";
@@ -41,31 +42,24 @@ const commonErrorResponses = {
   503: errorResponse("Agent service is not configured"),
 };
 
-async function requireAgentContext(
-  c: Context
-): Promise<
-  { ok: true; organizationId: string } | { ok: false; response: Response }
-> {
+async function requireAgentContext(c: Context) {
   if (isDemoMode()) {
     return {
-      ok: false,
+      ok: false as const,
       response: c.json({ error: DEMO_AGENT_UNAVAILABLE }, 403),
     };
   }
   if (!isAgentApiEnabled()) {
     return {
-      ok: false,
+      ok: false as const,
       response: c.json({ error: "Agent service is not configured" }, 503),
     };
   }
   const organizationId = getOrganizationId(c);
   if (!organizationId) {
     return {
-      ok: false,
-      response: c.json(
-        { error: "Forbidden: API key must be scoped to an organization" },
-        403
-      ),
+      ok: false as const,
+      response: c.json({ error: ORGANIZATION_SCOPED_API_KEY_ERROR }, 403),
     };
   }
   const rateLimited = await enforceRatelimit(
@@ -74,9 +68,9 @@ async function requireAgentContext(
     "organization"
   );
   if (rateLimited) {
-    return { ok: false, response: rateLimited };
+    return { ok: false as const, response: rateLimited };
   }
-  return { ok: true, organizationId };
+  return { ok: true as const, organizationId };
 }
 
 agentChatsRoutes.openAPIRegistry.registerPath(
@@ -335,29 +329,15 @@ const listAgentChatsRoute = createRoute({
 });
 
 agentChatsRoutes.openapi(listAgentChatsRoute, async (c) => {
-  if (isDemoMode()) {
-    return c.json({ error: DEMO_AGENT_UNAVAILABLE }, 403);
-  }
-  if (!isAgentApiEnabled()) {
-    return c.json({ error: "Agent service is not configured" }, 503);
-  }
-  const organizationId = getOrganizationId(c);
-  if (!organizationId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
-  }
-  const rateLimited = await enforceRatelimit(
-    c,
-    ratelimit.chatGeneration,
-    "organization"
-  );
-  if (rateLimited) {
-    return rateLimited;
+  const context = await requireAgentContext(c);
+  if (!context.ok) {
+    return context.response;
   }
   const { limit } = c.req.valid("query");
-  const sessions = await listAgentSessionMappings(organizationId, limit);
+  const sessions = await listAgentSessionMappings(
+    context.organizationId,
+    limit
+  );
   return c.json(
     {
       sessions: sessions.map((session) => ({

@@ -39,12 +39,6 @@ export function getWorkOSClientId() {
   return clientId;
 }
 
-export const tryWorkOSAuth = <T>(run: () => Promise<T>) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (error) => new WorkOSAuthError({ error }),
-  });
-
 export const completeAuthentication = Effect.fn("auth.completeSession")(
   function* (
     response: AuthenticationResponse,

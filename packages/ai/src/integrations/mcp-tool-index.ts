@@ -27,7 +27,6 @@ import { customAlphabet } from "nanoid";
 import {
   MCP_ACTIVATE_BATCH_LIMIT,
   MCP_INDEX_TIMEOUT_MS,
-  MCP_MAX_RUNTIME_WRAPPERS,
   MCP_SEARCH_LIMIT_DEFAULT,
   MCP_SEARCH_LIMIT_MAX,
   MCP_SESSION_ACTIVE_TOOL_LIMIT,
@@ -49,6 +48,19 @@ import { getMcpRequestAuth, withMcpOAuthRetry } from "./mcp-auth";
 import { createMcpRuntimeToolName } from "./mcp-tool-name";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 16);
+const LIKE_SPECIAL_CHARS_REGEX = /[%_\\]/g;
+const UNIQUE_VIOLATION_CODE = "23505";
+const RUNTIME_TOOL_NAME_CONSTRAINT = "mcpToolIndex_org_runtime_tool_uidx";
+
+const indexedToolColumns = {
+  tool: mcpToolIndex,
+  serverName: mcpServerIntegrations.name,
+  serverUrl: mcpServerIntegrations.url,
+  serverEnabled: mcpServerIntegrations.enabled,
+  serverLogoLightUrl: mcpServerIntegrations.logoLightUrl,
+  serverLogoDarkUrl: mcpServerIntegrations.logoDarkUrl,
+};
+
 export async function refreshMcpToolIndexForOrganization({
   organizationId,
 }: {
@@ -189,37 +201,18 @@ export async function refreshMcpToolIndexForIntegration({
         });
       }
 
-      if (seenToolNames.size > 0) {
-        await tx
-          .update(mcpToolIndex)
-          .set({
-            status: "stale",
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(mcpToolIndex.serverIntegrationId, integrationId),
-              notInArray(
-                mcpToolIndex.serverToolName,
-                Array.from(seenToolNames)
-              ),
-              sql`coalesce(${mcpToolIndex.meta} ->> 'notraManual', 'false') <> 'true'`
-            )
-          );
-      } else {
-        await tx
-          .update(mcpToolIndex)
-          .set({
-            status: "stale",
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(mcpToolIndex.serverIntegrationId, integrationId),
-              sql`coalesce(${mcpToolIndex.meta} ->> 'notraManual', 'false') <> 'true'`
-            )
-          );
-      }
+      await tx
+        .update(mcpToolIndex)
+        .set({ status: "stale", updatedAt: new Date() })
+        .where(
+          and(
+            eq(mcpToolIndex.serverIntegrationId, integrationId),
+            seenToolNames.size > 0
+              ? notInArray(mcpToolIndex.serverToolName, [...seenToolNames])
+              : undefined,
+            sql`coalesce(${mcpToolIndex.meta} ->> 'notraManual', 'false') <> 'true'`
+          )
+        );
 
       const [toolCount] = await tx
         .select({ value: count() })
@@ -282,6 +275,7 @@ export async function searchMcpToolIndex({
 }) {
   const normalizedQuery = query.replace(/\s+/g, " ").trim();
   const boundedLimit = Math.min(Math.max(limit, 1), MCP_SEARCH_LIMIT_MAX);
+  const likePattern = `%${normalizedQuery.replace(LIKE_SPECIAL_CHARS_REGEX, "\\$&")}%`;
 
   const activeCount = await db
     .select({ value: count() })
@@ -321,21 +315,16 @@ export async function searchMcpToolIndex({
     normalizedQuery
       ? or(
           sql`to_tsvector('english', ${mcpToolIndex.searchText}) @@ plainto_tsquery('english', ${normalizedQuery})`,
-          ilike(mcpToolIndex.searchText, `%${normalizedQuery}%`),
-          ilike(mcpToolIndex.runtimeToolName, `%${normalizedQuery}%`),
-          ilike(mcpServerIntegrations.name, `%${normalizedQuery}%`)
+          ilike(mcpToolIndex.searchText, likePattern),
+          ilike(mcpToolIndex.runtimeToolName, likePattern),
+          ilike(mcpServerIntegrations.name, likePattern)
         )
       : undefined
   );
 
   return db
     .select({
-      tool: mcpToolIndex,
-      serverName: mcpServerIntegrations.name,
-      serverUrl: mcpServerIntegrations.url,
-      serverEnabled: mcpServerIntegrations.enabled,
-      serverLogoLightUrl: mcpServerIntegrations.logoLightUrl,
-      serverLogoDarkUrl: mcpServerIntegrations.logoDarkUrl,
+      ...indexedToolColumns,
       rank: normalizedQuery
         ? sql<number>`ts_rank_cd(to_tsvector('english', ${mcpToolIndex.searchText}), plainto_tsquery('english', ${normalizedQuery}))`
         : sql<number>`0`,
@@ -353,61 +342,7 @@ export async function searchMcpToolIndex({
       mcpToolIndex.runtimeToolName
     )
     .limit(boundedLimit)
-    .then((rows) =>
-      rows.map((row) =>
-        toIndexedMcpTool(row.tool, {
-          serverName: row.serverName,
-          serverUrl: row.serverUrl,
-          serverEnabled: row.serverEnabled,
-          serverLogoLightUrl: row.serverLogoLightUrl,
-          serverLogoDarkUrl: row.serverLogoDarkUrl,
-        })
-      )
-    );
-}
-
-export async function getIndexedMcpToolsForRuntime({
-  organizationId,
-  limit = MCP_MAX_RUNTIME_WRAPPERS,
-}: {
-  organizationId: string;
-  limit?: number;
-}) {
-  return db
-    .select({
-      tool: mcpToolIndex,
-      serverName: mcpServerIntegrations.name,
-      serverUrl: mcpServerIntegrations.url,
-      serverEnabled: mcpServerIntegrations.enabled,
-      serverLogoLightUrl: mcpServerIntegrations.logoLightUrl,
-      serverLogoDarkUrl: mcpServerIntegrations.logoDarkUrl,
-    })
-    .from(mcpToolIndex)
-    .innerJoin(
-      mcpServerIntegrations,
-      eq(mcpToolIndex.serverIntegrationId, mcpServerIntegrations.id)
-    )
-    .where(
-      and(
-        eq(mcpToolIndex.organizationId, organizationId),
-        eq(mcpToolIndex.status, "active"),
-        eq(mcpServerIntegrations.enabled, true),
-        eq(mcpServerIntegrations.resourceType, "connection")
-      )
-    )
-    .orderBy(mcpToolIndex.runtimeToolName)
-    .limit(limit)
-    .then((rows) =>
-      rows.map((row) =>
-        toIndexedMcpTool(row.tool, {
-          serverName: row.serverName,
-          serverUrl: row.serverUrl,
-          serverEnabled: row.serverEnabled,
-          serverLogoLightUrl: row.serverLogoLightUrl,
-          serverLogoDarkUrl: row.serverLogoDarkUrl,
-        })
-      )
-    );
+    .then((rows) => rows.map((row) => toIndexedMcpTool(row)));
 }
 
 export async function hasActiveIndexedMcpToolsForOrganization({
@@ -455,13 +390,8 @@ async function querySessionActivatedMcpTools({
   const now = new Date();
   return database
     .select({
+      ...indexedToolColumns,
       activation: mcpSessionToolActivations,
-      tool: mcpToolIndex,
-      serverName: mcpServerIntegrations.name,
-      serverUrl: mcpServerIntegrations.url,
-      serverEnabled: mcpServerIntegrations.enabled,
-      serverLogoLightUrl: mcpServerIntegrations.logoLightUrl,
-      serverLogoDarkUrl: mcpServerIntegrations.logoDarkUrl,
     })
     .from(mcpSessionToolActivations)
     .innerJoin(
@@ -493,13 +423,7 @@ async function querySessionActivatedMcpTools({
     .orderBy(mcpSessionToolActivations.activatedAt)
     .then((rows) =>
       rows.map((row) => ({
-        ...toIndexedMcpTool(row.tool, {
-          serverName: row.serverName,
-          serverUrl: row.serverUrl,
-          serverEnabled: row.serverEnabled,
-          serverLogoLightUrl: row.serverLogoLightUrl,
-          serverLogoDarkUrl: row.serverLogoDarkUrl,
-        }),
+        ...toIndexedMcpTool(row),
         activationId: row.activation.id,
         sourceQuery: row.activation.sourceQuery,
         activatedAt: row.activation.activatedAt,
@@ -740,14 +664,7 @@ export async function getIndexedMcpToolByRuntimeName({
   runtimeToolName: string;
 }) {
   const [row] = await db
-    .select({
-      tool: mcpToolIndex,
-      serverName: mcpServerIntegrations.name,
-      serverUrl: mcpServerIntegrations.url,
-      serverEnabled: mcpServerIntegrations.enabled,
-      serverLogoLightUrl: mcpServerIntegrations.logoLightUrl,
-      serverLogoDarkUrl: mcpServerIntegrations.logoDarkUrl,
-    })
+    .select(indexedToolColumns)
     .from(mcpToolIndex)
     .innerJoin(
       mcpServerIntegrations,
@@ -764,15 +681,7 @@ export async function getIndexedMcpToolByRuntimeName({
     )
     .limit(1);
 
-  return row
-    ? toIndexedMcpTool(row.tool, {
-        serverName: row.serverName,
-        serverUrl: row.serverUrl,
-        serverEnabled: row.serverEnabled,
-        serverLogoLightUrl: row.serverLogoLightUrl,
-        serverLogoDarkUrl: row.serverLogoDarkUrl,
-      })
-    : null;
+  return row ? toIndexedMcpTool(row) : null;
 }
 
 export async function isMcpToolActivatedForSession({
@@ -1064,20 +973,9 @@ async function upsertIndexedToolWithRuntimeName({
     });
 }
 
-async function getToolsByIds(organizationId: string, toolIds: string[]) {
-  if (!toolIds.length) {
-    return [];
-  }
-
+function getToolsByIds(organizationId: string, toolIds: string[]) {
   return db
-    .select({
-      tool: mcpToolIndex,
-      serverName: mcpServerIntegrations.name,
-      serverUrl: mcpServerIntegrations.url,
-      serverEnabled: mcpServerIntegrations.enabled,
-      serverLogoLightUrl: mcpServerIntegrations.logoLightUrl,
-      serverLogoDarkUrl: mcpServerIntegrations.logoDarkUrl,
-    })
+    .select(indexedToolColumns)
     .from(mcpToolIndex)
     .innerJoin(
       mcpServerIntegrations,
@@ -1091,29 +989,20 @@ async function getToolsByIds(organizationId: string, toolIds: string[]) {
         eq(mcpServerIntegrations.resourceType, "connection")
       )
     )
-    .then((rows) =>
-      rows.map((row) =>
-        toIndexedMcpTool(row.tool, {
-          serverName: row.serverName,
-          serverUrl: row.serverUrl,
-          serverEnabled: row.serverEnabled,
-          serverLogoLightUrl: row.serverLogoLightUrl,
-          serverLogoDarkUrl: row.serverLogoDarkUrl,
-        })
-      )
-    );
+    .then((rows) => rows.map((row) => toIndexedMcpTool(row)));
 }
 
-function toIndexedMcpTool(
-  row: typeof mcpToolIndex.$inferSelect,
-  server: {
-    serverName: string;
-    serverUrl: string;
-    serverEnabled: boolean;
-    serverLogoLightUrl: string | null;
-    serverLogoDarkUrl: string | null;
-  }
-): IndexedMcpTool {
+function toIndexedMcpTool({
+  tool: row,
+  ...server
+}: {
+  tool: typeof mcpToolIndex.$inferSelect;
+  serverName: string;
+  serverUrl: string;
+  serverEnabled: boolean;
+  serverLogoLightUrl: string | null;
+  serverLogoDarkUrl: string | null;
+}): IndexedMcpTool {
   return {
     id: row.id,
     organizationId: row.organizationId,
@@ -1222,7 +1111,7 @@ function schemaPropertyNames(inputSchema: unknown) {
   ) {
     return "";
   }
-  const properties = (inputSchema as { properties?: unknown }).properties;
+  const { properties } = inputSchema;
   if (typeof properties !== "object" || properties === null) {
     return "";
   }
@@ -1233,15 +1122,21 @@ function sanitizeErrorMessage(message: string) {
   return message.replace(/\s+/g, " ").trim().slice(0, 1000);
 }
 
-function isRuntimeToolNameConflict(error: unknown) {
-  if (!(error instanceof Error)) {
-    return false;
+function isRuntimeToolNameConflict(error: unknown): boolean {
+  for (let current = error, depth = 0; current && depth < 6; depth++) {
+    if (typeof current === "object") {
+      const record = current as { code?: unknown; constraint?: unknown };
+      if (
+        record.code === UNIQUE_VIOLATION_CODE &&
+        record.constraint === RUNTIME_TOOL_NAME_CONSTRAINT
+      ) {
+        return true;
+      }
+    }
+    current =
+      typeof current === "object" && "cause" in current
+        ? current.cause
+        : undefined;
   }
-  return (
-    error.message.includes("mcpToolIndex_org_runtime_tool_uidx") ||
-    error.message.includes(
-      "mcp_tool_index_organization_id_runtime_tool_name"
-    ) ||
-    error.message.includes("runtime_tool_name")
-  );
+  return false;
 }

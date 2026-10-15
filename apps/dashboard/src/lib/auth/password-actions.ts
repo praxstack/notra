@@ -65,13 +65,29 @@ import {
   runAuthFlow,
   signedIn,
   trackAuthEvent,
-  tryWorkOSAuth,
 } from "@/lib/auth/auth-flow";
+import { tryWorkOSAuth } from "@/lib/auth/errors";
 import { authenticateResolvingOrgSelection } from "@/lib/auth/org-selection";
 import { readWorkOSError } from "@/lib/auth/workos-error";
 import { isRateLimited, ratelimit } from "@/utils/ratelimit";
 
 const NAME_SPLIT_REGEX = /\s+/;
+
+const signInWithPassword = Effect.fnUntraced(function* (input: {
+  email: string;
+  password: string;
+  returnTo?: string | null;
+}) {
+  const response = yield* authenticateResolvingOrgSelection(() =>
+    getWorkOS().userManagement.authenticateWithPassword({
+      clientId: getWorkOSClientId(),
+      email: input.email,
+      password: input.password,
+    })
+  );
+
+  return signedIn(yield* completeAuthentication(response, input.returnTo));
+});
 
 async function signInWithPasswordActionImpl(
   rawInput: SignInWithPasswordInput
@@ -92,17 +108,7 @@ async function signInWithPasswordActionImpl(
   return runAuthFlow(
     parsed.data.email,
     Effect.gen(function* () {
-      const response = yield* authenticateResolvingOrgSelection(() =>
-        getWorkOS().userManagement.authenticateWithPassword({
-          clientId: getWorkOSClientId(),
-          email: parsed.data.email,
-          password: parsed.data.password,
-        })
-      );
-
-      return signedIn(
-        yield* completeAuthentication(response, parsed.data.returnTo)
-      );
+      return yield* signInWithPassword(parsed.data);
     })
   );
 }
@@ -139,17 +145,7 @@ async function signUpWithPasswordActionImpl(
         })
       );
 
-      const response = yield* authenticateResolvingOrgSelection(() =>
-        getWorkOS().userManagement.authenticateWithPassword({
-          clientId: getWorkOSClientId(),
-          email: parsed.data.email,
-          password: parsed.data.password,
-        })
-      );
-
-      return signedIn(
-        yield* completeAuthentication(response, parsed.data.returnTo)
-      );
+      return yield* signInWithPassword(parsed.data);
     })
   );
 }

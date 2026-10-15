@@ -5,13 +5,13 @@ import { Effect, Result } from "effect";
 
 import { checkMissedGeoScans } from "@/lib/analytics/geo-scan-watchdog";
 import { runMonitoringSweep } from "@/lib/analytics/monitoring-sweep";
+import { isAuthorizedCron } from "@/lib/auth/cron";
 import { scheduleRequestErrorTelemetry } from "@/utils/request-error-telemetry";
 import { retryWorkflowFailureAlerts } from "@/utils/workflow-failure-alert";
 import { logWorkflowTelemetry } from "@/utils/workflow-telemetry";
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!isAuthorizedCron(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (isDemoMode()) {

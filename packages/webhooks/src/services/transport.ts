@@ -3,7 +3,6 @@ import { Cache, Clock, Context, Effect, Layer } from "effect";
 import { DNS_CHECK_TTL_SECONDS, HTTP_TIMEOUT_MS } from "../constants/delivery";
 import { WebhookTransportError } from "../errors/webhooks";
 import type { WebhookTransportService } from "../types/services";
-import type { DeliveryOutcome, SendRequest } from "../types/webhooks";
 import { validateDns } from "../utils/dns";
 import { parseRetryAfter } from "../utils/retry";
 

@@ -27,9 +27,9 @@ function scheduleCapture(capture: () => void): void {
   });
 }
 
-export function trackServerEvent(input: TrackServerEventInput): void {
+function eventCapture(input: TrackServerEventInput): () => void {
   const requestContext = getPostHogRequestContext(input.headers);
-  scheduleCapture(() =>
+  return () =>
     captureServerEvent({
       event: input.event,
       distinctId: resolvePostHogDistinctId(requestContext, input.userId),
@@ -37,22 +37,17 @@ export function trackServerEvent(input: TrackServerEventInput): void {
       organizationId: input.organizationId,
       projectId: input.projectId,
       properties: input.properties,
-    })
-  );
+    });
+}
+
+export function trackServerEvent(input: TrackServerEventInput): void {
+  scheduleCapture(eventCapture(input));
 }
 
 export async function trackServerEventAndFlush(
   input: TrackServerEventInput
 ): Promise<void> {
-  const requestContext = getPostHogRequestContext(input.headers);
-  captureServerEvent({
-    event: input.event,
-    distinctId: resolvePostHogDistinctId(requestContext, input.userId),
-    sessionId: requestContext.sessionId,
-    organizationId: input.organizationId,
-    projectId: input.projectId,
-    properties: input.properties,
-  });
+  eventCapture(input)();
   await flushPostHogServer();
 }
 

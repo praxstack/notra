@@ -13,13 +13,13 @@ import { POSTHOG_EVENTS } from "@notra/posthog/events";
 
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
 import { withOrganizationAuth } from "@/lib/auth/organization";
+import type { RouteContext } from "@/types/api/routes";
 import { ratelimit } from "@/utils/ratelimit";
 
-interface RouteContext {
-  params: Promise<{ organizationId: string; chatId: string }>;
-}
-
-export async function POST(request: Request, { params }: RouteContext) {
+export async function POST(
+  request: Request,
+  { params }: RouteContext<{ organizationId: string; chatId: string }>
+) {
   const { organizationId, chatId } = await params;
   const auth = await withOrganizationAuth(request, organizationId);
 

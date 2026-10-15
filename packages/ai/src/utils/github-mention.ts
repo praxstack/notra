@@ -66,7 +66,7 @@ export function commentMentionsNotra(
   );
 }
 
-export function isNotraMentionHandle(handle: string) {
+function isNotraMentionHandle(handle: string) {
   const normalized = normalizeHandle(handle);
   return (
     normalized === "usenotra" || NOTRA_FAMILY_HANDLE_PATTERN.test(normalized)

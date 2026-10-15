@@ -11,7 +11,6 @@ import type {
 import type { OperationalContext } from "@notra/ai/types/operational-log";
 import type * as z from "zod";
 
-export type RepoImageMode = z.infer<typeof repoImageModeSchema>;
 export type RepoImageFormat = z.infer<typeof repoImageFormatSchema>;
 
 export type RepoImageErrorCode =

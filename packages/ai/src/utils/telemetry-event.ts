@@ -9,6 +9,7 @@ import {
 } from "@notra/ai/constants/telemetry";
 import { WORKFLOW_TELEMETRY_FIELDS } from "@notra/ai/constants/workflow-telemetry";
 import { telemetryValue } from "@notra/ai/utils/telemetry-value";
+import { isRecord } from "@notra/ai/utils/unknown-record";
 import { workflowTelemetryValue } from "@notra/ai/utils/workflow-telemetry-value";
 import type { WideEvent } from "evlog";
 
@@ -69,8 +70,8 @@ export function telemetryEvent(event: WideEvent): WideEvent {
       }
     }
   }
-  if (event.ai && typeof event.ai === "object" && !Array.isArray(event.ai)) {
-    const ai = event.ai as Record<string, unknown>;
+  const { ai } = event;
+  if (isRecord(ai)) {
     safe.ai = Object.fromEntries(
       TELEMETRY_AI_FIELDS.flatMap((key) => {
         const value = ai[key];

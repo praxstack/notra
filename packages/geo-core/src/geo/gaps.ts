@@ -312,14 +312,14 @@ function aggregateMentionChecks(
 ): Map<string, PromptGapAgg> {
   const byPrompt = new Map<string, PromptGapAgg>();
   for (const check of checks) {
-    const entry = byPrompt.get(check.promptId) ?? {
+    const entry: PromptGapAgg = byPrompt.get(check.promptId) ?? {
       promptText: check.prompt,
       total: 0,
       mentioned: 0,
-      missing: [] as string[],
-      mentionedEngines: [] as string[],
-      competitors: [] as string[],
-      searchQueriesByEngine: [] as string[][],
+      missing: [],
+      mentionedEngines: [],
+      competitors: [],
+      searchQueriesByEngine: [],
     };
     entry.total += 1;
     if (check.mentioned) {
@@ -351,13 +351,13 @@ function aggregateAiSearches(
     ) {
       continue;
     }
-    const entry = byKey.get(key) ?? {
-      variants: new Map<string, number>(),
-      prompts: new Set<string>(),
-      engines: new Set<string>(),
-      checkIds: new Set<string>(),
-      coveredCheckIds: new Set<string>(),
-      competitors: [] as string[],
+    const entry: GeoAiSearchAgg = byKey.get(key) ?? {
+      variants: new Map(),
+      prompts: new Set(),
+      engines: new Set(),
+      checkIds: new Set(),
+      coveredCheckIds: new Set(),
+      competitors: [],
     };
     entry.variants.set(
       row.query,
@@ -566,25 +566,22 @@ const loadCollisionCandidates = Effect.fn("geo.gaps.collisionCandidates")(
             .limit(GEO_COLLISION_SITEMAP_PAGE_LIMIT)
         )
       : [];
-    const candidates: GeoContentCollisionCandidate[] = [];
-    for (const page of pageRows) {
-      candidates.push({
-        kind: "page",
+    const candidates: GeoContentCollisionCandidate[] = [
+      ...pageRows.map((page) => ({
+        kind: "page" as const,
         id: page.id,
         url: page.url,
         title: page.title,
         slug: null,
-      });
-    }
-    for (const post of postRows) {
-      candidates.push({
-        kind: "post",
+      })),
+      ...postRows.map((post) => ({
+        kind: "post" as const,
         id: post.id,
         url: post.htmlUrl,
         title: post.title,
         slug: post.slug,
-      });
-    }
+      })),
+    ];
     return candidates;
   }
 );

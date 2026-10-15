@@ -400,12 +400,13 @@ export async function publishSavedContentToGitHub(
       ...(input.linkedOnly ? { requireLinkedPullRequest: true } : {}),
       ...(publisherLogin ? { publisherLogin } : {}),
       prepareContent: async (contentPath: string) => {
+        const imagePathTemplate = resolveGitHubImagePathTemplate(
+          contentPath,
+          imagePath
+        );
         const preparedContent = await prepareR2GitHubContentAssets({
           contentPath,
-          imagePathTemplate: resolveGitHubImagePathTemplate(
-            contentPath,
-            imagePath
-          ),
+          imagePathTemplate,
           markdown: savedMarkdown,
           organizationId: input.organizationId,
           ...(siteTarget
@@ -431,10 +432,7 @@ export async function publishSavedContentToGitHub(
         const entryMetadata = await prepareSiteEntryMetadata(post, {
           contentPath,
           contentType: input.contentType,
-          imagePathTemplate: resolveGitHubImagePathTemplate(
-            contentPath,
-            imagePath
-          ),
+          imagePathTemplate,
           organizationId: input.organizationId,
           publicDirectory: resolveSitePublicDirectory(siteTarget.rootDirectory),
           slug: contentSlug,
@@ -549,29 +547,18 @@ export async function publishSavedContentToGitHub(
           })
         )
       );
-      if (!reconciliationScheduled) {
-        try {
-          await startContentPublicationReconciliation(publication, publishedAt);
-        } catch (startError) {
-          logError(
-            "Failed to start content publication reconciliation",
-            startError,
-            logContext
-          );
-        }
-      }
     } catch (error) {
       logError("Failed to record content publication", error, logContext);
-      if (!reconciliationScheduled) {
-        try {
-          await startContentPublicationReconciliation(publication, publishedAt);
-        } catch (startError) {
-          logError(
-            "Failed to start content publication reconciliation",
-            startError,
-            logContext
-          );
-        }
+    }
+    if (!reconciliationScheduled) {
+      try {
+        await startContentPublicationReconciliation(publication, publishedAt);
+      } catch (startError) {
+        logError(
+          "Failed to start content publication reconciliation",
+          startError,
+          logContext
+        );
       }
     }
     try {

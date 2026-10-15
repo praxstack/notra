@@ -60,9 +60,6 @@ import {
 } from "./sequence-generation";
 import { buildBrandTerms, promptMentionsBrand } from "./suggestion-keywords";
 
-const MIN_PROMPT_LENGTH = GEO_PROMPT_MIN_LENGTH;
-const MAX_PROMPT_LENGTH = GEO_PROMPT_MAX_LENGTH;
-
 function buildDiscoveryPrompt(
   url: string,
   content: string,
@@ -89,15 +86,11 @@ Write questions someone would actually type into ChatGPT before finding this com
 - Stay at this product's level. A provider-agnostic email library can answer questions about switching or using multiple providers, not which provider to buy, how to fix deliverability or how to schedule sends. A social SDK is not a post scheduler. If this product would not be a direct answer, replace the question.
 - Cover different jobs. No more than two questions about the same problem; changing the provider, role or opener does not make a new question. Mix recommendations with practical questions and tradeoffs.
 - Never name this company, its products, aliases or domain in a prompt. Do not copy its wording. Mention a direct competitor only when a buyer would naturally compare it.
-- Write every prompt in ${language}, even when the website uses another language. Do not invent claims about prices, legal deadlines, features or release dates. Each prompt must be ${MIN_PROMPT_LENGTH} to ${MAX_PROMPT_LENGTH} characters; do not append "${year}".
+- Write every prompt in ${language}, even when the website uses another language. Do not invent claims about prices, legal deadlines, features or release dates. Each prompt must be ${GEO_PROMPT_MIN_LENGTH} to ${GEO_PROMPT_MAX_LENGTH} characters; do not append "${year}".
 
 Give each question a useful article title in ${language}, under ${GEO_GAP_TITLE_MAX_LENGTH} characters. Use natural capitalization for that language. Only ranking or comparison titles may include "${year}".
 
 ${geoConversationRules("the company", language)}`;
-}
-
-function normalizeKey(value: string): string {
-  return value.trim().toLowerCase();
 }
 
 function unionValues(
@@ -109,7 +102,7 @@ function unionValues(
   const merged: string[] = [];
   for (const value of [...existing, ...extracted]) {
     const trimmed = value.trim();
-    const key = normalizeKey(trimmed);
+    const key = competitorKey(trimmed);
     if (!trimmed || seen.has(key) || merged.length >= limit) {
       continue;
     }
@@ -136,7 +129,7 @@ function buildCompetitorSeeds(
   }));
 }
 
-export const prepareGeoWebsiteGeneration = Effect.fn(
+const prepareGeoWebsiteGeneration = Effect.fn(
   "geo.generateFromWebsite.prepare"
 )(function* (
   discovery: GeoWebsiteDiscovery,
@@ -159,8 +152,8 @@ export const prepareGeoWebsiteGeneration = Effect.fn(
     const prompt = entry.prompt.trim();
     const title = entry.title.trim().slice(0, GEO_GAP_TITLE_MAX_LENGTH);
     if (
-      prompt.length < MIN_PROMPT_LENGTH ||
-      prompt.length > MAX_PROMPT_LENGTH ||
+      prompt.length < GEO_PROMPT_MIN_LENGTH ||
+      prompt.length > GEO_PROMPT_MAX_LENGTH ||
       promptMentionsBrand(prompt, brandTerms)
     ) {
       continue;

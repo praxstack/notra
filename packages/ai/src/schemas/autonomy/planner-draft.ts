@@ -10,9 +10,6 @@ export const plannerDraftTaskParamsSchema = z.looseObject({
   platform: z.string().optional(),
   focus: z.string().optional(),
 });
-export type PlannerDraftTaskParams = z.infer<
-  typeof plannerDraftTaskParamsSchema
->;
 
 export const plannerDraftTaskSchema = z.object({
   localId: z.string(),
@@ -22,7 +19,6 @@ export const plannerDraftTaskSchema = z.object({
   dependsOn: z.array(z.string()).default([]),
   reason: z.string(),
 });
-export type PlannerDraftTask = z.infer<typeof plannerDraftTaskSchema>;
 
 export const plannerDraftOutputSchema = z.object({
   contractVersion: z.literal(PLANNER_CONTRACT_VERSION),
@@ -41,4 +37,3 @@ export const plannerDraftOutputSchema = z.object({
     .optional(),
   tasks: z.array(plannerDraftTaskSchema).default([]),
 });
-export type PlannerDraftOutput = z.infer<typeof plannerDraftOutputSchema>;

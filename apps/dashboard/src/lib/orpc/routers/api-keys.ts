@@ -2,6 +2,7 @@ import { db } from "@notra/db/drizzle";
 import { demoSandboxes } from "@notra/db/schema";
 import { POSTHOG_EVENTS } from "@notra/posthog/events";
 import {
+  type CreateApiKeyInput,
   createApiKeySchema,
   deleteAccountKeyInputSchema,
   deleteKeyInputSchema,
@@ -29,10 +30,9 @@ import {
   summarizeApiKeyScopes,
 } from "@/lib/api-keys/scopes";
 import { unkey } from "@/lib/api-keys/unkey";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { getTranslations } from "@/lib/i18n/server";
-import { authorizedProcedure } from "@/lib/orpc/base";
+import { authorizedProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 
 import {
   badRequest,
@@ -103,23 +103,78 @@ async function listKeysByExternalId(
   return keys;
 }
 
-async function findKeyByExternalId(
+async function assertKeyIdMatches(input: {
+  keyIdParam: string;
+  payload: { keyId: string };
+}) {
+  if (input.payload.keyId !== input.keyIdParam) {
+    throw badRequest((await getTranslations("errors.actions"))("invalidInput"));
+  }
+}
+
+async function requireKeyByExternalId(
   client: NonNullable<typeof unkey>,
   apiId: string,
   externalId: string,
   keyId: string
 ) {
   const keys = await listKeysByExternalId(client, apiId, externalId);
-  return keys.find((key) => key.keyId === keyId) ?? null;
+  const key = keys.find((item) => item.keyId === keyId);
+  if (!key) {
+    throw notFound("API key not found");
+  }
+  return key;
 }
 
-function toKeyListItem(key: KeyResponseData) {
-  const meta = key.meta ?? {};
-  const permissions = Array.isArray(key.permissions)
+async function createUnkeyKey(
+  client: NonNullable<typeof unkey>,
+  apiId: string,
+  {
+    externalId,
+    input,
+    meta,
+  }: {
+    externalId: string;
+    input: CreateApiKeyInput;
+    meta: Record<string, unknown>;
+  }
+) {
+  const expiresMs = API_KEY_EXPIRATION_MS[input.expiration];
+  const permissions = getApiKeyPermissionsForAccessMode(
+    input.accessMode,
+    input.scopes
+  );
+
+  const created = await client.keys.createKey({
+    apiId,
+    expires: expiresMs ? Date.now() + expiresMs : undefined,
+    externalId,
+    meta: { accessMode: input.accessMode, ...meta },
+    name: input.name,
+    permissions,
+    prefix: "ntra",
+  });
+
+  const fullKey = created.data?.key;
+  const keyId = created.data?.keyId;
+  if (!(fullKey && keyId)) {
+    throw internalServerError("Failed to create API key");
+  }
+
+  return { fullKey, keyId, scopes: expandLegacyApiKeyScopes(permissions) };
+}
+
+function stringPermissions(key: KeyResponseData) {
+  return Array.isArray(key.permissions)
     ? key.permissions.filter(
         (permission): permission is string => typeof permission === "string"
       )
     : [];
+}
+
+function toKeyListItem(key: KeyResponseData) {
+  const meta = key.meta ?? {};
+  const permissions = stringPermissions(key);
 
   const scopes = expandLegacyApiKeyScopes(permissions);
   const accessMode = getApiKeyAccessMode(permissions, meta.accessMode);
@@ -170,11 +225,7 @@ function resolveUpdatePayload(
       ] ?? 0);
   }
 
-  const currentPermissions = Array.isArray(key.permissions)
-    ? key.permissions.filter(
-        (permission): permission is string => typeof permission === "string"
-      )
-    : [];
+  const currentPermissions = stringPermissions(key);
   const accessMode =
     payload.accessMode ??
     getApiKeyAccessMode(currentPermissions, meta.accessMode);
@@ -194,13 +245,8 @@ function resolveUpdatePayload(
 export const apiKeysRouter = {
   list: authorizedProcedure
     .input(organizationIdInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const { apiId, client } = await requireUnkeyConfig();
       const keysData = await listKeysByExternalId(
         client,
@@ -212,42 +258,16 @@ export const apiKeysRouter = {
     }),
   create: authorizedProcedure
     .input(organizationIdInputSchema.extend(createApiKeySchema.shape))
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
       await assertActiveSubscription(input.organizationId);
 
       const { apiId, client } = await requireUnkeyConfig();
-      const expiresMs = API_KEY_EXPIRATION_MS[input.expiration];
-      const expires = expiresMs ? Date.now() + expiresMs : undefined;
-      const permissions = getApiKeyPermissionsForAccessMode(
-        input.accessMode,
-        input.scopes
-      );
-      const scopes = expandLegacyApiKeyScopes(permissions);
-
-      const created = await client.keys.createKey({
-        apiId,
-        expires,
+      const { fullKey, keyId, scopes } = await createUnkeyKey(client, apiId, {
         externalId: input.organizationId,
-        meta: {
-          accessMode: input.accessMode,
-          createdBy: context.user.name,
-        },
-        name: input.name,
-        permissions,
-        prefix: "ntra",
+        input,
+        meta: { createdBy: context.user.name },
       });
-
-      const fullKey = created.data?.key;
-      const keyId = created.data?.keyId;
-
-      if (!(fullKey && keyId)) {
-        throw internalServerError("Failed to create API key");
-      }
 
       trackServerEvent({
         event: POSTHOG_EVENTS.API_KEY_CREATED,
@@ -270,34 +290,22 @@ export const apiKeysRouter = {
     }),
   update: authorizedProcedure
     .input(updateKeyInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
       await assertActiveSubscription(input.organizationId);
 
       const { apiId, client } = await requireUnkeyConfig();
 
-      if (input.payload.keyId !== input.keyIdParam) {
-        throw badRequest(
-          (await getTranslations("errors.actions"))("invalidInput")
-        );
-      }
+      await assertKeyIdMatches(input);
 
       await assertNotDemoSandboxKey(input.organizationId, input.payload.keyId);
 
-      const key = await findKeyByExternalId(
+      const key = await requireKeyByExternalId(
         client,
         apiId,
         input.organizationId,
         input.payload.keyId
       );
-
-      if (!key) {
-        throw notFound("API key not found");
-      }
 
       const { accessMode, expires, meta, permissions, scopes } =
         resolveUpdatePayload(key, {
@@ -337,33 +345,20 @@ export const apiKeysRouter = {
     }),
   delete: authorizedProcedure
     .input(deleteKeyInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-        user: context.user,
-      });
-
       const { apiId, client } = await requireUnkeyConfig();
 
-      if (input.payload.keyId !== input.keyIdParam) {
-        throw badRequest(
-          (await getTranslations("errors.actions"))("invalidInput")
-        );
-      }
+      await assertKeyIdMatches(input);
 
       await assertNotDemoSandboxKey(input.organizationId, input.payload.keyId);
 
-      const key = await findKeyByExternalId(
+      const key = await requireKeyByExternalId(
         client,
         apiId,
         input.organizationId,
         input.payload.keyId
       );
-
-      if (!key) {
-        throw notFound("API key not found");
-      }
 
       await client.keys.deleteKey({ keyId: input.payload.keyId });
 
@@ -394,34 +389,11 @@ export const apiKeysRouter = {
       .input(createApiKeySchema)
       .handler(async ({ context, input }) => {
         const { apiId, client } = await requireUnkeyConfig();
-        const expiresMs = API_KEY_EXPIRATION_MS[input.expiration];
-        const expires = expiresMs ? Date.now() + expiresMs : undefined;
-        const permissions = getApiKeyPermissionsForAccessMode(
-          input.accessMode,
-          input.scopes
-        );
-        const scopes = expandLegacyApiKeyScopes(permissions);
-
-        const created = await client.keys.createKey({
-          apiId,
-          expires,
+        const { fullKey, keyId, scopes } = await createUnkeyKey(client, apiId, {
           externalId: toAccountApiKeyExternalId(context.user.id),
-          meta: {
-            accessMode: input.accessMode,
-            accountWide: true,
-            createdBy: context.user.name,
-          },
-          name: input.name,
-          permissions,
-          prefix: "ntra",
+          input,
+          meta: { accountWide: true, createdBy: context.user.name },
         });
-
-        const fullKey = created.data?.key;
-        const keyId = created.data?.keyId;
-
-        if (!(fullKey && keyId)) {
-          throw internalServerError("Failed to create API key");
-        }
 
         trackServerEvent({
           event: POSTHOG_EVENTS.API_KEY_CREATED,
@@ -447,22 +419,14 @@ export const apiKeysRouter = {
       .handler(async ({ context, input }) => {
         const { apiId, client } = await requireUnkeyConfig();
 
-        if (input.payload.keyId !== input.keyIdParam) {
-          throw badRequest(
-            (await getTranslations("errors.actions"))("invalidInput")
-          );
-        }
+        await assertKeyIdMatches(input);
 
-        const key = await findKeyByExternalId(
+        const key = await requireKeyByExternalId(
           client,
           apiId,
           toAccountApiKeyExternalId(context.user.id),
           input.payload.keyId
         );
-
-        if (!key) {
-          throw notFound("API key not found");
-        }
 
         const { accessMode, expires, meta, permissions, scopes } =
           resolveUpdatePayload(key, {
@@ -506,22 +470,14 @@ export const apiKeysRouter = {
       .handler(async ({ context, input }) => {
         const { apiId, client } = await requireUnkeyConfig();
 
-        if (input.payload.keyId !== input.keyIdParam) {
-          throw badRequest(
-            (await getTranslations("errors.actions"))("invalidInput")
-          );
-        }
+        await assertKeyIdMatches(input);
 
-        const key = await findKeyByExternalId(
+        const key = await requireKeyByExternalId(
           client,
           apiId,
           toAccountApiKeyExternalId(context.user.id),
           input.payload.keyId
         );
-
-        if (!key) {
-          throw notFound("API key not found");
-        }
 
         await client.keys.deleteKey({ keyId: input.payload.keyId });
 

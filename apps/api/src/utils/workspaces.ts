@@ -1,10 +1,10 @@
-import type { createDb } from "@notra/db/drizzle";
 import { members, organizations, users } from "@notra/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
 import { WorkspaceInvitationServiceError } from "../errors/workspaces";
 import type { WorkspaceAuthData } from "../types/auth";
 import { isAccountKeyAuth, isOAuthAuth } from "../types/auth";
+import type { DbClient } from "../types/db";
 import type {
   PendingWorkspaceInvitation,
   WorkspaceContext,
@@ -12,7 +12,6 @@ import type {
 } from "../types/workspaces";
 import { getOrganizationResponse } from "./organizations";
 
-type DbClient = ReturnType<typeof createDb>;
 type PendingInvitationLoader = (
   email: string
 ) => Promise<PendingWorkspaceInvitation[]>;

@@ -45,4 +45,3 @@ export const mandateRefSchema = z.object({
   mandateId: z.string().min(1),
   mandateVersion: z.number().int().min(MANDATE_MIN_VERSION),
 });
-export type MandateRef = z.infer<typeof mandateRefSchema>;

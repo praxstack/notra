@@ -1,4 +1,5 @@
 import { checkContentBilling } from "@notra/ai/billing/content-billing";
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import { getTokenForIntegrationId } from "@notra/ai/integrations/github";
 import {
   getDecryptedLinearToken,
@@ -100,10 +101,10 @@ import {
 import { SOCIAL_VIDEO } from "@/constants/social-video";
 import { trackServerEvent } from "@/lib/analytics/posthog-server";
 import { getEnabledDataPoints } from "@/lib/analytics/studio-events";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
 import { getUtcDayRange } from "@/lib/content/content-calendar";
 import { getContentPublishingMetrics } from "@/lib/content/content-publishing-metrics.server";
+import { isUniqueConstraintError } from "@/lib/db/errors";
 import { afterResponse } from "@/lib/framework/after-response";
 import {
   addActiveGeneration,
@@ -115,7 +116,7 @@ import {
 import { requestGeoRescanForPublishedPost } from "@/lib/geo/rescan";
 import { getTranslations } from "@/lib/i18n/server";
 import { publishSavedContentToGitHub } from "@/lib/integrations/github/publish-saved-content";
-import { baseProcedure } from "@/lib/orpc/base";
+import { baseProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import { contentAuthorsRouter } from "@/lib/orpc/routers/content-authors";
 import { contentHistoryRouter } from "@/lib/orpc/routers/content-history";
 import { isOwnSocialVideo } from "@/lib/social-connect/media-urls";
@@ -304,6 +305,30 @@ function normalizeContentType(contentType: string): ContentType {
   return contentTypeSchema.parse(contentType);
 }
 
+function storedContentTypes(contentTypes: unknown): string[] {
+  return Array.isArray(contentTypes)
+    ? contentTypes.filter((type): type is string => typeof type === "string")
+    : [];
+}
+
+function isCollectionGenerating(collection: {
+  completedPostCount: number;
+  expectedPostCount: number | null;
+}) {
+  return (
+    collection.expectedPostCount !== null &&
+    collection.completedPostCount < collection.expectedPostCount
+  );
+}
+
+async function toSlugConflict(error: unknown) {
+  if (isUniqueConstraintError(error)) {
+    const tErrors = await getTranslations("errors.content");
+    return conflict(tErrors("slugTaken"));
+  }
+  return error;
+}
+
 function formatFailureMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;
@@ -372,7 +397,7 @@ async function fetchReleasesPreview(params: {
         repo,
         per_page: GITHUB_API_PAGE_SIZE,
         page,
-        headers: { "X-GitHub-Api-Version": "2022-11-28" },
+        headers: GITHUB_API_VERSION_HEADERS,
       }
     );
 
@@ -437,7 +462,7 @@ async function fetchMergedPullRequestsPreview(params: {
       direction: "desc",
       per_page: GITHUB_API_PAGE_SIZE,
       page,
-      headers: { "X-GitHub-Api-Version": "2022-11-28" },
+      headers: GITHUB_API_VERSION_HEADERS,
     });
 
     const pullRequests = response.data;
@@ -516,7 +541,7 @@ async function fetchCommitsPreview(params: {
         until: end.toISOString(),
         per_page: GITHUB_API_PAGE_SIZE,
         page,
-        headers: { "X-GitHub-Api-Version": "2022-11-28" },
+        headers: GITHUB_API_VERSION_HEADERS,
       }
     );
 
@@ -554,12 +579,8 @@ export const contentRouter = {
       .input(
         contentOrganizationIdInputSchema.and(dashboardHomeContentQuerySchema)
       )
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         const dateRange = getUtcDayRange("today");
         const filters = [eq(posts.organizationId, input.organizationId)];
         const collectionIds = projectScopedCollectionIds(
@@ -592,12 +613,8 @@ export const contentRouter = {
   },
   recents: baseProcedure
     .input(contentOrganizationIdInputSchema.and(contentRecentsQuerySchema))
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const filters = [eq(posts.organizationId, input.organizationId)];
       const collectionIds = projectScopedCollectionIds(
         input.organizationId,
@@ -622,12 +639,8 @@ export const contentRouter = {
     }),
   list: baseProcedure
     .input(contentOrganizationIdInputSchema.and(contentListQuerySchema))
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const dateRange = getUtcDayRange(input.date ?? null);
 
       if (input.date && !dateRange) {
@@ -682,12 +695,8 @@ export const contentRouter = {
     }),
   get: baseProcedure
     .input(contentInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const post = await db.query.posts.findFirst({
         where: and(
           eq(posts.id, input.contentId),
@@ -739,11 +748,9 @@ export const contentRouter = {
     }),
   create: baseProcedure
     .input(createPostInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       await assertActiveSubscription(input.organizationId);
 
       if (
@@ -804,16 +811,7 @@ export const contentRouter = {
           });
         });
       } catch (error) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          error.code === "23505"
-        ) {
-          const tErrors = await getTranslations("errors.content");
-          throw conflict(tErrors("slugTaken"));
-        }
-        throw error;
+        throw await toSlugConflict(error);
       }
 
       trackServerEvent({
@@ -831,11 +829,9 @@ export const contentRouter = {
     }),
   saveDocument: baseProcedure
     .input(saveContentDocumentSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       await assertActiveSubscription(input.organizationId);
       const [existingPost, tErrors] = await Promise.all([
         db.query.posts.findFirst({
@@ -942,11 +938,9 @@ export const contentRouter = {
     }),
   update: baseProcedure
     .input(contentInputSchema.and(updateContentSchema))
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       await assertActiveSubscription(input.organizationId);
 
       const existingPost = await db.query.posts.findFirst({
@@ -992,7 +986,7 @@ export const contentRouter = {
             actorUserId: auth.user.id,
             source: "system",
           });
-          const rows = await tx
+          return await tx
             .update(posts)
             .set(updateData)
             .where(
@@ -1027,7 +1021,6 @@ export const contentRouter = {
               status: posts.status,
               updatedAt: posts.updatedAt,
             });
-          return rows;
         });
 
         if (!updatedPost) {
@@ -1083,25 +1076,14 @@ export const contentRouter = {
           content: serializeContent(updatedPost),
         };
       } catch (error) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "code" in error &&
-          error.code === "23505"
-        ) {
-          const tErrors = await getTranslations("errors.content");
-          throw conflict(tErrors("slugTaken"));
-        }
-        throw error;
+        throw await toSlugConflict(error);
       }
     }),
   updateMetadata: baseProcedure
     .input(updateContentMetadataInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       await assertActiveSubscription(input.organizationId);
 
       const existingPost = await db.query.posts.findFirst({
@@ -1162,11 +1144,8 @@ export const contentRouter = {
   authors: contentAuthorsRouter,
   tagSuggestions: baseProcedure
     .input(contentOrganizationIdInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       return {
         tags: await listOrganizationTags(
           input.organizationId,
@@ -1176,11 +1155,9 @@ export const contentRouter = {
     }),
   publishChangelogToGitHub: baseProcedure
     .input(contentInputSchema.and(publishContentToGitHubSchema))
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       await assertActiveSubscription(input.organizationId);
       assertNotDemo();
 
@@ -1203,12 +1180,9 @@ export const contentRouter = {
     }),
   delete: baseProcedure
     .input(contentInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
-
+      const { auth } = context;
       const existingPost = await db.query.posts.findFirst({
         where: and(
           eq(posts.id, input.contentId),
@@ -1249,12 +1223,8 @@ export const contentRouter = {
   collections: {
     list: baseProcedure
       .input(postCollectionsListInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         const whereClause = and(
           eq(postCollections.organizationId, input.organizationId),
           projectScopeFilter(postCollections.projectId, input.projectId)
@@ -1317,20 +1287,12 @@ export const contentRouter = {
 
         const collections = collectionRows.map((collection) => {
           const aggregate = aggregates.get(collection.id);
-          const storedTypes = Array.isArray(collection.contentTypes)
-            ? collection.contentTypes.filter(
-                (type): type is string => typeof type === "string"
-              )
-            : [];
           const contentTypes = normalizeContentTypes(
             aggregate && aggregate.types.length > 0
               ? aggregate.types
-              : storedTypes
+              : storedContentTypes(collection.contentTypes)
           );
           const postCount = aggregate?.total ?? 0;
-          const isGenerating =
-            collection.expectedPostCount !== null &&
-            collection.completedPostCount < collection.expectedPostCount;
 
           return {
             id: collection.id,
@@ -1347,7 +1309,7 @@ export const contentRouter = {
                   }
                 : null,
             expectedPostCount: collection.expectedPostCount,
-            isGenerating,
+            isGenerating: isCollectionGenerating(collection),
             statusSummary: {
               total: postCount,
               draft: aggregate?.draft ?? 0,
@@ -1372,12 +1334,8 @@ export const contentRouter = {
       }),
     get: baseProcedure
       .input(postCollectionInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         const collection = await db.query.postCollections.findFirst({
           where: and(
             eq(postCollections.id, input.collectionId),
@@ -1405,21 +1363,12 @@ export const contentRouter = {
           throw notFound("Post collection not found");
         }
 
-        const storedTypes = Array.isArray(collection.contentTypes)
-          ? collection.contentTypes.filter(
-              (type): type is string => typeof type === "string"
-            )
-          : [];
         const postTypes: string[] = [];
         for (const post of collection.posts) {
           if (!postTypes.includes(post.contentType)) {
             postTypes.push(post.contentType);
           }
         }
-        const isGenerating =
-          collection.expectedPostCount !== null &&
-          collection.completedPostCount < collection.expectedPostCount;
-
         return {
           collection: {
             id: collection.id,
@@ -1427,10 +1376,12 @@ export const contentRouter = {
             source: collection.source,
             nameSource: collection.nameSource,
             contentTypes: normalizeContentTypes(
-              postTypes.length > 0 ? postTypes : storedTypes
+              postTypes.length > 0
+                ? postTypes
+                : storedContentTypes(collection.contentTypes)
             ),
             expectedPostCount: collection.expectedPostCount,
-            isGenerating,
+            isGenerating: isCollectionGenerating(collection),
             createdAt: collection.createdAt.toISOString(),
             posts: collection.posts.map((post) => ({
               id: post.id,
@@ -1448,11 +1399,9 @@ export const contentRouter = {
       }),
     rename: baseProcedure
       .input(renamePostCollectionInputSchema)
+      .use(withOrganizationAccess)
       .handler(async ({ context, input }) => {
-        const auth = await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+        const { auth } = context;
         await assertActiveSubscription(input.organizationId);
 
         const [updatedCollection] = await db
@@ -1494,12 +1443,8 @@ export const contentRouter = {
       }),
     delete: baseProcedure
       .input(postCollectionInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         const [deletedCollection] = await db
           .delete(postCollections)
           .where(
@@ -1537,11 +1482,8 @@ export const contentRouter = {
       }),
     updateExpectedPostCount: baseProcedure
       .input(updateExpectedPostCountInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await assertActiveSubscription(input.organizationId);
 
         const [updatedCollection] = await db
@@ -1568,23 +1510,15 @@ export const contentRouter = {
   metrics: {
     get: baseProcedure
       .input(contentOrganizationIdInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         return getContentPublishingMetrics(input.organizationId);
       }),
   },
   preview: baseProcedure
     .input(contentOrganizationIdInputSchema.and(contentPreviewRequestSchema))
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
-
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       const lookback = resolveLookbackRange(
         input.lookbackWindow,
         input.timezone
@@ -1667,77 +1601,46 @@ export const contentRouter = {
             };
           }
 
-          const octokit = createOctokit(token ?? undefined);
+          const fetchParams = {
+            octokit: createOctokit(token ?? undefined),
+            owner: repository.owner,
+            repo: repository.repo,
+            start: lookback.start,
+            end: lookback.end,
+          };
           const [commitsResult, pullsResult, releasesResult] =
             await Promise.allSettled([
               input.includeCommits
-                ? fetchCommitsPreview({
-                    octokit,
-                    owner: repository.owner,
-                    repo: repository.repo,
-                    start: lookback.start,
-                    end: lookback.end,
-                  })
+                ? fetchCommitsPreview(fetchParams)
                 : Promise.resolve([]),
               input.includePullRequests
-                ? fetchMergedPullRequestsPreview({
-                    octokit,
-                    owner: repository.owner,
-                    repo: repository.repo,
-                    start: lookback.start,
-                    end: lookback.end,
-                  })
+                ? fetchMergedPullRequestsPreview(fetchParams)
                 : Promise.resolve([]),
               input.includeReleases
-                ? fetchReleasesPreview({
-                    octokit,
-                    owner: repository.owner,
-                    repo: repository.repo,
-                    start: lookback.start,
-                    end: lookback.end,
-                  })
+                ? fetchReleasesPreview(fetchParams)
                 : Promise.resolve([]),
             ]);
 
           const repoFailures: RepositoryPreviewFailure[] = [];
-          const commits =
-            commitsResult.status === "fulfilled" ? commitsResult.value : [];
-
-          if (commitsResult.status === "rejected") {
+          const valueOrFailure = <T>(
+            result: PromiseSettledResult<T[]>,
+            stage: "commits" | "pull_requests" | "releases"
+          ): T[] => {
+            if (result.status === "fulfilled") {
+              return result.value;
+            }
             repoFailures.push({
               repositoryId: repository.id,
               owner: repository.owner,
               repo: repository.repo,
-              stage: "commits",
-              message: formatFailureMessage(commitsResult.reason),
+              stage,
+              message: formatFailureMessage(result.reason),
             });
-          }
-
-          const pullRequests =
-            pullsResult.status === "fulfilled" ? pullsResult.value : [];
-
-          if (pullsResult.status === "rejected") {
-            repoFailures.push({
-              repositoryId: repository.id,
-              owner: repository.owner,
-              repo: repository.repo,
-              stage: "pull_requests",
-              message: formatFailureMessage(pullsResult.reason),
-            });
-          }
-
-          const releases =
-            releasesResult.status === "fulfilled" ? releasesResult.value : [];
-
-          if (releasesResult.status === "rejected") {
-            repoFailures.push({
-              repositoryId: repository.id,
-              owner: repository.owner,
-              repo: repository.repo,
-              stage: "releases",
-              message: formatFailureMessage(releasesResult.reason),
-            });
-          }
+            return [];
+          };
+          const commits = valueOrFailure(commitsResult, "commits");
+          const pullRequests = valueOrFailure(pullsResult, "pull_requests");
+          const releases = valueOrFailure(releasesResult, "releases");
 
           return {
             repository: {
@@ -1775,29 +1678,28 @@ export const contentRouter = {
 
         linearIntegrationPreviews = await Promise.all(
           enabledIntegrations.map(async (integration) => {
+            const empty = {
+              integrationId: integration.id,
+              displayName: integration.displayName,
+              issues: [],
+            };
             try {
               const token = await getDecryptedLinearToken(integration.id);
               if (!token) {
-                return {
-                  integrationId: integration.id,
-                  displayName: integration.displayName,
-                  issues: [],
-                };
+                return empty;
               }
 
               const client = createLinearClient(token);
               const filter: Record<string, unknown> = {
-                completedAt: { null: false },
+                completedAt: {
+                  gte: lookback.start.toISOString(),
+                  lte: lookback.end.toISOString(),
+                },
               };
 
               if (integration.linearTeamId) {
                 filter.team = { id: { eq: integration.linearTeamId } };
               }
-
-              filter.completedAt = {
-                gte: lookback.start.toISOString(),
-                lte: lookback.end.toISOString(),
-              };
 
               const issues = await getLinearIssuePreviews(client, {
                 filter,
@@ -1814,11 +1716,7 @@ export const contentRouter = {
               logError("[Preview] Failed to fetch Linear issues", error, {
                 integrationId: integration.id,
               });
-              return {
-                integrationId: integration.id,
-                displayName: integration.displayName,
-                issues: [],
-              };
+              return empty;
             }
           })
         );
@@ -1835,11 +1733,8 @@ export const contentRouter = {
     }),
   createCollection: baseProcedure
     .input(createPostCollectionInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       await assertActiveSubscription(input.organizationId);
 
       if (
@@ -1871,11 +1766,9 @@ export const contentRouter = {
     }),
   generate: baseProcedure
     .input(generateContentInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       await assertActiveSubscription(input.organizationId);
 
       const collection = await db.query.postCollections.findFirst({
@@ -2013,12 +1906,8 @@ export const contentRouter = {
   activeGenerations: {
     list: baseProcedure
       .input(contentOrganizationIdInputSchema)
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
-
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         const [generations, results] = await Promise.all([
           getActiveGenerations(input.organizationId),
           getCompletedGenerations(input.organizationId),
@@ -2030,11 +1919,8 @@ export const contentRouter = {
       .input(
         contentOrganizationIdInputSchema.and(clearCompletedGenerationSchema)
       )
-      .handler(async ({ context, input }) => {
-        await assertOrganizationAccess({
-          headers: context.headers,
-          organizationId: input.organizationId,
-        });
+      .use(withOrganizationAccess)
+      .handler(async ({ input }) => {
         await assertActiveSubscription(input.organizationId);
 
         await clearCompletedGeneration(input.organizationId, input.runId);

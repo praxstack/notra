@@ -5,7 +5,10 @@ import {
 import { defineTool } from "eve/tools";
 
 import { searchBrandReferencesInputSchema } from "../schemas/assistant-tools";
-import { getFilteredBrandReferences } from "../utils/brand-references";
+import {
+  getFilteredBrandReferences,
+  toWriterBrandReference,
+} from "../utils/brand-references";
 import { requireOrganizationId } from "../utils/organization";
 import { getSessionAttribute } from "../utils/session";
 
@@ -51,11 +54,7 @@ export function createSearchBrandReferencesTool() {
 
           if (ranked.length > 0) {
             return {
-              references: ranked.map((reference) => ({
-                type: reference.type,
-                content: reference.content,
-                note: reference.note,
-              })),
+              references: ranked.map(toWriterBrandReference),
               count: ranked.length,
               source: "supermemory",
             };
@@ -68,11 +67,7 @@ export function createSearchBrandReferencesTool() {
       const fallback = references.slice(0, limit);
 
       return {
-        references: fallback.map((reference) => ({
-          type: reference.type,
-          content: reference.content,
-          note: reference.note,
-        })),
+        references: fallback.map(toWriterBrandReference),
         count: fallback.length,
         source: "fallback",
       };

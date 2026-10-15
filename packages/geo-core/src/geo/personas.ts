@@ -48,6 +48,7 @@ import {
   geoPersonaGenerationSchema,
   geoPersonaRegenerationSchema,
 } from "../schemas/geo-personas";
+import type { DbTransaction } from "../types/db";
 import type { GeoScopeInput, GeoWindowInput } from "../types/geo";
 import type {
   GeoPersona,
@@ -125,6 +126,24 @@ function toPersonas(
   return rows.map((row) => toGeoPersona(row, byPersona.get(row.id) ?? []));
 }
 
+async function countActivePersonas(
+  executor: typeof db | DbTransaction,
+  organizationId: string,
+  projectId: string
+): Promise<number> {
+  const [row] = await executor
+    .select({ count: count() })
+    .from(geoPersonas)
+    .where(
+      and(
+        eq(geoPersonas.projectId, projectId),
+        eq(geoPersonas.organizationId, organizationId),
+        isNull(geoPersonas.archivedAt)
+      )
+    );
+  return row?.count ?? 0;
+}
+
 export const listGeoPersonas = Effect.fn("geo.personasList")(function* (
   input: GeoScopeInput
 ) {
@@ -146,19 +165,10 @@ export const requireGeoPersonaGenerationCapacity = Effect.fn(
     return scope;
   }
   const current = yield* geoDb("persona count lookup failed", () =>
-    db
-      .select({ count: count() })
-      .from(geoPersonas)
-      .where(
-        and(
-          eq(geoPersonas.projectId, scope.projectId),
-          eq(geoPersonas.organizationId, scope.organizationId),
-          isNull(geoPersonas.archivedAt)
-        )
-      )
+    countActivePersonas(db, scope.organizationId, scope.projectId)
   );
   const requestedCount = brief ? 1 : GEO_PERSONA_MIN_COUNT;
-  if ((current.at(0)?.count ?? 0) + requestedCount > GEO_PERSONA_MAX_COUNT) {
+  if (current + requestedCount > GEO_PERSONA_MAX_COUNT) {
     return yield* Effect.fail(
       new GeoPersonaLimitError({ limit: GEO_PERSONA_MAX_COUNT })
     );
@@ -345,20 +355,12 @@ export const persistGeneratedPersonas = Effect.fn("geo.personas.persist")(
       db.transaction(async (tx) => {
         await Effect.runPromise(lockGeoProject(tx, projectId));
         if (!target) {
-          const current = await tx
-            .select({ count: count() })
-            .from(geoPersonas)
-            .where(
-              and(
-                eq(geoPersonas.projectId, projectId),
-                eq(geoPersonas.organizationId, organizationId),
-                isNull(geoPersonas.archivedAt)
-              )
-            );
-          if (
-            (current.at(0)?.count ?? 0) + personaRows.length >
-            GEO_PERSONA_MAX_COUNT
-          ) {
+          const current = await countActivePersonas(
+            tx,
+            organizationId,
+            projectId
+          );
+          if (current + personaRows.length > GEO_PERSONA_MAX_COUNT) {
             return null;
           }
         }
@@ -690,17 +692,12 @@ export const restoreGeoPersona = Effect.fn("geo.personaRestore")(function* (
       if (!archived) {
         return { status: "missing" as const };
       }
-      const current = await tx
-        .select({ count: count() })
-        .from(geoPersonas)
-        .where(
-          and(
-            eq(geoPersonas.projectId, scope.projectId),
-            eq(geoPersonas.organizationId, scope.organizationId),
-            isNull(geoPersonas.archivedAt)
-          )
-        );
-      if ((current.at(0)?.count ?? 0) >= GEO_PERSONA_MAX_COUNT) {
+      const current = await countActivePersonas(
+        tx,
+        scope.organizationId,
+        scope.projectId
+      );
+      if (current >= GEO_PERSONA_MAX_COUNT) {
         return { status: "limit" as const };
       }
       const [row] = await tx

@@ -73,23 +73,18 @@ function boxStreamOptions(agent: Agent) {
     return {};
   }
   if (agent === Agent.ClaudeCode) {
-    const options: ClaudeCodeAgentOptions = {
-      effort: GEO_CLAUDE_CODE_EFFORT,
-    };
-    return options;
+    return { effort: GEO_CLAUDE_CODE_EFFORT } satisfies ClaudeCodeAgentOptions;
   }
   if (agent === Agent.Codex) {
-    const options: CodexAgentOptions = {
+    return {
       modelReasoningEffort: GEO_CODEX_REASONING_EFFORT,
       webSearch: GEO_CODEX_WEB_SEARCH,
-    };
-    return options;
+    } satisfies CodexAgentOptions;
   }
-  const options: OpenCodeAgentOptions = {
+  return {
     reasoningEffort: GEO_OPENCODE_REASONING_EFFORT,
     textVerbosity: "medium",
-  };
-  return options;
+  } satisfies OpenCodeAgentOptions;
 }
 
 function abortReason(signal: AbortSignal) {
@@ -184,7 +179,7 @@ async function runGeoOpenCodePrompt(
                 ),
               })
             : prompt,
-        options: { ...boxStreamOptions(agent) },
+        options: boxStreamOptions(agent),
         onToolUse: (tool) => {
           toolCalls.push(tool);
           collectSources(tool.input);
@@ -275,11 +270,6 @@ export async function askGeoOpenCodeConversation(
     createOperation.dispose();
   }
 
-  let cleanupPromise: Promise<void> | null = null;
-  const cleanup = () => {
-    cleanupPromise ??= deleteGeoOpenCodeBox(box.id, boxApiKey);
-    return cleanupPromise;
-  };
   const results: Awaited<ReturnType<typeof runGeoOpenCodePrompt>>[] = [];
   let previousSessionUsd = 0;
   let previousSessionCostWasValid = true;
@@ -364,7 +354,7 @@ export async function askGeoOpenCodeConversation(
   let cleanupFailed = false;
   let cleanupError: unknown;
   try {
-    await cleanup();
+    await deleteGeoOpenCodeBox(box.id, boxApiKey);
   } catch (error) {
     cleanupFailed = true;
     cleanupError = error;

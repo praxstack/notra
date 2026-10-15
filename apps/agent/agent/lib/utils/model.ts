@@ -1,5 +1,6 @@
 import { devToolsMiddleware } from "@ai-sdk/devtools";
 import { EVALUATION_MODEL_ID } from "@notra/ai/constants/evaluation";
+import { readEnvSwitch } from "@notra/ai/utils/env-switch";
 import { withGatewayAgentOptions } from "@notra/ai/utils/gateway-agent-model";
 import { withGatewayEvaluationTelemetry } from "@notra/ai/utils/gateway-evaluation-model";
 import { gatewayAttributionOptions } from "@notra/ai/utils/usage-attribution";
@@ -14,7 +15,6 @@ import {
   ASSISTANT_MODEL_ID,
   ASSISTANT_MODEL_TIERS,
   ASSISTANT_TASK_MODEL_ID,
-  AUTO_MODEL_DISABLED_VALUES,
   AUTO_MODEL_FLAG_ENV,
   GPT_6_SOL_CONTEXT_WINDOW_TOKENS,
   SONNET_5_CONTEXT_WINDOW_TOKENS,
@@ -35,6 +35,11 @@ export function createAgentModel(
   });
 }
 
+export function getStepTurnId(event: unknown): string | undefined {
+  const turnId = (event as { data?: { turnId?: unknown } }).data?.turnId;
+  return typeof turnId === "string" ? turnId : undefined;
+}
+
 interface AssistantModelSelection {
   turnId: string;
   modelId: string;
@@ -51,8 +56,7 @@ export function getSelectedAssistantModelId(turnId: string): string {
 }
 
 function isAutoModelEnabled(): boolean {
-  const raw = process.env[AUTO_MODEL_FLAG_ENV]?.trim().toLowerCase();
-  return !(raw && AUTO_MODEL_DISABLED_VALUES.has(raw));
+  return readEnvSwitch(AUTO_MODEL_FLAG_ENV, { defaultOn: true });
 }
 
 type DynamicModelResult = Awaited<
@@ -88,12 +92,12 @@ export function createAssistantModel() {
     events: {
       "step.started": async (event, ctx) => {
         const organizationId = getOrganizationId(ctx);
-        const turnId = (event as { data?: { turnId?: unknown } }).data?.turnId;
+        const turnId = getStepTurnId(event);
         const providerOptions = {
           gateway: gatewayAttributionOptions({
             organizationId,
             sessionId: ctx.session.id,
-            turnId: typeof turnId === "string" ? turnId : undefined,
+            turnId,
           }),
         };
         const modelOptions = { providerOptions };
@@ -101,7 +105,7 @@ export function createAssistantModel() {
           ctx.session.auth.current?.attributes.surface ??
           ctx.session.auth.initiator?.attributes.surface;
         if (surface === "task") {
-          if (typeof turnId === "string") {
+          if (turnId !== undefined) {
             assistantModelSelection.update(() => ({
               turnId,
               modelId: ASSISTANT_TASK_MODEL_ID,
@@ -116,7 +120,7 @@ export function createAssistantModel() {
         }
 
         if (!isAutoModelEnabled()) {
-          if (typeof turnId === "string") {
+          if (turnId !== undefined) {
             assistantModelSelection.update(() => ({
               turnId,
               modelId: ASSISTANT_MODEL_ID,
@@ -135,7 +139,7 @@ export function createAssistantModel() {
             {
               organizationId,
               sessionId: ctx.session.id,
-              turnId: typeof turnId === "string" ? turnId : undefined,
+              turnId,
             }
           ),
           providerOptions: {
@@ -175,7 +179,7 @@ export function createAssistantModel() {
           };
         }
         const { modelId } = normalized.model as { modelId?: unknown };
-        if (typeof modelId === "string" && typeof turnId === "string") {
+        if (typeof modelId === "string" && turnId !== undefined) {
           assistantModelSelection.update(() => ({ turnId, modelId }));
         }
         return {

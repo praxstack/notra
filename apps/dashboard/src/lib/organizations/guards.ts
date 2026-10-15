@@ -6,8 +6,8 @@ import { Effect } from "effect";
 import { ActionFailure } from "@/lib/actions/errors";
 import { getAuthSession } from "@/lib/auth/server";
 import {
+  failWithOrganizationMessage,
   noActiveOrganizationMessage,
-  organizationActionMessage,
 } from "@/lib/organizations/action-messages";
 import type { AuthSessionData } from "@/types/auth/session";
 import { recordAuthorizedOrganization } from "@/utils/rpc-telemetry";
@@ -26,12 +26,8 @@ export const requireSession = Effect.fn("organizations.guards.requireSession")(
     });
 
     if (!session) {
-      return yield* Effect.fail(
-        new ActionFailure({
-          message: yield* organizationActionMessage(
-            "actions.organizations.signedOut"
-          ),
-        })
+      return yield* failWithOrganizationMessage(
+        "actions.organizations.signedOut"
       );
     }
 
@@ -58,11 +54,7 @@ export const requireMembership = Effect.fn(
   });
 
   if (!membership) {
-    return yield* Effect.fail(
-      new ActionFailure({
-        message: yield* organizationActionMessage("user.notMember"),
-      })
-    );
+    return yield* failWithOrganizationMessage("user.notMember");
   }
 
   recordAuthorizedOrganization(undefined, organizationId, session.user.id);
@@ -75,12 +67,8 @@ export const requireManagerMembership = Effect.fn(
   const membership = yield* requireMembership(session, organizationId);
 
   if (!MANAGER_ROLES.includes(membership.role)) {
-    return yield* Effect.fail(
-      new ActionFailure({
-        message: yield* organizationActionMessage(
-          "actions.organizations.noManagePermission"
-        ),
-      })
+    return yield* failWithOrganizationMessage(
+      "actions.organizations.noManagePermission"
     );
   }
 

@@ -152,7 +152,7 @@ async function resolveLinkedTwitterAccount(
   if (!isTwitterPublishConfigured()) {
     return null;
   }
-  const teamId = channel.state.teamId;
+  const teamId = channel.state.installationTeamId;
   if (!teamId) {
     return null;
   }
@@ -200,15 +200,12 @@ function createDraftApprovalCard(request: InputRequest): CardElement | null {
       { ...approve, label: "Save as draft", style: "primary" },
       0
     ),
-  ];
-
-  actions.push(
     responseButton(
       request.requestId,
       { ...deny, label: "Regenerate", style: "default" },
       1
-    )
-  );
+    ),
+  ];
 
   return Card({
     title: label,

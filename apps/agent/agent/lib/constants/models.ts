@@ -32,8 +32,3 @@ export const ASSISTANT_AUTO_MODEL_OPTIONS = {
 } as const;
 
 export const AUTO_MODEL_FLAG_ENV = "NOTRA_JEV_CLASSIFIERS";
-export const AUTO_MODEL_DISABLED_VALUES: ReadonlySet<string> = new Set([
-  "0",
-  "false",
-  "off",
-]);

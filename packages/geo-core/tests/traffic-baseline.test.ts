@@ -1,26 +1,19 @@
 import { afterAll, beforeAll, beforeEach, expect, mock, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
 import type { GeoTrafficOverviewRow } from "@notra/analytics/types/tinybird-endpoints";
 import { AI_AGENT_SIGNATURES } from "@usenotra/geo/signatures";
 import { Effect } from "effect";
 
-if (process.env.NOTRA_TRAFFIC_BASELINE_TEST_WORKER !== import.meta.url) {
-  test("traffic retains every previous-window source through DTO mapping", () => {
-    const result = spawnSync(
-      process.execPath,
-      ["test", "--isolate", fileURLToPath(import.meta.url)],
-      {
-        env: {
-          ...process.env,
-          NOTRA_TRAFFIC_BASELINE_TEST_WORKER: import.meta.url,
-        },
-        timeout: 30_000,
-      }
-    );
-    expect(result.status, result.stderr?.toString()).toBe(0);
-  }, 35_000);
+import {
+  isIsolatedTestWorker,
+  testInIsolatedProcess,
+} from "./utils/isolated-process";
+
+if (!isIsolatedTestWorker(import.meta.url)) {
+  testInIsolatedProcess(
+    "traffic retains every previous-window source through DTO mapping",
+    import.meta.url
+  );
 } else {
   await import("./utils/infrastructure");
   const { database, initializeDatabase, resetDatabase, seedProject } =

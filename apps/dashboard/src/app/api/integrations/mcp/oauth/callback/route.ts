@@ -10,6 +10,7 @@ import {
   McpOAuthRefreshTokenRequiredError,
 } from "@notra/ai/integrations/mcp-oauth-errors";
 import { refreshMcpToolIndexForIntegration } from "@notra/ai/integrations/mcp-tool-index";
+import { getAppUrl } from "@notra/ai/utils/url";
 import { mcpOAuthCallbackQuerySchema } from "@notra/schemas/dashboard/integrations";
 import { buildCallbackUrl } from "@notra/utils/callback-url";
 import { createMcpOAuthPopupCompletionResponse } from "@notra/utils/oauth-popup";
@@ -31,10 +32,7 @@ export const GET = withEvlog(async (request: Request) => {
     feature: "mcp_oauth_callback",
     routeId: "/api/integrations/mcp/oauth/callback",
   });
-  const baseUrl =
-    process.env.APP_URL ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    new URL(request.url).origin;
+  const baseUrl = getAppUrl() ?? new URL(request.url).origin;
   const { searchParams } = new URL(request.url);
   const parsed = mcpOAuthCallbackQuerySchema.safeParse({
     code: searchParams.get("code") ?? undefined,

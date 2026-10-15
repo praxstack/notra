@@ -1,7 +1,5 @@
 import type { GatewayId, RouterPolicyConfig } from "@notra/ai/types/router";
 
-export const GATEWAY_IDS: readonly GatewayId[] = ["vercel", "openrouter"];
-
 export const ROUTER_PROVIDER_OPTIONS_KEY = "notraRouter";
 export const ROUTER_METADATA_KEY = "notraRouter";
 export const ROUTED_MODEL_PROVIDER = "notra-router";

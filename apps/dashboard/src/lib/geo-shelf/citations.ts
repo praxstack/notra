@@ -45,10 +45,6 @@ function minIso(left: string, right: string): string {
   return left <= right ? left : right;
 }
 
-function maxIso(left: string, right: string): string {
-  return left >= right ? left : right;
-}
-
 export function citationsEqual(
   left: GeoShelfCitationSummary,
   right: GeoShelfCitationSummary
@@ -126,14 +122,8 @@ export function foldShelfCitationRows(
       if (title) {
         existing.title = title;
       }
-    } else {
-      existing.citations.lastCitedAt = maxIso(
-        existing.citations.lastCitedAt ?? lastCitedAt,
-        lastCitedAt
-      );
-      if (!existing.title && title) {
-        existing.title = title;
-      }
+    } else if (!existing.title && title) {
+      existing.title = title;
     }
     for (const promptId of row.promptIds) {
       existing.promptIds.add(promptId);
@@ -148,7 +138,6 @@ export function foldShelfCitationRows(
       ...cited
     } = page;
     cited.citations.promptCount = promptIds.size;
-    cited.citations.engines = uniqueSorted(cited.citations.engines);
     return cited;
   });
 }

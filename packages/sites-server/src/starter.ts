@@ -1,3 +1,4 @@
+import { GITHUB_API_VERSION_HEADERS } from "@notra/ai/constants/github";
 import { createOctokit } from "@notra/ai/utils/octokit";
 import { fetchPublicUrl } from "@notra/ai/utils/public-fetch";
 import { db } from "@notra/db/drizzle";
@@ -12,7 +13,6 @@ import {
 import { SITE_CONFIG_FILENAME } from "@notra/sites-core/constants/sites";
 import { asc, desc, eq } from "drizzle-orm";
 
-import { GITHUB_API_VERSION_HEADER } from "./constants/github";
 import {
   STARTER_BRANCH_PREFIX,
   STARTER_COMMIT_HEADLINE,
@@ -82,7 +82,7 @@ async function findOpenStarterPullRequest(
       state: "open",
       base,
       per_page: 100,
-      headers: GITHUB_API_VERSION_HEADER,
+      headers: GITHUB_API_VERSION_HEADERS,
     }
   );
   const pullRequest = data.find(

@@ -4,7 +4,7 @@ Hono HTTP service on Bun for `POST /api/geo/ingest`, deployed on Railway.
 Hono handles routing and HTTP responses. The Effect processing pipeline lives
 in `packages/geo-core/src/ingest` and is also used by the dashboard's
 compatibility handler. `Effect.runPromise` is the boundary between Hono and
-the pipeline; typed failures are mapped to HTTP responses with `Effect.match`.
+the pipeline; typed failures are mapped to HTTP responses via `Effect.result`.
 
 ## Responsibilities
 
@@ -18,7 +18,7 @@ the pipeline; typed failures are mapped to HTTP responses with `Effect.match`.
   across replicas and during the migration.
 
 Tracked events receive `202` once queued in the bounded in-memory batcher, or
-after Tinybird accepts a direct write when batching is disabled or full. Dropped
+after Tinybird accepts a direct write when the batcher is full. Dropped
 traffic also receives `202`. The batcher retries transient write failures; queued
 events are not durable across a forced process exit. Analytics run in the
 background. SIGTERM stops accepting requests and waits for active requests,
@@ -141,10 +141,10 @@ switching production traffic.
    that Tinybird and the dashboard receive it.
 3. Set `GEO_INGEST_URL` to the service's public HTTPS origin in the dashboard
    and public API environments, then redeploy those apps.
-4. New setup snippets point directly to Railway. The dashboard uses a
-   `beforeFiles` rewrite to proxy existing `/api/geo/ingest` installs to the
-   service without invoking its local handler or asking customers to rotate
-   tokens.
+4. New setup snippets point directly to Railway. The dashboard uses Nitro
+   `routeRules` proxies to forward existing `/api/geo/ingest` and drain
+   installs to the service without invoking its local handler or asking
+   customers to rotate tokens.
 
 The SDK's default origin is `https://ingest.usenotra.com`. Verify that this host
 serves `/api/geo/ingest` with the shared credentials before publishing an SDK

@@ -12,7 +12,6 @@ export const slackAuthorizeQuerySchema = z.object({
     })
     .default("/"),
 });
-export type SlackAuthorizeQuery = z.infer<typeof slackAuthorizeQuerySchema>;
 
 export const slackOAuthAccessResponseSchema = z.looseObject({
   ok: z.boolean(),

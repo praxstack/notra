@@ -42,7 +42,7 @@ function getResultErrorMessage(result: SocialPostResult): string {
   return "The platform rejected the post";
 }
 
-const publishDemoPost = Effect.fn("publishDemoPost")(function* (
+const loadConnectedAccount = Effect.fnUntraced(function* (
   params: PublishSocialPostParams
 ) {
   const account = yield* Effect.tryPromise({
@@ -68,6 +68,13 @@ const publishDemoPost = Effect.fn("publishDemoPost")(function* (
       })
     );
   }
+  return account;
+});
+
+const publishDemoPost = Effect.fn("publishDemoPost")(function* (
+  params: PublishSocialPostParams
+) {
+  const account = yield* loadConnectedAccount(params);
   const platformPostId = `demo-${crypto.randomUUID()}`;
   yield* Effect.tryPromise({
     try: () =>
@@ -119,30 +126,7 @@ export const publishSocialPost = Effect.fn("publishSocialPost")(function* (
     );
   }
 
-  const account = yield* Effect.tryPromise({
-    try: () =>
-      db.query.connectedSocialAccounts.findFirst({
-        columns: { provider: true, providerAccountId: true, username: true },
-        where: and(
-          eq(connectedSocialAccounts.id, params.accountId),
-          eq(connectedSocialAccounts.organizationId, params.organizationId)
-        ),
-      }),
-    catch: (cause) =>
-      new SocialConnectRequestError({
-        message: "Failed to load connected account",
-        cause,
-      }),
-  });
-
-  if (!account) {
-    return yield* Effect.fail(
-      new SocialConnectRequestError({
-        message: "Connected account not found",
-        cause: null,
-      })
-    );
-  }
+  const account = yield* loadConnectedAccount(params);
 
   const parsedPlatform = socialConnectPlatformSchema.safeParse(
     account.provider

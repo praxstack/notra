@@ -374,6 +374,13 @@ export const upsertConnectedAccount = Effect.fn("upsertConnectedAccount")(
     verified: boolean;
     verifiedType: string | null;
   }) {
+    const profile = {
+      username: input.username,
+      displayName: input.displayName,
+      profileImageUrl: input.profileImageUrl,
+      verified: input.verified,
+      verifiedType: input.verifiedType,
+    };
     yield* Effect.tryPromise({
       try: () =>
         db.transaction(async (tx) => {
@@ -392,13 +399,7 @@ export const upsertConnectedAccount = Effect.fn("upsertConnectedAccount")(
           if (existing) {
             await tx
               .update(connectedSocialAccounts)
-              .set({
-                username: input.username,
-                displayName: input.displayName,
-                profileImageUrl: input.profileImageUrl,
-                verified: input.verified,
-                verifiedType: input.verifiedType,
-              })
+              .set(profile)
               .where(eq(connectedSocialAccounts.id, existing.id));
             return;
           }
@@ -415,14 +416,7 @@ export const upsertConnectedAccount = Effect.fn("upsertConnectedAccount")(
           if (reconnected) {
             await tx
               .update(connectedSocialAccounts)
-              .set({
-                providerAccountId: input.providerAccountId,
-                username: input.username,
-                displayName: input.displayName,
-                profileImageUrl: input.profileImageUrl,
-                verified: input.verified,
-                verifiedType: input.verifiedType,
-              })
+              .set({ providerAccountId: input.providerAccountId, ...profile })
               .where(eq(connectedSocialAccounts.id, reconnected.id));
             return;
           }
@@ -434,11 +428,7 @@ export const upsertConnectedAccount = Effect.fn("upsertConnectedAccount")(
               organizationId: input.organizationId,
               provider: input.platform,
               providerAccountId: input.providerAccountId,
-              username: input.username,
-              displayName: input.displayName,
-              profileImageUrl: input.profileImageUrl,
-              verified: input.verified,
-              verifiedType: input.verifiedType,
+              ...profile,
             })
             .onConflictDoNothing();
         }),

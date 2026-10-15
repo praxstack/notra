@@ -15,6 +15,10 @@ function runSlackChannel(scenario: string) {
     import.meta.dir,
     "../agent/lib/utils/slack-controls.ts"
   );
+  const postToXPath = resolve(
+    import.meta.dir,
+    "../agent/lib/utils/slack-post-x.ts"
+  );
   const result = Bun.spawnSync(
     [
       process.execPath,
@@ -44,6 +48,28 @@ mock.module("@notra/ai/integrations/slack-workspace", () => ({
   disableSlackIntegrationByTeamId: async () => {},
   postSlackNotification: async () => {},
 }));
+const redisStore = new Map();
+mock.module("@notra/ai/utils/redis", () => ({ redis: {
+  get: async (key) => redisStore.get(key) ?? null,
+  set: async (key, value, options) => {
+    if (options?.xx && !redisStore.has(key)) return null;
+    redisStore.set(key, value);
+    return "OK";
+  },
+  getdel: async (key) => { const value = redisStore.get(key) ?? null; redisStore.delete(key); return value; },
+} }));
+const linkedLookups = [];
+mock.module("@notra/tools/utils/social-accounts", () => ({
+  isTwitterPublishConfigured: () => true,
+  getLinkedTwitterAccounts: async (organizationId) => {
+    linkedLookups.push(organizationId);
+    return [{ id: "acct-" + organizationId, username: organizationId + "-x" }, { id: "alt-" + organizationId, username: organizationId + "-alt" }];
+  },
+}));
+const published = [];
+mock.module("@notra/tools/utils/social-publish", () => ({
+  publishTwitterPost: (params) => Effect.sync(() => { published.push(params); return { postUrl: "https://x.com/example/status/1", confirmed: true }; }),
+}));
 mock.module("@notra/db/drizzle", () => ({ db: { select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ slug: "example" }] }) }) }) } }));
 let enterMirror;
 let releaseMirror;
@@ -55,7 +81,7 @@ mock.module(${JSON.stringify(mirrorPath)}, () => ({ mirrorPublicSlackThread: () 
 }) }));
 const outbound = [];
 globalThis.fetch = async (url, init) => {
-  outbound.push({ url: String(url), authorization: new Headers(init.headers).get("authorization"), body: Object.fromEntries(new URLSearchParams(String(init.body))) });
+  outbound.push({ url: String(url), raw: String(init.body), authorization: new Headers(init.headers).get("authorization"), body: Object.fromEntries(new URLSearchParams(String(init.body))) });
   const name = new URL(String(url)).pathname.split("/").at(-1);
   if (name === "conversations.info") return Response.json({ ok: true, channel: { id: "C-room", is_private: false } });
   if (name === "conversations.replies") return Response.json({ ok: true, messages: [{ ts: "1.5", user: "U-other", text: "Prior topic" }] });
@@ -153,6 +179,35 @@ if (scenario === "initial-status") {
     assert.equal(outbound.length, 1);
     assert(outbound.every((call) => call.authorization === "Bearer fixture-install"));
   }
+} else if (scenario === "post-x-slack-connect") {
+  const pending = (organizationId) => JSON.stringify({ organizationId, accountId: "acct-" + organizationId, username: organizationId + "-x", text: "Hello" });
+  redisStore.set("slack:post-x:call-install", pending("org-install"));
+  redisStore.set("slack:post-x:call-actor", pending("org-actor"));
+  const click = (action) => request({ type: "block_actions", app_installed_team_id: "T-install", team: { id: "T-install" }, user: { id: "U-human", team_id: "T-actor" },
+    channel: { id: "C-room" }, message: { ts: "card-1", thread_ts: "1.0" }, actions: [action] }, true);
+  for (const callId of ["call-install", "call-actor"]) {
+    await click({ action_id: "notra_post_x_confirm:req-1", value: JSON.stringify({ requestId: "req-1", callId, username: "x" }) });
+  }
+  await click({ action_id: "notra_post_x_account:call-actor", selected_option: { value: JSON.stringify({ callId: "call-actor", accountId: "acct-install", username: "install" }) } });
+  await Promise.all(tasks);
+  assert.deepEqual(linkedLookups, ["org-install"]);
+  const cards = outbound.filter((call) => call.url.endsWith("chat.postMessage"));
+  assert.equal(cards.length, 1);
+  assert(cards[0].raw.includes("org-install-alt"));
+  assert(!cards[0].raw.includes("org-actor"));
+  assert.equal(JSON.parse(redisStore.get("slack:post-x:call-actor")).accountId, "acct-org-actor");
+} else if (scenario === "post-x-once") {
+  const { publishPendingPostToX } = await import(${JSON.stringify(postToXPath)});
+  redisStore.set("slack:post-x:call-1", JSON.stringify({ organizationId: "org-install", accountId: "acct-1", username: "notra", text: "Hello" }));
+  const outcomes = await Promise.all([publishPendingPostToX("call-1", "turn-1"), publishPendingPostToX("call-1", "turn-1")]);
+  assert.equal(published.length, 1);
+  assert.equal(outcomes.filter(Boolean).length, 1);
+  assert.equal(await publishPendingPostToX("call-1", "turn-2"), undefined);
+  assert.equal(published.length, 1);
+  // An account switch that read the post before the claim must not revive it.
+  const { savePendingPostToX } = await import(${JSON.stringify(postToXPath)});
+  assert.equal(await savePendingPostToX("call-1", { organizationId: "org-install", accountId: "acct-2", username: "other", text: "Hello" }, { onlyIfExists: true }), false);
+  assert(!redisStore.has("slack:post-x:call-1"));
 } else if (scenario === "leave-race") {
   await message("follow-up");
   await mirrorEntered;
@@ -204,6 +259,10 @@ describe("Slack native channel boundaries", () => {
     runSlackChannel("owner-policy"));
   test("a valid installation's controls work for an external actor", () =>
     runSlackChannel("external-actor"));
+  test("Post to X in Slack Connect only uses the installing organization", () =>
+    runSlackChannel("post-x-slack-connect"));
+  test("a pending Post to X publishes at most once", () =>
+    runSlackChannel("post-x-once"));
   test("an in-flight ordinary reply cannot recreate a thread after Leave", () =>
     runSlackChannel("leave-race"));
   test("pinned replies preserve speaker attribution and thread context", () =>

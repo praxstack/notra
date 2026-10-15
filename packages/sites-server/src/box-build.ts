@@ -1,5 +1,6 @@
 import { performance } from "node:perf_hooks";
 
+import { shellQuote } from "@notra/ai/utils/shell";
 import { SITE_BUILD_LIMITS } from "@notra/sites-core/constants/sites";
 import {
   siteBuildRequestSchema,
@@ -47,7 +48,6 @@ import {
   sandboxJsonEffect,
   sandboxRequestEffect,
 } from "./utils/sandbox-transport";
-import { shellQuote } from "./utils/shell";
 
 const uploadBytesEffect = Effect.fn("Sites.Sandbox.upload")(function* (
   apiKey: string,

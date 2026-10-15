@@ -20,20 +20,21 @@ import {
 import { getGeoScanForProject, listGeoScansForProject } from "../programs/geo";
 import { runGeoEffect } from "../runtime/geo";
 import { trackApiEvent } from "../utils/analytics";
-import { attachGeoOrganization, geoErrorResponse } from "../utils/geo";
+import {
+  attachGeoOrganization,
+  geoErrorResponse,
+  geoOutcomeResponse,
+} from "../utils/geo";
 import { createOpenApiApp } from "../utils/openapi-app";
 import { rateLimitResponse } from "../utils/openapi-responses";
 import { enforceRatelimit, RATE_LIMITS, ratelimit } from "../utils/ratelimit";
 
 export const geoScansRoutes = createOpenApiApp();
 
-const GEO_TAG = GEO_OPENAPI_TAG;
-const commonErrors = GEO_COMMON_ERROR_RESPONSES;
-
 const createScanRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/geo/scans",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "createGeoScan",
   summary: "Trigger a GEO scan",
   description:
@@ -50,7 +51,7 @@ const createScanRoute = createRoute({
       },
       content: { "application/json": { schema: createScanResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
     429: rateLimitResponse(
       RATE_LIMITS.scanTrigger.requests,
       RATE_LIMITS.scanTrigger.window
@@ -61,7 +62,7 @@ const createScanRoute = createRoute({
 const listScansRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/geo/scans",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "listGeoScans",
   summary: "List GEO scans",
   description:
@@ -72,14 +73,14 @@ const listScansRoute = createRoute({
       description: "Scans fetched successfully",
       content: { "application/json": { schema: listScansResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
 const getScanRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/geo/scans/{scanId}",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "getGeoScan",
   summary: "Get a single GEO scan",
   description:
@@ -90,7 +91,7 @@ const getScanRoute = createRoute({
       description: "Scan fetched successfully",
       content: { "application/json": { schema: scanResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
@@ -147,11 +148,7 @@ geoScansRoutes.openapi(listScansRoute, async (c) => {
       page,
     })
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(attachGeoOrganization(base.organization, outcome.value), 200);
+  return geoOutcomeResponse(c, outcome, 200);
 });
 
 geoScansRoutes.openapi(getScanRoute, async (c) => {
@@ -166,9 +163,5 @@ geoScansRoutes.openapi(getScanRoute, async (c) => {
       scanId,
     })
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(attachGeoOrganization(base.organization, outcome.value), 200);
+  return geoOutcomeResponse(c, outcome, 200);
 });

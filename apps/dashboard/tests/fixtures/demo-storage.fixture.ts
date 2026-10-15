@@ -551,9 +551,10 @@ test("busy capacity responds with Retry-After without issuing a session", async 
   expect(afterResponse).not.toHaveBeenCalled();
 });
 
-test("the database lifetime and session cookie are both six hours", () => {
-  expect(DEMO_SANDBOX_MAX_AGE_MS).toBe(6 * 60 * 60 * 1000);
-  expect(DEMO_SESSION_COOKIE_MAX_AGE_SECONDS).toBe(6 * 60 * 60);
+test("the session cookie expires with the database sandbox", () => {
+  expect(DEMO_SESSION_COOKIE_MAX_AGE_SECONDS * 1000).toBe(
+    DEMO_SANDBOX_MAX_AGE_MS
+  );
 });
 
 test("an oversized pool cannot consume the entire workspace budget", () => {

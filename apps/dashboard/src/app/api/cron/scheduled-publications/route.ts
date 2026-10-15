@@ -1,11 +1,8 @@
+import { isAuthorizedCron } from "@/lib/auth/cron";
 import { runScheduledPublicationSweep } from "@/lib/content/scheduled-publication-sweep";
 
 export async function GET(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (
-    !cronSecret ||
-    request.headers.get("authorization") !== `Bearer ${cronSecret}`
-  ) {
+  if (!isAuthorizedCron(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

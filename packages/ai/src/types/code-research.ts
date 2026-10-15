@@ -51,14 +51,6 @@ export interface CodeResearchWorkspace {
   reused: boolean;
 }
 
-export interface CodeResearchFileListing {
-  path: string;
-  totalFiles: number;
-  truncated: boolean;
-  files: string[];
-  directories: { path: string; files: number }[];
-}
-
 export interface CodeResearchSearchMatch {
   path: string;
   line: number;

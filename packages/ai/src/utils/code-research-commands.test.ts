@@ -13,9 +13,9 @@ import {
   parseSearchMatches,
   parseShowChange,
   redactSecrets,
-  shellQuote,
   stripDeniedDiffFiles,
 } from "./code-research-commands";
+import { shellQuote } from "./shell";
 
 const repository = {
   integrationId: "int_1",

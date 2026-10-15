@@ -257,11 +257,9 @@ export const updateSlackMessage = Effect.fn("iris.slack.updateMessage")(
       },
     });
 
-    const updated: UpdateSlackMessageResult = {
+    return {
       channel: result.channel ?? input.channel,
       ts: result.ts ?? input.ts,
-    };
-
-    return updated;
+    } satisfies UpdateSlackMessageResult;
   }
 );

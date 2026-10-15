@@ -158,10 +158,6 @@ const inviteToSlackConnectEffect = Effect.fn("inviteToSlackConnect")(function* (
   } satisfies SlackConnectInviteResult;
 });
 
-export function inviteToSlackConnect(input: SlackConnectInviteInput) {
-  return Effect.runPromise(inviteToSlackConnectEffect(input));
-}
-
 const createSlackConnectChannelEffect = Effect.fn("createSlackConnectChannel")(
   function* (input: CreateSlackConnectChannelInput) {
     const operation = "conversations.create";
@@ -194,12 +190,6 @@ const createSlackConnectChannelEffect = Effect.fn("createSlackConnectChannel")(
     } satisfies SlackConnectChannel;
   }
 );
-
-export function createSlackConnectChannel(
-  input: CreateSlackConnectChannelInput
-) {
-  return Effect.runPromise(createSlackConnectChannelEffect(input));
-}
 
 const inviteSlackMemberToChannelEffect = Effect.fn(
   "inviteSlackMemberToChannel"
@@ -239,10 +229,6 @@ const archiveSlackChannelEffect = Effect.fn("archiveSlackChannel")(function* (
     });
   }
 });
-
-export function archiveSlackChannel(channelId: string): Promise<void> {
-  return Effect.runPromise(archiveSlackChannelEffect(channelId));
-}
 
 const createSlackConnectChannelWithInviteEffect = Effect.fn(
   "createSlackConnectChannelWithInvite"

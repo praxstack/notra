@@ -74,15 +74,13 @@ function buildAgentScopeHeaders(
     headers[AGENT_CONTENT_TYPE_HEADER] = scope.contentType;
   }
   if (scope.autoPublish !== undefined) {
-    headers[AGENT_AUTO_PUBLISH_HEADER] = scope.autoPublish ? "true" : "false";
+    headers[AGENT_AUTO_PUBLISH_HEADER] = String(scope.autoPublish);
   }
   if (scope.useMarkup !== undefined) {
-    headers[AGENT_USE_MARKUP_HEADER] = scope.useMarkup ? "true" : "false";
+    headers[AGENT_USE_MARKUP_HEADER] = String(scope.useMarkup);
   }
   if (scope.chargeAiCredits !== undefined) {
-    headers[AGENT_CHARGE_AI_CREDITS_HEADER] = scope.chargeAiCredits
-      ? "true"
-      : "false";
+    headers[AGENT_CHARGE_AI_CREDITS_HEADER] = String(scope.chargeAiCredits);
   }
   if (scope.voiceId) {
     headers[AGENT_VOICE_HEADER] = scope.voiceId;
@@ -101,7 +99,7 @@ function buildAgentScopeHeaders(
     );
   }
   if (scope.codeResearch !== undefined) {
-    headers[AGENT_CODE_RESEARCH_HEADER] = scope.codeResearch ? "true" : "false";
+    headers[AGENT_CODE_RESEARCH_HEADER] = String(scope.codeResearch);
   }
   return headers;
 }
@@ -177,6 +175,12 @@ export async function runAgentTask(
     startAgentSession({ ...input, mode: "task" }),
   ]);
 
+  const setSessionStatus = (status: "failed" | "completed" | "timed_out") =>
+    db
+      .update(agentSessions)
+      .set({ status })
+      .where(eq(agentSessions.id, started.agentSessionId));
+
   const deadline = Date.now() + AGENT_TASK_TIMEOUT_MS;
   const signal = AbortSignal.timeout(AGENT_TASK_TIMEOUT_MS);
   while (Date.now() < deadline) {
@@ -195,17 +199,11 @@ export async function runAgentTask(
       throw error;
     }
     if (result && "failed" in result) {
-      await db
-        .update(agentSessions)
-        .set({ status: "failed" })
-        .where(eq(agentSessions.id, started.agentSessionId));
+      await setSessionStatus("failed");
       throw new AgentTaskFailedError(started.eveSessionId, result.failed);
     }
     if (result) {
-      await db
-        .update(agentSessions)
-        .set({ status: "completed" })
-        .where(eq(agentSessions.id, started.agentSessionId));
+      await setSessionStatus("completed");
       return { eveSessionId: started.eveSessionId, output: result.output };
     }
     try {
@@ -222,9 +220,6 @@ export async function runAgentTask(
     }
   }
 
-  await db
-    .update(agentSessions)
-    .set({ status: "timed_out" })
-    .where(eq(agentSessions.id, started.agentSessionId));
+  await setSessionStatus("timed_out");
   throw new AgentTaskTimeoutError(started.eveSessionId);
 }

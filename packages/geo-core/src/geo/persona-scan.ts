@@ -23,6 +23,7 @@ import type {
   GeoSkipFields,
   GeoZdrMode,
 } from "../types/geo";
+import type { GeoPlannedPersonaOutcome } from "../types/geo-conversations";
 import type {
   GeoPersonaRunResponse,
   PersonaForScan,
@@ -60,7 +61,10 @@ import { loadGeoModelCatalog } from "./model-catalog";
 import { loadGeoProjectBrand } from "./project-brand";
 import { requireGeoProject } from "./projects";
 import { buildGeoScanCheckContext } from "./scan-context";
-import { omitGeoScanTasks, updateGeoScanTaskStatus } from "./scan-task-status";
+import {
+  omitGeoScanTasks,
+  updateGeoScanAnswerStatus,
+} from "./scan-task-status";
 import { resolveScanZdrPolicy } from "./zdr-policy";
 
 function personaFailureFields(
@@ -132,27 +136,27 @@ const loadPersonaForScan = Effect.fn("geo.persona.load")(function* (
  * Plays one persona's fixed prompts against one search-grounded engine. Rows
  * carry `personaId` so they stay out of the prompt aggregates.
  */
-export const runGeoPersonaConversation = Effect.fn(
-  "geo.runPersonaConversation"
-)(function* (
-  context: GeoCheckContext,
-  snapshot: GeoPersonaSnapshotV2,
-  grounded: GeoGroundedEngine,
-  zdr: GeoZdrMode
-) {
-  return yield* runGeoConversation(
-    context,
-    {
-      promptId: personaPromptId(snapshot.persona.id),
-      personaId: snapshot.persona.id,
-      prompts: snapshot.conversationPrompts,
-      snapshot,
-      timeoutMs: GEO_PERSONA_PAIR_TIMEOUT_MS,
-    },
-    grounded,
-    zdr
-  );
-});
+const runGeoPersonaConversation = Effect.fn("geo.runPersonaConversation")(
+  function* (
+    context: GeoCheckContext,
+    snapshot: GeoPersonaSnapshotV2,
+    grounded: GeoGroundedEngine,
+    zdr: GeoZdrMode
+  ) {
+    return yield* runGeoConversation(
+      context,
+      {
+        promptId: personaPromptId(snapshot.persona.id),
+        personaId: snapshot.persona.id,
+        prompts: snapshot.conversationPrompts,
+        snapshot,
+        timeoutMs: GEO_PERSONA_PAIR_TIMEOUT_MS,
+      },
+      grounded,
+      zdr
+    );
+  }
+);
 
 const runPlannedPersona = Effect.fn("geo.runPlannedPersona")(function* (
   checkContext: GeoCheckContext,
@@ -185,21 +189,22 @@ const runPlannedPersona = Effect.fn("geo.runPlannedPersona")(function* (
       checkContext,
       tasks.map((task) => task.key)
     ).pipe(geoSkip("scan plan update failed"));
-    return null;
+    // Omitted turns are not failures, so a paused persona must not land in
+    // `dropped` the way a crashed run does, nor in the workflow's attempted
+    // count (a scan of only paused personas must not fail and retry).
+    const paused: GeoPlannedPersonaOutcome = {
+      rows: [],
+      usage: EMPTY_TOKEN_USAGE,
+      engineUsage: EMPTY_TOKEN_USAGE,
+      judgeUsage: EMPTY_TOKEN_USAGE,
+      droppedTurns: 0,
+      omitted: true,
+    };
+    return paused;
   }
   yield* Effect.forEach(
     tasks,
-    (task) =>
-      updateGeoScanTaskStatus(
-        checkContext,
-        {
-          prompt: { id: task.promptId, text: task.prompt },
-          engine: task.engine,
-          language: task.language,
-        },
-        "running",
-        task.turn
-      ),
+    (task) => updateGeoScanAnswerStatus(checkContext, task, "running"),
     { concurrency: GEO_SCAN_CONCURRENCY }
   );
   const outcome = yield* runGeoPersonaConversation(
@@ -211,20 +216,11 @@ const runPlannedPersona = Effect.fn("geo.runPlannedPersona")(function* (
   const remaining = tasks.slice(outcome.rows.length);
   yield* Effect.forEach(
     remaining,
-    (task) =>
-      updateGeoScanTaskStatus(
-        checkContext,
-        {
-          prompt: { id: task.promptId, text: task.prompt },
-          engine: task.engine,
-          language: task.language,
-        },
-        "failed",
-        task.turn
-      ),
+    (task) => updateGeoScanAnswerStatus(checkContext, task, "failed"),
     { concurrency: GEO_SCAN_CONCURRENCY }
   );
-  return outcome;
+  const ran: GeoPlannedPersonaOutcome = outcome;
+  return ran;
 });
 
 /** Runs one batch of persona conversations; same contract as `runGeoScanSequenceBatch`. */
@@ -251,17 +247,15 @@ const runGeoScanPersonaBatchBody = Effect.fn("geo.runScanPersonaBatch.body")(
 
     const outcomes = yield* Effect.forEach(
       plannedPersonas,
-      (planned) =>
-        withGeoScanEvent(
+      (planned) => {
+        const fields = personaFailureFields(
+          checkContext,
+          planned.personaId,
+          planned.engine
+        );
+        return withGeoScanEvent(
           runPlannedPersona(checkContext, planned),
-          {
-            ...personaFailureFields(
-              checkContext,
-              planned.personaId,
-              planned.engine
-            ),
-            event: "geo.check.attempt.completed",
-          },
+          { ...fields, event: "geo.check.attempt.completed" },
           {
             scanId: context.scanId,
             runId: context.runId,
@@ -270,21 +264,14 @@ const runGeoScanPersonaBatchBody = Effect.fn("geo.runScanPersonaBatch.body")(
             taskKey: planned.personaId,
             persistSuccess: false,
           }
-        ).pipe(
-          geoSkip(
-            "persona conversation failed",
-            personaFailureFields(
-              checkContext,
-              planned.personaId,
-              planned.engine
-            )
-          )
-        ),
+        ).pipe(geoSkip("persona conversation failed", fields));
+      },
       { concurrency: GEO_SCAN_CONCURRENCY }
     );
 
     const rows: GeoCheckWrite[] = [];
     let dropped = 0;
+    let omitted = 0;
     let engineUsage = EMPTY_TOKEN_USAGE;
     let judgeUsage = EMPTY_TOKEN_USAGE;
     for (const [index, outcome] of outcomes.entries()) {
@@ -292,6 +279,9 @@ const runGeoScanPersonaBatchBody = Effect.fn("geo.runScanPersonaBatch.body")(
         const planned = plannedPersonas[index];
         dropped += planned ? geoScanPersonaTasks(planned).length : 0;
         continue;
+      }
+      if (outcome.omitted) {
+        omitted += 1;
       }
       dropped += outcome.droppedTurns;
       rows.push(...outcome.rows);
@@ -316,18 +306,17 @@ const runGeoScanPersonaBatchBody = Effect.fn("geo.runScanPersonaBatch.body")(
       mentions = inserted.mentions;
     }
 
+    const usage = addTokenUsage(engineUsage, judgeUsage);
     const result: GeoScanBatchOutcome = {
       checks,
       mentions,
       dropped,
-      usage: addTokenUsage(engineUsage, judgeUsage),
+      usage,
       engineUsage,
       judgeUsage,
       billedChecks: checks * GEO_PERSONA_BILLING_MULTIPLIER,
-      billedUsage: scaleAgentTokenUsage(
-        addTokenUsage(engineUsage, judgeUsage),
-        GEO_PERSONA_BILLING_MULTIPLIER
-      ),
+      billedUsage: scaleAgentTokenUsage(usage, GEO_PERSONA_BILLING_MULTIPLIER),
+      omitted,
     };
     return result;
   }

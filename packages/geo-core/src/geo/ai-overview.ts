@@ -59,21 +59,27 @@ async function fetchSerpApiJson(
   return response.json();
 }
 
-function requirePayload(payload: unknown): void {
+function requireGoogleAiOverview(
+  payload: unknown
+): Exclude<GeoAiOverviewParse, { status: "invalid" }> {
   const error = serpApiErrorMessage(payload);
   if (error) {
     throw new Error(error);
   }
-}
-
-function requireGoogleAiOverview(
-  payload: unknown
-): Exclude<GeoAiOverviewParse, { status: "invalid" }> {
   const parsed = parseGoogleAiOverview(payload);
   if (parsed.status === "invalid") {
     throw new Error(parsed.reason);
   }
   return parsed;
+}
+
+function toGeoAiOverviewResult(
+  parsed: Exclude<GeoAiOverviewParse, { status: "invalid" }>
+): GeoAiOverviewResult {
+  if (parsed.status === "present") {
+    return { present: true, text: parsed.text, sources: parsed.sources };
+  }
+  return { present: false, text: "", sources: [] };
 }
 
 /**
@@ -86,57 +92,30 @@ function requireGoogleAiOverview(
 export function fetchGoogleAiOverview(promptText: string, language: string) {
   return Effect.tryPromise(async (signal) => {
     const locale = geoAiOverviewLocale(language);
-    const searchPayload = await fetchSerpApiJson(
-      {
-        engine: GEO_SERPAPI_GOOGLE_ENGINE,
-        q: promptText,
-        hl: locale.hl,
-        gl: locale.gl,
-      },
-      signal
+    const first = requireGoogleAiOverview(
+      await fetchSerpApiJson(
+        {
+          engine: GEO_SERPAPI_GOOGLE_ENGINE,
+          q: promptText,
+          hl: locale.hl,
+          gl: locale.gl,
+        },
+        signal
+      )
     );
-    requirePayload(searchPayload);
-
-    const first = requireGoogleAiOverview(searchPayload);
-    if (first.status === "present") {
-      const result: GeoAiOverviewResult = {
-        present: true,
-        text: first.text,
-        sources: first.sources,
-      };
-      return result;
-    }
-    if (!first.pageToken) {
-      const result: GeoAiOverviewResult = {
-        present: false,
-        text: "",
-        sources: [],
-      };
-      return result;
+    if (first.status === "present" || !first.pageToken) {
+      return toGeoAiOverviewResult(first);
     }
 
-    const overviewPayload = await fetchSerpApiJson(
-      {
-        engine: GEO_SERPAPI_AI_OVERVIEW_ENGINE,
-        page_token: first.pageToken,
-      },
-      signal
+    const second = requireGoogleAiOverview(
+      await fetchSerpApiJson(
+        {
+          engine: GEO_SERPAPI_AI_OVERVIEW_ENGINE,
+          page_token: first.pageToken,
+        },
+        signal
+      )
     );
-    requirePayload(overviewPayload);
-    const second = requireGoogleAiOverview(overviewPayload);
-    if (second.status === "present") {
-      const result: GeoAiOverviewResult = {
-        present: true,
-        text: second.text,
-        sources: second.sources,
-      };
-      return result;
-    }
-    const result: GeoAiOverviewResult = {
-      present: false,
-      text: "",
-      sources: [],
-    };
-    return result;
+    return toGeoAiOverviewResult(second);
   });
 }

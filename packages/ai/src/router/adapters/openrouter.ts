@@ -129,7 +129,7 @@ export function createOpenRouterAdapter(
         ...(gatewayCost !== undefined && gatewayCost >= 0
           ? { gatewayCostUsd: gatewayCost }
           : {}),
-        ...(costDetails && upstreamCost !== undefined && upstreamCost >= 0
+        ...(upstreamCost !== undefined && upstreamCost >= 0
           ? {
               upstreamInferenceCostUsd: upstreamCost,
               byokInferenceCostUsd: upstreamCost,

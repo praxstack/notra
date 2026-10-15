@@ -4,8 +4,8 @@ const WHITESPACE_PATTERN = /\s+/g;
 const CODE_FENCE_PATTERN = /```[\s\S]*?```/g;
 const MARKDOWN_IMAGE_PATTERN = /!\[[^\]]*\]\(<?(https?:\/\/[^\s)>]+)>?\)/;
 
-export const IRIS_TITLE_MAX_LENGTH = 120;
-export const IRIS_EXCERPT_MAX_LENGTH = 200;
+const IRIS_TITLE_MAX_LENGTH = 120;
+const IRIS_EXCERPT_MAX_LENGTH = 200;
 
 const truncate = (value: string, maxLength: number): string =>
   value.length <= maxLength

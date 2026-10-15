@@ -187,6 +187,29 @@ export async function createPresignedUpload({
   };
 }
 
+async function requireUploadOrganization(headers: Headers, type: UploadType) {
+  const { organizationId, userId } = await assertUploadAccess({
+    headers,
+    type,
+  });
+  if (!organizationId) {
+    throw new ORPCError("UNAUTHORIZED", {
+      message: (await getTranslations("common.labels"))("noActiveOrganization"),
+    });
+  }
+  return { organizationId, userId };
+}
+
+async function requireOwnChatUploadKey(headers: Headers, key: string) {
+  const access = await requireUploadOrganization(headers, "chat");
+  if (!key.startsWith(`organization/${access.organizationId}/chat/`)) {
+    throw new ORPCError("FORBIDDEN", {
+      message: (await getTranslations("errors.upload"))("noOrganizationAccess"),
+    });
+  }
+  return access;
+}
+
 export async function deleteChatUpload({
   key,
   headers,
@@ -194,23 +217,7 @@ export async function deleteChatUpload({
   key: string;
   headers: Headers;
 }) {
-  const { organizationId } = await assertUploadAccess({
-    headers,
-    type: "chat",
-  });
-
-  if (!organizationId) {
-    throw new ORPCError("UNAUTHORIZED", {
-      message: (await getTranslations("common.labels"))("noActiveOrganization"),
-    });
-  }
-
-  const expectedPrefix = `organization/${organizationId}/chat/`;
-  if (!key.startsWith(expectedPrefix)) {
-    throw new ORPCError("FORBIDDEN", {
-      message: (await getTranslations("errors.upload"))("noOrganizationAccess"),
-    });
-  }
+  const { organizationId } = await requireOwnChatUploadKey(headers, key);
 
   await db
     .delete(chatAttachments)
@@ -245,24 +252,10 @@ export async function recordChatAttachment({
   size: number;
   headers: Headers;
 }) {
-  const { userId, organizationId } = await assertUploadAccess({
+  const { userId, organizationId } = await requireOwnChatUploadKey(
     headers,
-    type: "chat",
-  });
-
-  if (!organizationId) {
-    throw new ORPCError("UNAUTHORIZED", {
-      message: (await getTranslations("common.labels"))("noActiveOrganization"),
-    });
-  }
-
-  const expectedPrefix = `organization/${organizationId}/chat/`;
-
-  if (!key.startsWith(expectedPrefix)) {
-    throw new ORPCError("FORBIDDEN", {
-      message: (await getTranslations("errors.upload"))("noOrganizationAccess"),
-    });
-  }
+    key
+  );
 
   if (!ALLOWED_CHAT_MIME_TYPES.includes(mediaType as AllowedChatMimeType)) {
     throw new ORPCError("BAD_REQUEST", {
@@ -294,19 +287,6 @@ export async function recordChatAttachment({
   return { success: true };
 }
 
-async function requireContentOrganization(headers: Headers) {
-  const { organizationId } = await assertUploadAccess({
-    headers,
-    type: "content",
-  });
-  if (!organizationId) {
-    throw new ORPCError("UNAUTHORIZED", {
-      message: (await getTranslations("common.labels"))("noActiveOrganization"),
-    });
-  }
-  return organizationId;
-}
-
 export async function uploadContentImage({
   bytes,
   headers,
@@ -314,7 +294,10 @@ export async function uploadContentImage({
   bytes: Uint8Array;
   headers: Headers;
 }) {
-  const organizationId = await requireContentOrganization(headers);
+  const { organizationId } = await requireUploadOrganization(
+    headers,
+    "content"
+  );
   let compressed: Awaited<ReturnType<typeof compressContentImage>>;
   try {
     compressed = await compressContentImage(bytes);
@@ -345,7 +328,10 @@ export async function uploadContentVideo({
   bytes: Uint8Array;
   headers: Headers;
 }) {
-  const organizationId = await requireContentOrganization(headers);
+  const { organizationId } = await requireUploadOrganization(
+    headers,
+    "content"
+  );
   let mimeType: ReturnType<typeof validateContentVideo>;
   try {
     mimeType = validateContentVideo(bytes);

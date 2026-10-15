@@ -1,12 +1,10 @@
 import { createRoute } from "@hono/zod-openapi";
-import { refreshGeoContentGapsBestEffort } from "@notra/geo-core/geo/gaps";
 import { loadGeoSettings } from "@notra/geo-core/geo/programs";
 import { projectParamsSchema } from "@notra/schemas/api/geo-params";
 import {
   patchSettingsRequestSchema,
   settingsResponseSchema,
 } from "@notra/schemas/api/geo-settings";
-import { Effect } from "effect";
 
 import {
   GEO_COMMON_ERROR_RESPONSES,
@@ -14,18 +12,15 @@ import {
 } from "../constants/geo-openapi";
 import { upsertGeoSettingsWithValidation } from "../programs/geo";
 import { runGeoEffect } from "../runtime/geo";
-import { geoErrorResponse } from "../utils/geo";
+import { geoOutcomeResponse, refreshGeoGapsAfter } from "../utils/geo";
 import { createOpenApiApp } from "../utils/openapi-app";
 
 export const geoSettingsRoutes = createOpenApiApp();
 
-const GEO_TAG = GEO_OPENAPI_TAG;
-const commonErrors = GEO_COMMON_ERROR_RESPONSES;
-
 const getSettingsRoute = createRoute({
   method: "get",
   path: "/projects/{projectId}/geo/settings",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "getGeoSettings",
   summary: "Get a project's GEO settings",
   request: { params: projectParamsSchema },
@@ -34,14 +29,14 @@ const getSettingsRoute = createRoute({
       description: "Settings fetched successfully",
       content: { "application/json": { schema: settingsResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
 const patchSettingsRoute = createRoute({
   method: "patch",
   path: "/projects/{projectId}/geo/settings",
-  tags: [GEO_TAG],
+  tags: [GEO_OPENAPI_TAG],
   operationId: "updateGeoSettings",
   summary: "Replace a project's GEO settings",
   description:
@@ -58,7 +53,7 @@ const patchSettingsRoute = createRoute({
       description: "Settings updated successfully",
       content: { "application/json": { schema: settingsResponseSchema } },
     },
-    ...commonErrors,
+    ...GEO_COMMON_ERROR_RESPONSES,
   },
 });
 
@@ -69,62 +64,20 @@ geoSettingsRoutes.openapi(getSettingsRoute, async (c) => {
     "settings",
     loadGeoSettings({ organizationId: base.organizationId, projectId })
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(
-    {
-      configured: outcome.value.configured,
-      settings: outcome.value.settings,
-      organization: base.organization,
-    },
-    200
-  );
+  return geoOutcomeResponse(c, outcome, 200);
 });
 
 geoSettingsRoutes.openapi(patchSettingsRoute, async (c) => {
   const base = c.get("geo");
   const { projectId } = c.req.valid("param");
-  const body = c.req.valid("json");
+  const scope = { organizationId: base.organizationId, projectId };
   const outcome = await runGeoEffect(
     "settingsUpsert",
     upsertGeoSettingsWithValidation({
-      organizationId: base.organizationId,
-      projectId,
-      companyName: body.companyName,
-      aliases: body.aliases,
-      conversionPaths: body.conversionPaths,
-      domains: body.domains,
+      ...c.req.valid("json"),
+      ...scope,
       competitors: [],
-      languages: body.languages,
-      engines: body.engines,
-      enforceZdr: body.enforceZdr,
-      nonZdrApprovedEngines: body.nonZdrApprovedEngines,
-      trackWithoutSearch: body.trackWithoutSearch,
-      pausedAutoPromptIds: body.pausedAutoPromptIds,
-      removedAutoPromptIds: body.removedAutoPromptIds,
-      enabled: body.enabled,
-      scanIntervalHours: body.scanIntervalHours,
-    }).pipe(
-      Effect.tap(() =>
-        refreshGeoContentGapsBestEffort({
-          organizationId: base.organizationId,
-          projectId,
-        })
-      )
-    )
+    }).pipe(refreshGeoGapsAfter(scope))
   );
-  if (!outcome.ok) {
-    return geoErrorResponse(c, outcome.failure);
-  }
-
-  return c.json(
-    {
-      configured: outcome.value.configured,
-      settings: outcome.value.settings,
-      organization: base.organization,
-    },
-    200
-  );
+  return geoOutcomeResponse(c, outcome, 200);
 });

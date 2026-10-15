@@ -1,12 +1,11 @@
 import { OutboxEnqueueError } from "@notra/ai/autonomy/errors";
-import { MAX_OUTBOX_ATTEMPTS } from "@notra/ai/constants/autonomy";
 import type {
   EnqueueOutboxMessageInput,
   EnqueueOutboxMessageResult,
 } from "@notra/ai/types/autonomy";
 import { db } from "@notra/db/drizzle";
 import { autonomyOutbox } from "@notra/db/schema";
-import { and, asc, eq, inArray, isNull, lt, lte, or } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { Effect } from "effect";
 
 const CANCELABLE_OUTBOX_STATUSES = ["pending", "attempting", "failed"] as const;
@@ -104,45 +103,6 @@ export const enqueueOutboxMessage = Effect.fn("iris.outbox.enqueue")(function* (
     deduplicated: true,
   } satisfies EnqueueOutboxMessageResult;
 });
-
-export const listDeliverableOutbox = Effect.fn("iris.outbox.listDeliverable")(
-  function* (limit: number) {
-    const now = new Date();
-
-    return yield* Effect.tryPromise({
-      try: () =>
-        db
-          .select()
-          .from(autonomyOutbox)
-          .where(
-            or(
-              and(
-                eq(autonomyOutbox.status, "pending"),
-                or(
-                  isNull(autonomyOutbox.nextAttemptAt),
-                  lte(autonomyOutbox.nextAttemptAt, now)
-                )
-              ),
-              and(
-                eq(autonomyOutbox.status, "failed"),
-                lt(autonomyOutbox.attempts, MAX_OUTBOX_ATTEMPTS),
-                or(
-                  isNull(autonomyOutbox.nextAttemptAt),
-                  lte(autonomyOutbox.nextAttemptAt, now)
-                )
-              )
-            )
-          )
-          .orderBy(asc(autonomyOutbox.createdAt))
-          .limit(limit),
-      catch: (cause) =>
-        new OutboxEnqueueError({
-          message: "Failed to list deliverable outbox messages",
-          cause,
-        }),
-    });
-  }
-);
 
 export const cancelPendingOutboxForOrganization = Effect.fn(
   "iris.outbox.cancelPending"

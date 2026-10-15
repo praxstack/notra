@@ -1,4 +1,3 @@
-import { getAppUrl } from "@notra/ai/qstash/triggers";
 import { logError } from "@notra/ai/utils/server-log";
 import { GSC_SYNC_WORKFLOW_PATH } from "@notra/geo-core/constants/google-search-console";
 import { gscSyncPayloadSchema } from "@notra/geo-core/schemas/google-search-console";
@@ -12,7 +11,7 @@ export async function POST(request: Request) {
   const verified = await verifyQstashSignature({
     request,
     rawBody,
-    url: `${getAppUrl()}${GSC_SYNC_WORKFLOW_PATH}`,
+    path: GSC_SYNC_WORKFLOW_PATH,
   });
   if (!verified) {
     return new Response("Unauthorized", { status: 401 });

@@ -1,5 +1,4 @@
 import type { CachedWrapper } from "@notra/ai/types/tools";
-import type { Redis } from "@upstash/redis";
 
 interface ExecutableTool {
   execute?: (params: unknown, context?: unknown) => Promise<unknown> | unknown;
@@ -7,11 +6,6 @@ interface ExecutableTool {
 
 interface MemoryCacheEntry {
   expiresAt: number;
-  value: unknown;
-}
-
-interface RedisCacheEnvelope {
-  __notraToolCache: true;
   value: unknown;
 }
 
@@ -25,34 +19,17 @@ function normalizeKeyPart(value: string) {
     .replace(/^_+|_+$/g, "");
 }
 
-function parsePositiveInt(value: string | undefined) {
-  if (!value) {
-    return undefined;
-  }
+const DEFAULT_TTL_MS = 5 * 60 * 1000;
+const DEFAULT_KEY_PREFIX = "notra:ai-tools:";
 
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-const DEFAULT_TTL_MS =
-  parsePositiveInt(process.env.AI_TOOLS_CACHE_TTL_MS) ?? 5 * 60 * 1000;
-
-const DEFAULT_KEY_PREFIX =
-  process.env.AI_TOOLS_CACHE_KEY_PREFIX ?? "notra:ai-tools:";
-
-export function getAICachedTools(options?: {
+export function getAICachedTools(options: {
   organizationId?: string;
-  namespace?: string;
-  ttlMs?: number;
-  redis?: Redis | null;
+  namespace: string;
 }) {
-  const orgPart = normalizeKeyPart(options?.organizationId ?? "anonymous");
-  const namespacePart = normalizeKeyPart(options?.namespace ?? "default");
+  const orgPart = normalizeKeyPart(options.organizationId ?? "anonymous");
+  const namespacePart = normalizeKeyPart(options.namespace);
   const keyPrefix = `${DEFAULT_KEY_PREFIX}${namespacePart}:${orgPart}:`;
 
-  const ttl = options?.ttlMs ?? DEFAULT_TTL_MS;
-
-  const redis = options?.redis;
   const debug = process.env.NODE_ENV === "development";
 
   return ((tool: ExecutableTool, cacheOptions = {}) => {
@@ -61,12 +38,12 @@ export function getAICachedTools(options?: {
     }
 
     const originalExecute = tool.execute;
-    const toolTtl = cacheOptions.ttl ?? ttl;
+    const toolTtl = cacheOptions.ttl ?? DEFAULT_TTL_MS;
     return {
       ...tool,
       execute: async (params: unknown, context?: unknown) => {
         const cacheKey = `${keyPrefix}${cacheOptions.keyGenerator?.(params, context) ?? createDefaultCacheKey(params)}`;
-        const cachedValue = await readCachedValue(cacheKey, redis);
+        const cachedValue = readCachedValue(cacheKey);
         if (cachedValue.hit) {
           if (cacheOptions.debug ?? debug) {
             console.debug("[ai-tool-cache] hit", cacheKey);
@@ -79,7 +56,7 @@ export function getAICachedTools(options?: {
           return result;
         }
 
-        await writeCachedValue(cacheKey, result, toolTtl, redis);
+        writeCachedValue(cacheKey, result, toolTtl);
         return result;
       },
     };
@@ -90,19 +67,9 @@ function createDefaultCacheKey(params: unknown) {
   return JSON.stringify(params ?? {});
 }
 
-async function readCachedValue(
-  key: string,
-  redis?: Redis | null
-): Promise<{ hit: true; value: unknown } | { hit: false }> {
-  if (redis) {
-    const value = await redis.get<unknown>(key);
-    if (isRedisCacheEnvelope(value)) {
-      return { hit: true, value: value.value };
-    }
-
-    return value === null ? { hit: false } : { hit: true, value };
-  }
-
+function readCachedValue(
+  key: string
+): { hit: true; value: unknown } | { hit: false } {
   const entry = memoryCache.get(key);
   if (!entry) {
     return { hit: false };
@@ -116,41 +83,12 @@ async function readCachedValue(
   return { hit: true, value: entry.value };
 }
 
-async function writeCachedValue(
-  key: string,
-  value: unknown,
-  ttlMs: number,
-  redis?: Redis | null
-) {
-  if (redis) {
-    await redis.set(key, createRedisCacheEnvelope(value), {
-      ex: Math.ceil(ttlMs / 1000),
-    });
-    return;
-  }
-
+function writeCachedValue(key: string, value: unknown, ttlMs: number) {
   pruneExpiredMemoryCacheEntries();
   memoryCache.set(key, {
     expiresAt: Date.now() + ttlMs,
     value,
   });
-}
-
-function createRedisCacheEnvelope(value: unknown): RedisCacheEnvelope {
-  return {
-    __notraToolCache: true,
-    value,
-  };
-}
-
-function isRedisCacheEnvelope(value: unknown): value is RedisCacheEnvelope {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "__notraToolCache" in value &&
-    value.__notraToolCache === true &&
-    "value" in value
-  );
 }
 
 function pruneExpiredMemoryCacheEntries() {

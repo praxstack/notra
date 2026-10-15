@@ -1,5 +1,6 @@
 import { db } from "@notra/db/drizzle";
 import { geoScans } from "@notra/db/schema";
+import type { GeoScanPlannedAnswer } from "@notra/db/types/geo-scan";
 import { and, eq, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
@@ -115,3 +116,24 @@ export const updateGeoScanTaskStatus = Effect.fn("geo.updateScanTaskStatus")(
     );
   }
 );
+
+/** `updateGeoScanTaskStatus` for a conversation turn taken from the plan snapshot. */
+export function updateGeoScanAnswerStatus(
+  context: Pick<
+    GeoScanProjectContext,
+    "organizationId" | "projectId" | "scanId"
+  >,
+  answer: GeoScanPlannedAnswer,
+  status: "running" | "failed"
+) {
+  return updateGeoScanTaskStatus(
+    context,
+    {
+      prompt: { id: answer.promptId, text: answer.prompt },
+      engine: answer.engine,
+      language: answer.language,
+    },
+    status,
+    answer.turn
+  );
+}

@@ -16,7 +16,7 @@ import {
 } from "@notra/ai/utils/scheduled-publications";
 import { type Tool, tool } from "ai";
 
-export interface PostScheduleToolContext {
+interface PostScheduleToolContext {
   organizationId: string;
   userId?: string;
 }

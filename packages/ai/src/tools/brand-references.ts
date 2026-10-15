@@ -6,7 +6,10 @@ import {
 } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
 import type { BrandReferencesConfig } from "@notra/ai/types/brand-references";
-import { serializeBrandReference } from "@notra/ai/utils/brand-references";
+import {
+  serializeBrandReference,
+  withReferenceBillingFlag,
+} from "@notra/ai/utils/brand-references";
 import { toolDescription } from "@notra/ai/utils/description";
 import { db } from "@notra/db/drizzle";
 import { brandReferences, brandSettings } from "@notra/db/schema";
@@ -58,7 +61,7 @@ async function getFilteredReferences(
   config: BrandReferencesConfig,
   voiceId?: string
 ) {
-  const settingsId = await resolveSettingsId(config, voiceId ?? config.voiceId);
+  const settingsId = await resolveSettingsId(config, voiceId);
 
   if (!settingsId) {
     return { settingsId: null, references: [] };
@@ -69,16 +72,23 @@ async function getFilteredReferences(
     orderBy: [desc(brandReferences.createdAt)],
   });
 
-  const agentType = config.agentType;
-
-  const filtered: BrandReferenceRecord[] = agentType
-    ? refs.filter((r: BrandReferenceRecord) => {
+  const { agentType } = config;
+  const references = agentType
+    ? refs.filter((r) => {
         const targets = r.applicableTo as string[];
         return targets.includes("all") || targets.includes(agentType);
       })
     : refs;
 
-  return { settingsId, references: filtered };
+  return { settingsId, references };
+}
+
+function toVoiceSample(reference: BrandReferenceRecord) {
+  return {
+    type: reference.type,
+    content: reference.content,
+    note: reference.note,
+  };
 }
 
 export function createGetBrandReferencesTool(
@@ -118,11 +128,7 @@ export function createGetBrandReferencesTool(
         }
 
         return {
-          references: filtered.map((r) => ({
-            type: r.type,
-            content: r.content,
-            note: r.note,
-          })),
+          references: filtered.map(toVoiceSample),
           count: filtered.length,
         };
       },
@@ -193,10 +199,7 @@ export function createSearchBrandReferencesTool(
 
           if (orderedIds.length > 0) {
             const byId = new Map(
-              references.map((reference: BrandReferenceRecord) => [
-                reference.id,
-                reference,
-              ])
+              references.map((reference) => [reference.id, reference])
             );
             const ranked = orderedIds
               .map((id) => byId.get(id))
@@ -204,11 +207,7 @@ export function createSearchBrandReferencesTool(
 
             if (ranked.length > 0) {
               return {
-                references: ranked.map((r) => ({
-                  type: r.type,
-                  content: r.content,
-                  note: r.note,
-                })),
+                references: ranked.map(toVoiceSample),
                 count: ranked.length,
                 source: "supermemory",
               };
@@ -221,11 +220,7 @@ export function createSearchBrandReferencesTool(
         const fallback = references.slice(0, limit);
 
         return {
-          references: fallback.map((r) => ({
-            type: r.type,
-            content: r.content,
-            note: r.note,
-          })),
+          references: fallback.map(toVoiceSample),
           count: fallback.length,
           source: "fallback",
         };
@@ -313,9 +308,11 @@ export function createAddBrandReferenceTool(config: {
         };
       }
 
-      if (autumn && !allowUnmeteredAiInDevelopment) {
+      const chargesReferenceQuota = Boolean(
+        autumn && !allowUnmeteredAiInDevelopment
+      );
+      if (autumn && chargesReferenceQuota) {
         let allowed = false;
-
         try {
           const check = await autumn.check({
             customerId: config.organizationId,
@@ -325,7 +322,7 @@ export function createAddBrandReferenceTool(config: {
           });
           allowed = check?.allowed === true;
         } catch {
-          allowed = false;
+          // Fail closed: an unreachable billing service must not grant quota.
         }
 
         if (!allowed) {
@@ -361,7 +358,10 @@ export function createAddBrandReferenceTool(config: {
           brandSettingsId: settingsId,
           type,
           content,
-          metadata: sourceUrl ? { url: sourceUrl } : null,
+          metadata: withReferenceBillingFlag(
+            sourceUrl ? { url: sourceUrl } : null,
+            { metered: chargesReferenceQuota }
+          ),
           note: note ?? null,
           sourceUrl: sourceUrl ?? null,
           sourceCapturedAt: sourceUrl ? new Date() : null,

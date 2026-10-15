@@ -13,12 +13,8 @@ import { getAuthKitContext } from "@workos/authkit-tanstack-react-start";
 import { and, eq } from "drizzle-orm";
 import { Effect } from "effect";
 
-import {
-  DEMO_DISABLED_MESSAGE,
-  DEMO_EXIT_URL,
-  DEMO_SESSION_COOKIE,
-} from "@/constants/demo";
-import { ActionFailure } from "@/lib/actions/errors";
+import { DEMO_EXIT_URL, DEMO_SESSION_COOKIE } from "@/constants/demo";
+import { failDemoDisabled, tryAction } from "@/lib/actions/errors";
 import { runAction } from "@/lib/actions/run-action";
 import { validateActionInput } from "@/lib/actions/validate-input";
 import { runAfterResponse } from "@/lib/after-response";
@@ -31,7 +27,7 @@ import { signOutAuthSession } from "@/lib/auth/workos";
 import { isWorkOSNotFound } from "@/lib/auth/workos-error";
 import { syncBrewContacts } from "@/lib/email/brew-contacts";
 import { clearLocaleCookie, writeLocaleCookie } from "@/lib/i18n/locale-cookie";
-import { organizationActionMessage } from "@/lib/organizations/action-messages";
+import { failWithOrganizationMessage } from "@/lib/organizations/action-messages";
 import { requireSession } from "@/lib/organizations/guards";
 import { revokeSitePreviewSessions } from "@/lib/sites/preview-revocation";
 import type { SessionUser } from "@/types/auth/session";
@@ -42,11 +38,7 @@ import type {
 } from "@/types/auth/user-actions";
 import type { AccountInfo, ActionResult } from "@/types/organizations/actions";
 
-const tryAction = <T>(run: () => Promise<T>, message: string) =>
-  Effect.tryPromise({
-    try: run,
-    catch: (cause) => new ActionFailure({ message, cause }),
-  });
+const NAME_SPLIT_REGEX = /\s+/;
 
 export async function signOut(options?: SignOutActionOptions) {
   const parsed = signOutOptionsSchema.safeParse(options);
@@ -110,12 +102,8 @@ export async function updateUser(
       );
 
       if (!updated) {
-        return yield* Effect.fail(
-          new ActionFailure({
-            message: yield* organizationActionMessage(
-              "actions.organizations.userNotFound"
-            ),
-          })
+        return yield* failWithOrganizationMessage(
+          "actions.organizations.userNotFound"
         );
       }
 
@@ -133,7 +121,7 @@ export async function updateUser(
       }
 
       if (input.name !== undefined && updated.workosUserId) {
-        const [firstName, ...rest] = input.name.split(" ");
+        const [firstName, ...rest] = input.name.split(NAME_SPLIT_REGEX);
         yield* tryAction(
           () =>
             getWorkOS().userManagement.updateUser({
@@ -162,9 +150,7 @@ export async function deleteUser(): Promise<
   return runAction(
     Effect.gen(function* () {
       if (isDemoMode()) {
-        return yield* Effect.fail(
-          new ActionFailure({ message: DEMO_DISABLED_MESSAGE })
-        );
+        return yield* failDemoDisabled;
       }
       const session = yield* requireSession();
 
@@ -249,9 +235,7 @@ export async function requestPasswordReset(): Promise<
   return runAction(
     Effect.gen(function* () {
       if (isDemoMode()) {
-        return yield* Effect.fail(
-          new ActionFailure({ message: DEMO_DISABLED_MESSAGE })
-        );
+        return yield* failDemoDisabled;
       }
       const session = yield* requireSession();
 

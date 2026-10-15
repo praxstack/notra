@@ -42,7 +42,7 @@ export const webhookDeliveryQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(100000).default(0),
   status: webhookStatusFilterSchema.default("all"),
 });
-export const webhookEndpointSchema = z.object({
+const webhookEndpointSchema = z.object({
   id: z.string(),
   organizationId: z.string(),
   url: z.string(),
@@ -51,7 +51,7 @@ export const webhookEndpointSchema = z.object({
   createdAt: z.string(),
 });
 export const webhookIdentifierSchema = z.object({ id: z.string() });
-export const webhookDeliverySchema = z.object({
+const webhookDeliverySchema = z.object({
   id: z.string(),
   eventId: z.string(),
   endpointId: z.string(),
@@ -71,7 +71,7 @@ export const webhookDeliverySchema = z.object({
   statusCode: z.number().nullable(),
   error: z.string().nullable(),
 });
-export const webhookAttemptSchema = z.object({
+const webhookAttemptSchema = z.object({
   id: z.string(),
   deliveryId: z.string(),
   attemptNumber: z.number(),

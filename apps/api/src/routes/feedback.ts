@@ -182,24 +182,6 @@ const updateFeedbackRoute = createRoute({
   },
 });
 
-async function handleSubmitFeedbackAccepted(
-  c: Context,
-  organizationId: string,
-  via: (typeof API_FEEDBACK_VIA)[keyof typeof API_FEEDBACK_VIA],
-  success: SubmitFeedbackProgramSuccess
-) {
-  const feedback = serializeFeedback(success.feedback);
-
-  trackFeedbackReceived(c, {
-    organizationId,
-    feedback,
-    deduplicated: success.deduplicated,
-    via,
-  });
-
-  return c.json({ feedback, deduplicated: success.deduplicated }, 202);
-}
-
 async function submitFeedbackHandler(
   c: Context,
   organizationId: string,
@@ -216,14 +198,14 @@ async function submitFeedbackHandler(
     })
   );
   if (result._tag === "Failure") {
-    const response = respondToFeedbackFailure(c, result.failure);
-    if (response) {
-      return response;
-    }
-    throw result.failure;
+    return respondToFeedbackFailure(c, result.failure);
   }
 
-  return handleSubmitFeedbackAccepted(c, organizationId, via, result.success);
+  const { deduplicated } = result.success;
+  const feedback = serializeFeedback(result.success.feedback);
+  trackFeedbackReceived(c, { organizationId, feedback, deduplicated, via });
+
+  return c.json({ feedback, deduplicated }, 202);
 }
 
 feedbackRoutes.openapi(submitOrganizationFeedbackRoute, async (c) => {
@@ -240,11 +222,7 @@ feedbackRoutes.openapi(submitOrganizationFeedbackRoute, async (c) => {
     })
   );
   if (organizationResult._tag === "Failure") {
-    const response = respondToFeedbackFailure(c, organizationResult.failure);
-    if (response) {
-      return response;
-    }
-    throw organizationResult.failure;
+    return respondToFeedbackFailure(c, organizationResult.failure);
   }
 
   const organizationId = organizationResult.success;
@@ -328,11 +306,7 @@ feedbackRoutes.openapi(getFeedbackRoute, async (c) => {
     })
   );
   if (result._tag === "Failure") {
-    const response = respondToFeedbackFailure(c, result.failure);
-    if (response) {
-      return response;
-    }
-    throw result.failure;
+    return respondToFeedbackFailure(c, result.failure);
   }
 
   return c.json({ feedback: serializeFeedback(result.success) }, 200);
@@ -354,11 +328,7 @@ feedbackRoutes.openapi(updateFeedbackRoute, async (c) => {
     })
   );
   if (result._tag === "Failure") {
-    const response = respondToFeedbackFailure(c, result.failure);
-    if (response) {
-      return response;
-    }
-    throw result.failure;
+    return respondToFeedbackFailure(c, result.failure);
   }
 
   return c.json({ feedback: serializeFeedback(result.success) }, 200);

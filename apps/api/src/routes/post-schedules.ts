@@ -5,7 +5,6 @@ import {
   getPostSchedule,
   schedulePostPublication,
 } from "@notra/ai/utils/scheduled-publications";
-import type { createDb } from "@notra/db/drizzle";
 import { posts } from "@notra/db/schema";
 import { getPostParamsSchema } from "@notra/schemas/api/content";
 import {
@@ -15,13 +14,11 @@ import {
 } from "@notra/schemas/api/post-schedules";
 import { and, eq } from "drizzle-orm";
 
-import { getOrganizationId } from "../utils/auth";
+import type { DbClient } from "../types/db";
 import { createOpenApiApp } from "../utils/openapi-app";
 import { errorResponse, rateLimitResponse } from "../utils/openapi-responses";
-import { getOrganizationResponse } from "../utils/organizations";
+import { resolveRequestOrganization } from "../utils/organizations";
 import { enforceRatelimit, RATE_LIMITS, ratelimit } from "../utils/ratelimit";
-
-type DbClient = ReturnType<typeof createDb>;
 
 export const postSchedulesRoutes = createOpenApiApp();
 
@@ -126,19 +123,12 @@ const POST_NOT_FOUND = {
   error: SCHEDULE_POST_FAILURES.post_not_found.message,
 };
 
-const FORBIDDEN_UNSCOPED = {
-  error: "Forbidden: API key must be scoped to an organization",
-};
-
 postSchedulesRoutes.openapi(getPostScheduleRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(FORBIDDEN_UNSCOPED, 403);
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-  const organization = await getOrganizationResponse(c.get("db"), orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
   const { postId } = c.req.valid("param");
   if (!(await postExists(c.get("db"), orgId, postId))) {
     return c.json(POST_NOT_FOUND, 404);
@@ -148,14 +138,11 @@ postSchedulesRoutes.openapi(getPostScheduleRoute, async (c) => {
 });
 
 postSchedulesRoutes.openapi(schedulePostRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(FORBIDDEN_UNSCOPED, 403);
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-  const organization = await getOrganizationResponse(c.get("db"), orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
   const rateLimited = await enforceRatelimit(c, ratelimit.postUpdate);
   if (rateLimited) {
     return rateLimited;
@@ -178,14 +165,11 @@ postSchedulesRoutes.openapi(schedulePostRoute, async (c) => {
 });
 
 postSchedulesRoutes.openapi(cancelPostScheduleRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(FORBIDDEN_UNSCOPED, 403);
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-  const organization = await getOrganizationResponse(c.get("db"), orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
   const rateLimited = await enforceRatelimit(c, ratelimit.postUpdate);
   if (rateLimited) {
     return rateLimited;

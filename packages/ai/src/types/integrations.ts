@@ -203,19 +203,3 @@ export interface UpdateMcpServerIntegrationParams {
   headers?: McpHeaderMap;
   enabled?: boolean;
 }
-
-export type McpBrandingAssetKind = "logo-light" | "logo-dark" | "banner";
-
-export interface UploadIntegrationBrandingAssetParams {
-  organizationId: string;
-  kind: McpBrandingAssetKind;
-  body: Buffer;
-  contentType: string;
-  extension: string;
-}
-
-export interface McpToolActionPhraseUpdate {
-  serverToolName: string;
-  actionPhrasePresent: string | null;
-  actionPhrasePast: string | null;
-}

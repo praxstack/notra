@@ -1,3 +1,5 @@
+import { getAppUrl } from "@notra/ai/utils/url";
+
 import {
   GITHUB_PULL_REQUEST_BODY_MAX_LENGTH,
   GITHUB_PULL_REQUEST_BODY_SECTION_END,
@@ -17,9 +19,7 @@ const OPEN_IN_NOTRA_BADGE_PATHS = {
 const PULL_REQUEST_BODY_TRUNCATION_NOTICE =
   "_Truncated to fit GitHub's pull request description limit. The full draft is in the committed file._";
 
-export type { OpenInNotraBadgeUrls };
-
-export interface BuildContentPullRequestBodyParams {
+interface BuildContentPullRequestBodyParams {
   contentType: GitHubPublishContentType;
   /** Repository path of the committed draft. */
   path: string;
@@ -37,15 +37,9 @@ function trimTrailingSlash(url: string) {
   return url.replace(/\/+$/, "");
 }
 
-/**
- * Resolves the public base URL of the Notra dashboard from the environment.
- * Returns `null` when no URL is configured so callers can omit deep links.
- */
-export function resolveNotraBaseUrl(
-  env: NodeJS.ProcessEnv = process.env
-): string | null {
-  const raw =
-    env.APP_URL ?? env.NEXT_PUBLIC_SITE_URL ?? env.NEXT_PUBLIC_APP_URL ?? "";
+/** `null` when no URL is configured, so callers can omit deep links. */
+export function resolveNotraBaseUrl(): string | null {
+  const raw = getAppUrl() ?? "";
   const trimmed = trimTrailingSlash(raw.trim());
   return trimmed.length > 0 ? trimmed : null;
 }

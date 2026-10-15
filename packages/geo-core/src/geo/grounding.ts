@@ -12,8 +12,20 @@ import type { GeoGenerateTrace } from "../types/geo";
 import { perplexitySourcesFromExcerpt } from "../utils/geo-perplexity-sources";
 import { getReferenceDomain } from "../utils/reference-display";
 
+/** Gemini grounding chunk kinds and the field each one keeps its URL in. */
+const GROUNDING_CHUNK_URL_KEYS = [
+  ["web", "uri"],
+  ["image", "sourceUri"],
+  ["retrievedContext", "uri"],
+  ["maps", "uri"],
+] as const;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function searchQueryOf(input: Record<string, unknown>): unknown {
+  return input.query ?? input.q ?? input.search_query;
 }
 
 function addQuery(queries: string[], seen: Set<string>, value: unknown): void {
@@ -64,11 +76,7 @@ function collectToolInputs(
     if (!isRecord(input)) {
       continue;
     }
-    addQuery(
-      queries,
-      seenQueries,
-      input.query ?? input.q ?? input.search_query
-    );
+    addQuery(queries, seenQueries, searchQueryOf(input));
   }
 }
 
@@ -84,11 +92,7 @@ function collectToolOutputs(
       continue;
     }
     if (isRecord(result.input)) {
-      addQuery(
-        queries,
-        seenQueries,
-        result.input.query ?? result.input.q ?? result.input.search_query
-      );
+      addQuery(queries, seenQueries, searchQueryOf(result.input));
     }
     const output = result.output;
     const outputs = Array.isArray(output) ? output : [output];
@@ -145,29 +149,14 @@ function collectProviderMetadata(
       if (!isRecord(chunk)) {
         continue;
       }
-      if (isRecord(chunk.web)) {
-        addSource(sources, seenUrls, {
-          title: chunk.web.title,
-          url: chunk.web.uri,
-        });
-      }
-      if (isRecord(chunk.image)) {
-        addSource(sources, seenUrls, {
-          title: chunk.image.title,
-          url: chunk.image.sourceUri,
-        });
-      }
-      if (isRecord(chunk.retrievedContext)) {
-        addSource(sources, seenUrls, {
-          title: chunk.retrievedContext.title,
-          url: chunk.retrievedContext.uri,
-        });
-      }
-      if (isRecord(chunk.maps)) {
-        addSource(sources, seenUrls, {
-          title: chunk.maps.title,
-          url: chunk.maps.uri,
-        });
+      for (const [kind, urlKey] of GROUNDING_CHUNK_URL_KEYS) {
+        const entry = chunk[kind];
+        if (isRecord(entry)) {
+          addSource(sources, seenUrls, {
+            title: entry.title,
+            url: entry[urlKey],
+          });
+        }
       }
     }
   }

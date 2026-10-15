@@ -1,10 +1,48 @@
 {
   "name": "turbo",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "@ai-sdk/devtools": "1.0.32",
+      "@ai-sdk/gateway": "4.0.105",
+      "@aws-sdk/client-s3": "^3.1136.0",
+      "@base-ui/react": "^1.8.0",
+      "@databuddy/sdk": "^2.4.20",
+      "@dnd-kit/core": "^6.3.1",
+      "@dnd-kit/sortable": "^10.0.0",
+      "@electric-sql/pglite": "0.5.8",
+      "@hugeicons/core-free-icons": "^4.1.4",
+      "@hugeicons/react": "^1.1.10",
+      "@tanstack/react-form": "^1.33.5",
+      "@types/react-dom": "^19.3.0",
+      "@types/sanitize-html": "^2.16.2",
+      "@upstash/ratelimit": "^2.1.0",
+      "@upstash/redis": "^1.38.4",
+      "@vercel/oidc": "^3.8.10",
+      "ai": "7.0.129",
+      "autumn-js": "~1.2.56",
+      "bun-types": "1.4.0",
+      "dotenv-cli": "^11.0.0",
+      "drizzle-orm": "^0.45.3",
+      "echarts": "^6.1.0",
+      "effect": "4.0.0",
+      "evlog": "2.28.1",
+      "lucide-react": "^0.562.0",
+      "nanoid": "^5.1.16",
+      "next-themes": "^0.4.6",
+      "sanitize-html": "^2.17.7",
+      "satori": "^0.26.0",
+      "sonner": "^2.0.8",
+      "tailwindcss": "4.3.3",
+      "tw-animate-css": "^1.4.0",
+      "typescript": "7.0.2",
+      "zod": "^4.6.5"
+    }
+  },
   "type": "module",
   "scripts": {
     "build": "dotenv -- turbo run build",
@@ -39,10 +77,10 @@
     "@effect/tsgo": "0.47.2",
     "@shadcn/lint": "0.1.0",
     "@types/node": "24.13.6",
-    "bun-types": "1.4.0",
-    "dotenv-cli": "^11.0.0",
+    "bun-types": "catalog:",
+    "dotenv-cli": "catalog:",
     "drizzle-kit": "^0.31.11",
-    "drizzle-orm": "^0.45.3",
+    "drizzle-orm": "catalog:",
     "husky": "^9.1.7",
     "knip": "^6.12.2",
     "openlogs": "~0.0.4",
@@ -51,7 +89,7 @@
     "oxlint-tsgolint": "7.0.2001",
     "railway": "3.13.1",
     "turbo": "2.11.7",
-    "typescript": "7.0.2",
+    "typescript": "catalog:",
     "ultracite": "7.10.8"
   },
   "overrides": {

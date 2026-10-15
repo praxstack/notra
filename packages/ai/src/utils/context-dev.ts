@@ -88,12 +88,9 @@ function getContextDevErrorMessage(
 }
 
 async function parseContextDevError(response: Response): Promise<never> {
-  let payload: ContextDevErrorResponse | undefined;
-  try {
-    payload = (await response.json()) as ContextDevErrorResponse;
-  } catch {
-    payload = undefined;
-  }
+  const payload = (await response.json().catch(() => undefined)) as
+    | ContextDevErrorResponse
+    | undefined;
 
   throw new ContextDevApiError(
     getContextDevErrorMessage(payload, response.status),
@@ -243,10 +240,6 @@ function mapContextDevError(
   };
 }
 
-function getDomainFromUrl(url: string): string {
-  return new URL(url).hostname;
-}
-
 function normalizeBrandHostname(hostname: string): string {
   return hostname.startsWith(BRAND_ANALYSIS_WWW_PREFIX)
     ? hostname.slice(BRAND_ANALYSIS_WWW_PREFIX.length)
@@ -376,9 +369,11 @@ export async function scrapeWebsiteForBrandAnalysis(
   const websiteUrl = normalizeContextDevWebsiteUrl(url);
 
   try {
-    const sitemapResult = await crawlSitemapForBrandAnalysis(websiteUrl).catch(
-      () => null
-    );
+    const sitemapResult = await crawlSitemap({
+      domain: new URL(websiteUrl).hostname,
+      maxLinks: BRAND_ANALYSIS_SITEMAP_MAX_LINKS,
+      timeoutMS: BRAND_ANALYSIS_SITEMAP_TIMEOUT_MS,
+    }).catch(() => null);
 
     const urls = pickBrandAnalysisUrls(websiteUrl, sitemapResult?.urls ?? []);
     const scrapeResult = await scrapeBrandAnalysisPages(
@@ -439,14 +434,6 @@ async function scrapeBrandAnalysisPages(urls: string[]) {
       result.status === "fulfilled" ? [result.value] : []
     ),
   };
-}
-
-async function crawlSitemapForBrandAnalysis(url: string) {
-  return crawlSitemap({
-    domain: getDomainFromUrl(url),
-    maxLinks: BRAND_ANALYSIS_SITEMAP_MAX_LINKS,
-    timeoutMS: BRAND_ANALYSIS_SITEMAP_TIMEOUT_MS,
-  });
 }
 
 export async function fetchWebpage(
@@ -641,14 +628,6 @@ export async function captureScreenshot(
   );
 }
 
-function shouldScrapeMarkdown(input: ContextDevWebSearchInput): boolean {
-  return Boolean(input.scrapeOptions?.formats?.includes("markdown"));
-}
-
-function toMaxAgeMs(maxAge?: number) {
-  return typeof maxAge === "number" ? maxAge : undefined;
-}
-
 function normalizeSearchResult(
   result: ContextDevSearchResult
 ): ContextDevSearchResult {
@@ -675,13 +654,13 @@ export async function searchWeb(
         queryFanout: input.queryFanout,
         timeoutMS: input.timeoutMS,
         markdownOptions: {
-          enabled: shouldScrapeMarkdown(input),
+          enabled: input.scrapeOptions?.formats?.includes("markdown") ?? false,
           includeLinks: true,
           includeImages:
             input.scrapeOptions?.formats?.includes("images") ?? false,
           shortenBase64Images: true,
           useMainContentOnly: input.scrapeOptions?.onlyMainContent ?? true,
-          maxAgeMs: toMaxAgeMs(input.scrapeOptions?.maxAge),
+          maxAgeMs: input.scrapeOptions?.maxAge,
         },
       }),
       method: "POST",

@@ -13,8 +13,6 @@ import {
   deleteIntegration,
   listIntegrations,
 } from "../programs/integrations";
-import type { DbClient } from "../types/db";
-import { getOrganizationId } from "../utils/auth";
 import {
   respondToIntegrationFailure,
   runIntegrationProgram,
@@ -22,7 +20,7 @@ import {
 import { logError } from "../utils/logging";
 import { createOpenApiApp } from "../utils/openapi-app";
 import { errorResponse, rateLimitResponse } from "../utils/openapi-responses";
-import { getOrganizationResponse } from "../utils/organizations";
+import { resolveRequestOrganization } from "../utils/organizations";
 import { enforceRatelimit, RATE_LIMITS, ratelimit } from "../utils/ratelimit";
 
 export const integrationsRoutes = createOpenApiApp();
@@ -122,29 +120,12 @@ const deleteIntegrationRoute = createRoute({
   },
 });
 
-async function requireOrganization(
-  c: {
-    get: (key: "db") => DbClient;
-  },
-  orgId: string
-) {
-  const organization = await getOrganizationResponse(c.get("db"), orgId);
-  return organization ?? null;
-}
-
 integrationsRoutes.openapi(getIntegrationsRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
-
-  const organization = await requireOrganization(c, orgId);
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
+  const { orgId, organization } = scope;
 
   const result = await runIntegrationProgram(
     listIntegrations({ db: c.get("db"), organizationId: orgId })
@@ -165,20 +146,13 @@ integrationsRoutes.openapi(getIntegrationsRoute, async (c) => {
 });
 
 integrationsRoutes.openapi(createGitHubIntegrationRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
+  const { orgId, organization } = scope;
 
   const body = c.req.valid("json");
-  const organization = await requireOrganization(c, orgId);
-
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
 
   const owner = body.owner.trim();
   const repo = body.repo.trim();
@@ -193,11 +167,7 @@ integrationsRoutes.openapi(createGitHubIntegrationRoute, async (c) => {
   );
 
   if (duplicateCheck._tag === "Failure") {
-    const response = respondToIntegrationFailure(c, duplicateCheck.failure);
-    if (response) {
-      return response;
-    }
-    throw duplicateCheck.failure;
+    return respondToIntegrationFailure(c, duplicateCheck.failure);
   }
 
   const rateLimited = await enforceRatelimit(c, ratelimit.integrationCreate);
@@ -219,32 +189,20 @@ integrationsRoutes.openapi(createGitHubIntegrationRoute, async (c) => {
       logError("Failed to create GitHub integration", result.failure.cause);
     }
 
-    const response = respondToIntegrationFailure(c, result.failure);
-    if (response) {
-      return response;
-    }
-
-    throw result.failure;
+    return respondToIntegrationFailure(c, result.failure);
   }
 
   return c.json({ github: result.success, organization }, 201);
 });
 
 integrationsRoutes.openapi(deleteIntegrationRoute, async (c) => {
-  const orgId = getOrganizationId(c);
-  if (!orgId) {
-    return c.json(
-      { error: "Forbidden: API key must be scoped to an organization" },
-      403
-    );
+  const scope = await resolveRequestOrganization(c);
+  if (scope.response) {
+    return scope.response;
   }
+  const { orgId, organization } = scope;
 
   const { integrationId } = c.req.valid("param");
-  const organization = await requireOrganization(c, orgId);
-
-  if (!organization) {
-    return c.json({ error: "Organization not found" }, 404);
-  }
 
   const result = await runIntegrationProgram(
     deleteIntegration({

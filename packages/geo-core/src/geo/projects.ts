@@ -1,3 +1,4 @@
+import { purgeDeletedProjectAnalytics } from "@notra/analytics/tinybird/purge";
 import { db } from "@notra/db/drizzle";
 import { brandSettings, geoSettings, projects, sites } from "@notra/db/schema";
 import type { GeoCheckScope } from "@notra/db/types/geo-checks";
@@ -20,7 +21,7 @@ import { SUPPORTED_GEO_LANGUAGES } from "../utils/geo-language-rows";
 import { normalizeWebsiteUrl } from "../utils/geo-website";
 import { memoizeGeoRequest } from "../utils/request-memo";
 import { deleteGeoCache } from "./cache";
-import { geoDb } from "./effect";
+import { geoDb, geoSkip } from "./effect";
 import {
   GeoBrandIdentityMissingError,
   GeoBrandIdentityNotFoundError,
@@ -325,6 +326,11 @@ export const deleteGeoProject = Effect.fn("geo.projectDelete")(function* (
     yield* Effect.promise(() =>
       invalidateGeoIngestHostsCache(organizationId, projectId)
     );
+    // The project row is gone either way; a failed purge only leaves orphaned
+    // analytics behind, so it must not fail the delete.
+    yield* Effect.tryPromise(() =>
+      purgeDeletedProjectAnalytics({ organizationId, projectId })
+    ).pipe(geoSkip("project analytics purge failed", { projectId }));
   }
 
   return { id: projectId, success: true as const };
@@ -395,7 +401,7 @@ export const resolveGeoScope = Effect.fn("geo.resolveScope")(function* (
 export function geoCheckScope(scope: GeoProjectScope): GeoCheckScope {
   return {
     organizationId: scope.organizationId,
-    projectId: scope.projectId ?? null,
+    projectId: scope.projectId,
   };
 }
 

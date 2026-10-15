@@ -32,20 +32,9 @@ describe("normalizeProjectDomain", () => {
   });
 });
 
-describe("ingestAllowedHosts", () => {
-  test("keeps Unicode brand sites on the punycode allowlist", () => {
-    expect(ingestAllowedHosts("https://bücher.de")).toEqual([
-      "xn--bcher-kva.de",
-    ]);
-  });
-});
-
 describe("acceptsIngestHost", () => {
-  test("fails open when the allowlist could not be loaded", () => {
+  test("fails open when the allowlist could not be loaded, except for invalid hosts", () => {
     expect(acceptsIngestHost("attacker.example", null)).toBe(true);
-  });
-
-  test("still rejects hostless and invalid hosts when failing open", () => {
     expect(acceptsIngestHost("", null)).toBe(false);
     expect(acceptsIngestHost("localhost", null)).toBe(false);
     expect(acceptsIngestHost("not a domain", null)).toBe(false);

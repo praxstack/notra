@@ -1,5 +1,6 @@
 import { db } from "@notra/db/drizzle";
 import { skills } from "@notra/db/schema";
+import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { UNSLOP_DESCRIPTION } from "./constants";
@@ -31,9 +32,19 @@ export async function seedSystemSkills(
   return inserted.length;
 }
 
+/**
+ * Organizations known to have the system unslop row. System skills can't be
+ * deleted, so later chat turns can skip the round trip. A conflicting custom
+ * skill named "unslop" can be renamed or deleted, so that case keeps retrying.
+ */
+const unslopEnsuredOrganizations = new Set<string>();
+
 /** Add the new system skill to organizations created before it was seeded. */
 export async function ensureUnslopSkill(organizationId: string) {
-  await db
+  if (unslopEnsuredOrganizations.has(organizationId)) {
+    return;
+  }
+  const inserted = await db
     .insert(skills)
     .values({
       id: nanoid(),
@@ -43,5 +54,19 @@ export async function ensureUnslopSkill(organizationId: string) {
       content: UNSLOP_CONTENT,
       isSystem: true,
     })
-    .onConflictDoNothing({ target: [skills.organizationId, skills.name] });
+    .onConflictDoNothing({ target: [skills.organizationId, skills.name] })
+    .returning({ id: skills.id });
+  const existing =
+    inserted.length > 0
+      ? { isSystem: true }
+      : await db.query.skills.findFirst({
+          where: and(
+            eq(skills.organizationId, organizationId),
+            eq(skills.name, "unslop")
+          ),
+          columns: { isSystem: true },
+        });
+  if (existing?.isSystem) {
+    unslopEnsuredOrganizations.add(organizationId);
+  }
 }

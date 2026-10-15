@@ -1,12 +1,4 @@
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  spyOn,
-  test,
-} from "bun:test";
+import { afterAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
 
 import { Effect } from "effect";
 
@@ -53,11 +45,6 @@ const feed = spyOn(globalThis, "fetch").mockImplementation(async () =>
   })
 );
 
-beforeAll(() => {
-  for (const key of envKeys) {
-    process.env[key] = "test-only-never-sent";
-  }
-});
 beforeEach(() => {
   for (const key of envKeys) {
     process.env[key] = "test-only-never-sent";

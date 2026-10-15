@@ -11,10 +11,9 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 
 import { CONTENT_AUTHOR_ENSURE_SELF_ATTEMPTS } from "@/constants/content-overview";
-import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { isUniqueConstraintError } from "@/lib/db/errors";
 import { getTranslations } from "@/lib/i18n/server";
-import { baseProcedure } from "@/lib/orpc/base";
+import { baseProcedure, withOrganizationAccess } from "@/lib/orpc/base";
 import {
   authorSlugBase,
   serializeContentAuthor,
@@ -49,14 +48,20 @@ async function freeAuthorSlug(organizationId: string, name: string) {
   }
 }
 
+async function toAuthorSlugConflict(error: unknown) {
+  if (!isUniqueConstraintError(error)) {
+    return error;
+  }
+  const t = await getTranslations("errors.content");
+  return conflict(t("authorSlugTaken"));
+}
+
 export const contentAuthorsRouter = {
   list: baseProcedure
     .input(contentOrganizationIdInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+      const { auth } = context;
       const rows = await db
         .select()
         .from(contentAuthors)
@@ -70,17 +75,17 @@ export const contentAuthorsRouter = {
 
   ensureSelf: baseProcedure
     .input(contentOrganizationIdInputSchema)
+    .use(withOrganizationAccess)
     .handler(async ({ context, input }) => {
-      const auth = await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
-      const existing = await db.query.contentAuthors.findFirst({
-        where: and(
-          eq(contentAuthors.organizationId, input.organizationId),
-          eq(contentAuthors.userId, auth.user.id)
-        ),
-      });
+      const { auth } = context;
+      const findOwn = () =>
+        db.query.contentAuthors.findFirst({
+          where: and(
+            eq(contentAuthors.organizationId, input.organizationId),
+            eq(contentAuthors.userId, auth.user.id)
+          ),
+        });
+      const existing = await findOwn();
       if (existing) {
         return { author: serializeContentAuthor(existing) };
       }
@@ -89,13 +94,6 @@ export const contentAuthorsRouter = {
         columns: { name: true, image: true },
       });
       const name = profile?.name.trim() || auth.user.email || "Author";
-      const findOwn = () =>
-        db.query.contentAuthors.findFirst({
-          where: and(
-            eq(contentAuthors.organizationId, input.organizationId),
-            eq(contentAuthors.userId, auth.user.id)
-          ),
-        });
       for (let attempt = 1; ; attempt++) {
         const slug = await freeAuthorSlug(input.organizationId, name);
         try {
@@ -131,11 +129,8 @@ export const contentAuthorsRouter = {
 
   create: baseProcedure
     .input(createContentAuthorInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       try {
         const [created] = await db
           .insert(contentAuthors)
@@ -150,21 +145,14 @@ export const contentAuthorsRouter = {
         }
         return { author: serializeContentAuthor(created) };
       } catch (error) {
-        if (isUniqueConstraintError(error)) {
-          const t = await getTranslations("errors.content");
-          throw conflict(t("authorSlugTaken"));
-        }
-        throw error;
+        throw await toAuthorSlugConflict(error);
       }
     }),
 
   update: baseProcedure
     .input(updateContentAuthorInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       try {
         const [updated] = await db
           .update(contentAuthors)
@@ -181,21 +169,14 @@ export const contentAuthorsRouter = {
         }
         return { author: serializeContentAuthor(updated) };
       } catch (error) {
-        if (isUniqueConstraintError(error)) {
-          const t = await getTranslations("errors.content");
-          throw conflict(t("authorSlugTaken"));
-        }
-        throw error;
+        throw await toAuthorSlugConflict(error);
       }
     }),
 
   delete: baseProcedure
     .input(deleteContentAuthorInputSchema)
-    .handler(async ({ context, input }) => {
-      await assertOrganizationAccess({
-        headers: context.headers,
-        organizationId: input.organizationId,
-      });
+    .use(withOrganizationAccess)
+    .handler(async ({ input }) => {
       await db.transaction(async (tx) => {
         const [deleted] = await tx
           .delete(contentAuthors)

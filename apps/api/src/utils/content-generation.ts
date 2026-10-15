@@ -1,5 +1,4 @@
 import type { ContentGenerationWorkflowPayload } from "@notra/content-generation/schemas";
-import type { createDb } from "@notra/db/drizzle";
 import {
   brandSettings,
   githubIntegrations,
@@ -13,13 +12,11 @@ import {
   PostDatabaseError,
   PostGenerationTargetUnavailableError,
 } from "../errors/posts";
-import { isConfirmedWorkflowTriggerRejection } from "./brand-analysis";
+import type { DbClient } from "../types/db";
 import {
   getInternalWorkflowUrl,
   startDashboardWorkflow,
 } from "./internal-workflow";
-
-type DbClient = ReturnType<typeof createDb>;
 
 interface ContentGenerationEnv {
   WORKFLOW_BASE_URL?: string;
@@ -35,10 +32,6 @@ function getContentGenerationWorkflowUrl(env: ContentGenerationEnv) {
     env,
     "/api/internal/workflows/on-demand-content"
   );
-}
-
-export function isContentGenerationConfigured(env: ContentGenerationEnv) {
-  return !!getContentGenerationWorkflowUrl(env);
 }
 
 export function getContentGenerationUnavailableReason(
@@ -72,9 +65,6 @@ export async function triggerContentGenerationWorkflow(
 
   return await startDashboardWorkflow(url, payload);
 }
-
-export const isConfirmedContentGenerationRejection =
-  isConfirmedWorkflowTriggerRejection;
 
 const queryPostTargets = <A>(operation: () => Promise<A>) =>
   Effect.tryPromise({

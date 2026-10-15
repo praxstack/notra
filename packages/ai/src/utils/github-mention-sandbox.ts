@@ -17,6 +17,7 @@ import { logGitHubMentionEvent } from "@notra/ai/utils/github-mention-log";
 import { getGitHubMentionPathBlockReason } from "@notra/ai/utils/github-mention-path-policy";
 import { consumeGitHubMentionSandboxStream } from "@notra/ai/utils/github-mention-sandbox-usage";
 import { commitFilesToPullRequest } from "@notra/ai/utils/github-pr-commit";
+import { shellQuote } from "@notra/ai/utils/shell";
 import { syncPublishedPostAfterCommit } from "@notra/ai/utils/update-published-content";
 import { gatewayReportingHeaders } from "@notra/ai/utils/usage-attribution";
 import type { BoxConfig, Runtime, VercelModel } from "@upstash/box";
@@ -30,10 +31,6 @@ const SANDBOX_MODEL_ID = `vercel/${AGENT_DEFAULT_MODEL}`;
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const SANDBOX_FILE_LIMIT = 25;
-
-function shellQuote(value: string) {
-  return `'${value.replace(/'/g, `'\\''`)}'`;
-}
 
 async function clonePullRequestBranch(params: {
   box: Awaited<ReturnType<typeof Box.create>>;
@@ -256,8 +253,7 @@ export async function runGitHubMentionSandbox(params: {
       changes.skipped.push({ path: finding.path, reason: finding.reason });
     }
     const files = isBlocked ? [] : readable;
-    const deletions = isBlocked ? [] : changes.deleted;
-    if (files.length === 0 && deletions.length === 0) {
+    if (files.length === 0) {
       logGitHubMentionEvent(GITHUB_MENTION_LOG_EVENTS.sandboxCompleted, {
         organizationId: params.context.organizationId,
         deliveryId: params.context.deliveryId,
@@ -286,7 +282,6 @@ export async function runGitHubMentionSandbox(params: {
       expectedHeadOid: baseSha,
       headline: "docs: apply requested changes",
       files,
-      deletions,
     });
     params.onCommitted(commitSha);
     const postUpdated = await syncPublishedPostAfterCommit({
@@ -314,7 +309,7 @@ export async function runGitHubMentionSandbox(params: {
       deliveryId: params.context.deliveryId,
       commitSha,
       files: files.map((file) => file.path),
-      deleted: deletions,
+      deleted: [],
       skipped: changes.skipped,
       postUpdated,
       durationMs: Date.now() - startedAt,
@@ -323,7 +318,7 @@ export async function runGitHubMentionSandbox(params: {
       available: true as const,
       commitSha,
       files: files.map((file) => file.path),
-      deleted: deletions,
+      deleted: [],
       skipped: changes.skipped,
       postUpdated,
     };

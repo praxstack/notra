@@ -13,17 +13,9 @@ import {
   createGetGeoPromptResultsTool,
   createListGeoProjectsTool,
 } from "@notra/ai/tools/geo";
-import {
-  createGetCommitsByTimeframeTool,
-  createGetPullRequestsTool,
-  createGetReleaseByTagTool,
-} from "@notra/ai/tools/github";
+import { buildGitHubDataTools } from "@notra/ai/tools/github";
 import { createImageRevisionTool } from "@notra/ai/tools/image";
-import {
-  createGetLinearCyclesTool,
-  createGetLinearIssuesTool,
-  createGetLinearProjectsTool,
-} from "@notra/ai/tools/linear";
+import { buildLinearDataTools } from "@notra/ai/tools/linear";
 import {
   createGetBrandIdentityTool,
   createListBrandIdentitiesTool,
@@ -32,6 +24,7 @@ import { createPostDetailsTools } from "@notra/ai/tools/post-details";
 import { registerSitemapTools } from "@notra/ai/tools/sitemap";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
 import { registerWebSearchTools } from "@notra/ai/tools/web-search";
+import type { ResolveLinearIntegrationContext } from "@notra/ai/types/agents";
 import type { AgentType } from "@notra/ai/types/brand-references";
 import type {
   BuildToolSetDeps,
@@ -136,39 +129,17 @@ export function buildToolSet(
     );
   }
 
-  const hasGitHub = validatedIntegrations.some(
-    (i) => i.type === "github" && i.repositories.length > 0
-  );
-
-  if (hasGitHub) {
-    const allowedIntegrationIds = Array.from(
-      new Set(
-        validatedIntegrations
-          .filter((integration) => integration.type === "github")
-          .map((integration) => integration.id)
-      )
-    );
-
-    tools.getPullRequests = createGetPullRequestsTool(
-      {
+  if (hasGitHubRepositories(validatedIntegrations)) {
+    Object.assign(
+      tools,
+      buildGitHubDataTools({
         organizationId,
-        allowedIntegrationIds,
-      },
-      deps?.resolveContext
-    );
-    tools.getReleaseByTag = createGetReleaseByTagTool(
-      {
-        organizationId,
-        allowedIntegrationIds,
-      },
-      deps?.resolveContext
-    );
-    tools.getCommitsByTimeframe = createGetCommitsByTimeframeTool(
-      {
-        organizationId,
-        allowedIntegrationIds,
-      },
-      deps?.resolveContext
+        allowedIntegrationIds: uniqueIntegrationIds(
+          validatedIntegrations,
+          "github"
+        ),
+        resolveContext: deps?.resolveContext,
+      })
     );
 
     const repos = getGitHubRepoList(validatedIntegrations);
@@ -177,35 +148,13 @@ export function buildToolSet(
     );
   }
 
-  const hasLinear = validatedIntegrations.some((i) => i.type === "linear");
-
-  if (hasLinear) {
-    const allowedLinearIntegrationIds = Array.from(
-      new Set(
-        validatedIntegrations
-          .filter((integration) => integration.type === "linear")
-          .map((integration) => integration.id)
-      )
-    );
-
-    tools.getLinearIssues = createGetLinearIssuesTool(
-      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
-      deps?.resolveLinearContext
-    );
-    tools.getLinearProjects = createGetLinearProjectsTool(
-      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
-      deps?.resolveLinearContext
-    );
-    tools.getLinearCycles = createGetLinearCyclesTool(
-      { organizationId, allowedIntegrationIds: allowedLinearIntegrationIds },
-      deps?.resolveLinearContext
-    );
-
-    const teams = getLinearTeamList(validatedIntegrations);
-    descriptions.push(
-      `**Linear Integration**: Fetch issues, projects, and cycles${teams ? ` from: ${teams}` : ""}`
-    );
-  }
+  registerLinearTools(
+    tools,
+    descriptions,
+    organizationId,
+    validatedIntegrations,
+    deps?.resolveLinearContext
+  );
 
   return { tools, descriptions };
 }
@@ -281,7 +230,30 @@ function createUnavailableImageRevisionTool(): Tool {
   });
 }
 
-function getGitHubRepoList(integrations: ValidatedIntegration[]): string {
+export function hasGitHubRepositories(
+  integrations: ValidatedIntegration[]
+): boolean {
+  return integrations.some(
+    (i) => i.type === "github" && i.repositories.length > 0
+  );
+}
+
+export function uniqueIntegrationIds(
+  integrations: ValidatedIntegration[],
+  type: ValidatedIntegration["type"]
+): string[] {
+  return Array.from(
+    new Set(
+      integrations
+        .filter((integration) => integration.type === type)
+        .map((integration) => integration.id)
+    )
+  );
+}
+
+export function getGitHubRepoList(
+  integrations: ValidatedIntegration[]
+): string {
   const repos: string[] = [];
   for (const integration of integrations) {
     if (integration.type === "github") {
@@ -293,14 +265,36 @@ function getGitHubRepoList(integrations: ValidatedIntegration[]): string {
   return repos.join(", ");
 }
 
-function getLinearTeamList(integrations: ValidatedIntegration[]): string {
-  const teams: string[] = [];
-  for (const integration of integrations) {
-    if (integration.type === "linear") {
-      teams.push(integration.linearTeamName ?? integration.displayName);
-    }
+export function registerLinearTools(
+  tools: Record<string, Tool>,
+  descriptions: string[],
+  organizationId: string,
+  integrations: ValidatedIntegration[],
+  resolveContext?: ResolveLinearIntegrationContext
+) {
+  if (!integrations.some((i) => i.type === "linear")) {
+    return;
   }
-  return teams.join(", ");
+
+  Object.assign(
+    tools,
+    buildLinearDataTools({
+      organizationId,
+      allowedIntegrationIds: uniqueIntegrationIds(integrations, "linear"),
+      resolveContext,
+    })
+  );
+
+  const teams = integrations
+    .flatMap((integration) =>
+      integration.type === "linear"
+        ? [integration.linearTeamName ?? integration.displayName]
+        : []
+    )
+    .join(", ");
+  descriptions.push(
+    `**Linear Integration**: Fetch issues, projects, and cycles${teams ? ` from: ${teams}` : ""}`
+  );
 }
 
 export function getRepoContextFromIntegrations(

@@ -5,7 +5,7 @@ import { type Tool, tool } from "ai";
 export const UPDATE_TODOS_TOOL_NAME = "updateTodos";
 
 /** Plan writes allowed per reply: the plan plus one update per deliverable. */
-export const UPDATE_TODOS_MAX_CALLS = 6;
+const UPDATE_TODOS_MAX_CALLS = 6;
 
 /**
  * A plan the model keeps for long, multi-deliverable requests. It stores

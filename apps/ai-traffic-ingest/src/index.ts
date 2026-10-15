@@ -1,10 +1,10 @@
 import { flushGeoLog, geoLog } from "@notra/ai/evlog";
 import { logError } from "@notra/ai/utils/server-log";
+import { GEO_TRAFFIC_FLUSH_INTERVAL_MS } from "@notra/analytics/constants/cache";
 import {
   ingestWebPageEngagement,
   ingestWebPageViews,
 } from "@notra/analytics/tinybird/client";
-import { getGeoTrafficFlushIntervalMs } from "@notra/analytics/utils/geo-flush-interval";
 import { db } from "@notra/db/drizzle";
 import { GEO_DRAIN_MAX_BODY_BYTES } from "@notra/geo-core/constants/ingest";
 import {
@@ -41,28 +41,18 @@ if (databasePool) {
   retainIngestDatabaseConnections(databasePool);
 }
 
-const flushIntervalMs = getGeoTrafficFlushIntervalMs();
-const batcher =
-  flushIntervalMs > 0
-    ? createGeoEventBatcher({
-        intervalMs: flushIntervalMs,
-        onWritten: announceGeoTrafficRows,
-      })
-    : null;
-const webBatcher =
-  flushIntervalMs > 0
-    ? createEventBatcher({
-        intervalMs: flushIntervalMs,
-        write: ingestWebPageViews,
-      })
-    : null;
-const engagementBatcher =
-  flushIntervalMs > 0
-    ? createEventBatcher({
-        intervalMs: flushIntervalMs,
-        write: ingestWebPageEngagement,
-      })
-    : null;
+const batcher = createGeoEventBatcher({
+  intervalMs: GEO_TRAFFIC_FLUSH_INTERVAL_MS,
+  onWritten: announceGeoTrafficRows,
+});
+const webBatcher = createEventBatcher({
+  intervalMs: GEO_TRAFFIC_FLUSH_INTERVAL_MS,
+  write: ingestWebPageViews,
+});
+const engagementBatcher = createEventBatcher({
+  intervalMs: GEO_TRAFFIC_FLUSH_INTERVAL_MS,
+  write: ingestWebPageEngagement,
+});
 
 const app = createIngestApp(
   (task) => {
@@ -73,17 +63,15 @@ const app = createIngestApp(
       .finally(() => pending.delete(promise));
     pending.add(promise);
   },
-  batcher
-    ? {
-        enqueue: batcher.enqueue,
-        expedite: (organizationId) => {
-          batcher.expedite(organizationId);
-          webBatcher?.expedite(organizationId);
-        },
-        enqueueWeb: webBatcher?.enqueue,
-        enqueueEngagement: engagementBatcher?.enqueue,
-      }
-    : undefined
+  {
+    enqueue: batcher.enqueue,
+    expedite: (organizationId) => {
+      batcher.expedite(organizationId);
+      webBatcher.expedite(organizationId);
+    },
+    enqueueWeb: webBatcher.enqueue,
+    enqueueEngagement: engagementBatcher.enqueue,
+  }
 );
 
 const server = Bun.serve({
@@ -114,7 +102,9 @@ const runtimeLogTimer = setInterval(() => {
     externalBytes: memory.external,
     activeRequests: active.size,
     pendingTasks: pending.size,
-    bufferedEvents: batcher?.size() ?? 0,
+    bufferedEvents: batcher.size(),
+    webBufferedEvents: webBatcher.size(),
+    engagementBufferedEvents: engagementBatcher.size(),
     databaseConnections: databasePool?.totalCount ?? 0,
     databaseIdleConnections: databasePool?.idleCount ?? 0,
     databaseWaitingRequests: databasePool?.waitingCount ?? 0,
@@ -163,25 +153,29 @@ async function shutdown() {
     );
     server.stop(true);
   }
-  if (webBatcher) {
-    await withDeadline(() => webBatcher.stop(), INGEST_EVENTS_FLUSH_TIMEOUT_MS);
-  }
-  if (engagementBatcher) {
-    await withDeadline(
-      () => engagementBatcher.stop(),
-      INGEST_EVENTS_FLUSH_TIMEOUT_MS
+  const webFlushed = await withDeadline(
+    () => webBatcher.stop(),
+    INGEST_EVENTS_FLUSH_TIMEOUT_MS
+  );
+  const engagementFlushed = await withDeadline(
+    () => engagementBatcher.stop(),
+    INGEST_EVENTS_FLUSH_TIMEOUT_MS
+  );
+  const flushed = await withDeadline(
+    () => batcher.stop(),
+    INGEST_EVENTS_FLUSH_TIMEOUT_MS
+  );
+  if (!flushed || batcher.size() > 0) {
+    console.error(
+      `[geo-ingest] Buffered events not written before exit (${batcher.size()} left in buffer)`
     );
   }
-  if (batcher) {
-    const flushed = await withDeadline(
-      () => batcher.stop(),
-      INGEST_EVENTS_FLUSH_TIMEOUT_MS
+  const webLeft = webBatcher.size();
+  const engagementLeft = engagementBatcher.size();
+  if (!webFlushed || !engagementFlushed || webLeft > 0 || engagementLeft > 0) {
+    console.error(
+      `[geo-ingest] Web events not written before exit (${webLeft} page views, ${engagementLeft} engagement events left in buffer)`
     );
-    if (!flushed || batcher.size() > 0) {
-      console.error(
-        `[geo-ingest] Buffered events not written before exit (${batcher.size()} left in buffer)`
-      );
-    }
   }
   if (
     databasePool &&

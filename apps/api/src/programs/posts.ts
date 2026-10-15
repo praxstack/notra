@@ -63,10 +63,8 @@ import {
   addActiveGeneration,
   removeActiveGeneration,
 } from "../utils/active-generations";
-import {
-  isConfirmedContentGenerationRejection,
-  triggerContentGenerationWorkflow,
-} from "../utils/content-generation";
+import { isConfirmedWorkflowTriggerRejection } from "../utils/brand-analysis";
+import { triggerContentGenerationWorkflow } from "../utils/content-generation";
 import {
   extractTitleFromMarkdown,
   renderMarkdownToHtml,
@@ -89,10 +87,6 @@ const database = <A>(operation: () => Promise<A>) =>
     try: operation,
     catch: (cause) => new PostDatabaseError({ cause }),
   });
-
-function queueFailureMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Failed to trigger workflow";
-}
 
 function loadPostAuthors(
   input: { db: ListPostsProgramInput["db"]; organizationId: string },
@@ -136,19 +130,18 @@ const patchPostLookupColumns = {
   updatedAt: true,
 } as const;
 
+type QueuedGenerationJob = Awaited<
+  ReturnType<typeof createContentGenerationJob>
+>;
+
 const failPostGenerationQueue = Effect.fnUntraced(function* (
   input: CreatePostGenerationProgramInput,
   collectionId: string,
   jobId: string,
-  job: Awaited<ReturnType<typeof createContentGenerationJob>> | null,
-  options: {
-    deleteCollection: boolean;
-    markJobFailed: boolean;
-    removeActiveGeneration: boolean;
-    errorMessage: string;
-  }
+  job: QueuedGenerationJob | null,
+  options: { releaseReservation: boolean; errorMessage: string }
 ) {
-  if (options.deleteCollection) {
+  if (options.releaseReservation) {
     yield* database(() =>
       input.db
         .delete(postCollections)
@@ -159,46 +152,35 @@ const failPostGenerationQueue = Effect.fnUntraced(function* (
           )
         )
     );
-  }
 
-  if (options.removeActiveGeneration) {
-    yield* Effect.tryPromise({
-      try: () =>
-        removeActiveGeneration(input.redis, input.organizationId, jobId),
-      catch: () => undefined,
-    }).pipe(Effect.ignore);
+    yield* Effect.tryPromise(() =>
+      removeActiveGeneration(input.redis, input.organizationId, jobId)
+    ).pipe(Effect.ignore);
   }
 
   let failedJobId: string | undefined;
 
-  if (options.markJobFailed && job) {
-    failedJobId = yield* Effect.tryPromise({
-      try: async () => {
-        const failedJob = await setContentGenerationJobStatus(
-          input.redis,
-          jobId,
-          "failed",
-          {
-            error: options.errorMessage,
-          }
-        );
-        return failedJob?.id;
-      },
-      catch: () => undefined,
-    }).pipe(Effect.catch(() => Effect.succeed(undefined)));
+  if (job) {
+    failedJobId = yield* Effect.tryPromise(async () => {
+      const failedJob = await setContentGenerationJobStatus(
+        input.redis,
+        jobId,
+        "failed",
+        { error: options.errorMessage }
+      );
+      return failedJob?.id;
+    }).pipe(Effect.orElseSucceed(() => undefined));
 
-    yield* Effect.tryPromise({
-      try: () =>
-        appendContentGenerationJobEvent(input.redis, {
-          id: crypto.randomUUID(),
-          jobId,
-          type: "failed",
-          message: options.errorMessage,
-          createdAt: new Date().toISOString(),
-          metadata: null,
-        }),
-      catch: () => undefined,
-    }).pipe(Effect.ignore);
+    yield* Effect.tryPromise(() =>
+      appendContentGenerationJobEvent(input.redis, {
+        id: crypto.randomUUID(),
+        jobId,
+        type: "failed",
+        message: options.errorMessage,
+        createdAt: new Date().toISOString(),
+        metadata: null,
+      })
+    ).pipe(Effect.ignore);
   }
 
   return yield* new PostGenerationQueueFailedError({
@@ -206,53 +188,30 @@ const failPostGenerationQueue = Effect.fnUntraced(function* (
   });
 });
 
-function recoverBeforeWorkflowAccepted(
+function recoverQueueFailure(
   input: CreatePostGenerationProgramInput,
   collectionId: string,
   jobId: string,
-  job: Awaited<ReturnType<typeof createContentGenerationJob>> | null
+  job: QueuedGenerationJob | null,
+  releaseReservation: (error: unknown) => boolean
 ) {
   return Effect.catch((error: unknown) =>
     failPostGenerationQueue(input, collectionId, jobId, job, {
-      deleteCollection: true,
-      markJobFailed: job !== null,
-      removeActiveGeneration: true,
-      errorMessage: queueFailureMessage(error),
+      releaseReservation: releaseReservation(error),
+      errorMessage:
+        error instanceof Error ? error.message : "Failed to trigger workflow",
     })
   );
 }
 
-function recoverWorkflowTriggerFailure(
-  input: CreatePostGenerationProgramInput,
-  collectionId: string,
-  jobId: string,
-  job: Awaited<ReturnType<typeof createContentGenerationJob>>
-) {
-  return Effect.catch((error: unknown) =>
-    failPostGenerationQueue(input, collectionId, jobId, job, {
-      deleteCollection: isConfirmedContentGenerationRejection(error),
-      markJobFailed: true,
-      removeActiveGeneration: isConfirmedContentGenerationRejection(error),
-      errorMessage: queueFailureMessage(error),
-    })
-  );
-}
+const releaseBeforeWorkflowAccepted = () => true;
+const keepAfterWorkflowAccepted = () => false;
 
-function recoverAfterWorkflowAccepted(
-  input: CreatePostGenerationProgramInput,
-  collectionId: string,
-  jobId: string,
-  job: Awaited<ReturnType<typeof createContentGenerationJob>>
-) {
-  return Effect.catch((error: unknown) =>
-    failPostGenerationQueue(input, collectionId, jobId, job, {
-      deleteCollection: false,
-      markJobFailed: true,
-      removeActiveGeneration: false,
-      errorMessage: queueFailureMessage(error),
-    })
-  );
-}
+const mapPostWriteError = (cause: unknown) =>
+  isPgUniqueViolation(cause) &&
+  isConstraintViolation(cause, "posts_org_slug_uidx")
+    ? new PostSlugDuplicateError()
+    : new PostDatabaseError({ cause });
 
 export const listPosts = Effect.fn("posts.list")(function* (
   input: ListPostsProgramInput
@@ -442,16 +401,7 @@ export const createPost = Effect.fn("posts.create")(function* (
           })
           .returning(postReturningColumns());
       }),
-    catch: (cause) => {
-      if (
-        isPgUniqueViolation(cause) &&
-        isConstraintViolation(cause, "posts_org_slug_uidx")
-      ) {
-        return new PostSlugDuplicateError();
-      }
-
-      return new PostDatabaseError({ cause });
-    },
+    catch: mapPostWriteError,
   });
 
   if (!createdPost) {
@@ -596,11 +546,11 @@ export const commitPatchPost = Effect.fn("posts.commitPatch")(function* (
     }
   }
 
-  const patchResult = yield* Effect.tryPromise({
+  const [updatedPost] = yield* Effect.tryPromise({
     try: () =>
       input.db.transaction(async (tx) => {
         await setPostHistoryContext(tx, { actorUserId: null, source: "api" });
-        const rows = await tx
+        return await tx
           .update(posts)
           .set(updateData)
           .where(
@@ -614,21 +564,9 @@ export const commitPatchPost = Effect.fn("posts.commitPatch")(function* (
             ...postReturningColumns(),
             githubPublish: posts.githubPublish,
           });
-        return rows;
       }),
-    catch: (cause) => {
-      if (
-        isPgUniqueViolation(cause) &&
-        isConstraintViolation(cause, "posts_org_slug_uidx")
-      ) {
-        return new PostSlugDuplicateError();
-      }
-
-      return new PostDatabaseError({ cause });
-    },
+    catch: mapPostWriteError,
   });
-
-  const [updatedPost] = patchResult;
 
   if (!updatedPost) {
     return yield* new PostConcurrentModificationError();
@@ -687,7 +625,15 @@ export const createPostGeneration = Effect.fn("posts.createGeneration")(
           completedAt: null,
         }),
       catch: (cause) => cause,
-    }).pipe(recoverBeforeWorkflowAccepted(input, collectionId, jobId, null));
+    }).pipe(
+      recoverQueueFailure(
+        input,
+        collectionId,
+        jobId,
+        null,
+        releaseBeforeWorkflowAccepted
+      )
+    );
 
     yield* Effect.tryPromise({
       try: () =>
@@ -700,7 +646,15 @@ export const createPostGeneration = Effect.fn("posts.createGeneration")(
           source: "api",
         }),
       catch: (cause) => cause,
-    }).pipe(recoverBeforeWorkflowAccepted(input, collectionId, jobId, job));
+    }).pipe(
+      recoverQueueFailure(
+        input,
+        collectionId,
+        jobId,
+        job,
+        releaseBeforeWorkflowAccepted
+      )
+    );
 
     yield* Effect.tryPromise({
       try: () =>
@@ -717,7 +671,15 @@ export const createPostGeneration = Effect.fn("posts.createGeneration")(
           },
         }),
       catch: (cause) => cause,
-    }).pipe(recoverBeforeWorkflowAccepted(input, collectionId, jobId, job));
+    }).pipe(
+      recoverQueueFailure(
+        input,
+        collectionId,
+        jobId,
+        job,
+        releaseBeforeWorkflowAccepted
+      )
+    );
 
     const workflowRunId = yield* Effect.tryPromise({
       try: () =>
@@ -739,7 +701,15 @@ export const createPostGeneration = Effect.fn("posts.createGeneration")(
           source: "api",
         }),
       catch: (cause) => cause,
-    }).pipe(recoverWorkflowTriggerFailure(input, collectionId, jobId, job));
+    }).pipe(
+      recoverQueueFailure(
+        input,
+        collectionId,
+        jobId,
+        job,
+        isConfirmedWorkflowTriggerRejection
+      )
+    );
 
     const updatedJob = yield* Effect.tryPromise({
       try: () =>
@@ -747,7 +717,15 @@ export const createPostGeneration = Effect.fn("posts.createGeneration")(
           workflowRunId,
         }),
       catch: (cause) => cause,
-    }).pipe(recoverAfterWorkflowAccepted(input, collectionId, jobId, job));
+    }).pipe(
+      recoverQueueFailure(
+        input,
+        collectionId,
+        jobId,
+        job,
+        keepAfterWorkflowAccepted
+      )
+    );
 
     yield* Effect.tryPromise({
       try: () =>
@@ -760,7 +738,15 @@ export const createPostGeneration = Effect.fn("posts.createGeneration")(
           metadata: { workflowRunId },
         }),
       catch: (cause) => cause,
-    }).pipe(recoverAfterWorkflowAccepted(input, collectionId, jobId, job));
+    }).pipe(
+      recoverQueueFailure(
+        input,
+        collectionId,
+        jobId,
+        job,
+        keepAfterWorkflowAccepted
+      )
+    );
 
     return {
       job: updatedJob ?? job,

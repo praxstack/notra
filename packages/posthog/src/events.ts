@@ -77,7 +77,6 @@ export const POSTHOG_EVENTS = {
   GEO_CONVERSATION_RUN_NOW: "geo_conversation_run_now",
   GEO_PERSONAS_GENERATED: "geo_personas_generated",
   GEO_PERSONA_UPDATED: "geo_persona_updated",
-  GEO_PERSONA_DELETED: "geo_persona_deleted",
   GEO_PERSONA_ARCHIVED: "geo_persona_archived",
   GEO_PERSONA_RESTORED: "geo_persona_restored",
   GEO_PERSONA_RUN_NOW: "geo_persona_run_now",
@@ -93,7 +92,6 @@ export const POSTHOG_EVENTS = {
   GSC_DISCONNECTED: "gsc_disconnected",
   GSC_SYNC_REQUESTED: "gsc_sync_requested",
   GSC_SYNC_COMPLETED: "gsc_sync_completed",
-  GSC_CARD_DISMISSED: "gsc_card_dismissed",
   GEO_GAPS_VIEWED: "geo_gaps_viewed",
   GEO_GAP_WRITE_CLICKED: "geo_gap_write_clicked",
   GEO_GAP_IGNORED: "geo_gap_ignored",
@@ -115,7 +113,6 @@ export const POSTHOG_EVENTS = {
   TRAFFIC_INGEST_RECEIVED: "traffic_ingest_received",
   TRAFFIC_TOKEN_ROTATED: "traffic_token_rotated",
   TRAFFIC_LOG_FILTER_CHANGED: "traffic_log_filter_changed",
-  TRAFFIC_LIVE_TOGGLED: "traffic_live_toggled",
   AGENT_READINESS_SCAN_STARTED: "agent_readiness_scan_started",
   AGENT_READINESS_SCAN_COMPLETED: "agent_readiness_scan_completed",
   AGENT_READINESS_SCAN_FAILED: "agent_readiness_scan_failed",
@@ -227,7 +224,6 @@ export const POSTHOG_EVENTS = {
   ZDR_ADDON_ATTACHED: "zdr_addon_attached",
   ZDR_ADDON_REMOVED: "zdr_addon_removed",
   CUSTOMER_PORTAL_OPENED: "customer_portal_opened",
-  PLAN_CHANGED: "plan_changed",
   AI_CREDITS_CHARGED: "ai_credits_charged",
   MEMBER_INVITED: "member_invited",
   MEMBER_ROLE_CHANGED: "member_role_changed",
@@ -252,9 +248,6 @@ export const POSTHOG_EVENTS = {
   WORKFLOW_FAILED: "workflow_failed",
   WORKFLOW_PAUSED: "workflow_paused",
   WORKFLOW_DUPLICATE_REJECTED: "workflow_duplicate_rejected",
-
-  GROUP_IDENTIFY: "$groupidentify",
-  PAGEVIEW: "$pageview",
 } as const;
 
 export type PostHogEventName =

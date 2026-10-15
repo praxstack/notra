@@ -16,7 +16,6 @@ export const AGENT_READINESS_HISTORY_LIMIT = 60;
 export const AGENT_READINESS_GREAT_THRESHOLD = 90;
 export const AGENT_READINESS_NEEDS_IMPROVEMENT_THRESHOLD = 50;
 
-export const AGENT_READINESS_PAGE_TITLE = "Agent Readiness";
 export const AGENT_READINESS_RESULT_ORDER = {
   failed: 0,
   partial: 1,

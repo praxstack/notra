@@ -43,7 +43,6 @@ declare module "hono" {
 }
 
 interface AuthOptions {
-  getKey?: (c: Context) => string | null;
   legacyPermissions?: string[];
   permissions?: string;
 }
@@ -543,8 +542,7 @@ async function verifyRequestAuth(
   c: Context,
   options: AuthOptions = {}
 ): Promise<AuthResult> {
-  const getKey = options.getKey ?? extractBearerToken;
-  const apiKey = getKey(c);
+  const apiKey = extractBearerToken(c);
 
   if (!apiKey) {
     return { success: false, error: "Missing API key", status: 401 };
@@ -615,20 +613,11 @@ async function verifyRequestAuth(
 
     const accountUserId = parseAccountApiKeyUserId(verifiedIdentity.externalId);
     if (accountUserId) {
-      try {
-        return await resolveAccountKeyAuth(
-          c,
-          { ...result.data, identity: verifiedIdentity },
-          accountUserId
-        );
-      } catch {
-        return {
-          success: false,
-          error: "Service unavailable",
-          status: 503,
-          kind: API_AUTH_KINDS.UNKEY,
-        };
-      }
+      return await resolveAccountKeyAuth(
+        c,
+        { ...result.data, identity: verifiedIdentity },
+        accountUserId
+      );
     }
 
     const mismatch = await checkOrganizationKeySelection(

@@ -10,3 +10,9 @@ export const GITHUB_CREATE_COMMIT_ON_BRANCH_MUTATION = `
     }
   }
 `;
+
+export const GITHUB_API_VERSION = "2022-11-28";
+
+export const GITHUB_API_VERSION_HEADERS = {
+  "X-GitHub-Api-Version": GITHUB_API_VERSION,
+} as const;

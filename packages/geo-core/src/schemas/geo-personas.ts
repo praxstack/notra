@@ -16,7 +16,7 @@ import { geoOrganizationInputSchema } from "./geo-scope";
 const requiredText = string().trim().min(1);
 const textList = array(requiredText).min(GEO_PERSONA_PROFILE_LIST_MIN);
 
-export const geoGeneratedPersonaMemorySchema = object({
+const geoGeneratedPersonaMemorySchema = object({
   kind: enumType(GEO_PERSONA_MEMORY_KINDS),
   content: requiredText,
 });

@@ -20,18 +20,19 @@ export const judgeAnswer = Effect.fn("geo.judgeAnswer")(function* (
   const models = yield* GeoModelService;
   const mentioned =
     findBrandMention(answer, context.companyName, context.aliases) !== null;
+  const judgeLogContext = {
+    projectId: context.projectId,
+    scanId: context.scanId,
+    runId: context.runId,
+    ...logContext,
+  };
   const [judged, evaluation] = yield* Effect.all(
     [
       models
         .judge({
           organizationId: context.organizationId,
           prompt: buildJudgePrompt(context, promptText, answer),
-          logContext: {
-            projectId: context.projectId,
-            scanId: context.scanId,
-            runId: context.runId,
-            ...logContext,
-          },
+          logContext: judgeLogContext,
         })
         .pipe(
           Effect.retry({ times: 1, while: (error) => error.timedOut === true })
@@ -39,12 +40,7 @@ export const judgeAnswer = Effect.fn("geo.judgeAnswer")(function* (
       mentioned && models.evaluateMention
         ? models.evaluateMention({
             organizationId: context.organizationId,
-            logContext: {
-              projectId: context.projectId,
-              scanId: context.scanId,
-              runId: context.runId,
-              ...logContext,
-            },
+            logContext: judgeLogContext,
             companyName: context.companyName,
             aliases: context.aliases,
             prompt: promptText,

@@ -6,7 +6,7 @@ import { UNSLOP_DESCRIPTION } from "./constants";
 import { HUMANIZER_CONTENT } from "./humanizer-content";
 import { UNSLOP_CONTENT } from "./unslop-content";
 
-export interface SystemSkillDefinition {
+interface SystemSkillDefinition {
   name: string;
   description: string;
   content: string;

@@ -27,9 +27,6 @@ import {
 } from "@notra/ai/utils/github-pr-comments";
 
 export function clipGitHubComment(body: string) {
-  if (body.length <= GITHUB_MENTION_COMMENT_MAX_LENGTH) {
-    return body;
-  }
   return body.slice(0, GITHUB_MENTION_COMMENT_MAX_LENGTH);
 }
 
@@ -155,7 +152,6 @@ function fitProposalToReviewThread(
   });
 }
 
-/** Posts proposals as suggestions, falling back to a plain diff. */
 export async function postGitHubMentionProposal(params: {
   octokit: GitHubMentionOctokit;
   context: GitHubMentionContext;

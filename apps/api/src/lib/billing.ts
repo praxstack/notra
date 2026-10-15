@@ -24,10 +24,6 @@ export class BillingService extends Context.Service<
   BillingOperations
 >()("api/Billing") {}
 
-export interface BillingMiddlewareOptions {
-  billingLayer?: Layer.Layer<BillingService>;
-}
-
 export function billingLayer(secretKey: string) {
   const autumn = new Autumn({ secretKey });
   let geoEntitlements:

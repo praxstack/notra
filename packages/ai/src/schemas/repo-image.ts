@@ -2,7 +2,6 @@
 import * as z from "zod";
 
 export const repoImageModeSchema = z.enum(["prompt", "pr", "commit"]);
-export const REPO_IMAGE_MODES = repoImageModeSchema.options;
 
 export const repoImageFormatSchema = z.enum(["marketing", "diagram"]);
 

@@ -31,8 +31,6 @@ import { and, eq, or } from "drizzle-orm";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 
-export { getCreatePostToolName };
-
 const postSlugSchema = z
   .string()
   .trim()
@@ -86,6 +84,21 @@ export function createCreatePostTool(
   const toolName = getCreatePostToolName(contentType);
   const withSlug = supportsPostSlug(contentType);
 
+  const recordPost = (
+    postId: string,
+    input: { title: string; recommendations?: string | null }
+  ) => {
+    result.posts ??= [];
+    result.posts.push({
+      postId,
+      title: input.title,
+      recommendations: input.recommendations ?? null,
+    });
+    result.postId ??= postId;
+    result.title ??= input.title;
+    return result.posts.length;
+  };
+
   const execute = async (input: {
     title: string;
     slug?: string | null;
@@ -131,18 +144,10 @@ export function createCreatePostTool(
           excerpt: input.excerpt,
         });
       }
-      result.posts ??= [];
-      result.posts.push({
-        postId: config.targetPostId,
-        title: input.title,
-        recommendations: input.recommendations ?? null,
-      });
-      result.postId ??= config.targetPostId;
-      result.title ??= input.title;
       return {
         postId: config.targetPostId,
         status,
-        totalCreated: result.posts.length,
+        totalCreated: recordPost(config.targetPostId, input),
       };
     }
 
@@ -160,18 +165,10 @@ export function createCreatePostTool(
       tags: input.tags,
       excerpt: input.excerpt,
     });
-    result.posts ??= [];
-    result.posts.push({
-      postId,
-      title: input.title,
-      recommendations: input.recommendations ?? null,
-    });
-    result.postId ??= postId;
-    result.title ??= input.title;
     return {
       postId,
       status: "created",
-      totalCreated: result.posts.length,
+      totalCreated: recordPost(postId, input),
     };
   };
 
@@ -246,26 +243,19 @@ export function createUpdatePostTool(
       return { postId: input.postId, status };
     }
 
+    const existingPost = result.posts?.find(
+      (entry) => entry.postId === input.postId
+    );
     if (input.title !== undefined) {
-      const existingPost = result.posts?.find(
-        (entry) => entry.postId === input.postId
-      );
       if (existingPost) {
         existingPost.title = input.title;
       }
-
       if (result.postId === input.postId) {
         result.title = input.title;
       }
     }
-
-    if (input.recommendations !== undefined) {
-      const existingPost = result.posts?.find(
-        (entry) => entry.postId === input.postId
-      );
-      if (existingPost) {
-        existingPost.recommendations = input.recommendations;
-      }
+    if (existingPost && input.recommendations !== undefined) {
+      existingPost.recommendations = input.recommendations;
     }
 
     return { postId: input.postId, status };

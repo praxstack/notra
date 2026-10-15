@@ -21,7 +21,6 @@ export const irisContentTaskParamsSchema = z.object({
   angle: z.string().max(600).optional(),
   audience: z.string().max(200).optional(),
 });
-export type IrisContentTaskParams = z.infer<typeof irisContentTaskParamsSchema>;
 
 export const irisBlogPostTaskParamsSchema = irisContentTaskParamsSchema.extend({
   imageCount: z
@@ -31,9 +30,6 @@ export const irisBlogPostTaskParamsSchema = irisContentTaskParamsSchema.extend({
     .max(IRIS_MAX_BLOG_POST_IMAGES)
     .default(IRIS_MIN_IMAGES_PER_POST),
 });
-export type IrisBlogPostTaskParams = z.infer<
-  typeof irisBlogPostTaskParamsSchema
->;
 
 export const irisSocialPlatformSchema = z.enum(["twitter", "linkedin"]);
 export type IrisSocialPlatform = z.infer<typeof irisSocialPlatformSchema>;
@@ -42,24 +38,15 @@ export const irisSocialPostTaskParamsSchema =
   irisContentTaskParamsSchema.extend({
     platform: irisSocialPlatformSchema,
   });
-export type IrisSocialPostTaskParams = z.infer<
-  typeof irisSocialPostTaskParamsSchema
->;
 
 export const irisSourceReadTaskParamsSchema = z.object({
   focus: z.string().max(IRIS_TOPIC_MAX_LENGTH).optional(),
 });
-export type IrisSourceReadTaskParams = z.infer<
-  typeof irisSourceReadTaskParamsSchema
->;
 
 export const irisAnalyticsReadTaskParamsSchema = z.object({
   days: z.number().int().min(1).max(365).optional(),
   topPostsLimit: z.number().int().min(1).max(25).optional(),
 });
-export type IrisAnalyticsReadTaskParams = z.infer<
-  typeof irisAnalyticsReadTaskParamsSchema
->;
 
 export const IRIS_EXPERIMENT_NAME_MAX_LENGTH = 120;
 export const IRIS_EXPERIMENT_HYPOTHESIS_MAX_LENGTH = 500;
@@ -69,7 +56,6 @@ export const irisExperimentMetricSchema = z.enum([
   "impressions",
   "likes",
 ]);
-export type IrisExperimentMetric = z.infer<typeof irisExperimentMetricSchema>;
 
 export const irisExperimentCreateTaskParamsSchema = z.object({
   name: z.string().min(1).max(IRIS_EXPERIMENT_NAME_MAX_LENGTH),
@@ -79,16 +65,10 @@ export const irisExperimentCreateTaskParamsSchema = z.object({
   metric: irisExperimentMetricSchema.default(IRIS_EXPERIMENT_DEFAULT_METRIC),
   provider: irisSocialPlatformSchema.default(IRIS_EXPERIMENT_DEFAULT_PROVIDER),
 });
-export type IrisExperimentCreateTaskParams = z.infer<
-  typeof irisExperimentCreateTaskParamsSchema
->;
 
 export const irisExperimentReadTaskParamsSchema = z.object({
   limit: z.number().int().min(1).max(25).optional(),
 });
-export type IrisExperimentReadTaskParams = z.infer<
-  typeof irisExperimentReadTaskParamsSchema
->;
 
 export const irisTaskParamSchemas: Record<string, z.ZodType> = {
   [IRIS_CAPABILITY_SOURCE_GITHUB_READ]: irisSourceReadTaskParamsSchema,
@@ -122,7 +102,6 @@ export const irisImageReviewSchema = z
       });
     }
   });
-export type IrisImageReview = z.infer<typeof irisImageReviewSchema>;
 
 export const irisSignalEnvelopeSchema = z.looseObject({
   id: z.string().optional(),
@@ -132,7 +111,6 @@ export const irisSignalEnvelopeSchema = z.looseObject({
   occurredAt: z.union([z.string(), z.date()]).optional(),
   payload: z.unknown().optional(),
 });
-export type IrisSignalEnvelope = z.infer<typeof irisSignalEnvelopeSchema>;
 
 export const irisSignalRepositoryRefSchema = z.looseObject({
   repositoryId: z.string().optional(),

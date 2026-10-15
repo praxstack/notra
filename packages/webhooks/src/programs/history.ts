@@ -14,6 +14,12 @@ import { queryRows } from "../services/database";
 import type { DeliveryId, OrganizationId } from "../types/webhooks";
 import { isoTimestamp } from "../utils/sql";
 
+const DELIVERY_COLUMNS = `d.id, d.event_id AS "eventId", d.endpoint_id AS "endpointId", d.status, d.url,
+    e.event_type AS "eventType", a.status_code AS "statusCode", a.error,
+    d.attempt_count AS "attemptCount", ${isoTimestamp("d.next_attempt_at")} AS "nextAttemptAt", ${isoTimestamp("d.created_at")} AS "createdAt"`;
+const DELIVERY_FROM = `FROM webhook_deliveries d JOIN webhook_events e ON e.id = d.event_id
+    LEFT JOIN webhook_attempts a ON a.delivery_id = d.id AND a.attempt_number = d.attempt_count`;
+
 export const listDeliveries = Effect.fn("webhooks.listDeliveries")(function* (
   organizationId: OrganizationId,
   offset = 0,
@@ -21,11 +27,7 @@ export const listDeliveries = Effect.fn("webhooks.listDeliveries")(function* (
 ) {
   return yield* queryRows(
     DeliverySummary,
-    `SELECT d.id, d.event_id AS "eventId", d.endpoint_id AS "endpointId", d.status, d.url,
-    e.event_type AS "eventType", a.status_code AS "statusCode", a.error,
-    d.attempt_count AS "attemptCount", ${isoTimestamp("d.next_attempt_at")} AS "nextAttemptAt", ${isoTimestamp("d.created_at")} AS "createdAt"
-    FROM webhook_deliveries d JOIN webhook_events e ON e.id = d.event_id
-    LEFT JOIN webhook_attempts a ON a.delivery_id = d.id AND a.attempt_number = d.attempt_count
+    `SELECT ${DELIVERY_COLUMNS} ${DELIVERY_FROM}
     WHERE d.organization_id = $1 AND ($3 = 'all' OR d.status = $3)
     ORDER BY d.created_at DESC, d.id DESC LIMIT $4 OFFSET $2`,
     [organizationId, Math.max(0, Math.floor(offset)), status, PAGE_SIZE + 1]
@@ -78,11 +80,7 @@ export const getDelivery = Effect.fn("webhooks.getDelivery")(function* (
 ) {
   const [delivery] = yield* queryRows(
     DeliveryDetail,
-    `SELECT d.id, d.event_id AS "eventId", d.endpoint_id AS "endpointId", d.status, d.url,
-    e.event_type AS "eventType", e.payload, a.status_code AS "statusCode", a.error,
-    d.attempt_count AS "attemptCount", ${isoTimestamp("d.next_attempt_at")} AS "nextAttemptAt", ${isoTimestamp("d.created_at")} AS "createdAt"
-    FROM webhook_deliveries d JOIN webhook_events e ON e.id = d.event_id
-    LEFT JOIN webhook_attempts a ON a.delivery_id = d.id AND a.attempt_number = d.attempt_count
+    `SELECT ${DELIVERY_COLUMNS}, e.payload ${DELIVERY_FROM}
     WHERE d.organization_id = $1 AND d.id = $2`,
     [organizationId, deliveryId]
   );
@@ -119,7 +117,7 @@ export const retryDelivery = Effect.fn("webhooks.retryDelivery")(function* (
     `UPDATE webhook_deliveries d
     SET status = 'retrying', next_attempt_at = now(), attempt_limit = attempt_count + $3, updated_at = now()
     WHERE d.organization_id = $1 AND d.id = $2 AND d.status = 'failed' AND d.updated_at < now() - interval '1 minute'
-    AND EXISTS (SELECT 1 FROM webhook_endpoints e WHERE e.id = d.endpoint_id AND e.enabled AND e.deleted_at IS NULL)
+    AND EXISTS (SELECT 1 FROM webhook_endpoints e WHERE e.id = d.endpoint_id AND e.organization_id = d.organization_id AND e.enabled AND e.deleted_at IS NULL)
     RETURNING id`,
     [organizationId, deliveryId, MAX_ATTEMPTS]
   );

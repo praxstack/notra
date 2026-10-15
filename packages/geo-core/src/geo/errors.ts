@@ -16,13 +16,6 @@ export class GeoCodingAgentAccessError extends Data.TaggedError(
   readonly cause: unknown;
 }> {}
 
-export class GeoNoSuccessfulChecksError extends Data.TaggedError(
-  "GeoNoSuccessfulChecksError"
-)<{
-  readonly message: string;
-  readonly attemptedChecks: number;
-}> {}
-
 export class GeoEmptyAnswerError extends Data.TaggedError(
   "GeoEmptyAnswerError"
 )<{

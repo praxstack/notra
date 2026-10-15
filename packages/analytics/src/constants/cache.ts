@@ -13,7 +13,6 @@ export const LIVE_QUERY_CACHE_TTL_SECONDS = 30;
  * generation, so they never wait for the window.
  */
 export const GEO_TRAFFIC_FLUSH_INTERVAL_MS = 5 * 60 * 1000;
-export const GEO_TRAFFIC_FLUSH_INTERVAL_ENV = "GEO_INGEST_FLUSH_INTERVAL_MS";
 export const GEO_TRAFFIC_FLUSH_SETTLE_MS = 20_000;
 export const GLOBAL_SCOPE_ID = "global";
 export const INITIAL_CACHE_VERSION = 0;
@@ -26,6 +25,3 @@ export const INITIAL_CACHE_VERSION = 0;
  * entirely.
  */
 export const VERSIONED_CACHE_SCOPES = new Set(["social"]);
-
-export const EXTERNAL_CACHE_TTL_SECONDS = 43_200;
-export const EXTERNAL_CACHE_KEY_PREFIX = "tb:ext";

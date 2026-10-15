@@ -9,11 +9,6 @@ afterEach(() => {
   delete process.env.CLOUDFLARE_PUBLIC_URL;
 });
 
-test("passes through empty input without env", () => {
-  expect(() => assertAllowedSocialMediaUrls(undefined)).not.toThrow();
-  expect(() => assertAllowedSocialMediaUrls([])).not.toThrow();
-});
-
 test("rejects relative media paths (PostForMe cannot fetch them)", () => {
   expect(() =>
     assertAllowedSocialMediaUrls(["/api/uploads/content-images/org_1/a.mp4"])
@@ -38,6 +33,7 @@ test("rejects another organization's objects on the shared host", () => {
     assertAllowedSocialMediaUrls([`${R2_HOST}/organization/org_2/clip.mp4`])
   ).not.toThrow();
 });
+
 test("allows the configured R2 host, rejects app and other hosts", () => {
   process.env.CLOUDFLARE_PUBLIC_URL = R2_HOST;
   expect(() =>

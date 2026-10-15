@@ -18,7 +18,6 @@ export const irisOutboxDeliverySchema = z.object({
   teamId: z.string().min(1),
   deliveredAt: z.iso.datetime(),
 });
-export type IrisOutboxDelivery = z.infer<typeof irisOutboxDeliverySchema>;
 
 export const irisApprovalActionSchema = z.enum(["shipped", "skipped"]);
 export type IrisApprovalAction = z.infer<typeof irisApprovalActionSchema>;
