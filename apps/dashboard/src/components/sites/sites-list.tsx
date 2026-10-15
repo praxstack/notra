@@ -38,6 +38,7 @@ import {
   SiteStatusBadge,
 } from "@/components/sites/site-status-badge";
 import { SITE_OVERVIEW_ANALYTICS_DAYS } from "@/constants/sites";
+import { useRedeployDeployment } from "@/lib/hooks/use-site-deployments";
 import { useSiteAnalytics } from "@/lib/hooks/use-sites";
 import type {
   SiteListCardProps,
@@ -90,6 +91,7 @@ function SiteListCard({
 }: SiteListCardProps) {
   const t = useTranslations("sites.list");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const redeploy = useRedeployDeployment({ organizationId, siteId: site.id });
   const latest = site.latestDeployment;
   const title = commitTitle(latest?.commitMessage ?? null);
   const href = siteHref(organizationSlug, site.id, "overview", site.projectId);
@@ -173,6 +175,8 @@ function SiteListCard({
                   organizationSlug={organizationSlug}
                   site={site}
                   onDelete={() => setDeleteOpen(true)}
+                  onRedeploy={() => latest && redeploy.mutate(latest.id)}
+                  redeployPending={redeploy.isPending}
                   variant="dropdown"
                 />
               </DropdownMenuContent>
@@ -215,6 +219,8 @@ function SiteListCard({
             organizationSlug={organizationSlug}
             site={site}
             onDelete={() => setDeleteOpen(true)}
+            onRedeploy={() => latest && redeploy.mutate(latest.id)}
+            redeployPending={redeploy.isPending}
             variant="context"
           />
         </ContextMenuContent>

@@ -94,6 +94,8 @@ export interface SiteListMenuItemsProps extends Pick<
   "organizationSlug" | "site"
 > {
   onDelete: () => void;
+  onRedeploy: () => void;
+  redeployPending: boolean;
   variant: "context" | "dropdown";
 }
 

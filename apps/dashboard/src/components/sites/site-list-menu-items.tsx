@@ -6,6 +6,7 @@ import {
   Delete02Icon,
   FileEditIcon,
   LinkSquare02Icon,
+  RefreshIcon,
   Rocket01Icon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
@@ -23,18 +24,22 @@ import { useTranslations } from "use-intl";
 import Link from "@/components/framework/link";
 import type { SiteListMenuItemsProps } from "@/types/components/sites";
 import { copyTextToClipboard } from "@/utils/copy-to-clipboard";
+import { isDeploymentInProgress } from "@/utils/site-deployments";
 import { siteHref } from "@/utils/site-links";
 
 export function SiteListMenuItems({
   organizationSlug,
   site,
   onDelete,
+  onRedeploy,
+  redeployPending,
   variant,
 }: SiteListMenuItemsProps) {
   const t = useTranslations("sites.list.actions");
   const tTabs = useTranslations("sites.detail.tabs");
   const tCommon = useTranslations("common");
   const tDelete = useTranslations("sites.settings.delete");
+  const tDeployment = useTranslations("sites.deployments.actions");
   const Item = variant === "context" ? ContextMenuItem : DropdownMenuItem;
   const Separator =
     variant === "context" ? ContextMenuSeparator : DropdownMenuSeparator;
@@ -85,6 +90,22 @@ export function SiteListMenuItems({
         {t("copyLink")}
       </Item>
       <Separator />
+      <Item
+        disabled={
+          redeployPending ||
+          site.status === "suspended" ||
+          !site.latestDeployment ||
+          isDeploymentInProgress(site.latestDeployment.status)
+        }
+        onClick={onRedeploy}
+      >
+        <HugeiconsIcon
+          aria-hidden="true"
+          icon={RefreshIcon}
+          strokeWidth={1.5}
+        />
+        {tDeployment("redeploy")}
+      </Item>
       <Item
         render={
           <Link
