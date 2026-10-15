@@ -5442,7 +5442,7 @@
     },
     "usageBreakdown": {
       "rangeLabel": "Usage range",
-      "title": "Usage breakdown",
+      "title": "AI answers per day",
       "empty": "No AI Answers usage in this period"
     },
     "geoUpgrade": {
@@ -5503,28 +5503,12 @@
     "usage": {
       "remainingAria": "{label}: {percent}% remaining",
       "about": "About {name}",
-      "usedOfCycle": "{used} used of {included} this cycle.",
-      "includedCycle": "{included} included this cycle.",
-      "remainingOf": "{balance} of {included} remaining",
-      "remainingOfUnknown": "of {included} remaining",
-      "logRetention": "Log retention",
-      "logRetentionDescription": "Logs are kept for {days} days.",
-      "days": "{days} days",
-      "noCap": "Included in your plan without a usage cap.",
       "unlimited": "Unlimited",
       "resets": "Resets {date}",
-      "remainingPercent": "{percent}% remaining",
-      "remainingPercentResets": "{percent}% remaining · Resets {date}",
-      "ofThisCycle": "of {included} this cycle",
-      "balanceTitle": "Balance",
-      "balanceDescription": "How much of each plan limit you have left this cycle.",
-      "aiAnswersRemaining": "AI answers remaining",
       "creditsFooter": "Credits extend usage beyond your plan limits.",
-      "creditsRemaining": "Credits remaining",
       "pullRequestFooter": "What @notra may spend on pull requests. Credits take over once it runs out.",
-      "featureLimits": "Feature limits",
-      "otherQuotas": "Other remaining quotas on your plan.",
-      "quotas": "Remaining quotas on your plan."
+      "thisCycle": "This billing cycle",
+      "aiCredits": "AI credits"
     },
     "plans": {
       "renewalTerms": "{kind, select, trial {After your free trial, your base plan renews at {price}/{interval} until canceled. Cancel before the trial ends to avoid charges.} trialRevert {Your free trial ends without automatic billing. A paid base plan renews at {price}/{interval} only if you subscribe.} other {Your base plan renews at {price}/{interval} until canceled.}} Manage or cancel in Billing settings.",

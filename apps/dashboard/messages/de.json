@@ -5442,7 +5442,7 @@
     },
     "usageBreakdown": {
       "rangeLabel": "Nutzungszeitraum",
-      "title": "Nutzung im Detail",
+      "title": "KI-Antworten pro Tag",
       "empty": "Keine Nutzung von KI-Antworten in diesem Zeitraum"
     },
     "geoUpgrade": {
@@ -5503,28 +5503,12 @@
     "usage": {
       "remainingAria": "{label}: {percent} % verbleibend",
       "about": "Über {name}",
-      "usedOfCycle": "{used} von {included} in diesem Zeitraum verbraucht.",
-      "includedCycle": "{included} in diesem Zeitraum inklusive.",
-      "remainingOf": "{balance} von {included} verbleibend",
-      "remainingOfUnknown": "von {included} verbleibend",
-      "logRetention": "Log-Aufbewahrung",
-      "logRetentionDescription": "Logs werden {days} Tage aufbewahrt.",
-      "days": "{days} Tage",
-      "noCap": "In deinem Tarif ohne Nutzungslimit enthalten.",
       "unlimited": "Unbegrenzt",
       "resets": "Wird am {date} zurückgesetzt",
-      "remainingPercent": "{percent} % verbleibend",
-      "remainingPercentResets": "{percent} % verbleibend · Wird am {date} zurückgesetzt",
-      "ofThisCycle": "von {included} in diesem Zeitraum",
-      "balanceTitle": "Guthaben",
-      "balanceDescription": "Wie viel von jedem Tariflimit dir in diesem Zeitraum noch bleibt.",
-      "aiAnswersRemaining": "Verbleibende KI-Antworten",
       "creditsFooter": "Credits erweitern deine Nutzung über die Tariflimits hinaus.",
-      "creditsRemaining": "Verbleibende Credits",
       "pullRequestFooter": "Was @notra für Pull Requests ausgeben darf. Danach werden Credits verwendet.",
-      "featureLimits": "Funktionslimits",
-      "otherQuotas": "Weitere verbleibende Kontingente in deinem Tarif.",
-      "quotas": "Verbleibende Kontingente in deinem Tarif."
+      "thisCycle": "Aktueller Abrechnungszeitraum",
+      "aiCredits": "KI-Credits"
     },
     "plans": {
       "renewalTerms": "{kind, select, trial {Nach deiner kostenlosen Testphase verlängert sich dein Basistarif für {price} pro {interval} automatisch, bis du kündigst. Kündige vor Ende der Testphase, um Kosten zu vermeiden.} trialRevert {Deine kostenlose Testphase endet ohne automatische Zahlung. Ein kostenpflichtiger Basistarif verlängert sich für {price} pro {interval} nur, wenn du ihn abonnierst.} other {Dein Basistarif verlängert sich für {price} pro {interval} automatisch, bis du kündigst.}} Verwalte oder kündige dein Abo in den Abrechnungseinstellungen.",
