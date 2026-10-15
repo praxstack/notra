@@ -683,7 +683,18 @@ export const GEO_META_SEARCH_MODEL_IDS: ReadonlySet<string> = new Set([
  * consumer assistant runs.
  */
 export const GEO_MODEL_HIDDEN_ID_PATTERN =
-  /(-nano|-lite|-thinking|-reasoning|-multi-agent|-\d{4}(?:\d{4})?)$|^openai\/.+-pro$|codex|-code\b|gemma|llama|grok-build/;
+  /(-nano|-lite|-thinking|-reasoning|-multi-agent|-\d{4}(?:\d{4})?)$|^openai\/.+-pro$|codex|-code\b|gemma|llama|grok-build|safeguard|-exp$/;
+/**
+ * The picker lists only the newest release of each model line (`gpt-*-sol`,
+ * `claude-opus-*`, …). A line whose newest release trails the provider's
+ * newest model by more than this is hidden entirely.
+ */
+export const GEO_MODEL_STALE_LINE_DAYS = 365;
+/**
+ * Gateway models without a web search route answer from training data only.
+ * Each provider lists just its newest few; older ones are legacy-only.
+ */
+export const GEO_MODEL_NO_SEARCH_VISIBLE = 3;
 export const GEO_MODEL_EXCLUDED_TAGS: ReadonlySet<string> = new Set([
   "image-generation",
   "video-generation",

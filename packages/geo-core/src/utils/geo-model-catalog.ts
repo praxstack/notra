@@ -11,6 +11,7 @@ import {
   GEO_MODEL_EXCLUDED_TAGS,
   GEO_MODEL_HIDDEN_ID_PATTERN,
   GEO_MODEL_PROVIDERS,
+  GEO_MODEL_STALE_LINE_DAYS,
   GEO_STATIC_ENGINE_ENV,
 } from "../constants/geo-model-catalog";
 import type {
@@ -22,7 +23,10 @@ import type {
 } from "../types/geo";
 
 const MS_PER_SECOND = 1000;
+const MS_PER_DAY = 86_400_000;
 const DAY_LENGTH = 10;
+const BATCH_SUFFIX = "-batch";
+const VERSION_PATTERN = /\d+(?:\.\d+)*/g;
 const DEFAULT_ENGINE_SET = new Set<string>(GEO_DEFAULT_ENGINE_IDS);
 const SEED_RELEASE_DATES = new Map(
   GEO_MODEL_CATALOG_SEED.map((entry) => [entry.id, entry.released])
@@ -127,18 +131,63 @@ function byReleaseDescending(
   return right.released.localeCompare(left.released);
 }
 
+/** `openai/gpt-6.1-sol` → `gpt-sol`: every release of one model line. */
+function geoModelLine(id: string): string {
+  return id
+    .slice(id.indexOf("/") + 1)
+    .split("-")
+    .map((part) => part.replace(VERSION_PATTERN, ""))
+    .filter(Boolean)
+    .join("-");
+}
+
+function releasedAt(entry: GeoModelCatalogEntry): number {
+  return Date.parse(entry.released) || 0;
+}
+
 /**
- * Hide niche variants from the picker. Defaults are never hidden. Hidden
- * models stay in the catalog so stored selections keep resolving.
+ * Hide niche variants and superseded releases from the picker: per model line
+ * only the newest release stays, and lines that went stale disappear. Batch
+ * variants follow their base model. Defaults are never hidden. Hidden models
+ * stay in the catalog so stored selections keep resolving.
  */
 function markHiddenGeoModels(
   entries: readonly GeoModelCatalogEntry[]
 ): GeoModelCatalogEntry[] {
+  const candidates = entries.filter(
+    (entry) =>
+      !entry.id.endsWith(BATCH_SUFFIX) &&
+      !GEO_MODEL_HIDDEN_ID_PATTERN.test(entry.id)
+  );
+  // Without a release date neither recency rule can judge a model, so it stays.
+  const undated = candidates.filter((entry) => releasedAt(entry) === 0);
+  const newestByLine = new Map<string, GeoModelCatalogEntry>();
+  for (const entry of candidates.filter((model) => releasedAt(model) > 0)) {
+    const line = geoModelLine(entry.id);
+    const newest = newestByLine.get(line);
+    if (!newest || releasedAt(entry) > releasedAt(newest)) {
+      newestByLine.set(line, entry);
+    }
+  }
+  const providerNewest = Math.max(0, ...candidates.map(releasedAt));
+  const staleBefore = providerNewest - GEO_MODEL_STALE_LINE_DAYS * MS_PER_DAY;
+  const listed = new Set(
+    [
+      ...[...newestByLine.values()].filter(
+        (entry) => releasedAt(entry) >= staleBefore
+      ),
+      ...undated,
+    ].map((entry) => entry.id)
+  );
+  const isListed = (entry: GeoModelCatalogEntry) =>
+    entry.default || STATIC_ENGINE_IDS.has(entry.id) || listed.has(entry.id);
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+
   return entries.map((entry) => {
-    const hidden =
-      !entry.default &&
-      !STATIC_ENGINE_IDS.has(entry.id) &&
-      GEO_MODEL_HIDDEN_ID_PATTERN.test(entry.id);
+    const base = entry.id.endsWith(BATCH_SUFFIX)
+      ? byId.get(entry.id.slice(0, -BATCH_SUFFIX.length))
+      : entry;
+    const hidden = !(base && isListed(base)) && !isListed(entry);
     return hidden ? { ...entry, hidden } : entry;
   });
 }

@@ -481,10 +481,16 @@ function GeoEngineProviderList({
 }: GeoEngineProviderListProps) {
   const selectedIds = new Set(selected);
   const approvedNonZdrIds = new Set(nonZdrApproved);
+  // Providers whose models are all legacy (no web search, superseded) would
+  // render as empty rows.
+  const providers = catalog.providers.filter(
+    (provider) =>
+      geoModelsForProvider(catalog, provider.id, selectedIds).length > 0
+  );
 
   return (
     <ul>
-      {catalog.providers.map((provider) => (
+      {providers.map((provider) => (
         <GeoEngineProviderRow
           approvedNonZdrIds={approvedNonZdrIds}
           catalog={catalog}
